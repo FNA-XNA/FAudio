@@ -1,0 +1,22 @@
+This is FACT, an XACT reimplementation that focuses solely on developing a fully
+accurate XACT runtime for the FNA project.
+
+Project Website: http://fna-xna.github.io/
+
+NOTE TO DEVELOPERS
+------------------
+This project is extremely early in development! Do not use this until it has
+been fully integrated into FNA, unless you really like broken software.
+
+License
+-------
+FACT is released under the Microsoft Public License. See LICENSE for details.
+
+FNA uses code from the unxwb project, specially released under the MonoGame
+project license. See unxwb.LICENSE for details.
+
+Found an issue?
+---------------
+Issues and patches can be reported via GitHub:
+
+https://github.com/flibitijibibo/FACT/issues
