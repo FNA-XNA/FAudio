@@ -13,7 +13,7 @@ else
 	TARGET = so
 endif
 
-CFLAGS = -g -Wall -pedantic
+CFLAGS += -g -Wall -pedantic -fpic -fPIC -shared
 
 # Source lists
 FACTSRC = \
@@ -30,7 +30,7 @@ FACTOBJ = $(FACTSRC:%.c=%.o)
 # Targets
 
 all: $(FACTOBJ)
-	$(CC) $(CFLAGS) -fpic -fPIC -shared -o libFACT.$(TARGET) $(FACTOBJ) `sdl2-config --libs`
+	$(CC) $(CFLAGS) -o libFACT.$(TARGET) $(FACTOBJ) `sdl2-config --libs`
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`

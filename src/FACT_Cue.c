@@ -5,8 +5,7 @@
  * See LICENSE for details.
  */
 
-#include "FACT.h"
-#include "FACT_platform.h"
+#include "FACT_internal.h"
 
 uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
@@ -23,7 +22,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	return 0;
 }
 
-uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t pdwState)
+uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t *pdwState)
 {
 	return 0;
 }

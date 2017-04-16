@@ -5,8 +5,7 @@
  * See LICENSE for details.
  */
 
-#include "FACT.h"
-#include "FACT_platform.h"
+#include "FACT_internal.h"
 
 uint32_t FACTWave_Destroy(FACTWave *pWave)
 {

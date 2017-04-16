@@ -5,8 +5,20 @@
  * See LICENSE for details.
  */
 
-#include "FACT.h"
-#include "FACT_platform.h"
+#include "FACT_internal.h"
+
+uint32_t FACTCreateAudioEngine(
+	uint32_t dwCreationFlags,
+	FACTAudioEngine **ppEngine
+) {
+	*ppEngine = (FACTAudioEngine*) FACT_malloc(sizeof(FACTAudioEngine));
+	if (*ppEngine == NULL)
+	{
+		return -1; /* TODO: E_OUTOFMEMORY */
+	}
+	FACT_zero(*ppEngine, sizeof(FACTAudioEngine));
+	return 0;
+}
 
 uint32_t FACTAudioEngine_GetRendererCount(
 	FACTAudioEngine *pEngine,
@@ -39,6 +51,7 @@ uint32_t FACTAudioEngine_Initialize(
 
 uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 {
+	FACT_free(pEngine);
 	return 0;
 }
 

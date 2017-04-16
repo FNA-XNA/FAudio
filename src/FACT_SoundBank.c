@@ -5,8 +5,7 @@
  * See LICENSE for details.
  */
 
-#include "FACT.h"
-#include "FACT_platform.h"
+#include "FACT_internal.h"
 
 uint16_t FACTSoundBank_GetCueIndex(
 	FACTSoundBank *pSoundBank,

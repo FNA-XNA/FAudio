@@ -286,6 +286,12 @@ static const uint32_t FACT_STATE_PREPAREFAILED =	0x80000000;
 
 /* AudioEngine Interface */
 
+/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
+FACTAPI uint32_t FACTCreateEngine(
+	uint32_t dwCreationFlags,
+	FACTAudioEngine **ppEngine
+);
+
 /* FIXME: AddRef/Release? Or just ignore COM garbage... -flibit */
 
 FACTAPI uint32_t FACTAudioEngine_GetRendererCount(
@@ -554,7 +560,7 @@ FACTAPI uint32_t FACTCue_Play(FACTCue *pCue);
 
 FACTAPI uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags);
 
-FACTAPI uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t pdwState);
+FACTAPI uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t *pdwState);
 
 FACTAPI uint32_t FACTCue_SetMatrixCoefficients(
 	FACTCue *pCue,
