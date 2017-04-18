@@ -58,10 +58,11 @@ uint32_t FACTAudioEngine_Initialize(
 			dspPresetOffset,
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count;
-	uint8_t *ptr = pParams->pGlobalSettingsBuffer;
-	uint8_t *start = ptr;
 	size_t memsize;
 	uint16_t i, j;
+
+	uint8_t *ptr = (uint8_t*) pParams->pGlobalSettingsBuffer;
+	uint8_t *start = ptr;
 
 	if (	read_u32(&ptr) != 0x46534758 /* 'XGSF' */ ||
 		read_u16(&ptr) != FACT_CONTENT_VERSION ||
@@ -70,8 +71,7 @@ uint32_t FACTAudioEngine_Initialize(
 		return -1; /* TODO: NOT XACT FILE */
 	}
 
-	/* Unknown value */
-	ptr += 2;
+	ptr += 2; /* Unknown value */
 
 	/* Last modified, unused */
 	ptr += 8;
@@ -278,6 +278,230 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	return 0;
 }
 
+void INTERNAL_FACTParseClip(uint8_t **ptr, FACTClip *clip)
+{
+	uint32_t evtInfo;
+	uint8_t minWeight, maxWeight;
+	int i, j;
+
+	clip->volume = read_u8(ptr);
+
+	/* Clip offset, unused */
+	*ptr += 4;
+
+	clip->filter = read_u8(ptr);
+	if (clip->filter & 0x01)
+	{
+		clip->filter = (clip->filter >> 1) & 0x02;
+	}
+	else
+	{
+		/* Huh...? */
+		clip->filter = 0xFF;
+	}
+
+	clip->qfactor = read_u8(ptr);
+	clip->frequency = read_u16(ptr);
+
+	clip->eventCount = read_u8(ptr);
+	clip->events = (FACTEvent*) FACT_malloc(
+		sizeof(FACTEvent) *
+		clip->eventCount
+	);
+	for (i = 0; i < clip->eventCount; i += 1)
+	{
+		evtInfo = read_u32(ptr);
+		clip->events[i].randomOffset = read_u16(ptr);
+
+		clip->events[i].type = evtInfo & 0x001F;
+		clip->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
+
+		assert(read_u8(ptr) == 0xFF); /* Separator? */
+
+		#define CLIPTYPE(t) (clip->events[i].type == t)
+		if (CLIPTYPE(FACTEVENT_STOP))
+		{
+			clip->events[i].stop.flags = read_u8(ptr);
+		}
+		else if (CLIPTYPE(FACTEVENT_PLAYWAVE))
+		{
+			/* Basic Wave */
+			clip->events[i].wave.isComplex = 0;
+			clip->events[i].wave.flags = read_u8(ptr);
+			clip->events[i].wave.simple.track = read_u16(ptr);
+			clip->events[i].wave.simple.wavebank = read_u16(ptr);
+			clip->events[i].loopCount = read_u8(ptr);
+			clip->events[i].wave.position = read_u16(ptr);
+			clip->events[i].wave.angle = read_u16(ptr);
+
+			/* No Variation */
+			clip->events[i].wave.variationFlags = 0;
+		}
+		else if (CLIPTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
+		{
+			/* Complex Wave */
+			clip->events[i].wave.isComplex = 1;
+			clip->events[i].wave.flags = read_u8(ptr);
+			clip->events[i].loopCount = read_u8(ptr);
+			clip->events[i].wave.position = read_u16(ptr);
+			clip->events[i].wave.angle = read_u16(ptr);
+
+			/* Track Variation */
+			clip->events[i].wave.complex.trackCount = read_u16(ptr);
+			clip->events[i].wave.complex.variation = read_u16(ptr);
+			*ptr += 4; /* Unknown values */
+			clip->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
+				sizeof(uint16_t) *
+				clip->events[i].wave.complex.trackCount
+			);
+			clip->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
+				sizeof(uint8_t) *
+				clip->events[i].wave.complex.trackCount
+			);
+			clip->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
+				sizeof(uint8_t) *
+				clip->events[i].wave.complex.trackCount
+			);
+			for (j = 0; j < clip->events[i].wave.complex.trackCount; j += 1)
+			{
+				clip->events[i].wave.complex.tracks[j] = read_u16(ptr);
+				clip->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
+				minWeight = read_u8(ptr);
+				maxWeight = read_u8(ptr);
+				clip->events[i].wave.complex.weights[j] = (
+					maxWeight - minWeight
+				);
+			}
+		}
+		else if (CLIPTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
+		{
+			/* Basic Wave */
+			clip->events[i].wave.isComplex = 0;
+			clip->events[i].wave.flags = read_u8(ptr);
+			clip->events[i].wave.simple.track = read_u16(ptr);
+			clip->events[i].wave.simple.wavebank = read_u16(ptr);
+			clip->events[i].loopCount = read_u8(ptr);
+			clip->events[i].wave.position = read_u16(ptr);
+			clip->events[i].wave.angle = read_u16(ptr);
+
+			/* Effect Variation */
+			clip->events[i].wave.minPitch = read_s16(ptr);
+			clip->events[i].wave.maxPitch = read_s16(ptr);
+			clip->events[i].wave.minVolume = read_u8(ptr);
+			clip->events[i].wave.maxVolume = read_u8(ptr);
+			clip->events[i].wave.minFrequency = read_f32(ptr);
+			clip->events[i].wave.maxFrequency = read_f32(ptr);
+			clip->events[i].wave.minQFactor = read_f32(ptr);
+			clip->events[i].wave.maxQFactor = read_f32(ptr);
+			clip->events[i].wave.variationFlags = read_u16(ptr);
+		}
+		else if (CLIPTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
+		{
+			/* Complex Wave */
+			clip->events[i].wave.isComplex = 1;
+			clip->events[i].wave.flags = read_u8(ptr);
+			clip->events[i].loopCount = read_u8(ptr);
+			clip->events[i].wave.position = read_u16(ptr);
+			clip->events[i].wave.angle = read_u16(ptr);
+
+			/* Effect Variation */
+			clip->events[i].wave.minPitch = read_s16(ptr);
+			clip->events[i].wave.maxPitch = read_s16(ptr);
+			clip->events[i].wave.minVolume = read_u8(ptr);
+			clip->events[i].wave.maxVolume = read_u8(ptr);
+			clip->events[i].wave.minFrequency = read_f32(ptr);
+			clip->events[i].wave.maxFrequency = read_f32(ptr);
+			clip->events[i].wave.minQFactor = read_f32(ptr);
+			clip->events[i].wave.maxQFactor = read_f32(ptr);
+			clip->events[i].wave.variationFlags = read_u16(ptr);
+
+			/* Track Variation */
+			clip->events[i].wave.complex.trackCount = read_u16(ptr);
+			clip->events[i].wave.complex.variation = read_u16(ptr);
+			*ptr += 4; /* Unknown values */
+			clip->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
+				sizeof(uint16_t) *
+				clip->events[i].wave.complex.trackCount
+			);
+			clip->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
+				sizeof(uint8_t) *
+				clip->events[i].wave.complex.trackCount
+			);
+			clip->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
+				sizeof(uint8_t) *
+				clip->events[i].wave.complex.trackCount
+			);
+			for (j = 0; j < clip->events[i].wave.complex.trackCount; j += 1)
+			{
+				clip->events[i].wave.complex.tracks[j] = read_u16(ptr);
+				clip->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
+				minWeight = read_u8(ptr);
+				maxWeight = read_u8(ptr);
+				clip->events[i].wave.complex.weights[j] = (
+					maxWeight - minWeight
+				);
+			}
+		}
+		else if (	CLIPTYPE(FACTEVENT_PITCH) ||
+				CLIPTYPE(FACTEVENT_VOLUME) ||
+				CLIPTYPE(FACTEVENT_PITCHREPEATING) ||
+				CLIPTYPE(FACTEVENT_VOLUMEREPEATING)	)
+		{
+			clip->events[i].value.settings = read_u8(ptr);
+			if (clip->events[i].value.settings & 1) /* Ramp */
+			{
+				clip->events[i].loopCount = 0;
+				clip->events[i].value.ramp.initialValue = read_f32(ptr);
+				clip->events[i].value.ramp.initialSlope = read_f32(ptr);
+				clip->events[i].value.ramp.slopeDelta = read_f32(ptr);
+				clip->events[i].value.ramp.duration = read_u16(ptr);
+			}
+			else /* Equation */
+			{
+				clip->events[i].value.equation.flags = read_u8(ptr);
+
+				/* SetValue, SetRandomValue, anything else? */
+				assert(clip->events[i].value.equation.flags & 0x0C);
+
+				clip->events[i].value.equation.value1 = read_f32(ptr);
+				clip->events[i].value.equation.value2 = read_f32(ptr);
+
+				*ptr += 5; /* Unknown values */
+
+				if (	CLIPTYPE(FACTEVENT_PITCHREPEATING) ||
+					CLIPTYPE(FACTEVENT_VOLUMEREPEATING)	)
+				{
+					clip->events[i].loopCount = read_u16(ptr);
+					clip->events[i].frequency = read_u16(ptr);
+				}
+				else
+				{
+					clip->events[i].loopCount = 0;
+				}
+			}
+		}
+		else if (CLIPTYPE(FACTEVENT_MARKER))
+		{
+			clip->events[i].marker.marker = read_u32(ptr);
+			clip->events[i].loopCount = read_u16(ptr);
+			clip->events[i].frequency = read_u16(ptr);
+			clip->events[i].marker.repeating = 0;
+		}
+		else if (CLIPTYPE(FACTEVENT_MARKERREPEATING))
+		{
+			clip->events[i].marker.marker = read_u32(ptr);
+			clip->events[i].loopCount = read_u16(ptr);
+			clip->events[i].frequency = read_u16(ptr);
+			clip->events[i].marker.repeating = 1;
+		}
+		else
+		{
+			assert(0 && "Unknown event type!");
+		}
+		#undef CLIPTYPE
+	}
+}
+
 uint32_t FACTAudioEngine_CreateSoundBank(
 	FACTAudioEngine *pEngine,
 	const void *pvBuffer,
@@ -286,6 +510,352 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	uint32_t dwAllocAttributes,
 	FACTSoundBank **ppSoundBank
 ) {
+	FACTSoundBank *sb;
+	uint16_t	cueSimpleCount,
+			cueComplexCount;
+	uint32_t	cueSimpleOffset,
+			cueComplexOffset,
+			cueNameOffset,
+			variationOffset,
+			wavebankNameOffset,
+			cueHashOffset,
+			cueNameIndexOffset,
+			soundOffset;
+	size_t memsize;
+	uint16_t i, j, cur;
+	uint8_t *ptrBookmark;
+
+	uint8_t *ptr = (uint8_t*) pvBuffer;
+	uint8_t *start = ptr;
+
+	if (	read_u32(&ptr) != 0x4B424453 /* 'SDBK' */ ||
+		read_u16(&ptr) != FACT_CONTENT_VERSION ||
+		read_u16(&ptr) != 43 /* Tool version */	)
+	{
+		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	/* CRC, unused */
+	ptr += 2;
+
+	/* Last modified, unused */
+	ptr += 8;
+
+	/* Windows == 1, Xbox == 0 (I think?) */
+	if (read_u32(&ptr) != 1)
+	{
+		return -1; /* TODO: WRONG PLATFORM */
+	}
+
+	sb = (FACTSoundBank*) FACT_malloc(sizeof(FACTSoundBank));
+
+	cueSimpleCount = read_u16(&ptr);
+	cueComplexCount = read_u16(&ptr);
+
+	ptr += 2; /* Unknown value */
+
+	sb->cueCount = read_u16(&ptr);
+	sb->wavebankCount = read_u8(&ptr);
+	sb->soundCount = read_u16(&ptr);
+
+	/* Cue name length, unused */
+	ptr += 2;
+
+	ptr += 2; /* Unknown value */
+
+	cueSimpleOffset = read_u32(&ptr);
+	cueComplexOffset = read_u32(&ptr);
+	cueNameOffset = read_u32(&ptr);
+
+	ptr += 4; /* Unknown value */
+
+	variationOffset = read_u32(&ptr);
+
+	ptr += 4; /* Unknown value */
+
+	wavebankNameOffset = read_u32(&ptr);
+	cueHashOffset = read_u32(&ptr);
+	cueNameIndexOffset = read_u32(&ptr);
+	soundOffset = read_u32(&ptr);
+
+	/* SoundBank Name */
+	memsize = FACT_strlen((char*) ptr) + 1; /* Dastardly! */
+	sb->name = (char*) FACT_malloc(memsize);
+	FACT_memcpy(sb->name, ptr, memsize);
+	ptr += 64;
+
+	/* WaveBank Name data */
+	assert((ptr - start) == wavebankNameOffset);
+	sb->wavebankNames = (char**) FACT_malloc(
+		sizeof(char*) *
+		sb->wavebankCount
+	);
+	for (i = 0; i < sb->wavebankCount; i += 1)
+	{
+		memsize = FACT_strlen((char*) ptr) + 1;
+		sb->wavebankNames[i] = (char*) FACT_malloc(memsize);
+		FACT_memcpy(sb->wavebankNames[i], ptr, memsize);
+		ptr += 64;
+	}
+
+	/* Sound data */
+	assert((ptr - start) == soundOffset);
+	sb->sounds = (FACTSound*) FACT_malloc(
+		sizeof(FACTSound) *
+		sb->soundCount
+	);
+	sb->soundCodes = (size_t*) FACT_malloc(
+		sizeof(size_t) *
+		sb->soundCount
+	);
+	for (i = 0; i < sb->soundCount; i += 1)
+	{
+		sb->soundCodes[i] = ptr - start;
+		sb->sounds[i].flags = read_u8(&ptr);
+		sb->sounds[i].category = read_u16(&ptr);
+		sb->sounds[i].volume = read_u8(&ptr);
+		sb->sounds[i].pitch = read_s16(&ptr);
+
+		ptr += 1; /* Unknown value */
+
+		/* Length of sound entry, unused */
+		ptr += 2;
+
+		/* Simple/Complex Clip data */
+		if (sb->sounds[i].flags & 0x01)
+		{
+			sb->sounds[i].clipCount = read_u8(&ptr);
+			sb->sounds[i].clips = (FACTClip*) FACT_malloc(
+				sizeof(FACTClip) *
+				sb->sounds[i].clipCount
+			);
+		}
+		else
+		{
+			sb->sounds[i].clipCount = 1;
+			sb->sounds[i].clips = (FACTClip*) FACT_malloc(
+				sizeof(FACTClip)
+			);
+			sb->sounds[i].clips[0].volume = FACT_VOLUME_0;
+			sb->sounds[i].clips[0].filter = 0xFF;
+			sb->sounds[i].clips[0].eventCount = 1;
+			sb->sounds[i].clips[0].events = (FACTEvent*) FACT_malloc(
+				sizeof(FACTEvent)
+			);
+			sb->sounds[i].clips[0].events[0].type = FACTEVENT_PLAYWAVE;
+			sb->sounds[i].clips[0].events[0].timestamp = 0;
+			sb->sounds[i].clips[0].events[0].randomOffset = 0;
+			sb->sounds[i].clips[0].events[0].loopCount = 0;
+			sb->sounds[i].clips[0].events[0].wave.flags = 0;
+			sb->sounds[i].clips[0].events[0].wave.position = 0; /* FIXME */
+			sb->sounds[i].clips[0].events[0].wave.angle = 0; /* FIXME */
+			sb->sounds[i].clips[0].events[0].wave.isComplex = 0;
+			sb->sounds[i].clips[0].events[0].wave.simple.track = read_u16(&ptr);
+			sb->sounds[i].clips[0].events[0].wave.simple.wavebank = read_u8(&ptr);
+		}
+
+		/* RPC Code data */
+		cur = 0;
+		if (sb->sounds[i].flags & 0x0E)
+		{
+			const uint16_t rpcDataLength = read_u16(&ptr);
+			ptrBookmark = ptr - 2;
+			while ((ptr - ptrBookmark) < rpcDataLength)
+			{
+				const uint8_t codes = read_u8(&ptr);
+				sb->sounds[i].rpcCodeCount += codes;
+				ptr += 4 * codes;
+			}
+			sb->sounds[i].rpcCodes = (size_t*) FACT_malloc(
+				sizeof(size_t) *
+				sb->sounds[i].rpcCodeCount
+			);
+			ptr = ptrBookmark;
+			while ((ptr - ptrBookmark) < rpcDataLength)
+			{
+				const uint8_t codes = read_u8(&ptr);
+				for (j = 0; j < codes; j += 1, cur += 1)
+				{
+					sb->sounds[i].rpcCodes[j + cur] = read_u32(&ptr);
+				}
+			}
+		}
+		else
+		{
+			sb->sounds[i].rpcCodeCount = 0;
+			sb->sounds[i].rpcCodes = NULL;
+		}
+
+		/* DSP Preset Code data */
+		if (sb->sounds[i].flags & 0x10)
+		{
+			/* DSP presets length, unused */
+			ptr += 2;
+
+			sb->sounds[i].dspCodeCount = read_u8(&ptr);
+			sb->sounds[i].dspCodes = (size_t*) FACT_malloc(
+				sizeof(size_t) *
+				sb->sounds[i].dspCodeCount
+			);
+			for (j = 0; j < sb->sounds[i].dspCodeCount; j += 1)
+			{
+				sb->sounds[i].dspCodes[i] = read_u32(&ptr);
+			}
+		}
+		else
+		{
+			sb->sounds[i].dspCodeCount = 0;
+			sb->sounds[i].dspCodes = NULL;
+		}
+
+		/* Clip data */
+		if (sb->sounds[i].flags & 0x01)
+		{
+			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+			{
+				INTERNAL_FACTParseClip(
+					&ptr,
+					&sb->sounds[i].clips[j]
+				);
+			}
+		}
+	}
+
+	/* All Cue data */
+	sb->variationCount = 0;
+	sb->cues = (FACTCueData*) FACT_malloc(
+		sizeof(FACTCueData) *
+		sb->cueCount
+	);
+	cur = 0;
+
+	/* Simple Cue data */
+	assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
+	for (i = 0; i < cueSimpleCount; i += 1, cur += 1)
+	{
+		sb->cues[cur].flags = read_u8(&ptr);
+		sb->cues[cur].sbCode = read_u32(&ptr);
+		sb->cues[cur].transitionOffset = read_u32(&ptr);
+		sb->cues[cur].instanceLimit = 0xFF;
+		sb->cues[cur].fadeIn = 0;
+		sb->cues[cur].fadeOut = 0;
+		sb->cues[cur].maxInstanceBehavior = 0;
+	}
+
+	/* Complex Cue data */
+	assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
+	for (i = 0; i < cueComplexCount; i += 1, cur += 1)
+	{
+		sb->cues[cur].flags = read_u8(&ptr);
+		sb->cues[cur].sbCode = read_u32(&ptr);
+		sb->cues[cur].transitionOffset = read_u32(&ptr);
+		sb->cues[cur].instanceLimit = read_u8(&ptr);
+		sb->cues[cur].fadeIn = read_u16(&ptr);
+		sb->cues[cur].fadeOut = read_u16(&ptr);
+		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr);
+
+		if (!(sb->cues[cur].flags & 0x04))
+		{
+			/* FIXME: Is this the only way to get this...? */
+			sb->variationCount += 1;
+		}
+	}
+
+	/* Variation data */
+	if (sb->variationCount > 0)
+	{
+		assert((ptr - start) == variationOffset);
+		sb->variations = (FACTVariationTable*) FACT_malloc(
+			sizeof(FACTVariationTable) *
+			sb->variationCount
+		);
+		sb->variationCodes = (size_t*) FACT_malloc(
+			sizeof(size_t) *
+			sb->variationCount
+		);
+	}
+	for (i = 0; i < sb->variationCount; i += 1)
+	{
+		sb->variationCodes[i] = ptr - start;
+		sb->variations[i].entryCount = read_u16(&ptr);
+		sb->variations[i].flags = (read_u16(&ptr) >> 3) & 0x07;
+		ptr += 2; /* Unknown value */
+		sb->variations[i].variable = read_u16(&ptr);
+
+		sb->variations[i].entries = (FACTVariation*) FACT_malloc(
+			sizeof(FACTVariation) *
+			sb->variations[i].entryCount
+		);
+
+		if (sb->variations[i].flags == 0)
+		{
+			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			{
+				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
+				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
+				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+			}
+		}
+		else if (sb->variations[i].flags == 1)
+		{
+			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			{
+				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
+				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
+				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+			}
+		}
+		if (sb->variations[i].flags == 3)
+		{
+			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			{
+				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
+				sb->variations[i].entries[j].minWeight = read_f32(&ptr);
+				sb->variations[i].entries[j].maxWeight = read_f32(&ptr);
+			}
+		}
+		if (sb->variations[i].flags == 4)
+		{
+			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			{
+				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
+				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+				sb->variations[i].entries[j].minWeight = 0.0f;
+				sb->variations[i].entries[j].maxWeight = 1.0f;
+			}
+		}
+		else
+		{
+			assert(0 && "Unknown variation type!");
+		}
+	}
+
+	/* Cue Hash data? No idea what this is... */
+	assert((ptr - start) == cueHashOffset);
+	ptr += 2 * sb->cueCount;
+
+	/* Cue Name Index data */
+	assert((ptr - start) == cueNameIndexOffset);
+	ptr += 6 * sb->cueCount; /* FIXME: index as assert value? */
+
+	/* Cue Name data */
+	assert((ptr - start) == cueNameOffset);
+	sb->cueNames = (char**) FACT_malloc(
+		sizeof(char*) *
+		sb->cueCount
+	);
+	for (int i = 0; i < sb->cueCount; i += 1)
+	{
+		memsize = FACT_strlen((char*) ptr) + 1;
+		sb->cueNames[i] = (char*) FACT_malloc(memsize);
+		FACT_memcpy(sb->cueNames[i], ptr, memsize);
+		ptr += memsize;
+	}
+
+	/* Finally. */
+	assert((ptr - start) == dwSize);
+	*ppSoundBank = sb;
 	return 0;
 }
 

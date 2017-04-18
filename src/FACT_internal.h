@@ -10,7 +10,11 @@
 /* FIXME: Remove this! */
 #include <assert.h>
 
-/* Internal XACT Types */
+/* Internal Constants */
+
+#define FACT_VOLUME_0 180
+
+/* Internal AudioEngine Types */
 
 typedef struct FACTAudioCategory
 {
@@ -62,6 +66,171 @@ typedef struct FACTDSPPreset
 	FACTDSPParameter *parameters;
 } FACTDSPPreset;
 
+/* Internal SoundBank Types */
+
+typedef struct FACTCueData
+{
+	uint8_t flags;
+	uint32_t sbCode;
+	uint32_t transitionOffset;
+	uint8_t instanceLimit;
+	uint16_t fadeIn;
+	uint16_t fadeOut;
+	uint8_t maxInstanceBehavior;
+} FACTCueData;
+
+typedef enum
+{
+	FACTEVENT_STOP =				0,
+	FACTEVENT_PLAYWAVE =				1,
+	FACTEVENT_PLAYWAVETRACKVARIATION =		3,
+	FACTEVENT_PLAYWAVEEFFECTVARIATION =		4,
+	FACTEVENT_PLAYWAVETRACKEFFECTVARIATION =	6,
+	FACTEVENT_PITCH =				7,
+	FACTEVENT_VOLUME =				8,
+	FACTEVENT_MARKER =				9,
+	FACTEVENT_PITCHREPEATING =			16,
+	FACTEVENT_VOLUMEREPEATING =			17,
+	FACTEVENT_MARKERREPEATING =			18
+} FACTEventType;
+
+typedef struct FACTEvent_PlayWave
+{
+	uint8_t flags;
+	uint16_t position;
+	uint16_t angle;
+
+	/* Track Variation */
+	uint8_t isComplex;
+	union
+	{
+		struct
+		{
+			uint16_t track;
+			uint8_t wavebank;
+		} simple;
+		struct
+		{
+			uint16_t variation;
+			uint16_t trackCount;
+			uint16_t *tracks;
+			uint8_t *wavebanks;
+			uint8_t *weights;
+		} complex;
+	};
+
+	/* Effect Variation */
+	int16_t minPitch;
+	int16_t maxPitch;
+	uint8_t minVolume;
+	uint8_t maxVolume;
+	float minFrequency;
+	float maxFrequency;
+	float minQFactor;
+	float maxQFactor;
+	uint16_t variationFlags;
+} FACTEvent_PlayWave;
+
+typedef struct FACTEvent_SetValue
+{
+	uint8_t settings;
+	union
+	{
+		struct
+		{
+			float initialValue;
+			float initialSlope;
+			float slopeDelta;
+			uint16_t duration;
+		} ramp;
+		struct
+		{
+			uint8_t flags;
+			float value1;
+			float value2;
+		} equation;
+	};
+} FACTEvent_SetValue;
+
+typedef struct FACTEvent_Stop
+{
+	uint8_t flags;
+} FACTEvent_Stop;
+
+typedef struct FACTEvent_Marker
+{
+	uint32_t marker;
+	uint8_t repeating;
+} FACTEvent_Marker;
+
+typedef struct FACTEvent
+{
+	uint16_t type;
+	uint16_t timestamp;
+	uint16_t randomOffset;
+	uint8_t loopCount;
+	uint16_t frequency;
+	union
+	{
+		FACTEvent_PlayWave wave;
+		FACTEvent_SetValue value;
+		FACTEvent_Stop stop;
+		FACTEvent_Marker marker;
+	};
+} FACTEvent;
+
+typedef struct FACTClip
+{
+	uint8_t volume;
+	uint8_t filter;
+	uint8_t qfactor;
+	uint16_t frequency;
+
+	uint8_t eventCount;
+	FACTEvent *events;
+} FACTClip;
+
+typedef struct FACTSound
+{
+	uint8_t flags;
+	uint16_t category;
+	uint8_t volume;
+	int16_t pitch;
+
+	uint8_t clipCount;
+	uint8_t rpcCodeCount;
+	uint8_t dspCodeCount;
+
+	FACTClip *clips;
+	size_t *rpcCodes;
+	size_t *dspCodes;
+} FACTSound;
+
+typedef struct FACTVariation
+{
+	uint8_t isComplex;
+	union
+	{
+		struct
+		{
+			uint16_t track;
+			uint8_t wavebank;
+		} simple;
+		size_t soundCode;
+	};
+	float minWeight;
+	float maxWeight;
+} FACTVariation;
+
+typedef struct FACTVariationTable
+{
+	uint8_t flags;
+	uint16_t variable;
+
+	uint16_t entryCount;
+	FACTVariation *entries;
+} FACTVariationTable;
+
 /* Public XACT Types */
 
 struct FACTAudioEngine
@@ -85,7 +254,20 @@ struct FACTAudioEngine
 
 struct FACTSoundBank
 {
-	uint8_t TODO;
+	uint16_t cueCount;
+	uint8_t wavebankCount;
+	uint16_t soundCount;
+	uint16_t variationCount;
+
+	char **wavebankNames;
+	char **cueNames;
+
+	char *name;
+	FACTCueData *cues;
+	FACTSound *sounds;
+	size_t *soundCodes;
+	FACTVariationTable *variations;
+	size_t *variationCodes;
 };
 
 struct FACTWaveBank
