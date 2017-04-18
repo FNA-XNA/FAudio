@@ -269,6 +269,8 @@ typedef struct FACTCueInstanceProperties
 
 /* Constants */
 
+#define FACT_CONTENT_VERSION 46
+
 static const uint32_t FACT_FLAG_MANAGEDATA =		0x00000001;
 
 static const uint32_t FACT_FLAG_STOP_RELEASE =		0x00000000;

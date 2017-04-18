@@ -23,3 +23,13 @@ void FACT_zero(void *ptr, size_t size)
 {
 	SDL_memset(ptr, '\0', size);
 }
+
+void FACT_memcpy(void *dst, void *src, size_t size)
+{
+	SDL_memcpy(dst, src, size);
+}
+
+size_t FACT_strlen(const char *ptr)
+{
+	return SDL_strlen(ptr);
+}
