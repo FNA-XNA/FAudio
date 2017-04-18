@@ -74,8 +74,8 @@ struct FACTAudioEngine
 
 	char **categoryNames;
 	char **variableNames;
-	uint8_t **rpcCodes;
-	uint8_t **dspPresetCodes;
+	size_t *rpcCodes;
+	size_t *dspPresetCodes;
 
 	FACTAudioCategory *categories;
 	FACTVariable *variables;

@@ -124,13 +124,13 @@ uint32_t FACTAudioEngine_Initialize(
 		sizeof(FACTRPC) *
 		pEngine->rpcCount
 	);
-	pEngine->rpcCodes = (uint8_t**) FACT_malloc(
-		sizeof(uint8_t*) *
+	pEngine->rpcCodes = (size_t*) FACT_malloc(
+		sizeof(size_t) *
 		pEngine->rpcCount
 	);
 	for (i = 0; i < pEngine->rpcCount; i += 1)
 	{
-		pEngine->rpcCodes[i] = ptr;
+		pEngine->rpcCodes[i] = ptr - start;
 		pEngine->rpcs[i].variable = read_u16(&ptr);
 		pEngine->rpcs[i].pointCount = read_u8(&ptr);
 		pEngine->rpcs[i].parameter = read_u16(&ptr);
@@ -152,13 +152,13 @@ uint32_t FACTAudioEngine_Initialize(
 		sizeof(FACTDSPPreset) *
 		pEngine->dspPresetCount
 	);
-	pEngine->dspPresetCodes = (uint8_t**) FACT_malloc(
-		sizeof(uint8_t*) *
+	pEngine->dspPresetCodes = (size_t*) FACT_malloc(
+		sizeof(size_t) *
 		pEngine->dspPresetCount
 	);
 	for (i = 0; i < pEngine->dspPresetCount; i += 1)
 	{
-		pEngine->dspPresetCodes[i] = ptr;
+		pEngine->dspPresetCodes[i] = ptr - start;
 		pEngine->dspPresets[i].accessibility = read_u8(&ptr);
 		pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
 		pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FACT_malloc(
