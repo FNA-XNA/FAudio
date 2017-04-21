@@ -859,6 +859,182 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	return 0;
 }
 
+/* The unxwb project, written by Luigi Auriemma, was released in 2006 under the
+ * GNU General Public License, version 2.0:
+ *
+ * http://www.gnu.org/licenses/gpl-2.0.html
+ *
+ * While the unxwb project was released under the GPL, Luigi has given express
+ * permission to the MonoGame project to use code from unxwb under the MonoGame
+ * project license. See LICENSE for details.
+ *
+ * The unxwb website can be found here:
+ *
+ * http://aluigi.altervista.org/papers.htm#xbox
+ */
+uint32_t FACT_ParseWaveBank(
+	FACTAudioEngine *pEngine,
+	FACTIOStream *io,
+	uint16_t isStreaming,
+	FACTWaveBank **ppWaveBank
+) {
+	FACTWaveBank *wb;
+	size_t memsize;
+	uint32_t i;
+	struct
+	{
+		uint32_t wbnd;
+		uint32_t contentversion;
+		uint32_t toolversion;
+	} header;
+	struct
+	{
+		uint32_t infoOffset;
+		uint32_t infoLength;
+		uint32_t entryTableOffset;
+		uint32_t entryTableLength;
+		uint32_t unknownOffset1;
+		uint32_t unknownLength1;
+		uint32_t unknownOffset2;
+		uint32_t unknownLength2;
+		uint32_t playRegionOffset;
+		uint32_t playRegionLength;
+	} wbtable;
+	struct
+	{
+		uint16_t streaming;
+		uint16_t flags;
+		uint32_t entryCount;
+		char name[64];
+		uint32_t metadataElementSize;
+		uint32_t nameElementSize;
+		uint32_t alignment;
+		uint32_t compactFormat;
+		uint64_t unknown;
+	} wbinfo;
+	uint32_t compactEntry;
+
+	io->read(io->data, &header, sizeof(header), 1);
+	if (	header.wbnd != 0x444E4257 ||
+		header.contentversion != FACT_CONTENT_VERSION ||
+		header.toolversion != 44	)
+	{
+		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	wb = (FACTWaveBank*) FACT_malloc(sizeof(FACTWaveBank));
+
+	/* Offset Table */
+	io->read(io->data, &wbtable, sizeof(wbtable), 1);
+
+	/* TODO: What are these...? */
+	assert(wbtable.unknownOffset1 == wbtable.playRegionOffset);
+	assert(wbtable.unknownLength1 == 0);
+	assert(wbtable.unknownOffset2 == 0);
+	assert(wbtable.unknownLength2 == 0);
+
+	/* WaveBank Info */
+	assert(io->seek(io->data, 0, 1) == wbtable.infoOffset);
+	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
+	assert(wbinfo.streaming == isStreaming);
+	wb->entryCount = wbinfo.entryCount;
+	memsize = FACT_strlen(wbinfo.name) + 1;
+	wb->name = (char*) FACT_malloc(memsize);
+	FACT_memcpy(wb->name, wbinfo.name, memsize);
+	memsize = sizeof(FACTWaveBankEntry) * wbinfo.entryCount;
+	wb->entries = (FACTWaveBankEntry*) FACT_malloc(memsize);
+	FACT_zero(wb->entries, memsize);
+
+	/* WaveBank Entries */
+	assert(io->seek(io->data, 0, 1) == wbtable.entryTableOffset);
+	if (wbinfo.flags & 0x0002)
+	{
+		for (i = 0; i < wbinfo.entryCount - 1; i += 1)
+		{
+			io->read(
+				io->data,
+				&compactEntry,
+				sizeof(compactEntry),
+				1
+			);
+			wb->entries[i].PlayRegion.dwOffset = (
+				(compactEntry & ((1 << 21) - 1)) *
+				wbinfo.alignment
+			);
+			wb->entries[i].PlayRegion.dwLength = (
+				(compactEntry >> 21) & ((1 << 11) - 1)
+			);
+
+			/* TODO: Deviation table */
+			io->seek(
+				io->data,
+				wbinfo.metadataElementSize,
+				1
+			);
+			wb->entries[i].PlayRegion.dwLength = (
+				(compactEntry & ((1 << 21) - 1)) *
+				wbinfo.alignment
+			) - wb->entries[i].PlayRegion.dwOffset;
+
+			wb->entries[i].PlayRegion.dwOffset +=
+				wbtable.playRegionOffset;
+		}
+
+		io->read(
+			io->data,
+			&compactEntry,
+			sizeof(compactEntry),
+			1
+		);
+		wb->entries[i].PlayRegion.dwOffset = (
+			(compactEntry & ((1 << 21) - 1)) *
+			wbinfo.alignment
+		);
+
+		/* TODO: Deviation table */
+		io->seek(
+			io->data,
+			wbinfo.metadataElementSize,
+			1
+		);
+		wb->entries[i].PlayRegion.dwLength = (
+			wbtable.playRegionLength -
+			wb->entries[i].PlayRegion.dwOffset
+		);
+
+		wb->entries[i].PlayRegion.dwOffset +=
+			wbtable.playRegionOffset;
+	}
+	else
+	{
+		for (i = 0; i < wbinfo.entryCount; i += 1)
+		{
+			io->read(
+				io->data,
+				&wb->entries[i],
+				wbinfo.metadataElementSize,
+				1
+			);
+			wb->entries[i].PlayRegion.dwOffset +=
+				wbtable.playRegionOffset;
+		}
+
+		/* FIXME: This is a bit hacky. */
+		if (wbinfo.metadataElementSize < 24)
+		{
+			for (i = 0; i < wbinfo.entryCount; i += 1)
+			{
+				wb->entries[i].PlayRegion.dwLength =
+					wbtable.playRegionLength;
+			}
+		}
+	}
+
+	/* Finally. */
+	*ppWaveBank = wb;
+	return 0;
+}
+
 uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	FACTAudioEngine *pEngine,
 	const void *pvBuffer,
@@ -867,7 +1043,12 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	uint32_t dwAllocAttributes,
 	FACTWaveBank **ppWaveBank
 ) {
-	return 0;
+	return FACT_ParseWaveBank(
+		pEngine,
+		FACT_memopen((void*) pvBuffer, dwSize),
+		0,
+		ppWaveBank
+	);
 }
 
 uint32_t FACTAudioEngine_CreateStreamingWaveBank(
@@ -875,7 +1056,14 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	const FACTStreamingParameters *pParms,
 	FACTWaveBank **ppWaveBank
 ) {
-	return 0;
+	FACTIOStream *io = (FACTIOStream*) pParms->file;
+	io->seek(io, pParms->offset, 0);
+	return FACT_ParseWaveBank(
+		pEngine,
+		io,
+		1,
+		ppWaveBank
+	);
 }
 
 uint32_t FACTAudioEngine_PrepareWave(

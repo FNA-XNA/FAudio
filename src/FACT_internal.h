@@ -272,7 +272,12 @@ struct FACTSoundBank
 
 struct FACTWaveBank
 {
-	uint8_t TODO;
+	char *name;
+
+	uint32_t entryCount;
+	FACTWaveBankEntry *entries;
+
+	FACTIOStream *io;
 };
 
 struct FACTWave
@@ -311,3 +316,26 @@ void FACT_free(void *ptr);
 void FACT_zero(void *ptr, size_t size);
 void FACT_memcpy(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
+
+typedef size_t (FACTCALL * FACT_readfunc)(
+	void *data,
+	void *dst,
+	size_t size,
+	size_t count
+);
+typedef int64_t (FACTCALL * FACT_seekfunc)(
+	void *data,
+	int64_t offset,
+	int whence
+);
+typedef int (FACTCALL * FACT_closefunc)(
+	void *data
+);
+
+struct FACTIOStream
+{
+	void *data;
+	FACT_readfunc read;
+	FACT_seekfunc seek;
+	FACT_closefunc close;
+};

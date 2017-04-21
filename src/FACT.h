@@ -610,6 +610,14 @@ FACTAPI uint32_t FACTCue_SetOutputVoiceMatrix(
 	const float *pLevelMatrix /* SourceChannels * DestinationChannels */
 );
 
+/* FACT I/O API */
+
+typedef struct FACTIOStream FACTIOStream;
+
+FACTAPI FACTIOStream* FACT_fopen(const char *path);
+FACTAPI FACTIOStream* FACT_memopen(void *mem, int len);
+FACTAPI void FACT_close(FACTIOStream *io);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

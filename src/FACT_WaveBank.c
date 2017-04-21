@@ -9,6 +9,10 @@
 
 uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
+	FACT_free(pWaveBank->name);
+	FACT_free(pWaveBank->entries);
+	FACT_close(pWaveBank->io);
+	FACT_free(pWaveBank);
 	return 0;
 }
 

@@ -33,3 +33,35 @@ size_t FACT_strlen(const char *ptr)
 {
 	return SDL_strlen(ptr);
 }
+
+FACTIOStream* FACT_fopen(const char *path)
+{
+	FACTIOStream *io = (FACTIOStream*) SDL_malloc(
+		sizeof(FACTIOStream)
+	);
+	SDL_RWops *rwops = SDL_RWFromFile(path, "rb");
+	io->data = rwops;
+	io->read = (FACT_readfunc) rwops->read;
+	io->seek = (FACT_seekfunc) rwops->seek;
+	io->close = (FACT_closefunc) rwops->close;
+	return io;
+}
+
+FACTIOStream* FACT_memopen(void *mem, int len)
+{
+	FACTIOStream *io = (FACTIOStream*) SDL_malloc(
+		sizeof(FACTIOStream)
+	);
+	SDL_RWops *rwops = SDL_RWFromMem(mem, len);
+	io->data = rwops;
+	io->read = (FACT_readfunc) rwops->read;
+	io->seek = (FACT_seekfunc) rwops->seek;
+	io->close = (FACT_closefunc) rwops->close;
+	return io;
+}
+
+void FACT_close(FACTIOStream *io)
+{
+	io->close(io->data);
+	SDL_free(io);
+}
