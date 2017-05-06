@@ -937,6 +937,7 @@ uint32_t FACT_ParseWaveBank(
 	assert(io->seek(io->data, 0, 1) == wbtable.infoOffset);
 	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
 	assert(wbinfo.streaming == isStreaming);
+	wb->streaming = wbinfo.streaming;
 	wb->entryCount = wbinfo.entryCount;
 	memsize = FACT_strlen(wbinfo.name) + 1;
 	wb->name = (char*) FACT_malloc(memsize);

@@ -277,6 +277,7 @@ struct FACTWaveBank
 	uint32_t entryCount;
 	FACTWaveBankEntry *entries;
 
+	uint16_t streaming;
 	FACTIOStream *io;
 };
 

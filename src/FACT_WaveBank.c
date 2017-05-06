@@ -25,8 +25,9 @@ uint32_t FACTWaveBank_GetState(
 
 uint32_t FACTWaveBank_GetNumWaves(
 	FACTWaveBank *pWaveBank,
-	uint16_t pnNumWaves
+	uint16_t *pnNumWaves
 ) {
+	*pnNumWaves = pWaveBank->entryCount;
 	return 0;
 }
 
@@ -34,6 +35,7 @@ uint16_t FACTWaveBank_GetWaveIndex(
 	FACTWaveBank *pWaveBank,
 	const char *szFriendlyName
 ) {
+	assert(0 && "WaveBank name tables are not supported!");
 	return 0;
 }
 
@@ -42,6 +44,21 @@ uint32_t FACTWaveBank_GetWaveProperties(
 	uint16_t nWaveIndex,
 	FACTWaveProperties *pWaveProperties
 ) {
+	FACTWaveBankEntry *entry = &pWaveBank->entries[nWaveIndex];
+
+	/* FIXME: Name tables! -flibit */
+	FACT_zero(
+		pWaveProperties->friendlyName,
+		sizeof(pWaveProperties->friendlyName)
+	);
+
+	pWaveProperties->format = entry->Format;
+	pWaveProperties->durationInSamples = (
+		entry->LoopRegion.dwStartSample +
+		entry->LoopRegion.dwTotalSamples
+	); /* FIXME: Do we just want the full wave block? -flibit */
+	pWaveProperties->loopRegion = entry->LoopRegion;
+	pWaveProperties->streaming = pWaveBank->streaming;
 	return 0;
 }
 

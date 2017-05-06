@@ -488,7 +488,7 @@ FACTAPI uint32_t FACTWaveBank_GetState(
 
 FACTAPI uint32_t FACTWaveBank_GetNumWaves(
 	FACTWaveBank *pWaveBank,
-	uint16_t pnNumWaves
+	uint16_t *pnNumWaves
 );
 
 FACTAPI uint16_t FACTWaveBank_GetWaveIndex(
