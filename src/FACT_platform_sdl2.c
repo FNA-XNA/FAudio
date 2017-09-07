@@ -34,6 +34,16 @@ size_t FACT_strlen(const char *ptr)
 	return SDL_strlen(ptr);
 }
 
+int FACT_strcmp(const char *str1, const char *str2)
+{
+	return SDL_strcmp(str1, str2);
+}
+
+void FACT_strlcpy(char *dst, const char *src, size_t len)
+{
+	SDL_strlcpy(dst, src, len);
+}
+
 FACTIOStream* FACT_fopen(const char *path)
 {
 	FACTIOStream *io = (FACTIOStream*) SDL_malloc(

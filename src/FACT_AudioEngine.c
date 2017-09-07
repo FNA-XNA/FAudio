@@ -740,6 +740,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sb->cues[cur].fadeIn = 0;
 		sb->cues[cur].fadeOut = 0;
 		sb->cues[cur].maxInstanceBehavior = 0;
+		sb->cues[cur].instanceCount = 0;
 	}
 
 	/* Complex Cue data */
@@ -753,6 +754,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sb->cues[cur].fadeIn = read_u16(&ptr);
 		sb->cues[cur].fadeOut = read_u16(&ptr);
 		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr);
+		sb->cues[cur].instanceCount = 0;
 
 		if (!(sb->cues[cur].flags & 0x04))
 		{

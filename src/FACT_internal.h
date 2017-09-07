@@ -77,6 +77,7 @@ typedef struct FACTCueData
 	uint16_t fadeIn;
 	uint16_t fadeOut;
 	uint8_t maxInstanceBehavior;
+	uint8_t instanceCount;
 } FACTCueData;
 
 typedef enum
@@ -317,6 +318,8 @@ void FACT_free(void *ptr);
 void FACT_zero(void *ptr, size_t size);
 void FACT_memcpy(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
+int FACT_strcmp(const char *str1, const char *str2);
+void FACT_strlcpy(char *dst, const char *src, size_t len);
 
 typedef size_t (FACTCALL * FACT_readfunc)(
 	void *data,

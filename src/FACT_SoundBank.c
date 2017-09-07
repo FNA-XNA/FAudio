@@ -11,6 +11,16 @@ uint16_t FACTSoundBank_GetCueIndex(
 	FACTSoundBank *pSoundBank,
 	const char *szFriendlyName
 ) {
+	uint16_t i;
+	for (i = 0; i < pSoundBank->cueCount; i += 1)
+	{
+		if (FACT_strcmp(szFriendlyName, pSoundBank->cueNames[i]) == 0)
+		{
+			return i;
+		}
+	}
+
+	/* FIXME: We should never get here! */
 	return 0;
 }
 
@@ -18,6 +28,7 @@ uint32_t FACTSoundBank_GetNumCues(
 	FACTSoundBank *pSoundBank,
 	uint16_t *pnNumCues
 ) {
+	*pnNumCues = pSoundBank->cueCount;
 	return 0;
 }
 
@@ -26,6 +37,42 @@ uint32_t FACTSoundBank_GetCueProperties(
 	uint16_t nCueIndex,
 	FACTCueProperties *pProperties
 ) {
+	uint16_t i;
+	FACT_strlcpy(
+		pProperties->friendlyName,
+		pSoundBank->cueNames[nCueIndex],
+		0xFF
+	);
+	if (!(pSoundBank->cues[nCueIndex].flags & 0x04))
+	{
+		for (i = 0; i < pSoundBank->variationCount; i += 1)
+		{
+			if (pSoundBank->variationCodes[i] == pSoundBank->cues[nCueIndex].sbCode)
+			{
+				break;
+			}
+		}
+
+		if (pSoundBank->variations[i].flags == 3)
+		{
+			pProperties->interactive = 1;
+			pProperties->iaVariableIndex = pSoundBank->variations[i].variable;
+		}
+		else
+		{
+			pProperties->interactive = 0;
+			pProperties->iaVariableIndex = 0;
+		}
+		pProperties->numVariations = pSoundBank->variations[i].entryCount;
+	}
+	else
+	{
+		pProperties->interactive = 0;
+		pProperties->iaVariableIndex = 0;
+		pProperties->numVariations = 0;
+	}
+	pProperties->maxInstances = pSoundBank->cues[nCueIndex].instanceLimit;
+	pProperties->currentInstances = pSoundBank->cues[nCueIndex].instanceCount;
 	return 0;
 }
 
@@ -36,6 +83,7 @@ uint32_t FACTSoundBank_Prepare(
 	int32_t timeOffset,
 	FACTCue** ppCue
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -46,6 +94,7 @@ uint32_t FACTSoundBank_Play(
 	int32_t timeOffset,
 	FACTCue** ppCue /* Optional! */
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -54,6 +103,7 @@ uint32_t FACTSoundBank_Stop(
 	uint16_t nCueIndex,
 	uint32_t dwFlags
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -137,6 +187,15 @@ uint32_t FACTSoundBank_GetState(
 	FACTSoundBank *pSoundBank,
 	uint32_t *pdwState
 ) {
+	/* FIXME: Is there more to this than just checking INUSE? */
+	uint16_t i;
+	for (i = 0; i < pSoundBank->cueCount; i += 1)
+	{
+		if (pSoundBank->cues[i].instanceCount > 0)
+		{
+			return FACT_STATE_INUSE;
+		}
+	}
 	return 0;
 }
 
