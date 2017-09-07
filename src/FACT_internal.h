@@ -251,6 +251,8 @@ struct FACTAudioEngine
 	FACTVariable *variables;
 	FACTRPC *rpcs;
 	FACTDSPPreset *dspPresets;
+
+	float *globalVariableValues;
 };
 
 struct FACTSoundBank
@@ -321,6 +323,9 @@ void FACT_memcpy(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
 int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
+
+#define FACT_clamp(val, min, max) \
+	(nValue > max ? max : (nValue < min ? min : nValue))
 
 typedef size_t (FACTCALL * FACT_readfunc)(
 	void *data,

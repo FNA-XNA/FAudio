@@ -24,6 +24,7 @@ uint32_t FACTAudioEngine_GetRendererCount(
 	FACTAudioEngine *pEngine,
 	uint16_t *pnRendererCount
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -32,6 +33,7 @@ uint32_t FACTAudioEngine_GetRendererDetails(
 	uint16_t nRendererIndex,
 	FACTRendererDetails *pRendererDetails
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -39,6 +41,7 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 	FACTAudioEngine *pEngine,
 	FACTWaveFormatExtensible *pFinalMixFormat
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -117,6 +120,14 @@ uint32_t FACTAudioEngine_Initialize(
 	pEngine->variables = (FACTVariable*) FACT_malloc(memsize);
 	FACT_memcpy(pEngine->variables, ptr, memsize);
 	ptr += memsize;
+
+	/* Global variable storage. Some unused data for non-global vars */
+	memsize = sizeof(float) * pEngine->variableCount;
+	pEngine->globalVariableValues = (float*) FACT_malloc(memsize);
+	for (i = 0; i < pEngine->variableCount; i += 1)
+	{
+		pEngine->globalVariableValues[i] = pEngine->variables[i].initialValue;
+	}
 
 	/* RPC data */
 	assert((ptr - start) == rpcOffset);
@@ -275,6 +286,7 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 
 uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 {
+	/* TODO */
 	return 0;
 }
 
@@ -1082,6 +1094,7 @@ uint32_t FACTAudioEngine_PrepareWave(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1095,6 +1108,7 @@ uint32_t FACTAudioEngine_PrepareInMemoryWave(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1110,6 +1124,7 @@ uint32_t FACTAudioEngine_PrepareStreamingWave(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1117,6 +1132,7 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	FACTAudioEngine *pEngine,
 	const FACTNotificationDescription *pNotificationDescription
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1124,6 +1140,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 	FACTAudioEngine *pEngine,
 	const FACTNotificationDescription *pNotificationDescription
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1131,6 +1148,16 @@ uint16_t FACTAudioEngine_GetCategory(
 	FACTAudioEngine *pEngine,
 	const char *szFriendlyName
 ) {
+	uint16_t i;
+	for (i = 0; i < pEngine->categoryCount; i += 1)
+	{
+		if (FACT_strcmp(szFriendlyName, pEngine->categoryNames[i]) == 0)
+		{
+			return i;
+		}
+	}
+
+	assert(0 && "Category name not found!");
 	return 0;
 }
 
@@ -1139,6 +1166,7 @@ uint32_t FACTAudioEngine_Stop(
 	uint16_t nCategory,
 	uint32_t dwFlags
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1147,6 +1175,7 @@ uint32_t FACTAudioEngine_SetVolume(
 	uint16_t nCategory,
 	uint32_t dwFlags
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1155,6 +1184,7 @@ uint32_t FACTAudioEngine_Pause(
 	uint16_t nCategory,
 	int32_t fPause
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -1162,6 +1192,16 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	FACTAudioEngine *pEngine,
 	const char *szFriendlyName
 ) {
+	uint16_t i;
+	for (i = 0; i < pEngine->variableCount; i += 1)
+	{
+		if (	FACT_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
+			pEngine->variables[i].accessibility & 0x04	)
+		{
+			return i;
+		}
+	}
+	assert(0 && "Variable name not found!");
 	return 0;
 }
 
@@ -1170,6 +1210,15 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 	uint16_t nIndex,
 	float nValue
 ) {
+	FACTVariable *var = &pEngine->variables[nIndex];
+	assert(var->accessibility & 0x01);
+	assert(var->accessibility & 0x04);
+	assert(!(var->accessibility & 0x02));
+	pEngine->globalVariableValues[nIndex] = FACT_clamp(
+		nValue,
+		var->minValue,
+		var->maxValue
+	);
 	return 0;
 }
 
@@ -1178,5 +1227,9 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 	uint16_t nIndex,
 	float *pnValue
 ) {
+	FACTVariable *var = &pEngine->variables[nIndex];
+	assert(var->accessibility & 0x01);
+	assert(var->accessibility & 0x04);
+	*pnValue = pEngine->globalVariableValues[nIndex];
 	return 0;
 }
