@@ -20,7 +20,7 @@ uint16_t FACTSoundBank_GetCueIndex(
 		}
 	}
 
-	/* FIXME: We should never get here! */
+	assert(0 && "Cue name not found!");
 	return 0;
 }
 
@@ -52,6 +52,8 @@ uint32_t FACTSoundBank_GetCueProperties(
 				break;
 			}
 		}
+
+		assert(i < pSoundBank->variationCount && "Variation table not found!");
 
 		if (pSoundBank->variations[i].flags == 3)
 		{
