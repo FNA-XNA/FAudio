@@ -947,6 +947,9 @@ uint32_t FACT_ParseWaveBank(
 	memsize = sizeof(FACTWaveBankEntry) * wbinfo.entryCount;
 	wb->entries = (FACTWaveBankEntry*) FACT_malloc(memsize);
 	FACT_zero(wb->entries, memsize);
+	memsize = sizeof(uint32_t) * wbinfo.entryCount;
+	wb->entryRefs = (uint32_t*) FACT_malloc(memsize);
+	FACT_zero(wb->entryRefs, memsize);
 
 	/* WaveBank Entries */
 	assert(io->seek(io->data, 0, 1) == wbtable.entryTableOffset);

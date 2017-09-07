@@ -11,6 +11,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
 	FACT_free(pWaveBank->name);
 	FACT_free(pWaveBank->entries);
+	FACT_free(pWaveBank->entryRefs);
 	FACT_close(pWaveBank->io);
 	FACT_free(pWaveBank);
 	return 0;
@@ -20,6 +21,15 @@ uint32_t FACTWaveBank_GetState(
 	FACTWaveBank *pWaveBank,
 	uint32_t *pdwState
 ) {
+	/* FIXME: Is there more to this than just checking INUSE? */
+	uint32_t i;
+	for (i = 0; i < pWaveBank->entryCount; i += 1)
+	{
+		if (pWaveBank->entryRefs[i] > 0)
+		{
+			return FACT_STATE_INUSE;
+		}
+	}
 	return 0;
 }
 
@@ -70,6 +80,7 @@ uint32_t FACTWaveBank_Prepare(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -81,6 +92,7 @@ uint32_t FACTWaveBank_Play(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -89,5 +101,6 @@ uint32_t FACTWaveBank_Stop(
 	uint16_t nWaveIndex,
 	uint32_t dwFlags
 ) {
+	/* TODO */
 	return 0;
 }
