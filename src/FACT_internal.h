@@ -292,7 +292,8 @@ struct FACTWave
 
 struct FACTCue
 {
-	uint8_t TODO;
+	FACTAudioEngine *parentEngine;
+	float *variableValues;
 };
 
 /* Helper Functions */

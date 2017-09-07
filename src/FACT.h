@@ -585,7 +585,7 @@ FACTAPI uint32_t FACTCue_SetVariable(
 FACTAPI uint32_t FACTCue_GetVariable(
 	FACTCue *pCue,
 	uint16_t nIndex,
-	float *nValue
+	float *pnValue
 );
 
 FACTAPI uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause);
