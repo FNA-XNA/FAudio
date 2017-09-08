@@ -80,7 +80,7 @@ uint32_t FACTWaveBank_Prepare(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
-	/* TODO */
+	/* TODO: FACTWave */
 	return 0;
 }
 
@@ -92,7 +92,7 @@ uint32_t FACTWaveBank_Play(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
-	/* TODO */
+	/* TODO: FACTWave */
 	return 0;
 }
 
@@ -101,6 +101,6 @@ uint32_t FACTWaveBank_Stop(
 	uint16_t nWaveIndex,
 	uint32_t dwFlags
 ) {
-	/* TODO */
+	/* TODO: FACTWave */
 	return 0;
 }
