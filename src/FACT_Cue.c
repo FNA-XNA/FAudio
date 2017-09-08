@@ -242,7 +242,7 @@ uint32_t FACTCue_GetProperties(
 			/* arrTrackProperties[0] */
 		}
 	}
-	/* TODO: activeVariationProperties */
+
 	return 0;
 }
 
