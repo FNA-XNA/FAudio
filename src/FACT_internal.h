@@ -292,8 +292,16 @@ struct FACTWave
 
 struct FACTCue
 {
+	/* Engine references */
 	FACTAudioEngine *parentEngine;
+	FACTSoundBank *parentBank;
+	uint16_t index;
+
+	/* Instance data */
 	float *variableValues;
+
+	/* Playback */
+	uint32_t state;
 };
 
 /* Helper Functions */

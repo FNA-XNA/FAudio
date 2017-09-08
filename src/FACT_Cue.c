@@ -9,25 +9,46 @@
 
 uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
-	/* TODO */
+	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
+	/* TODO: Delete all resources alloc'd */
 	return 0;
 }
 
 uint32_t FACTCue_Play(FACTCue *pCue)
 {
-	/* TODO */
+	/* TODO: Init Sound state */
+	pCue->state |= FACT_STATE_PLAYING;
+	/* FIXME: How do we deal with STOPPING? -flibit */
+	pCue->state &= ~(
+		FACT_STATE_PAUSED |
+		FACT_STATE_STOPPED
+	);
 	return 0;
 }
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
-	/* TODO */
+	if (dwFlags & FACT_FLAG_STOP_IMMEDIATE)
+	{
+		pCue->state |= FACT_STATE_STOPPED;
+		pCue->state &= ~(
+			FACT_STATE_PLAYING |
+			FACT_STATE_STOPPING |
+			FACT_STATE_PAUSED
+		);
+		/* TODO: Reset Sound state */
+	}
+	else
+	{
+		/* FIXME: How do we deal with PAUSED? -flibit */
+		pCue->state |= FACT_STATE_STOPPING;
+	}
 	return 0;
 }
 
 uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t *pdwState)
 {
-	/* TODO */
+	*pdwState = pCue->state;
 	return 0;
 }
 
@@ -78,18 +99,32 @@ uint32_t FACTCue_SetVariable(
 uint32_t FACTCue_GetVariable(
 	FACTCue *pCue,
 	uint16_t nIndex,
-	float *pnValue
+	float *nValue
 ) {
 	FACTVariable *var = &pCue->parentEngine->variables[nIndex];
 	assert(var->accessibility & 0x01);
 	assert(!(var->accessibility & 0x04));
-	*pnValue = pCue->variableValues[nIndex];
+	*nValue = pCue->variableValues[nIndex];
 	return 0;
 }
 
 uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 {
-	/* TODO */
+	/* "A stopping or stopped cue cannot be paused." */
+	if (pCue->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))
+	{
+		return 0;
+	}
+
+	/* All we do is set the flag, the mixer handles the rest */
+	if (fPause)
+	{
+		pCue->state |= FACT_STATE_PAUSED;
+	}
+	else
+	{
+		pCue->state &= ~FACT_STATE_PAUSED;
+	}
 	return 0;
 }
 
@@ -97,7 +132,13 @@ uint32_t FACTCue_GetProperties(
 	FACTCue *pCue,
 	FACTCueInstanceProperties *ppProperties
 ) {
-	/* TODO */
+	ppProperties->allocAttributes = 0;
+	FACTSoundBank_GetCueProperties(
+		pCue->parentBank,
+		pCue->index,
+		&ppProperties->cueProperties
+	);
+	/* TODO: activeVariationProperties */
 	return 0;
 }
 
