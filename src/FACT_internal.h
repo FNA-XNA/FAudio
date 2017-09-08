@@ -304,6 +304,7 @@ struct FACTCue
 	/* Engine references */
 	FACTSoundBank *parentBank;
 	FACTCue *next;
+	uint8_t managed;
 	uint16_t index;
 
 	/* Instance data */

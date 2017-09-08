@@ -92,6 +92,7 @@ uint32_t FACTSoundBank_Prepare(
 
 	(*ppCue)->parentBank = pSoundBank;
 	(*ppCue)->next = NULL;
+	(*ppCue)->managed = 0;
 	(*ppCue)->index = nCueIndex;
 	(*ppCue)->variableValues = (float*) FACT_malloc(
 		sizeof(float) * pSoundBank->parentEngine->variableCount
@@ -143,6 +144,11 @@ uint32_t FACTSoundBank_Play(
 	{
 		*ppCue = result;
 	}
+	else
+	{
+		/* AKA we get to Destroy() this ourselves */
+		result->managed = 1;
+	}
 	return 0;
 }
 
@@ -151,7 +157,25 @@ uint32_t FACTSoundBank_Stop(
 	uint16_t nCueIndex,
 	uint32_t dwFlags
 ) {
-	/* TODO */
+	FACTCue *cue = pSoundBank->cueList;
+	while (cue != NULL)
+	{
+		if (cue->index == nCueIndex)
+		{
+			if (	dwFlags == FACT_FLAG_STOP_IMMEDIATE &&
+				cue->managed	)
+			{
+				/* Just blow this up now */
+				FACTCue_Destroy(cue);
+			}
+			else
+			{
+				/* If managed, the mixer will destroy for us */
+				FACTCue_Stop(cue, dwFlags);
+			}
+		}
+		cue = cue->next;
+	}
 	return 0;
 }
 
