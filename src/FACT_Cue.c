@@ -133,12 +133,115 @@ uint32_t FACTCue_GetProperties(
 	FACTCue *pCue,
 	FACTCueInstanceProperties *ppProperties
 ) {
+	FACTVariationProperties *varProps;
+	FACTSoundProperties *sndProps;
+
 	ppProperties->allocAttributes = 0;
 	FACTSoundBank_GetCueProperties(
 		pCue->parentBank,
 		pCue->index,
 		&ppProperties->cueProperties
 	);
+
+	varProps = &ppProperties->activeVariationProperties.variationProperties;
+	sndProps = &ppProperties->activeVariationProperties.soundProperties;
+	if (!(pCue->data->flags & 0x04))
+	{
+		/* Nothing active? Zero, bail. */
+		if (pCue->active.variation == NULL)
+		{
+			FACT_zero(
+				varProps,
+				sizeof(FACTVariationProperties)
+			);
+			FACT_zero(
+				sndProps,
+				sizeof(FACTSoundProperties)
+			);
+		}
+		else
+		{
+			/* TODO:
+			 * - index?
+			 * - weight is just the max - min?
+			 * - linger?
+			 */
+			varProps->index = 0;
+			varProps->weight = (
+				pCue->active.variation->maxWeight -
+				pCue->active.variation->minWeight
+			);
+			if (pCue->sound.variation->flags == 3)
+			{
+				varProps->iaVariableMin =
+					pCue->active.variation->minWeight;
+				varProps->iaVariableMax =
+					pCue->active.variation->maxWeight;
+			}
+			else
+			{
+				varProps->iaVariableMin = 0;
+				varProps->iaVariableMax = 0;
+			}
+			varProps->linger = 0;
+
+			/* No Sound, no SoundProperties */
+			if (!pCue->active.variation->isComplex)
+			{
+				FACT_zero(
+					sndProps,
+					sizeof(FACTSoundProperties)
+				);
+			}
+			else
+			{
+				/* TODO:
+				 * - Priority?
+				 * - u8->float volume conversion crap
+				 * - "Track" vs. "Clip"?
+				 * - arrTrackProperties?
+				 */
+				sndProps->category = pCue->active.sound->category;
+				sndProps->priority = 0;
+				sndProps->pitch = pCue->active.sound->pitch;
+				sndProps->volume = pCue->active.sound->volume;
+				sndProps->numTracks = pCue->active.sound->clipCount;
+				/* arrTrackProperties[0] */
+			}
+		}
+	}
+	else
+	{
+		/* No variations here! */
+		FACT_zero(
+			varProps,
+			sizeof(FACTVariationProperties)
+		);
+
+		/* Nothing active? Zero, bail. */
+		if (pCue->active.sound == NULL)
+		{
+			FACT_zero(
+				sndProps,
+				sizeof(FACTSoundProperties)
+			);
+		}
+		else
+		{
+			/* TODO:
+			 * - Priority?
+			 * - u8->float volume conversion crap
+			 * - "Track" vs. "Clip"?
+			 * - arrTrackProperties?
+			 */
+			sndProps->category = pCue->active.sound->category;
+			sndProps->priority = 0;
+			sndProps->pitch = pCue->active.sound->pitch;
+			sndProps->volume = pCue->active.sound->volume;
+			sndProps->numTracks = pCue->active.sound->clipCount;
+			/* arrTrackProperties[0] */
+		}
+	}
 	/* TODO: activeVariationProperties */
 	return 0;
 }

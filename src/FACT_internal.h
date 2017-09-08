@@ -307,11 +307,24 @@ struct FACTCue
 	uint8_t managed;
 	uint16_t index;
 
+	/* Sound data */
+	FACTCueData *data;
+	union
+	{
+		FACTSound *sound;
+		FACTVariationTable *variation;
+	} sound;
+
 	/* Instance data */
 	float *variableValues;
 
 	/* Playback */
 	uint32_t state;
+	union
+	{
+		FACTSound *sound;
+		FACTVariation *variation;
+	} active;
 };
 
 /* Helper Functions */

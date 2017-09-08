@@ -595,6 +595,9 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 	sb = (FACTSoundBank*) FACT_malloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
+	sb->cueList = NULL;
+
+	/* Add to the Engine SoundBank list */
 	if (pEngine->sbList == NULL)
 	{
 		pEngine->sbList = sb;
@@ -608,7 +611,6 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		latest->next = sb;
 	}
-	sb->cueList = NULL;
 
 	cueSimpleCount = read_u16(&ptr);
 	cueComplexCount = read_u16(&ptr);
@@ -852,6 +854,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 		if (sb->variations[i].flags == 0)
 		{
+			/* Wave with byte min/max */
 			for (j = 0; i < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
@@ -862,6 +865,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		else if (sb->variations[i].flags == 1)
 		{
+			/* Complex with byte min/max */
 			for (j = 0; i < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
@@ -871,6 +875,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		if (sb->variations[i].flags == 3)
 		{
+			/* Complex with float min/max */
 			for (j = 0; i < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
@@ -880,6 +885,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		if (sb->variations[i].flags == 4)
 		{
+			/* Compact Wave */
 			for (j = 0; i < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].simple.track = read_u16(&ptr);

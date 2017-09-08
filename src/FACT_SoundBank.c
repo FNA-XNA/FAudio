@@ -90,10 +90,38 @@ uint32_t FACTSoundBank_Prepare(
 
 	*ppCue = (FACTCue*) FACT_malloc(sizeof(FACTCue));
 
+	/* Engine references */
 	(*ppCue)->parentBank = pSoundBank;
 	(*ppCue)->next = NULL;
 	(*ppCue)->managed = 0;
 	(*ppCue)->index = nCueIndex;
+
+	/* Sound data */
+	(*ppCue)->data = &pSoundBank->cues[nCueIndex];
+	if (!((*ppCue)->data->flags & 0x04))
+	{
+		for (i = 0; i < pSoundBank->variationCount; i += 1)
+		{
+			if ((*ppCue)->data->sbCode == pSoundBank->variationCodes[i])
+			{
+				(*ppCue)->sound.variation = &pSoundBank->variations[i];
+			}
+		}
+		(*ppCue)->active.variation = NULL;
+	}
+	else
+	{
+		for (i = 0; i < pSoundBank->soundCount; i += 1)
+		{
+			if ((*ppCue)->data->sbCode == pSoundBank->soundCodes[i])
+			{
+				(*ppCue)->sound.sound = &pSoundBank->sounds[i];
+			}
+		}
+		(*ppCue)->active.sound = NULL;
+	}
+
+	/* Instance data */
 	(*ppCue)->variableValues = (float*) FACT_malloc(
 		sizeof(float) * pSoundBank->parentEngine->variableCount
 	);
@@ -102,11 +130,14 @@ uint32_t FACTSoundBank_Prepare(
 		(*ppCue)->variableValues[i] =
 			pSoundBank->parentEngine->variables[i].initialValue;
 	}
+
+	/* Playback */
 	(*ppCue)->state = (
 		FACT_STATE_CREATED |
 		FACT_STATE_PREPARED
 	);
 
+	/* Add to the SoundBank Cue list */
 	if (pSoundBank->cueList == NULL)
 	{
 		pSoundBank->cueList = *ppCue;
