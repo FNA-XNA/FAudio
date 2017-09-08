@@ -240,6 +240,7 @@ uint32_t FACTAudioEngine_Initialize(
 
 	/* Finally. */
 	assert((ptr - start) == pParams->globalSettingsBufferSize);
+	pEngine->sbList = NULL;
 	return 0;
 }
 
@@ -286,7 +287,39 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 
 uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 {
-	/* TODO */
+	/* Go through each SoundBank and free any Destroy()'d Cues */
+	FACTCue *cue, *prev;
+	FACTSoundBank *bank = pEngine->sbList;
+	while (bank != NULL)
+	{
+		cue = bank->cueList;
+		prev = bank->cueList;
+		while (cue != NULL)
+		{
+			if (cue->state == 0) /* Set by Destroy() */
+			{
+				if (cue == prev) /* First in list */
+				{
+					bank->cueList = cue->next;
+					FACT_free(cue);
+					cue = bank->cueList;
+					prev = bank->cueList;
+				}
+				else
+				{
+					prev->next = cue->next;
+					FACT_free(cue);
+					cue = prev->next;
+				}
+			}
+			else
+			{
+				prev = cue;
+				cue = cue->next;
+			}
+		}
+		bank = bank->next;
+	}
 	return 0;
 }
 
@@ -536,6 +569,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	size_t memsize;
 	uint16_t i, j, cur;
 	uint8_t *ptrBookmark;
+	FACTSoundBank *latest;
 
 	uint8_t *ptr = (uint8_t*) pvBuffer;
 	uint8_t *start = ptr;
@@ -560,6 +594,21 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	sb = (FACTSoundBank*) FACT_malloc(sizeof(FACTSoundBank));
+	sb->parentEngine = pEngine;
+	if (pEngine->sbList == NULL)
+	{
+		pEngine->sbList = sb;
+	}
+	else
+	{
+		latest = pEngine->sbList;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = sb;
+	}
+	sb->cueList = NULL;
 
 	cueSimpleCount = read_u16(&ptr);
 	cueComplexCount = read_u16(&ptr);

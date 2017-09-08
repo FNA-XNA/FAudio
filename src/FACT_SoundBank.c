@@ -85,7 +85,41 @@ uint32_t FACTSoundBank_Prepare(
 	int32_t timeOffset,
 	FACTCue** ppCue
 ) {
-	/* TODO */
+	uint16_t i;
+	FACTCue *latest;
+
+	*ppCue = (FACTCue*) FACT_malloc(sizeof(FACTCue));
+
+	(*ppCue)->parentBank = pSoundBank;
+	(*ppCue)->next = NULL;
+	(*ppCue)->index = nCueIndex;
+	(*ppCue)->variableValues = (float*) FACT_malloc(
+		sizeof(float) * pSoundBank->parentEngine->variableCount
+	);
+	for (i = 0; i < pSoundBank->parentEngine->variableCount; i += 1)
+	{
+		(*ppCue)->variableValues[i] =
+			pSoundBank->parentEngine->variables[i].initialValue;
+	}
+	(*ppCue)->state = (
+		FACT_STATE_CREATED |
+		FACT_STATE_PREPARED
+	);
+
+	if (pSoundBank->cueList == NULL)
+	{
+		pSoundBank->cueList = *ppCue;
+	}
+	else
+	{
+		latest = pSoundBank->cueList;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = *ppCue;
+	}
+
 	return 0;
 }
 
@@ -96,7 +130,19 @@ uint32_t FACTSoundBank_Play(
 	int32_t timeOffset,
 	FACTCue** ppCue /* Optional! */
 ) {
-	/* TODO */
+	FACTCue *result;
+	FACTSoundBank_Prepare(
+		pSoundBank,
+		nCueIndex,
+		dwFlags,
+		timeOffset,
+		&result
+	);
+	FACTCue_Play(result);
+	if (ppCue != NULL)
+	{
+		*ppCue = result;
+	}
 	return 0;
 }
 
@@ -112,7 +158,7 @@ uint32_t FACTSoundBank_Stop(
 uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 {
 	uint16_t i, j, k;
-	FACTSoundBank *sb = pSoundBank;
+	FACTSoundBank *prev, *sb = pSoundBank;
 
 	/* SoundBank Name */
 	FACT_free(sb->name);
@@ -179,6 +225,28 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		FACT_free(sb->cueNames[i]);
 	}
 	FACT_free(sb->cueNames);
+
+	/* Remove this SoundBank from the Engine list */
+	sb = pSoundBank->parentEngine->sbList;
+	prev = sb;
+	while (sb != NULL)
+	{
+		if (sb == pSoundBank)
+		{
+			if (sb == prev) /* First in list */
+			{
+				pSoundBank->parentEngine->sbList = sb->next;
+			}
+			else
+			{
+				prev->next = sb->next;
+			}
+			break;
+		}
+		prev = sb;
+		sb = sb->next;
+	}
+	assert(sb != NULL && "Could not find SoundBank reference!");
 
 	/* Finally. */
 	FACT_free(sb);

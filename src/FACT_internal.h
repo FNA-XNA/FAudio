@@ -252,19 +252,28 @@ struct FACTAudioEngine
 	FACTRPC *rpcs;
 	FACTDSPPreset *dspPresets;
 
+	FACTSoundBank *sbList;
 	float *globalVariableValues;
 };
 
 struct FACTSoundBank
 {
+	/* Engine references */
+	FACTAudioEngine *parentEngine;
+	FACTSoundBank *next;
+	FACTCue *cueList;
+
+	/* Array sizes */
 	uint16_t cueCount;
 	uint8_t wavebankCount;
 	uint16_t soundCount;
 	uint16_t variationCount;
 
+	/* Strings, strings everywhere! */
 	char **wavebankNames;
 	char **cueNames;
 
+	/* Actual SoundBank information */
 	char *name;
 	FACTCueData *cues;
 	FACTSound *sounds;
@@ -293,8 +302,8 @@ struct FACTWave
 struct FACTCue
 {
 	/* Engine references */
-	FACTAudioEngine *parentEngine;
 	FACTSoundBank *parentBank;
+	FACTCue *next;
 	uint16_t index;
 
 	/* Instance data */

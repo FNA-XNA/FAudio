@@ -10,7 +10,8 @@
 uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
 	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
-	/* TODO: Delete all resources alloc'd */
+	FACT_free(pCue->variableValues);
+	pCue->state = 0; /* TODO: Use this to FACT_free(pCue)! */
 	return 0;
 }
 
@@ -67,10 +68,10 @@ uint16_t FACTCue_GetVariableIndex(
 	const char *szFriendlyName
 ) {
 	uint16_t i;
-	for (i = 0; i < pCue->parentEngine->variableCount; i += 1)
+	for (i = 0; i < pCue->parentBank->parentEngine->variableCount; i += 1)
 	{
-		if (	FACT_strcmp(szFriendlyName, pCue->parentEngine->variableNames[i]) == 0 &&
-			!(pCue->parentEngine->variables[i].accessibility & 0x04)	)
+		if (	FACT_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
+			!(pCue->parentBank->parentEngine->variables[i].accessibility & 0x04)	)
 		{
 			return i;
 		}
@@ -84,7 +85,7 @@ uint32_t FACTCue_SetVariable(
 	uint16_t nIndex,
 	float nValue
 ) {
-	FACTVariable *var = &pCue->parentEngine->variables[nIndex];
+	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
 	assert(var->accessibility & 0x01);
 	assert(!(var->accessibility & 0x02));
 	assert(!(var->accessibility & 0x04));
@@ -101,7 +102,7 @@ uint32_t FACTCue_GetVariable(
 	uint16_t nIndex,
 	float *nValue
 ) {
-	FACTVariable *var = &pCue->parentEngine->variables[nIndex];
+	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
 	assert(var->accessibility & 0x01);
 	assert(!(var->accessibility & 0x04));
 	*nValue = pCue->variableValues[nIndex];
