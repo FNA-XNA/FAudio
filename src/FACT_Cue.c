@@ -11,7 +11,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
 	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
 	FACT_free(pCue->variableValues);
-	pCue->state = 0; /* TODO: Use this to FACT_free(pCue)! */
+	pCue->state = 0; /* '0' is used to detect destroyed Cues */
 	return 0;
 }
 
