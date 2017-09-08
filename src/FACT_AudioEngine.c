@@ -1216,21 +1216,81 @@ uint16_t FACTAudioEngine_GetCategory(
 	return 0;
 }
 
+uint8_t FACTIsInCategory(
+	FACTAudioEngine *engine,
+	uint16_t target,
+	uint16_t category
+) {
+	FACTAudioCategory *cat;
+
+	/* Same category, no need to go on a crazy hunt */
+	if (category == target)
+	{
+		return 1;
+	}
+
+	/* Right, on with the crazy hunt */
+	cat = &engine->categories[category];
+	while (cat->parentCategory != -1)
+	{
+		if (cat->parentCategory == target)
+		{
+			return 1;
+		}
+		cat = &engine->categories[cat->parentCategory];
+	}
+	return 0;
+}
+
+#define ITERATE_CUES(action) \
+	FACTCue *cue; \
+	FACTSoundBank *sb = pEngine->sbList; \
+	while (sb != NULL) \
+	{ \
+		cue = sb->cueList; \
+		while (cue != NULL) \
+		{ \
+			if (	cue->active.sound != NULL && \
+				FACTIsInCategory( \
+					cue->parentBank->parentEngine, \
+					nCategory, \
+					cue->active.sound->category \
+				)	) \
+			{ \
+				action; \
+			} \
+			cue = cue->next; \
+		} \
+		sb = sb->next; \
+	}
+
 uint32_t FACTAudioEngine_Stop(
 	FACTAudioEngine *pEngine,
 	uint16_t nCategory,
 	uint32_t dwFlags
 ) {
-	/* TODO */
+	ITERATE_CUES(
+		if (	dwFlags == FACT_FLAG_STOP_IMMEDIATE &&
+			cue->managed	)
+		{
+			/* Just blow this up now */
+			FACTCue_Destroy(cue);
+		}
+		else
+		{
+			/* If managed, the mixer will destroy for us */
+			FACTCue_Stop(cue, dwFlags);
+		}
+	)
 	return 0;
 }
 
 uint32_t FACTAudioEngine_SetVolume(
 	FACTAudioEngine *pEngine,
 	uint16_t nCategory,
-	uint32_t dwFlags
+	float volume
 ) {
-	/* TODO */
+	ITERATE_CUES(/* TODO: Category Volume */)
 	return 0;
 }
 
@@ -1239,9 +1299,11 @@ uint32_t FACTAudioEngine_Pause(
 	uint16_t nCategory,
 	int32_t fPause
 ) {
-	/* TODO */
+	ITERATE_CUES(FACTCue_Pause(cue, fPause))
 	return 0;
 }
+
+#undef ITERATE_CUES
 
 uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	FACTAudioEngine *pEngine,

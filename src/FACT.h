@@ -404,7 +404,7 @@ FACTAPI uint32_t FACTAudioEngine_Stop(
 FACTAPI uint32_t FACTAudioEngine_SetVolume(
 	FACTAudioEngine *pEngine,
 	uint16_t nCategory,
-	uint32_t dwFlags
+	float volume
 );
 
 FACTAPI uint32_t FACTAudioEngine_Pause(
