@@ -130,6 +130,7 @@ uint32_t FACTWaveBank_Prepare(
 		(*ppWave)->initialPosition = dwPlayOffset;
 	}
 	(*ppWave)->position = (*ppWave)->initialPosition;
+	(*ppWave)->loopCount = nLoopCount;
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)

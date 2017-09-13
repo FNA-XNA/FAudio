@@ -317,6 +317,7 @@ struct FACTWave
 	int16_t pitch;
 	uint32_t position;
 	uint32_t initialPosition;
+	uint8_t loopCount;
 
 	/* TODO: Wave decode cache, offset, blah blah blah */
 };
