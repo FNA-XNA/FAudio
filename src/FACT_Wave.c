@@ -100,13 +100,21 @@ uint32_t FACTWave_GetState(FACTWave *pWave, uint32_t *pdwState)
 
 uint32_t FACTWave_SetPitch(FACTWave *pWave, int16_t pitch)
 {
-	pWave->pitch = pitch;
+	pWave->pitch = FACT_clamp(
+		pitch,
+		FACTPITCH_MIN_TOTAL,
+		FACTPITCH_MAX_TOTAL
+	);
 	return 0;
 }
 
 uint32_t FACTWave_SetVolume(FACTWave *pWave, float volume)
 {
-	pWave->volume = FACT_clamp(volume, 0.0f, 16777216.0f);
+	pWave->volume = FACT_clamp(
+		volume,
+		FACTVOLUME_MIN,
+		FACTVOLUME_MAX
+	);
 	return 0;
 }
 
