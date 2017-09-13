@@ -132,10 +132,7 @@ uint32_t FACTSoundBank_Prepare(
 	}
 
 	/* Playback */
-	(*ppCue)->state = (
-		FACT_STATE_CREATED |
-		FACT_STATE_PREPARED
-	);
+	(*ppCue)->state = FACT_STATE_PREPARED;
 
 	/* Add to the SoundBank Cue list */
 	if (pSoundBank->cueList == NULL)

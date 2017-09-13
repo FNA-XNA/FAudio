@@ -252,7 +252,9 @@ struct FACTAudioEngine
 	FACTRPC *rpcs;
 	FACTDSPPreset *dspPresets;
 
+	/* Engine references */
 	FACTSoundBank *sbList;
+	FACTWaveBank *wbList;
 	float *globalVariableValues;
 };
 
@@ -284,19 +286,39 @@ struct FACTSoundBank
 
 struct FACTWaveBank
 {
+	/* Engine references */
+	FACTAudioEngine *parentEngine;
+	FACTWave *waveList;
+	FACTWaveBank *next;
+
+	/* Guess what this is? */
 	char *name;
 
+	/* Actual WaveBank information */
 	uint32_t entryCount;
 	FACTWaveBankEntry *entries;
 	uint32_t *entryRefs;
 
+	/* I/O information */
 	uint16_t streaming;
 	FACTIOStream *io;
 };
 
 struct FACTWave
 {
-	uint8_t TODO;
+	/* Engine references */
+	FACTWaveBank *parentBank;
+	FACTWave *next;
+	uint16_t index;
+
+	/* Playback */
+	uint32_t state;
+	float volume;
+	int16_t pitch;
+	uint32_t position;
+	uint32_t initialPosition;
+
+	/* TODO: Wave decode cache, offset, blah blah blah */
 };
 
 struct FACTCue
@@ -357,7 +379,7 @@ int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
 
 #define FACT_clamp(val, min, max) \
-	(nValue > max ? max : (nValue < min ? min : nValue))
+	(val > max ? max : (val < min ? min : val))
 
 typedef size_t (FACTCALL * FACT_readfunc)(
 	void *data,

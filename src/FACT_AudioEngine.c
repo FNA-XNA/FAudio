@@ -947,7 +947,7 @@ uint32_t FACT_ParseWaveBank(
 	uint16_t isStreaming,
 	FACTWaveBank **ppWaveBank
 ) {
-	FACTWaveBank *wb;
+	FACTWaveBank *wb, *latest;
 	size_t memsize;
 	uint32_t i;
 	struct
@@ -992,6 +992,7 @@ uint32_t FACT_ParseWaveBank(
 	}
 
 	wb = (FACTWaveBank*) FACT_malloc(sizeof(FACTWaveBank));
+	wb->parentEngine = pEngine;
 
 	/* Offset Table */
 	io->read(io->data, &wbtable, sizeof(wbtable), 1);
@@ -1101,6 +1102,21 @@ uint32_t FACT_ParseWaveBank(
 					wbtable.playRegionLength;
 			}
 		}
+	}
+
+	/* Add to the Engine WaveBank list */
+	if (pEngine->wbList == NULL)
+	{
+		pEngine->wbList = wb;
+	}
+	else
+	{
+		latest = pEngine->wbList;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = wb;
 	}
 
 	/* Finally. */

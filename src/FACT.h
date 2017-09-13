@@ -276,6 +276,10 @@ static const uint32_t FACT_FLAG_MANAGEDATA =		0x00000001;
 static const uint32_t FACT_FLAG_STOP_RELEASE =		0x00000000;
 static const uint32_t FACT_FLAG_STOP_IMMEDIATE =	0x00000001;
 
+static const uint32_t FACT_FLAG_BACKGROUND_MUSIC =	0x00000002;
+static const uint32_t FACT_FLAG_UNITS_MS =		0x00000004;
+static const uint32_t FACT_FLAG_UNITS_SAMPLES =		0x00000008;
+
 static const uint32_t FACT_STATE_CREATED =		0x00000001;
 static const uint32_t FACT_STATE_PREPARING =		0x00000002;
 static const uint32_t FACT_STATE_PREPARED =		0x00000004;

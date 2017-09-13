@@ -9,6 +9,30 @@
 
 uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
+	FACTWaveBank *wb, *prev;
+
+	/* Remove this WaveBank from the Engine list */
+	wb = pWaveBank->parentEngine->wbList;
+	prev = wb;
+	while (wb != NULL)
+	{
+		if (wb == pWaveBank)
+		{
+			if (wb == prev) /* First in list */
+			{
+				pWaveBank->parentEngine->wbList = wb->next;
+			}
+			else
+			{
+				prev->next = wb->next;
+			}
+			break;
+		}
+		prev = wb;
+		wb = wb->next;
+	}
+	assert(wb != NULL && "Could not find WaveBank reference!");
+
 	FACT_free(pWaveBank->name);
 	FACT_free(pWaveBank->entries);
 	FACT_free(pWaveBank->entryRefs);
@@ -80,7 +104,50 @@ uint32_t FACTWaveBank_Prepare(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
-	/* TODO: FACTWave */
+	FACTWave *latest;
+
+	*ppWave = (FACTWave*) FACT_malloc(sizeof(FACTWave));
+
+	/* Engine references */
+	(*ppWave)->parentBank = pWaveBank;
+	(*ppWave)->index = nWaveIndex;
+
+	/* Playback */
+	(*ppWave)->state = FACT_STATE_PREPARED;
+	(*ppWave)->volume = 1.0f;
+	(*ppWave)->pitch = 0;
+	if (dwFlags & FACT_FLAG_UNITS_MS)
+	{
+		(*ppWave)->initialPosition = (uint32_t) (
+			( /* Samples per millisecond... */
+				(float) pWaveBank->entries[nWaveIndex].Format.nSamplesPerSec /
+				1000.0f
+			) * (float) dwPlayOffset
+		);
+	}
+	else
+	{
+		(*ppWave)->initialPosition = dwPlayOffset;
+	}
+	(*ppWave)->position = (*ppWave)->initialPosition;
+
+	/* Add to the WaveBank Wave list */
+	if (pWaveBank->waveList == NULL)
+	{
+		pWaveBank->waveList = *ppWave;
+	}
+	else
+	{
+		latest = pWaveBank->waveList;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = *ppWave;
+	}
+
+	/* TODO: Wave decode cache, offset, blah blah blah */
+
 	return 0;
 }
 
@@ -92,7 +159,15 @@ uint32_t FACTWaveBank_Play(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
-	/* TODO: FACTWave */
+	FACTWaveBank_Prepare(
+		pWaveBank,
+		nWaveIndex,
+		dwFlags,
+		dwPlayOffset,
+		nLoopCount,
+		ppWave
+	);
+	FACTWave_Play(*ppWave);
 	return 0;
 }
 
@@ -101,6 +176,14 @@ uint32_t FACTWaveBank_Stop(
 	uint16_t nWaveIndex,
 	uint32_t dwFlags
 ) {
-	/* TODO: FACTWave */
+	FACTWave *wave = pWaveBank->waveList;
+	while (wave != NULL)
+	{
+		if (wave->index == nWaveIndex)
+		{
+			FACTWave_Stop(wave, dwFlags);
+		}
+		wave = wave->next;
+	}
 	return 0;
 }
