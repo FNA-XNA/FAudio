@@ -718,6 +718,17 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 
 		/* RPC Code data */
+		/* TODO: Okay, so get this:
+		 * RPCs are allocated in groups based on tracks and sound.
+		 *
+		 * sound is based on sound->flags & 0x02.
+		 * track is based on sound->flags & 0x04.
+		 * Based on that you can tell how many groups there are before
+		 * allocating, then give the sounds and clips their own lists!
+		 *
+		 * Still no idea why it's 0x0E though. WTF is 0x08?
+		 * -flibit
+		 */
 		cur = 0;
 		if (sb->sounds[i].flags & 0x0E)
 		{
