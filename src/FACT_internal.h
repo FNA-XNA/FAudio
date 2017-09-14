@@ -42,6 +42,16 @@ typedef struct FACTRPCPoint
 	uint8_t type;
 } FACTRPCPoint;
 
+typedef enum FACTRPCParameter
+{
+	RPC_PARAMETER_VOLUME,
+	RPC_PARAMETER_PITCH,
+	RPC_PARAMETER_REVERBSEND,
+	RPC_PARAMETER_FILTERFREQUENCY,
+	RPC_PARAMETER_FILTERQFACTOR,
+	RPC_PARAMETER_COUNT /* If >=, DSP Parameter! */
+} FACTRPCParameter;
+
 typedef struct FACTRPC
 {
 	uint16_t variable;
@@ -207,6 +217,27 @@ typedef struct FACTSound
 	size_t *dspCodes;
 } FACTSound;
 
+typedef struct FACTClipInstance
+{
+	/* Tracks which events have fired */
+	uint8_t eventCount;
+	uint16_t eventTimestamp;
+	uint8_t *eventLoopsLeft;
+	uint8_t *eventFinished;
+} FACTClipInstance;
+
+typedef struct FACTSoundInstance
+{
+	/* Who wants to malloc anyway? */
+	uint8_t exists;
+
+	/* Base Sound reference */
+	FACTSound *sound;
+
+	/* Per-instance clip information */
+	FACTClipInstance *clips;
+} FACTSoundInstance;
+
 typedef struct FACTVariation
 {
 	uint8_t isComplex;
@@ -348,6 +379,7 @@ struct FACTCue
 		FACTSound *sound;
 		FACTVariation *variation;
 	} active;
+	FACTSoundInstance soundInstance;
 };
 
 /* Helper Functions */
@@ -368,6 +400,12 @@ READ_FUNC(int16_t, 2, s16)
 READ_FUNC(float, 4, f32)
 
 #undef READ_FUNC
+
+/* Internal functions */
+
+void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
+uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue);
+void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len);
 
 /* Platform Functions */
 

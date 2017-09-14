@@ -89,6 +89,7 @@ uint32_t FACTSoundBank_Prepare(
 	FACTCue *latest;
 
 	*ppCue = (FACTCue*) FACT_malloc(sizeof(FACTCue));
+	FACT_zero(*ppCue, sizeof(FACTCue));
 
 	/* Engine references */
 	(*ppCue)->parentBank = pSoundBank;

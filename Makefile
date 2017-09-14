@@ -22,6 +22,7 @@ FACTSRC = \
 	src/FACT_WaveBank.c \
 	src/FACT_Wave.c \
 	src/FACT_Cue.c \
+	src/FACT_internal.c \
 	src/FACT_platform_sdl2.c
 
 # Object code lists
