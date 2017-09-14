@@ -733,7 +733,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 				sizeof(size_t) *
 				sb->sounds[i].rpcCodeCount
 			);
-			ptr = ptrBookmark;
+			ptr = ptrBookmark + 2;
 			while ((ptr - ptrBookmark) < rpcDataLength)
 			{
 				const uint8_t codes = read_u8(&ptr);
