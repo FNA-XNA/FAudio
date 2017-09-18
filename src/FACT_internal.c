@@ -269,7 +269,13 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		);
 	}
 
-	/* TODO: Wave updates */
+	/* TODO: Wave updates:
+	 * - Volume
+	 * - Pitch
+	 * - Filter
+	 * - Reverb
+	 * - 3D
+	 */
 
 	/* Finally. */
 	return 0;
