@@ -9,6 +9,23 @@
 
 /* Various internal math functions */
 
+FACTRPC* FACT_INTERNAL_GetRPC(
+	FACTAudioEngine *engine,
+	uint32_t code
+) {
+	uint16_t i;
+	for (i = 0; i < engine->rpcCount; i += 1)
+	{
+		if (engine->rpcCodes[i] == code)
+		{
+			return &engine->rpcs[i];
+		}
+	}
+
+	assert(0 && "RPC code not found!");
+	return NULL;
+}
+
 float FACT_INTERNAL_CalculateRPC(
 	FACTRPC *rpc,
 	float var
@@ -47,6 +64,77 @@ float FACT_INTERNAL_CalculateRPC(
 		}
 	}
 	return result;
+}
+
+void FACT_INTERNAL_UpdateRPCs(
+	FACTCue *cue,
+	uint8_t codeCount,
+	uint32_t *codes,
+	FACTInstanceRPCData *data
+) {
+	uint8_t i;
+	FACTRPC *rpc;
+	float rpcResult;
+	FACTAudioEngine *engine = cue->parentBank->parentEngine;
+
+	if (codeCount > 0)
+	{
+		data->rpcVolume = 0.0f;
+		data->rpcPitch = 0.0f;
+		data->rpcFilterFreq = 0.0f; /* FIXME: Starting value? */
+		for (i = 0; i < codeCount; i += 1)
+		{
+			rpc = FACT_INTERNAL_GetRPC(
+				engine,
+				codes[i]
+			);
+			if (engine->variables[rpc->variable].accessibility & 0x04)
+			{
+				rpcResult = FACT_INTERNAL_CalculateRPC(
+					rpc,
+					engine->globalVariableValues[rpc->variable]
+				);
+			}
+			else
+			{
+				if (FACT_strcmp(
+					engine->variableNames[rpc->variable],
+					"AttackTime"
+				) == 0) {
+					/* TODO: AttackTime */
+				}
+				else if (FACT_strcmp(
+					engine->variableNames[rpc->variable],
+					"ReleaseTime"
+				) == 0) {
+					/* TODO: ReleaseTime */
+				}
+				else
+				{
+					rpcResult = FACT_INTERNAL_CalculateRPC(
+						rpc,
+						cue->variableValues[rpc->variable]
+					);
+				}
+			}
+			if (rpc->parameter == RPC_PARAMETER_VOLUME)
+			{
+				data->rpcVolume += rpcResult;
+			}
+			else if (rpc->parameter == RPC_PARAMETER_PITCH)
+			{
+				data->rpcPitch += rpcResult;
+			}
+			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
+			{
+				data->rpcFilterFreq += rpcResult;
+			}
+			else
+			{
+				assert(0 && "Unhandled RPC parameter type!");
+			}
+		}
+	}
 }
 
 void FACT_INTERNAL_SetDSPParameter(
@@ -100,63 +188,62 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		return 0;
 	}
 
+	/* FIXME: I think this will always be true except for first play? */
+	if (cue->soundInstance.exists)
+	{
+		return 0;
+	}
+
 	/* TODO: Interactive Cues */
 
 	/* Trigger events for each track */
-	if (cue->soundInstance.exists)
+	for (i = 0; i < cue->soundInstance.sound->clipCount; i += 1)
+	for (j = 0; i < cue->soundInstance.sound->clips[i].eventCount; j += 1)
+	if (	!cue->soundInstance.clips[i].eventFinished[j] &&
+		1 /* TODO: timer > cue->soundInstance.clips[i].eventTimestamp */	)
 	{
-		for (i = 0; i < cue->active.sound->clipCount; i += 1)
-		for (j = 0; i < cue->active.sound->clips[i].eventCount; j += 1)
-		if (	!cue->soundInstance.clips[i].eventFinished[j] &&
-			1 /* TODO: timer > cue->soundInstance.clips[i].eventTimestamp */	)
+		/* Activate the event */
+		switch (cue->soundInstance.sound->clips[i].events[j].type)
 		{
-			/* Activate the event */
-			switch (cue->soundInstance.sound->clips[i].events[j].type)
-			{
-			case FACTEVENT_STOP:
-				/* TODO: FACT_INTERNAL_Stop(Stop*) */
-				break;
-			case FACTEVENT_PLAYWAVE:
-			case FACTEVENT_PLAYWAVETRACKVARIATION:
-			case FACTEVENT_PLAYWAVEEFFECTVARIATION:
-			case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-				/* TODO: FACT_INTERNAL_Play(PlayWave*) */
-				break;
-			case FACTEVENT_PITCH:
-			case FACTEVENT_PITCHREPEATING:
-				/* TODO: FACT_INTERNAL_SetPitch(SetValue*) */
-				break;
-			case FACTEVENT_VOLUME:
-			case FACTEVENT_VOLUMEREPEATING:
-				/* TODO: FACT_INTERNAL_SetVolume(SetValue*) */
-				break;
-			case FACTEVENT_MARKER:
-			case FACTEVENT_MARKERREPEATING:
-				/* TODO: FACT_INTERNAL_Marker(Marker*) */
-				break;
-			default:
-				assert(0 && "Unrecognized clip event type!");
-			}
-
-			/* Either loop or mark this event as complete */
-			if (cue->soundInstance.clips[i].eventLoopsLeft[j] > 0)
-			{
-				if (cue->soundInstance.sound->clips[i].events[j].loopCount != 0xFF)
-				{
-					cue->soundInstance.clips[i].eventLoopsLeft[j] -= 1;
-				}
-
-				/* TODO: Push timestamp forward for "looping" */
-			}
-			else
-			{
-				cue->soundInstance.clips[i].eventFinished[j] = 1;
-			}
+		case FACTEVENT_STOP:
+			/* TODO: FACT_INTERNAL_Stop(Stop*) */
+			break;
+		case FACTEVENT_PLAYWAVE:
+		case FACTEVENT_PLAYWAVETRACKVARIATION:
+		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
+		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
+			/* TODO: FACT_INTERNAL_Play(PlayWave*) */
+			break;
+		case FACTEVENT_PITCH:
+		case FACTEVENT_PITCHREPEATING:
+			/* TODO: FACT_INTERNAL_SetPitch(SetValue*) */
+			break;
+		case FACTEVENT_VOLUME:
+		case FACTEVENT_VOLUMEREPEATING:
+			/* TODO: FACT_INTERNAL_SetVolume(SetValue*) */
+			break;
+		case FACTEVENT_MARKER:
+		case FACTEVENT_MARKERREPEATING:
+			/* TODO: FACT_INTERNAL_Marker(Marker*) */
+			break;
+		default:
+			assert(0 && "Unrecognized clip event type!");
 		}
-	}
-	else
-	{
-		/* TODO: Simple variation fake PlayWaveEvent */
+
+		/* Either loop or mark this event as complete */
+		if (cue->soundInstance.clips[i].eventLoopsLeft[j] > 0)
+		{
+			if (cue->soundInstance.sound->clips[i].events[j].loopCount != 0xFF)
+			{
+				cue->soundInstance.clips[i].eventLoopsLeft[j] -= 1;
+			}
+
+			/* TODO: Push timestamp forward for "looping" */
+		}
+		else
+		{
+			cue->soundInstance.clips[i].eventFinished[j] = 1;
+		}
 	}
 
 	/* TODO: Clear out Waves as they finish */
@@ -165,7 +252,22 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 
 	/* TODO: If everything has been played and finished, set STOPPED */
 
-	/* TODO: RPC updates */
+	/* RPC updates */
+	FACT_INTERNAL_UpdateRPCs(
+		cue,
+		cue->soundInstance.sound->rpcCodeCount,
+		cue->soundInstance.sound->rpcCodes,
+		&cue->soundInstance.rpcData
+	);
+	for (i = 0; i < cue->soundInstance.sound->clipCount; i += 1)
+	{
+		FACT_INTERNAL_UpdateRPCs(
+			cue,
+			cue->soundInstance.sound->clips[i].rpcCodeCount,
+			cue->soundInstance.sound->clips[i].rpcCodes,
+			&cue->soundInstance.clips[i].rpcData
+		);
+	}
 
 	/* TODO: Wave updates */
 

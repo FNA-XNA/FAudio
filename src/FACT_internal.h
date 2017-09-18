@@ -220,6 +220,13 @@ typedef struct FACTSound
 	uint32_t *dspCodes;
 } FACTSound;
 
+typedef struct FACTInstanceRPCData
+{
+	float rpcVolume;
+	float rpcPitch;
+	float rpcFilterFreq;
+} FACTInstanceRPCData;
+
 typedef struct FACTClipInstance
 {
 	/* Tracks which events have fired */
@@ -227,6 +234,9 @@ typedef struct FACTClipInstance
 	uint16_t eventTimestamp;
 	uint8_t *eventLoopsLeft;
 	uint8_t *eventFinished;
+
+	/* RPC instance data */
+	FACTInstanceRPCData rpcData;
 } FACTClipInstance;
 
 typedef struct FACTSoundInstance
@@ -239,6 +249,9 @@ typedef struct FACTSoundInstance
 
 	/* Per-instance clip information */
 	FACTClipInstance *clips;
+
+	/* RPC instance data */
+	FACTInstanceRPCData rpcData;
 } FACTSoundInstance;
 
 typedef struct FACTVariation
