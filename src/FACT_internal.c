@@ -189,7 +189,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	}
 
 	/* FIXME: I think this will always be true except for first play? */
-	if (cue->soundInstance.exists)
+	if (!cue->soundInstance.exists)
 	{
 		return 0;
 	}
