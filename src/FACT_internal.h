@@ -197,6 +197,9 @@ typedef struct FACTClip
 	uint8_t qfactor;
 	uint16_t frequency;
 
+	uint8_t rpcCodeCount;
+	uint32_t *rpcCodes;
+
 	uint8_t eventCount;
 	FACTEvent *events;
 } FACTClip;
@@ -213,8 +216,8 @@ typedef struct FACTSound
 	uint8_t dspCodeCount;
 
 	FACTClip *clips;
-	size_t *rpcCodes;
-	size_t *dspCodes;
+	uint32_t *rpcCodes;
+	uint32_t *dspCodes;
 } FACTSound;
 
 typedef struct FACTClipInstance
@@ -248,7 +251,7 @@ typedef struct FACTVariation
 			uint16_t track;
 			uint8_t wavebank;
 		} simple;
-		size_t soundCode;
+		uint32_t soundCode;
 	};
 	float minWeight;
 	float maxWeight;
@@ -275,8 +278,8 @@ struct FACTAudioEngine
 
 	char **categoryNames;
 	char **variableNames;
-	size_t *rpcCodes;
-	size_t *dspPresetCodes;
+	uint32_t *rpcCodes;
+	uint32_t *dspPresetCodes;
 
 	FACTAudioCategory *categories;
 	FACTVariable *variables;
@@ -310,9 +313,9 @@ struct FACTSoundBank
 	char *name;
 	FACTCueData *cues;
 	FACTSound *sounds;
-	size_t *soundCodes;
+	uint32_t *soundCodes;
 	FACTVariationTable *variations;
-	size_t *variationCodes;
+	uint32_t *variationCodes;
 };
 
 struct FACTWaveBank

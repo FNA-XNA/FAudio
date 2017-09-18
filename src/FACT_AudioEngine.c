@@ -135,13 +135,13 @@ uint32_t FACTAudioEngine_Initialize(
 		sizeof(FACTRPC) *
 		pEngine->rpcCount
 	);
-	pEngine->rpcCodes = (size_t*) FACT_malloc(
-		sizeof(size_t) *
+	pEngine->rpcCodes = (uint32_t*) FACT_malloc(
+		sizeof(uint32_t) *
 		pEngine->rpcCount
 	);
 	for (i = 0; i < pEngine->rpcCount; i += 1)
 	{
-		pEngine->rpcCodes[i] = ptr - start;
+		pEngine->rpcCodes[i] = (uint32_t) (ptr - start);
 		pEngine->rpcs[i].variable = read_u16(&ptr);
 		pEngine->rpcs[i].pointCount = read_u8(&ptr);
 		pEngine->rpcs[i].parameter = read_u16(&ptr);
@@ -163,13 +163,13 @@ uint32_t FACTAudioEngine_Initialize(
 		sizeof(FACTDSPPreset) *
 		pEngine->dspPresetCount
 	);
-	pEngine->dspPresetCodes = (size_t*) FACT_malloc(
-		sizeof(size_t) *
+	pEngine->dspPresetCodes = (uint32_t*) FACT_malloc(
+		sizeof(uint32_t) *
 		pEngine->dspPresetCount
 	);
 	for (i = 0; i < pEngine->dspPresetCount; i += 1)
 	{
-		pEngine->dspPresetCodes[i] = ptr - start;
+		pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
 		pEngine->dspPresets[i].accessibility = read_u8(&ptr);
 		pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
 		pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FACT_malloc(
@@ -667,13 +667,13 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sizeof(FACTSound) *
 		sb->soundCount
 	);
-	sb->soundCodes = (size_t*) FACT_malloc(
-		sizeof(size_t) *
+	sb->soundCodes = (uint32_t*) FACT_malloc(
+		sizeof(uint32_t) *
 		sb->soundCount
 	);
 	for (i = 0; i < sb->soundCount; i += 1)
 	{
-		sb->soundCodes[i] = ptr - start;
+		sb->soundCodes[i] = (uint32_t) (ptr - start);
 		sb->sounds[i].flags = read_u8(&ptr);
 		sb->sounds[i].category = read_u16(&ptr);
 		sb->sounds[i].volume = read_u8(&ptr);
@@ -718,46 +718,61 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 
 		/* RPC Code data */
-		/* TODO: Okay, so get this:
-		 * RPCs are allocated in groups based on tracks and sound.
-		 *
-		 * sound is based on sound->flags & 0x02.
-		 * track is based on sound->flags & 0x04.
-		 * Based on that you can tell how many groups there are before
-		 * allocating, then give the sounds and clips their own lists!
-		 *
-		 * Still no idea why it's 0x0E though. WTF is 0x08?
-		 * -flibit
-		 */
 		cur = 0;
 		if (sb->sounds[i].flags & 0x0E)
 		{
 			const uint16_t rpcDataLength = read_u16(&ptr);
 			ptrBookmark = ptr - 2;
-			while ((ptr - ptrBookmark) < rpcDataLength)
+
+			#define COPYRPCBLOCK(loc) \
+				loc.rpcCodeCount = read_u8(&ptr); \
+				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
+				loc.rpcCodes = (uint32_t*) FACT_malloc(memsize); \
+				FACT_memcpy(loc.rpcCodes, ptr, memsize); \
+				ptr += memsize;
+
+			/* Sound has attached RPCs */
+			if (sb->sounds[i].flags & 0x02)
 			{
-				const uint8_t codes = read_u8(&ptr);
-				sb->sounds[i].rpcCodeCount += codes;
-				ptr += 4 * codes;
+				COPYRPCBLOCK(sb->sounds[i])
 			}
-			sb->sounds[i].rpcCodes = (size_t*) FACT_malloc(
-				sizeof(size_t) *
-				sb->sounds[i].rpcCodeCount
-			);
-			ptr = ptrBookmark + 2;
-			while ((ptr - ptrBookmark) < rpcDataLength)
+			else
 			{
-				const uint8_t codes = read_u8(&ptr);
-				for (j = 0; j < codes; j += 1, cur += 1)
+				sb->sounds[i].rpcCodeCount = 0;
+				sb->sounds[i].rpcCodes = NULL;
+			}
+
+			/* Clips have attached RPCs */
+			if (sb->sounds[i].flags & 0x04)
+			{
+				for (j = 0; j < sb->sounds[i].clipCount; j += 1)
 				{
-					sb->sounds[i].rpcCodes[j + cur] = read_u32(&ptr);
+					COPYRPCBLOCK(sb->sounds[i].clips[j])
 				}
 			}
+			else
+			{
+				for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+				{
+					sb->sounds[i].clips[j].rpcCodeCount = 0;
+					sb->sounds[i].clips[j].rpcCodes = NULL;
+				}
+			}
+
+			#undef COPYRPCBLOCK
+
+			/* FIXME: Does 0x08 mean something for RPCs...? */
+			assert((ptr - ptrBookmark) == rpcDataLength);
 		}
 		else
 		{
 			sb->sounds[i].rpcCodeCount = 0;
 			sb->sounds[i].rpcCodes = NULL;
+			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+			{
+				sb->sounds[i].clips[j].rpcCodeCount = 0;
+				sb->sounds[i].clips[j].rpcCodes = NULL;
+			}
 		}
 
 		/* DSP Preset Code data */
@@ -767,14 +782,10 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			ptr += 2;
 
 			sb->sounds[i].dspCodeCount = read_u8(&ptr);
-			sb->sounds[i].dspCodes = (size_t*) FACT_malloc(
-				sizeof(size_t) *
-				sb->sounds[i].dspCodeCount
-			);
-			for (j = 0; j < sb->sounds[i].dspCodeCount; j += 1)
-			{
-				sb->sounds[i].dspCodes[i] = read_u32(&ptr);
-			}
+			memsize = sizeof(uint32_t) * sb->sounds[i].dspCodeCount;
+			sb->sounds[i].dspCodes = (uint32_t*) FACT_malloc(memsize);
+			FACT_memcpy(sb->sounds[i].dspCodes, ptr, memsize);
+			ptr += memsize;
 		}
 		else
 		{
@@ -845,14 +856,14 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			sizeof(FACTVariationTable) *
 			sb->variationCount
 		);
-		sb->variationCodes = (size_t*) FACT_malloc(
-			sizeof(size_t) *
+		sb->variationCodes = (uint32_t*) FACT_malloc(
+			sizeof(uint32_t) *
 			sb->variationCount
 		);
 	}
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
-		sb->variationCodes[i] = ptr - start;
+		sb->variationCodes[i] = (uint32_t) (ptr - start);
 		sb->variations[i].entryCount = read_u16(&ptr);
 		sb->variations[i].flags = (read_u16(&ptr) >> 3) & 0x07;
 		ptr += 2; /* Unknown value */
