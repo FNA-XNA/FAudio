@@ -906,8 +906,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			/* Wave with byte min/max */
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
-				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
-				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+				sb->variations[i].entries[j].track = read_u16(&ptr);
+				sb->variations[i].entries[j].wavebank = read_u8(&ptr);
 				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
 				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
 			}
@@ -937,8 +937,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			/* Compact Wave */
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
-				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
-				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+				sb->variations[i].entries[j].track = read_u16(&ptr);
+				sb->variations[i].entries[j].wavebank = read_u8(&ptr);
 				sb->variations[i].entries[j].minWeight = 0.0f;
 				sb->variations[i].entries[j].maxWeight = 1.0f;
 			}

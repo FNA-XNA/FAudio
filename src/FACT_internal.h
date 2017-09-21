@@ -264,7 +264,7 @@ typedef struct FACTVariation
 		{
 			uint16_t track;
 			uint8_t wavebank;
-		} simple;
+		};
 		uint32_t soundCode;
 	};
 	float minWeight;
