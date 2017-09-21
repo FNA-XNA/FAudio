@@ -7,7 +7,7 @@
 
 #include "FACT_internal.h"
 
-uint32_t FACTCreateAudioEngine(
+uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
 ) {
@@ -109,89 +109,113 @@ uint32_t FACTAudioEngine_Initialize(
 
 	/* Category data */
 	assert((ptr - start) == categoryOffset);
-	memsize = sizeof(FACTAudioCategory) * pEngine->categoryCount;
-	pEngine->categories = (FACTAudioCategory*) FACT_malloc(memsize);
-	FACT_memcpy(pEngine->categories, ptr, memsize);
-	ptr += memsize;
+	pEngine->categories = (FACTAudioCategory*) FACT_malloc(
+		sizeof(FACTAudioCategory) * pEngine->categoryCount
+	);
+	for (i = 0; i < pEngine->categoryCount; i += 1)
+	{
+		pEngine->categories[i].maxInstances = read_u8(&ptr);
+		pEngine->categories[i].fadeInMS = read_u16(&ptr);
+		pEngine->categories[i].fadeOutMS = read_u16(&ptr);
+		pEngine->categories[i].instanceBehavior = read_u8(&ptr);
+		pEngine->categories[i].parentCategory = read_u16(&ptr);
+		pEngine->categories[i].volume = read_u8(&ptr);
+		pEngine->categories[i].visibility = read_u8(&ptr);
+	}
 
 	/* Variable data */
 	assert((ptr - start) == variableOffset);
-	memsize = sizeof(FACTVariable) * pEngine->variableCount;
-	pEngine->variables = (FACTVariable*) FACT_malloc(memsize);
-	FACT_memcpy(pEngine->variables, ptr, memsize);
-	ptr += memsize;
+	pEngine->variables = (FACTVariable*) FACT_malloc(
+		sizeof(FACTVariable) * pEngine->variableCount
+	);
+	for (i = 0; i < pEngine->variableCount; i += 1)
+	{
+		pEngine->variables[i].accessibility = read_u8(&ptr);
+		pEngine->variables[i].initialValue = read_f32(&ptr);
+		pEngine->variables[i].minValue = read_f32(&ptr);
+		pEngine->variables[i].maxValue = read_f32(&ptr);
+	}
 
 	/* Global variable storage. Some unused data for non-global vars */
-	memsize = sizeof(float) * pEngine->variableCount;
-	pEngine->globalVariableValues = (float*) FACT_malloc(memsize);
+	pEngine->globalVariableValues = (float*) FACT_malloc(
+		sizeof(float) * pEngine->variableCount
+	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
 		pEngine->globalVariableValues[i] = pEngine->variables[i].initialValue;
 	}
 
 	/* RPC data */
-	assert((ptr - start) == rpcOffset);
-	pEngine->rpcs = (FACTRPC*) FACT_malloc(
-		sizeof(FACTRPC) *
-		pEngine->rpcCount
-	);
-	pEngine->rpcCodes = (uint32_t*) FACT_malloc(
-		sizeof(uint32_t) *
-		pEngine->rpcCount
-	);
-	for (i = 0; i < pEngine->rpcCount; i += 1)
+	if (pEngine->rpcCount > 0)
 	{
-		pEngine->rpcCodes[i] = (uint32_t) (ptr - start);
-		pEngine->rpcs[i].variable = read_u16(&ptr);
-		pEngine->rpcs[i].pointCount = read_u8(&ptr);
-		pEngine->rpcs[i].parameter = read_u16(&ptr);
-		pEngine->rpcs[i].points = (FACTRPCPoint*) FACT_malloc(
-			sizeof(FACTRPCPoint) *
-			pEngine->rpcs[i].pointCount
+		assert((ptr - start) == rpcOffset);
+		pEngine->rpcs = (FACTRPC*) FACT_malloc(
+			sizeof(FACTRPC) *
+			pEngine->rpcCount
 		);
-		for (j = 0; j < pEngine->rpcs[i].pointCount; j += 1)
+		pEngine->rpcCodes = (uint32_t*) FACT_malloc(
+			sizeof(uint32_t) *
+			pEngine->rpcCount
+		);
+		for (i = 0; i < pEngine->rpcCount; i += 1)
 		{
-			pEngine->rpcs[i].points[j].x = read_f32(&ptr);
-			pEngine->rpcs[i].points[j].y = read_f32(&ptr);
-			pEngine->rpcs[i].points[j].type = read_u8(&ptr);
+			pEngine->rpcCodes[i] = (uint32_t) (ptr - start);
+			pEngine->rpcs[i].variable = read_u16(&ptr);
+			pEngine->rpcs[i].pointCount = read_u8(&ptr);
+			pEngine->rpcs[i].parameter = read_u16(&ptr);
+			pEngine->rpcs[i].points = (FACTRPCPoint*) FACT_malloc(
+				sizeof(FACTRPCPoint) *
+				pEngine->rpcs[i].pointCount
+			);
+			for (j = 0; j < pEngine->rpcs[i].pointCount; j += 1)
+			{
+				pEngine->rpcs[i].points[j].x = read_f32(&ptr);
+				pEngine->rpcs[i].points[j].y = read_f32(&ptr);
+				pEngine->rpcs[i].points[j].type = read_u8(&ptr);
+			}
 		}
 	}
 
 	/* DSP Preset data */
-	assert((ptr - start) == dspPresetOffset);
-	pEngine->dspPresets = (FACTDSPPreset*) FACT_malloc(
-		sizeof(FACTDSPPreset) *
-		pEngine->dspPresetCount
-	);
-	pEngine->dspPresetCodes = (uint32_t*) FACT_malloc(
-		sizeof(uint32_t) *
-		pEngine->dspPresetCount
-	);
-	for (i = 0; i < pEngine->dspPresetCount; i += 1)
+	if (pEngine->dspPresetCount > 0)
 	{
-		pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
-		pEngine->dspPresets[i].accessibility = read_u8(&ptr);
-		pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
-		pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FACT_malloc(
-			sizeof(FACTDSPParameter) *
-			pEngine->dspPresets[i].parameterCount
-		); /* This will be filled in just a moment... */
-	}
+		assert((ptr - start) == dspPresetOffset);
+		pEngine->dspPresets = (FACTDSPPreset*) FACT_malloc(
+			sizeof(FACTDSPPreset) *
+			pEngine->dspPresetCount
+		);
+		pEngine->dspPresetCodes = (uint32_t*) FACT_malloc(
+			sizeof(uint32_t) *
+			pEngine->dspPresetCount
+		);
+		for (i = 0; i < pEngine->dspPresetCount; i += 1)
+		{
+			pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
+			pEngine->dspPresets[i].accessibility = read_u8(&ptr);
+			pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
+			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FACT_malloc(
+				sizeof(FACTDSPParameter) *
+				pEngine->dspPresets[i].parameterCount
+			); /* This will be filled in just a moment... */
+		}
 
-	/* DSP Parameter data */
-	assert((ptr - start) == dspParameterOffset);
-	for (i = 0; i < pEngine->dspPresetCount; i += 1)
-	{
-		memsize = (
-			sizeof(FACTDSPParameter) *
-			pEngine->dspPresets[i].parameterCount
-		);
-		FACT_memcpy(
-			pEngine->dspPresets[i].parameters,
-			ptr,
-			memsize
-		);
-		ptr += memsize;
+		/* DSP Parameter data */
+		assert((ptr - start) == dspParameterOffset);
+		for (i = 0; i < pEngine->dspPresetCount; i += 1)
+		{
+			memsize = (
+				sizeof(FACTDSPParameter) *
+				pEngine->dspPresets[i].parameterCount
+			);
+			for (j = 0; j < pEngine->dspPresets[i].parameterCount; j += 1)
+			{
+				pEngine->dspPresets[i].parameters[j].type = read_u8(&ptr);
+				pEngine->dspPresets[i].parameters[j].value = read_f32(&ptr);
+				pEngine->dspPresets[i].parameters[j].minVal = read_f32(&ptr);
+				pEngine->dspPresets[i].parameters[j].maxVal = read_f32(&ptr);
+				pEngine->dspPresets[i].parameters[j].unknown = read_u16(&ptr);
+			}
+		}
 	}
 
 	/* Blob #1, no idea what this is... */
@@ -263,6 +287,7 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	}
 	FACT_free(pEngine->variableNames);
 	FACT_free(pEngine->variables);
+	FACT_free(pEngine->globalVariableValues);
 
 	/* RPC data */
 	for (i = 0; i < pEngine->rpcCount; i += 1)
@@ -323,30 +348,11 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	return 0;
 }
 
-void INTERNAL_FACTParseClip(uint8_t **ptr, FACTClip *clip)
+void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 {
 	uint32_t evtInfo;
 	uint8_t minWeight, maxWeight;
 	int i, j;
-
-	clip->volume = read_u8(ptr);
-
-	/* Clip offset, unused */
-	*ptr += 4;
-
-	clip->filter = read_u8(ptr);
-	if (clip->filter & 0x01)
-	{
-		clip->filter = (clip->filter >> 1) & 0x02;
-	}
-	else
-	{
-		/* Huh...? */
-		clip->filter = 0xFF;
-	}
-
-	clip->qfactor = read_u8(ptr);
-	clip->frequency = read_u16(ptr);
 
 	clip->eventCount = read_u8(ptr);
 	clip->events = (FACTEvent*) FACT_malloc(
@@ -374,7 +380,7 @@ void INTERNAL_FACTParseClip(uint8_t **ptr, FACTClip *clip)
 			clip->events[i].wave.isComplex = 0;
 			clip->events[i].wave.flags = read_u8(ptr);
 			clip->events[i].wave.simple.track = read_u16(ptr);
-			clip->events[i].wave.simple.wavebank = read_u16(ptr);
+			clip->events[i].wave.simple.wavebank = read_u8(ptr);
 			clip->events[i].loopCount = read_u8(ptr);
 			clip->events[i].wave.position = read_u16(ptr);
 			clip->events[i].wave.angle = read_u16(ptr);
@@ -424,7 +430,7 @@ void INTERNAL_FACTParseClip(uint8_t **ptr, FACTClip *clip)
 			clip->events[i].wave.isComplex = 0;
 			clip->events[i].wave.flags = read_u8(ptr);
 			clip->events[i].wave.simple.track = read_u16(ptr);
-			clip->events[i].wave.simple.wavebank = read_u16(ptr);
+			clip->events[i].wave.simple.wavebank = read_u8(ptr);
 			clip->events[i].loopCount = read_u8(ptr);
 			clip->events[i].wave.position = read_u16(ptr);
 			clip->events[i].wave.angle = read_u16(ptr);
@@ -565,7 +571,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			wavebankNameOffset,
 			cueHashOffset,
 			cueNameIndexOffset,
-			soundOffset;
+			soundOffset,
+			curClipOffset;
 	size_t memsize;
 	uint16_t i, j, cur;
 	uint8_t *ptrBookmark;
@@ -588,7 +595,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	ptr += 8;
 
 	/* Windows == 1, Xbox == 0 (I think?) */
-	if (read_u32(&ptr) != 1)
+	if (read_u8(&ptr) != 1)
 	{
 		return -1; /* TODO: WRONG PLATFORM */
 	}
@@ -797,7 +804,28 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		{
 			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
 			{
-				INTERNAL_FACTParseClip(
+				sb->sounds[i].clips[j].volume = read_u8(&ptr);
+
+				curClipOffset = read_u32(&ptr);
+
+				sb->sounds[i].clips[j].filter = read_u8(&ptr);
+				if (sb->sounds[i].clips[j].filter & 0x01)
+				{
+					sb->sounds[i].clips[j].filter =
+						(sb->sounds[i].clips[j].filter >> 1) & 0x02;
+				}
+				else
+				{
+					/* Huh...? */
+					sb->sounds[i].clips[j].filter = 0xFF;
+				}
+
+				sb->sounds[i].clips[j].qfactor = read_u8(&ptr);
+				sb->sounds[i].clips[j].frequency = read_u16(&ptr);
+
+				assert((ptr - start) == curClipOffset);
+
+				INTERNAL_FACTParseClipEvents(
 					&ptr,
 					&sb->sounds[i].clips[j]
 				);
@@ -819,7 +847,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	{
 		sb->cues[cur].flags = read_u8(&ptr);
 		sb->cues[cur].sbCode = read_u32(&ptr);
-		sb->cues[cur].transitionOffset = read_u32(&ptr);
+		sb->cues[cur].transitionOffset = 0;
 		sb->cues[cur].instanceLimit = 0xFF;
 		sb->cues[cur].fadeIn = 0;
 		sb->cues[cur].fadeOut = 0;
@@ -876,7 +904,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		if (sb->variations[i].flags == 0)
 		{
 			/* Wave with byte min/max */
-			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
 				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
@@ -887,27 +915,27 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		else if (sb->variations[i].flags == 1)
 		{
 			/* Complex with byte min/max */
-			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
 				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
 				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
 			}
 		}
-		if (sb->variations[i].flags == 3)
+		else if (sb->variations[i].flags == 3)
 		{
 			/* Complex with float min/max */
-			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
 				sb->variations[i].entries[j].minWeight = read_f32(&ptr);
 				sb->variations[i].entries[j].maxWeight = read_f32(&ptr);
 			}
 		}
-		if (sb->variations[i].flags == 4)
+		else if (sb->variations[i].flags == 4)
 		{
 			/* Compact Wave */
-			for (j = 0; i < sb->variations[i].entryCount; j += 1)
+			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
 				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
 				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
@@ -1014,6 +1042,7 @@ uint32_t FACT_ParseWaveBank(
 
 	wb = (FACTWaveBank*) FACT_malloc(sizeof(FACTWaveBank));
 	wb->parentEngine = pEngine;
+	wb->io = io;
 
 	/* Offset Table */
 	io->read(io->data, &wbtable, sizeof(wbtable), 1);
