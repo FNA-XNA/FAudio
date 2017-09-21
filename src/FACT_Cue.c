@@ -196,13 +196,12 @@ uint32_t FACTCue_GetProperties(
 			else
 			{
 				/* TODO:
-				 * - Priority?
 				 * - u8->float volume conversion crap
 				 * - "Track" vs. "Clip"?
 				 * - arrTrackProperties?
 				 */
 				sndProps->category = pCue->active.sound->category;
-				sndProps->priority = 0;
+				sndProps->priority = pCue->active.sound->priority;
 				sndProps->pitch = pCue->active.sound->pitch;
 				sndProps->volume = pCue->active.sound->volume;
 				sndProps->numTracks = pCue->active.sound->clipCount;
@@ -229,13 +228,12 @@ uint32_t FACTCue_GetProperties(
 		else
 		{
 			/* TODO:
-			 * - Priority?
 			 * - u8->float volume conversion crap
 			 * - "Track" vs. "Clip"?
 			 * - arrTrackProperties?
 			 */
 			sndProps->category = pCue->active.sound->category;
-			sndProps->priority = 0;
+			sndProps->priority = pCue->active.sound->priority;
 			sndProps->pitch = pCue->active.sound->pitch;
 			sndProps->volume = pCue->active.sound->volume;
 			sndProps->numTracks = pCue->active.sound->clipCount;

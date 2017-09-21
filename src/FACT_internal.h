@@ -210,6 +210,7 @@ typedef struct FACTSound
 	uint16_t category;
 	uint8_t volume;
 	int16_t pitch;
+	uint8_t priority;
 
 	uint8_t clipCount;
 	uint8_t rpcCodeCount;

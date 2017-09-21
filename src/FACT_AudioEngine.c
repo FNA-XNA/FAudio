@@ -678,8 +678,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sb->sounds[i].category = read_u16(&ptr);
 		sb->sounds[i].volume = read_u8(&ptr);
 		sb->sounds[i].pitch = read_s16(&ptr);
-
-		ptr += 1; /* Unknown value */
+		sb->sounds[i].priority = read_u8(&ptr);
 
 		/* Length of sound entry, unused */
 		ptr += 2;
