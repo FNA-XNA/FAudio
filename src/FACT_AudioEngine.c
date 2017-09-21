@@ -359,6 +359,7 @@ void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 		sizeof(FACTEvent) *
 		clip->eventCount
 	);
+	FACT_zero(clip->events, sizeof(FACTEvent) * clip->eventCount);
 	for (i = 0; i < clip->eventCount; i += 1)
 	{
 		evtInfo = read_u32(ptr);
@@ -697,31 +698,29 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		if (sb->sounds[i].flags & 0x01)
 		{
 			sb->sounds[i].clipCount = read_u8(&ptr);
-			sb->sounds[i].clips = (FACTClip*) FACT_malloc(
-				sizeof(FACTClip) *
-				sb->sounds[i].clipCount
-			);
+			memsize = sizeof(FACTClip) * sb->sounds[i].clipCount;
+			sb->sounds[i].clips = (FACTClip*) FACT_malloc(memsize);
+			FACT_zero(sb->sounds[i].clips, memsize);
 		}
 		else
 		{
 			sb->sounds[i].clipCount = 1;
-			sb->sounds[i].clips = (FACTClip*) FACT_malloc(
-				sizeof(FACTClip)
-			);
+			memsize = sizeof(FACTClip) * sb->sounds[i].clipCount;
+			sb->sounds[i].clips = (FACTClip*) FACT_malloc(memsize);
+			FACT_zero(sb->sounds[i].clips, memsize);
 			sb->sounds[i].clips[0].volume = FACT_VOLUME_0;
 			sb->sounds[i].clips[0].filter = 0xFF;
 			sb->sounds[i].clips[0].eventCount = 1;
 			sb->sounds[i].clips[0].events = (FACTEvent*) FACT_malloc(
 				sizeof(FACTEvent)
 			);
+			FACT_zero(
+				sb->sounds[i].clips[0].events,
+				sizeof(FACTEvent)
+			);
 			sb->sounds[i].clips[0].events[0].type = FACTEVENT_PLAYWAVE;
-			sb->sounds[i].clips[0].events[0].timestamp = 0;
-			sb->sounds[i].clips[0].events[0].randomOffset = 0;
-			sb->sounds[i].clips[0].events[0].loopCount = 0;
-			sb->sounds[i].clips[0].events[0].wave.flags = 0;
 			sb->sounds[i].clips[0].events[0].wave.position = 0; /* FIXME */
 			sb->sounds[i].clips[0].events[0].wave.angle = 0; /* FIXME */
-			sb->sounds[i].clips[0].events[0].wave.isComplex = 0;
 			sb->sounds[i].clips[0].events[0].wave.simple.track = read_u16(&ptr);
 			sb->sounds[i].clips[0].events[0].wave.simple.wavebank = read_u8(&ptr);
 		}
@@ -899,10 +898,11 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		ptr += 2; /* Unknown value */
 		sb->variations[i].variable = read_u16(&ptr);
 
+		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
 		sb->variations[i].entries = (FACTVariation*) FACT_malloc(
-			sizeof(FACTVariation) *
-			sb->variations[i].entryCount
+			memsize
 		);
+		FACT_zero(sb->variations[i].entries, memsize);
 
 		if (sb->variations[i].flags == 0)
 		{
