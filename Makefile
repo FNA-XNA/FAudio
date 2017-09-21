@@ -38,3 +38,8 @@ all: $(FACTOBJ)
 
 clean:
 	rm -f $(FACTOBJ) libFACT.$(TARGET)
+
+.PHONY: test
+
+test:
+	$(CC) -g -Wall -pedantic test/testparse.c src/*.c -Isrc `sdl2-config --cflags --libs`
