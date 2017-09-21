@@ -385,7 +385,7 @@ void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 			clip->events[i].wave.position = read_u16(ptr);
 			clip->events[i].wave.angle = read_u16(ptr);
 
-			/* No Variation */
+			/* No Effect Variation */
 			clip->events[i].wave.variationFlags = 0;
 		}
 		else if (CLIPTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
@@ -423,6 +423,9 @@ void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 					maxWeight - minWeight
 				);
 			}
+
+			/* No Effect Variation */
+			clip->events[i].wave.variationFlags = 0;
 		}
 		else if (CLIPTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
 		{
