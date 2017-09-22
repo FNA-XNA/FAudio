@@ -66,7 +66,7 @@ extern uint8_t UI_Update(
 	uint8_t mouse1,
 	uint8_t mouse2,
 	uint8_t mouse3,
-	uint8_t wheel,
+	int8_t wheel,
 	float deltaTime
 );
 extern void UI_Render();
