@@ -438,6 +438,119 @@ void FACTTool_Update()
 		if (ImGui::CollapsingHeader("Sounds"))
 		for (uint16_t j = 0; j < soundBanks[i]->soundCount; j += 1)
 		{
+			if (ImGui::TreeNode(
+				(void*) (intptr_t) j,
+				"Code %d",
+				soundBanks[i]->soundCodes[j]
+			)) {
+				ImGui::Text(
+					"Flags: %X",
+					soundBanks[i]->sounds[j].flags
+				);
+				ImGui::Text(
+					"Category Index: %d",
+					soundBanks[i]->sounds[j].category
+				);
+				ImGui::Text(
+					"Volume: %d",
+					soundBanks[i]->sounds[j].volume
+				);
+				ImGui::Text(
+					"Pitch: %d",
+					soundBanks[i]->sounds[j].pitch
+				);
+				ImGui::Text(
+					"Priority: %d",
+					soundBanks[i]->sounds[j].priority
+				);
+				ImGui::Text(
+					"RPC Code Count: %d",
+					soundBanks[i]->sounds[j].rpcCodeCount
+				);
+				ImGui::Text(
+					"DSP Preset Code Count: %d",
+					soundBanks[i]->sounds[j].dspCodeCount
+				);
+				ImGui::Text(
+					"Clip Count: %d",
+					soundBanks[i]->sounds[j].clipCount
+				);
+				if (ImGui::TreeNode("RPC Codes"))
+				{
+					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].rpcCodeCount; k += 1)
+					{
+						ImGui::Text(
+							"%d",
+							soundBanks[i]->sounds[j].rpcCodes[k]
+						);
+					}
+					ImGui::TreePop();
+				}
+				if (ImGui::TreeNode("DSP Preset Codes"))
+				{
+					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].dspCodeCount; k += 1)
+					{
+						ImGui::Text(
+							"%d",
+							soundBanks[i]->sounds[j].dspCodes[k]
+						);
+					}
+					ImGui::TreePop();
+				}
+				if (ImGui::TreeNode("Clips"))
+				{
+					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].clipCount; k += 1)
+					if (ImGui::TreeNode(
+						(void*) (intptr_t) k,
+						"Clip #%d",
+						k
+					)) {
+						ImGui::Text(
+							"Volume: %d",
+							soundBanks[i]->sounds[j].clips[k].volume
+						);
+						ImGui::Text(
+							"Filter Type: %d",
+							soundBanks[i]->sounds[j].clips[k].filter
+						);
+						ImGui::Text(
+							"Filter Q-Factor: %d",
+							soundBanks[i]->sounds[j].clips[k].qfactor
+						);
+						ImGui::Text(
+							"Filter Frequency: %d",
+							soundBanks[i]->sounds[j].clips[k].frequency
+						);
+						ImGui::Text(
+							"RPC Code Count: %d",
+							soundBanks[i]->sounds[j].clips[k].rpcCodeCount
+						);
+						ImGui::Text(
+							"Event Count: %d",
+							soundBanks[i]->sounds[j].clips[k].eventCount
+						);
+						if (ImGui::TreeNode("RPC Codes"))
+						{
+							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].clips[k].rpcCodeCount; l += 1)
+							{
+								ImGui::Text(
+									"%d",
+									soundBanks[i]->sounds[j].clips[k].rpcCodes[l]
+								);
+							}
+							ImGui::TreePop();
+						}
+						if (ImGui::TreeNode("Events"))
+						{
+							ImGui::Text("TODO: Events");
+							ImGui::TreePop();
+						}
+						ImGui::TreePop();
+					}
+					ImGui::TreePop();
+				}
+				ImGui::TreePop();
+			}
 		}
 
 		/* Variations */
