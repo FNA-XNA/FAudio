@@ -622,6 +622,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		latest->next = sb;
 	}
+	sb->next = NULL;
 
 	cueSimpleCount = read_u16(&ptr);
 	cueComplexCount = read_u16(&ptr);
@@ -1171,6 +1172,7 @@ uint32_t FACT_ParseWaveBank(
 		}
 		latest->next = wb;
 	}
+	wb->next = NULL;
 
 	/* Finally. */
 	*ppWaveBank = wb;
