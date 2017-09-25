@@ -385,6 +385,7 @@ void FACTTool_Update()
 			soundBanks.erase(soundBanks.begin() + i);
 			soundbankShows.erase(soundbankShows.begin() + i);
 			i -= 1;
+			continue;
 		}
 
 		ImGui::Separator();
@@ -516,6 +517,7 @@ void FACTTool_Update()
 			waveBanks.erase(waveBanks.begin() + i);
 			wavebankShows.erase(wavebankShows.begin() + i);
 			i -= 1;
+			continue;
 		}
 
 		/* Giant table of wavedata entries */
