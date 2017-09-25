@@ -202,17 +202,24 @@ void FACTTool_Update()
 				engines[i]->rpcs[j].pointCount
 			);
 			if (ImGui::TreeNode("Points"))
-			for (uint8_t k = 0; k < engines[i]->rpcs[j].pointCount; k += 1)
 			{
-				ImGui::Text(
-					"Coordinate: (%f, %f)",
-					engines[i]->rpcs[j].points[k].x,
-					engines[i]->rpcs[j].points[k].y
-				);
-				ImGui::Text(
-					"Type: %d\n",
-					engines[i]->rpcs[j].points[k].type
-				);
+				for (uint8_t k = 0; k < engines[i]->rpcs[j].pointCount; k += 1)
+				if (ImGui::TreeNode(
+					(void*) (intptr_t) k,
+					"Point #%d",
+					k
+				)) {
+					ImGui::Text(
+						"Coordinate: (%f, %f)",
+						engines[i]->rpcs[j].points[k].x,
+						engines[i]->rpcs[j].points[k].y
+					);
+					ImGui::Text(
+						"Type: %d\n",
+						engines[i]->rpcs[j].points[k].type
+					);
+					ImGui::TreePop();
+				}
 				ImGui::TreePop();
 			}
 			ImGui::TreePop();
@@ -235,24 +242,31 @@ void FACTTool_Update()
 				engines[i]->dspPresets[j].parameterCount
 			);
 			if (ImGui::TreeNode("Parameters"))
-			for (uint32_t k = 0; k < engines[i]->dspPresets[j].parameterCount; k += 1)
 			{
-				ImGui::Text(
-					"Initial Value: %f",
-					engines[i]->dspPresets[j].parameters[k].value
-				);
-				ImGui::Text(
-					"Min Value: %f",
-					engines[i]->dspPresets[j].parameters[k].minVal
-				);
-				ImGui::Text(
-					"Max Value: %f",
-					engines[i]->dspPresets[j].parameters[k].maxVal
-				);
-				ImGui::Text(
-					"Unknown u16: %d",
-					engines[i]->dspPresets[j].parameters[k].unknown
-				);
+				for (uint32_t k = 0; k < engines[i]->dspPresets[j].parameterCount; k += 1)
+				if (ImGui::TreeNode(
+					(void*) (intptr_t) k,
+					"Parameter #%d",
+					k
+				)) {
+					ImGui::Text(
+						"Initial Value: %f",
+						engines[i]->dspPresets[j].parameters[k].value
+					);
+					ImGui::Text(
+						"Min Value: %f",
+						engines[i]->dspPresets[j].parameters[k].minVal
+					);
+					ImGui::Text(
+						"Max Value: %f",
+						engines[i]->dspPresets[j].parameters[k].maxVal
+					);
+					ImGui::Text(
+						"Unknown u16: %d",
+						engines[i]->dspPresets[j].parameters[k].unknown
+					);
+					ImGui::TreePop();
+				}
 				ImGui::TreePop();
 			}
 			ImGui::TreePop();
@@ -374,7 +388,118 @@ void FACTTool_Update()
 		}
 
 		ImGui::Separator();
-		ImGui::Text("TODO: Dump SoundBank info");
+
+		/* WaveBank Dependencies */
+		if (ImGui::CollapsingHeader("WaveBank Dependencies"))
+		for (uint8_t j = 0; j < soundBanks[i]->wavebankCount; j += 1)
+		{
+			ImGui::Text(soundBanks[i]->wavebankNames[j]);
+		}
+
+		/* Cues */
+		if (ImGui::CollapsingHeader("Cues"))
+		for (uint16_t j = 0; j < soundBanks[i]->cueCount; j += 1)
+		if (ImGui::TreeNode(soundBanks[i]->cueNames[j]))
+		{
+			ImGui::Text(
+				"Flags: %X",
+				soundBanks[i]->cues[j].flags
+			);
+			ImGui::Text(
+				"Sound/Variation Code: %d",
+				soundBanks[i]->cues[j].sbCode
+			);
+			ImGui::Text(
+				"Transition Offset: %d",
+				soundBanks[i]->cues[j].transitionOffset
+			);
+			ImGui::Text(
+				"Instance Limit: %d",
+				soundBanks[i]->cues[j].instanceLimit
+			);
+			ImGui::Text(
+				"Fade-out (ms): %d",
+				soundBanks[i]->cues[j].fadeIn
+			);
+			ImGui::Text(
+				"Fade-out (ms): %d",
+				soundBanks[i]->cues[j].fadeOut
+			);
+			ImGui::Text(
+				"Max Instance Behavior: %d",
+				soundBanks[i]->cues[j].maxInstanceBehavior
+			);
+			ImGui::TreePop();
+		}
+
+		/* Sounds */
+		if (ImGui::CollapsingHeader("Sounds"))
+		for (uint16_t j = 0; j < soundBanks[i]->soundCount; j += 1)
+		{
+		}
+
+		/* Variations */
+		if (ImGui::CollapsingHeader("Variations"))
+		for (uint16_t j = 0; j < soundBanks[i]->variationCount; j += 1)
+		if (ImGui::TreeNode(
+			(void*) (intptr_t) j,
+			"Code %d",
+			soundBanks[i]->variationCodes[j]
+		)) {
+			ImGui::Text(
+				"Flags: %X",
+				soundBanks[i]->variations[j].flags
+			);
+			ImGui::Text(
+				"Interactive Variable Index: %d",
+				soundBanks[i]->variations[j].variable
+			);
+			ImGui::Text(
+				"Entry Count: %X",
+				soundBanks[i]->variations[j].entryCount
+			);
+			if (ImGui::TreeNode("Entries"))
+			{
+				for (uint16_t k = 0; k < soundBanks[i]->variations[j].entryCount; k += 1)
+				if (ImGui::TreeNode(
+					(void*) (intptr_t) k,
+					"Entry #%d",
+					k
+				)) {
+					if (soundBanks[i]->variations[j].entries[k].isComplex)
+					{
+						ImGui::Text("Complex Variation");
+						ImGui::Text(
+							"Sound Code: %d",
+							soundBanks[i]->variations[j].entries[k].soundCode
+						);
+					}
+					else
+					{
+						ImGui::Text("Simple Variation");
+						ImGui::Text(
+							"Track Index: %d",
+							soundBanks[i]->variations[j].entries[k].track
+						);
+						ImGui::Text(
+							"WaveBank Index: %d",
+							soundBanks[i]->variations[j].entries[k].wavebank
+						);
+					}
+					ImGui::Text(
+						"Min Weight: %f",
+						soundBanks[i]->variations[j].entries[k].minWeight
+					);
+					ImGui::Text(
+						"Max Weight: %f",
+						soundBanks[i]->variations[j].entries[k].maxWeight
+					);
+					ImGui::TreePop();
+				}
+				ImGui::TreePop();
+			}
+			ImGui::TreePop();
+		}
 
 		/* We out. */
 		ImGui::End();
