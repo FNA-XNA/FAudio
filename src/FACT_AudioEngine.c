@@ -921,6 +921,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			/* Complex with byte min/max */
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
+				sb->variations[i].entries[j].isComplex = 1;
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
 				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
 				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
@@ -931,6 +932,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			/* Complex with float min/max */
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
+				sb->variations[i].entries[j].isComplex = 1;
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
 				sb->variations[i].entries[j].minWeight = read_f32(&ptr);
 				sb->variations[i].entries[j].maxWeight = read_f32(&ptr);
