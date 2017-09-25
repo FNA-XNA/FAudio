@@ -542,7 +542,217 @@ void FACTTool_Update()
 						}
 						if (ImGui::TreeNode("Events"))
 						{
-							ImGui::Text("TODO: Events");
+							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].clips[k].eventCount; l += 1)
+							if (ImGui::TreeNode(
+								(void*) (intptr_t) l,
+								"Event #%d",
+								l
+							)) {
+								const FACTEvent *evt = &soundBanks[i]->sounds[j].clips[k].events[l];
+								ImGui::Text(
+									"Type: %d",
+									evt->type
+								);
+								ImGui::Text(
+									"Timestamp: %d",
+									evt->timestamp
+								);
+								ImGui::Text(
+									"Random Offset: %d",
+									evt->randomOffset
+								);
+								ImGui::Text(
+									"Loop Count: %d",
+									evt->loopCount
+								);
+								ImGui::Text(
+									"Frequency: %d",
+									evt->frequency
+								);
+								if (evt->type == FACTEVENT_STOP)
+								{
+									ImGui::Text(
+										"Flags: %X",
+										evt->stop.flags
+									);
+								}
+								else if (	evt->type == FACTEVENT_PLAYWAVE ||
+										evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+										evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+										evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+								{
+									ImGui::Text(
+										"Play Flags: %X",
+										evt->wave.flags
+									);
+									ImGui::Text(
+										"Position: %d",
+										evt->wave.position
+									);
+									ImGui::Text(
+										"Angle: %d",
+										evt->wave.angle
+									);
+									if (evt->wave.isComplex)
+									{
+										ImGui::Text(
+											"Track Variation Type: %d",
+											evt->wave.complex.variation
+										);
+										ImGui::Text(
+											"Track Count: %d",
+											evt->wave.complex.trackCount
+										);
+										if (ImGui::TreeNode("Tracks"))
+										{
+											for (uint16_t m = 0; m < evt->wave.complex.trackCount; m += 1)
+											if (ImGui::TreeNode(
+												(void*) (intptr_t) m,
+												"Track #%d",
+												m
+											)) {
+												ImGui::Text(
+													"Track Index: %d",
+													evt->wave.complex.tracks[m]
+												);
+												ImGui::Text(
+													"WaveBank Index: %d",
+													evt->wave.complex.wavebanks[m]
+												);
+												ImGui::Text(
+													"Weight: %d",
+													evt->wave.complex.weights[m]
+												);
+												ImGui::TreePop();
+											}
+											ImGui::TreePop();
+										}
+									}
+									else
+									{
+										ImGui::Text(
+											"Track Index: %d",
+											evt->wave.simple.track
+										);
+										ImGui::Text(
+											"WaveBank Index: %d",
+											evt->wave.simple.wavebank
+										);
+									}
+
+									if (	evt->wave.variationFlags != 0 &&
+										evt->wave.variationFlags != 0xFFFF	)
+									{
+										ImGui::Text(
+											"Effect Variation Flags: %X",
+											evt->wave.variationFlags
+										);
+										if (evt->wave.variationFlags & 0x1000)
+										{
+											ImGui::Text(
+												"Min Pitch: %d",
+												evt->wave.minPitch
+											);
+											ImGui::Text(
+												"Max Pitch: %d",
+												evt->wave.maxPitch
+											);
+										}
+										if (evt->wave.variationFlags & 0x2000)
+										{
+											ImGui::Text(
+												"Min Volume: %d",
+												evt->wave.minVolume
+											);
+											ImGui::Text(
+												"Max Volume: %d",
+												evt->wave.maxVolume
+											);
+										}
+										/* FIXME: Frequency/QFactor flags???
+										if (evt->wave.variationFlags & 0x4000)
+										{
+											ImGui::Text(
+												"Min Frequency: %f",
+												evt->wave.minFrequency
+											);
+											ImGui::Text(
+												"Max Frequency: %f",
+												evt->wave.maxFrequency
+											);
+										}
+										if (evt->wave.variationFlags & 0x8000)
+										{
+											ImGui::Text(
+												"Min Q-Factor: %f",
+												evt->wave.minQFactor
+											);
+											ImGui::Text(
+												"Max Q-Factor: %f",
+												evt->wave.maxQFactor
+											);
+										}
+										*/
+									}
+								}
+								else if (	evt->type == FACTEVENT_PITCH ||
+										evt->type == FACTEVENT_VOLUME ||
+										evt->type == FACTEVENT_PITCHREPEATING ||
+										evt->type == FACTEVENT_VOLUMEREPEATING	)
+								{
+									if (evt->value.settings == 0)
+									{
+										ImGui::Text(
+											"Equation Flags: %X",
+											evt->value.equation.flags
+										);
+										ImGui::Text(
+											"Value 1: %f",
+											evt->value.equation.value1
+										);
+										ImGui::Text(
+											"Value 2: %f",
+											evt->value.equation.value2
+										);
+									}
+									else
+									{
+										ImGui::Text(
+											"Initial Value: %f",
+											evt->value.ramp.initialValue
+										);
+										ImGui::Text(
+											"Initial Slope: %f",
+											evt->value.ramp.initialSlope
+										);
+										ImGui::Text(
+											"Slope Delta: %f",
+											evt->value.ramp.slopeDelta
+										);
+										ImGui::Text(
+											"Duration: %d",
+											evt->value.ramp.duration
+										);
+									}
+								}
+								else if (	evt->type == FACTEVENT_MARKER ||
+										evt->type == FACTEVENT_MARKERREPEATING	)
+								{
+									ImGui::Text(
+										"Marker: %d",
+										evt->marker.marker
+									);
+									ImGui::Text(
+										"Repeating: %d",
+										evt->marker.repeating
+									);
+								}
+								else
+								{
+									assert(0 && "Unknown event type!");
+								}
+								ImGui::TreePop();
+							}
 							ImGui::TreePop();
 						}
 						ImGui::TreePop();
