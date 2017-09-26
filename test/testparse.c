@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 				"\t\t\t\tFilter Type: %d\n"
 				"\t\t\t\tFilter Q-Factor: %d\n"
 				"\t\t\t\tFilter Frequency: %d\n",
-				j,
+				sb->sounds[i].clips[j].code,
 				sb->sounds[i].clips[j].volume,
 				sb->sounds[i].clips[j].filter,
 				sb->sounds[i].clips[j].qfactor,
@@ -429,7 +429,7 @@ int main(int argc, char **argv)
 			{
 				printf(
 					"\t\t\tVariation %d, Complex:\n"
-					"\t\t\t\tSound Code: %d",
+					"\t\t\t\tSound Code: %d\n",
 					j,
 					sb->variations[i].entries[j].soundCode
 				);

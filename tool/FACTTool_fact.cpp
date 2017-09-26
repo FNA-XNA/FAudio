@@ -22,9 +22,11 @@ std::vector<std::string> engineNames;
 std::vector<bool> engineShows;
 
 std::vector<FACTSoundBank*> soundBanks;
+std::vector<std::string> soundbankNames;
 std::vector<bool> soundbankShows;
 
 std::vector<FACTWaveBank*> waveBanks;
+std::vector<std::string> wavebankNames;
 std::vector<bool> wavebankShows;
 
 bool show_test_window = false;
@@ -65,7 +67,7 @@ void FACTTool_Update()
 			for (size_t i = 0; i < soundBanks.size(); i += 1)
 			{
 				if (ImGui::MenuItem(
-					soundBanks[i]->name,
+					soundbankNames[i].c_str(),
 					NULL,
 					soundbankShows[i],
 					true
@@ -76,7 +78,7 @@ void FACTTool_Update()
 			for (size_t i = 0; i < waveBanks.size(); i += 1)
 			{
 				if (ImGui::MenuItem(
-					waveBanks[i]->name,
+					wavebankNames[i].c_str(),
 					NULL,
 					wavebankShows[i],
 					true
@@ -95,10 +97,11 @@ void FACTTool_Update()
 		if (ImGui::Begin("Open AudioEngine"))
 		{
 			static char enginename[64] = "AudioEngine.xgs";
-			ImGui::InputText("", enginename, 64);
-			ImGui::SameLine();
-			if (ImGui::Button("Open"))
-			{
+			if (ImGui::InputText(
+				"Open AudioEngine",
+				enginename, 64,
+				ImGuiInputTextFlags_EnterReturnsTrue
+			)) {
 				/* Load up file... */
 				OPENFILE(enginename)
 				FACTRuntimeParameters params;
@@ -286,10 +289,11 @@ void FACTTool_Update()
 
 		/* Open SoundBank */
 		static char soundbankname[64] = "Sound Bank.xsb";
-		ImGui::InputText("", soundbankname, 64);
-		ImGui::SameLine();
-		if (ImGui::Button("Open SoundBank"))
-		{
+		if (ImGui::InputText(
+			"Open SoundBank",
+			soundbankname, 64,
+			ImGuiInputTextFlags_EnterReturnsTrue
+		)) {
 			/* Load up file... */
 			OPENFILE(soundbankname)
 
@@ -307,15 +311,19 @@ void FACTTool_Update()
 
 			/* Add to UI... */
 			soundBanks.push_back(sb);
+			soundbankNames.push_back(
+				"SoundBank: " + std::string(sb->name)
+			);
 			soundbankShows.push_back(true);
 		}
 
 		/* Open WaveBank */
 		static char wavebankname[64] = "Wave Bank.xwb";
-		ImGui::InputText("", wavebankname, 64);
-		ImGui::SameLine();
-		if (ImGui::Button("Open WaveBank"))
-		{
+		if (ImGui::InputText(
+			"Open WaveBank",
+			wavebankname, 64,
+			ImGuiInputTextFlags_EnterReturnsTrue
+		)) {
 			/* Load up file... */
 			OPENFILE(wavebankname)
 
@@ -332,6 +340,9 @@ void FACTTool_Update()
 
 			/* Add to UI... */
 			waveBanks.push_back(wb);
+			wavebankNames.push_back(
+				"WaveBank: " + std::string(wb->name)
+			);
 			wavebankShows.push_back(true);
 		}
 
@@ -350,6 +361,7 @@ void FACTTool_Update()
 					{
 						sb = sb->next;
 						soundBanks.erase(soundBanks.begin() + j);
+						soundbankNames.erase(soundbankNames.begin() + j);
 						soundbankShows.erase(soundbankShows.begin() + j);
 						break;
 					}
@@ -366,6 +378,7 @@ void FACTTool_Update()
 					{
 						wb = wb->next;
 						waveBanks.erase(waveBanks.begin() + j);
+						wavebankNames.erase(wavebankNames.begin() + j);
 						wavebankShows.erase(wavebankShows.begin() + j);
 						break;
 					}
@@ -389,7 +402,7 @@ void FACTTool_Update()
 	if (soundbankShows[i])
 	{
 		/* Early out */
-		if (!ImGui::Begin(soundBanks[i]->name))
+		if (!ImGui::Begin(soundbankNames[i].c_str()))
 		{
 			ImGui::End();
 			continue;
@@ -400,6 +413,7 @@ void FACTTool_Update()
 		{
 			FACTSoundBank_Destroy(soundBanks[i]);
 			soundBanks.erase(soundBanks.begin() + i);
+			soundbankNames.erase(soundbankNames.begin() + i);
 			soundbankShows.erase(soundbankShows.begin() + i);
 			i -= 1;
 			ImGui::End();
@@ -519,8 +533,8 @@ void FACTTool_Update()
 					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].clipCount; k += 1)
 					if (ImGui::TreeNode(
 						(void*) (intptr_t) k,
-						"Clip #%d",
-						k
+						"Clip Code %d",
+						soundBanks[i]->sounds[j].clips[k].code
 					)) {
 						ImGui::Text(
 							"Volume: %d",
@@ -852,7 +866,7 @@ void FACTTool_Update()
 	if (wavebankShows[i])
 	{
 		/* Early out */
-		if (!ImGui::Begin(waveBanks[i]->name))
+		if (!ImGui::Begin(wavebankNames[i].c_str()))
 		{
 			ImGui::End();
 			continue;
@@ -863,6 +877,7 @@ void FACTTool_Update()
 		{
 			FACTWaveBank_Destroy(waveBanks[i]);
 			waveBanks.erase(waveBanks.begin() + i);
+			wavebankNames.erase(wavebankNames.begin() + i);
 			wavebankShows.erase(wavebankShows.begin() + i);
 			i -= 1;
 			ImGui::End();

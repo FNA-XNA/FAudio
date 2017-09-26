@@ -568,15 +568,15 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	FACTSoundBank *sb;
 	uint16_t	cueSimpleCount,
 			cueComplexCount;
-	uint32_t	cueSimpleOffset,
-			cueComplexOffset,
-			cueNameOffset,
-			variationOffset,
-			wavebankNameOffset,
-			cueHashOffset,
-			cueNameIndexOffset,
-			soundOffset,
-			curClipOffset;
+	int32_t	cueSimpleOffset,
+		cueComplexOffset,
+		cueNameOffset,
+		variationOffset,
+		transitionOffset,
+		wavebankNameOffset,
+		cueHashOffset,
+		cueNameIndexOffset,
+		soundOffset;
 	size_t memsize;
 	uint16_t i, j, cur;
 	uint8_t *ptrBookmark;
@@ -638,20 +638,18 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 	ptr += 2; /* Unknown value */
 
-	cueSimpleOffset = read_u32(&ptr);
-	cueComplexOffset = read_u32(&ptr);
-	cueNameOffset = read_u32(&ptr);
+	cueSimpleOffset = read_s32(&ptr);
+	cueComplexOffset = read_s32(&ptr);
+	cueNameOffset = read_s32(&ptr);
 
 	ptr += 4; /* Unknown value */
 
-	variationOffset = read_u32(&ptr);
-
-	ptr += 4; /* Unknown value */
-
-	wavebankNameOffset = read_u32(&ptr);
-	cueHashOffset = read_u32(&ptr);
-	cueNameIndexOffset = read_u32(&ptr);
-	soundOffset = read_u32(&ptr);
+	variationOffset = read_s32(&ptr);
+	transitionOffset = read_s32(&ptr);
+	wavebankNameOffset = read_s32(&ptr);
+	cueHashOffset = read_s32(&ptr);
+	cueNameIndexOffset = read_s32(&ptr);
+	soundOffset = read_s32(&ptr);
 
 	/* SoundBank Name */
 	memsize = FACT_strlen((char*) ptr) + 1; /* Dastardly! */
@@ -727,7 +725,6 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 
 		/* RPC Code data */
-		cur = 0;
 		if (sb->sounds[i].flags & 0x0E)
 		{
 			const uint16_t rpcDataLength = read_u16(&ptr);
@@ -809,7 +806,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			{
 				sb->sounds[i].clips[j].volume = read_u8(&ptr);
 
-				curClipOffset = read_u32(&ptr);
+				sb->sounds[i].clips[j].code = read_u32(&ptr);
 
 				sb->sounds[i].clips[j].filter = read_u8(&ptr);
 				if (sb->sounds[i].clips[j].filter & 0x01)
@@ -825,9 +822,12 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 				sb->sounds[i].clips[j].qfactor = read_u8(&ptr);
 				sb->sounds[i].clips[j].frequency = read_u16(&ptr);
+			}
 
-				assert((ptr - start) == curClipOffset);
-
+			/* All Clip events are stored at the end of the block */
+			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+			{
+				assert((ptr - start) == sb->sounds[i].clips[j].code);
 				INTERNAL_FACTParseClipEvents(
 					&ptr,
 					&sb->sounds[i].clips[j]
@@ -891,14 +891,18 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			sb->variationCount
 		);
 	}
+	else
+	{
+		sb->variations = NULL;
+		sb->variationCodes = NULL;
+	}
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
 		sb->variationCodes[i] = (uint32_t) (ptr - start);
 		sb->variations[i].entryCount = read_u16(&ptr);
 		sb->variations[i].flags = (read_u16(&ptr) >> 3) & 0x07;
 		ptr += 2; /* Unknown value */
-		sb->variations[i].variable = read_u16(&ptr);
-
+		sb->variations[i].variable = read_s16(&ptr);
 		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
 		sb->variations[i].entries = (FACTVariation*) FACT_malloc(
 			memsize
@@ -936,6 +940,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
 				sb->variations[i].entries[j].minWeight = read_f32(&ptr);
 				sb->variations[i].entries[j].maxWeight = read_f32(&ptr);
+				sb->variations[i].entries[j].linger = read_u32(&ptr);
 			}
 		}
 		else if (sb->variations[i].flags == 4)
@@ -953,6 +958,13 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		{
 			assert(0 && "Unknown variation type!");
 		}
+	}
+
+	/* FIXME: How is transition data structured? */
+	if (transitionOffset != -1)
+	{
+		assert((ptr - start) == transitionOffset);
+		ptr = start + cueHashOffset;
 	}
 
 	/* Cue Hash data? No idea what this is... */

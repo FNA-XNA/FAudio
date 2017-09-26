@@ -192,6 +192,8 @@ typedef struct FACTEvent
 
 typedef struct FACTClip
 {
+	uint32_t code;
+
 	uint8_t volume;
 	uint8_t filter;
 	uint8_t qfactor;
@@ -269,12 +271,13 @@ typedef struct FACTVariation
 	};
 	float minWeight;
 	float maxWeight;
+	uint32_t linger;
 } FACTVariation;
 
 typedef struct FACTVariationTable
 {
 	uint8_t flags;
-	uint16_t variable;
+	int16_t variable;
 
 	uint16_t entryCount;
 	FACTVariation *entries;
@@ -414,6 +417,7 @@ READ_FUNC(uint16_t, 2, u16)
 READ_FUNC(uint32_t, 4, u32)
 READ_FUNC(uint64_t, 8, u64)
 READ_FUNC(int16_t, 2, s16)
+READ_FUNC(int32_t, 4, s32)
 READ_FUNC(float, 4, f32)
 
 #undef READ_FUNC
