@@ -567,7 +567,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 ) {
 	FACTSoundBank *sb;
 	uint16_t	cueSimpleCount,
-			cueComplexCount;
+			cueComplexCount,
+			cueTotalAlign;
 	int32_t	cueSimpleOffset,
 		cueComplexOffset,
 		cueNameOffset,
@@ -629,7 +630,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 	ptr += 2; /* Unknown value */
 
-	sb->cueCount = read_u16(&ptr);
+	cueTotalAlign = read_u16(&ptr); /* FIXME: Why? */
+	sb->cueCount = cueSimpleCount + cueComplexCount;
 	sb->wavebankCount = read_u8(&ptr);
 	sb->soundCount = read_u16(&ptr);
 
@@ -969,7 +971,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 	/* Cue Hash data? No idea what this is... */
 	assert((ptr - start) == cueHashOffset);
-	ptr += 2 * sb->cueCount;
+	ptr += 2 * cueTotalAlign;
 
 	/* Cue Name Index data */
 	assert((ptr - start) == cueNameIndexOffset);
