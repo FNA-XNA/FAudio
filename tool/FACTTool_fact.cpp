@@ -383,10 +383,6 @@ void FACTTool_Update()
 		/* We out. */
 		ImGui::End();
 	}
-	else
-	{
-		ImGui::End();
-	}
 
 	/* SoundBank windows */
 	for (size_t i = 0; i < soundBanks.size(); i += 1)
