@@ -90,37 +90,47 @@ void FACTTool_Update()
 	}
 
 	/* Open AudioEngine */
-	if (openEngineShow && ImGui::Begin("Open AudioEngine"))
+	if (openEngineShow)
 	{
-		static char enginename[64] = "AudioEngine.xgs";
-		ImGui::InputText("", enginename, 64);
-		ImGui::SameLine();
-		if (ImGui::Button("Open"))
+		if (ImGui::Begin("Open AudioEngine"))
 		{
-			/* Load up file... */
-			OPENFILE(enginename)
-			FACTRuntimeParameters params;
-			params.pGlobalSettingsBuffer = buf;
-			params.globalSettingsBufferSize = len;
+			static char enginename[64] = "AudioEngine.xgs";
+			ImGui::InputText("", enginename, 64);
+			ImGui::SameLine();
+			if (ImGui::Button("Open"))
+			{
+				/* Load up file... */
+				OPENFILE(enginename)
+				FACTRuntimeParameters params;
+				params.pGlobalSettingsBuffer = buf;
+				params.globalSettingsBufferSize = len;
 
-			/* Create engine... */
-			FACTAudioEngine *engine;
-			FACTCreateEngine(0, &engine);
-			FACTAudioEngine_Initialize(engine, &params);
-			SDL_free(buf);
+				/* Create engine... */
+				FACTAudioEngine *engine;
+				FACTCreateEngine(0, &engine);
+				FACTAudioEngine_Initialize(engine, &params);
+				SDL_free(buf);
 
-			/* Add to UI... */
-			engines.push_back(engine);
-			engineNames.push_back(enginename);
-			engineShows.push_back(true);
+				/* Add to UI... */
+				engines.push_back(engine);
+				engineNames.push_back(enginename);
+				engineShows.push_back(true);
+			}
 		}
 		ImGui::End();
 	}
 
 	/* AudioEngine windows */
 	for (size_t i = 0; i < engines.size(); i += 1)
-	if (engineShows[i] && ImGui::Begin(engineNames[i].c_str()))
+	if (engineShows[i])
 	{
+		/* Early out */
+		if (!ImGui::Begin(engineNames[i].c_str()))
+		{
+			ImGui::End();
+			continue;
+		}
+
 		/* Categories */
 		if (ImGui::CollapsingHeader("Categories"))
 		for (uint16_t j = 0; j < engines[i]->categoryCount; j += 1)
@@ -373,11 +383,22 @@ void FACTTool_Update()
 		/* We out. */
 		ImGui::End();
 	}
+	else
+	{
+		ImGui::End();
+	}
 
 	/* SoundBank windows */
 	for (size_t i = 0; i < soundBanks.size(); i += 1)
-	if (soundbankShows[i] && ImGui::Begin(soundBanks[i]->name))
+	if (soundbankShows[i])
 	{
+		/* Early out */
+		if (!ImGui::Begin(soundBanks[i]->name))
+		{
+			ImGui::End();
+			continue;
+		}
+
 		/* Close file */
 		if (ImGui::Button("Close SoundBank"))
 		{
@@ -832,8 +853,15 @@ void FACTTool_Update()
 
 	/* WaveBank windows */
 	for (size_t i = 0; i < waveBanks.size(); i += 1)
-	if (wavebankShows[i] && ImGui::Begin(waveBanks[i]->name))
+	if (wavebankShows[i])
 	{
+		/* Early out */
+		if (!ImGui::Begin(waveBanks[i]->name))
+		{
+			ImGui::End();
+			continue;
+		}
+
 		/* Close file */
 		if (ImGui::Button("Close WaveBank"))
 		{
