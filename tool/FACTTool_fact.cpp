@@ -451,7 +451,7 @@ void FACTTool_Update()
 				soundBanks[i]->cues[j].instanceLimit
 			);
 			ImGui::Text(
-				"Fade-out (ms): %d",
+				"Fade-in (ms): %d",
 				soundBanks[i]->cues[j].fadeIn
 			);
 			ImGui::Text(
