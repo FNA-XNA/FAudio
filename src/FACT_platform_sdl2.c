@@ -21,7 +21,10 @@ FACTEngineDevice *devlist = NULL;
 
 void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 {
+	FACTAudioEngine *engine = (FACTAudioEngine*) userdata;
+
 	/* TODO */
+	(void) engine;
 	SDL_memset(stream, '\0', len);
 }
 
@@ -38,11 +41,6 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		SDL_InitSubSystem(SDL_INIT_AUDIO);
 	}
 
-	/* Pair the upcoming audio device with the audio engine */
-	device = (FACTEngineDevice*) FACT_malloc(sizeof(FACTEngineDevice));
-	device->next = NULL;
-	device->engine = engine;
-
 	/* By default, let's aim for a 48KHz float stream */
 	want.freq = 48000;
 	want.format = AUDIO_F32;
@@ -50,8 +48,9 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 	want.silence = 0;
 	want.samples = 4096;
 	want.callback = FACT_MixCallback;
-	want.userdata = device;
+	want.userdata = engine;
 
+	/* Use the device that the engine tells us to use */
 	if (id == NULL)
 	{
 		name = NULL;
@@ -67,6 +66,11 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		}
 		name = SDL_GetAudioDeviceName(renderer, 0);
 	}
+
+	/* Pair the upcoming audio device with the audio engine */
+	device = (FACTEngineDevice*) FACT_malloc(sizeof(FACTEngineDevice));
+	device->next = NULL;
+	device->engine = engine;
 	device->device = SDL_OpenAudioDevice(
 		name,
 		0,
