@@ -19,17 +19,19 @@ struct FACTEngineDevice
 
 FACTEngineDevice *devlist = NULL;
 
-void FACT_MixCallback(void *userdata, Uint8* stream, int len)
+void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 {
 	/* TODO */
 	SDL_memset(stream, '\0', len);
 }
 
-void FACT_PlatformInitEngine(FACTAudioEngine *engine)
+void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 {
 	SDL_AudioSpec want, have;
 	FACTEngineDevice *device;
 	FACTEngineDevice *list;
+	const char *name;
+	int renderer;
 
 	if (!SDL_WasInit(SDL_INIT_AUDIO))
 	{
@@ -50,8 +52,23 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine)
 	want.callback = FACT_MixCallback;
 	want.userdata = device;
 
+	if (id == NULL)
+	{
+		name = NULL;
+	}
+	else
+	{
+		/* FIXME: wchar_t is an asshole */
+		renderer = id[0] - L'0';
+		if (	renderer < 0 ||
+			renderer > SDL_GetNumAudioDevices(0)	)
+		{
+			renderer = 0;
+		}
+		name = SDL_GetAudioDeviceName(renderer, 0);
+	}
 	device->device = SDL_OpenAudioDevice(
-		NULL, /* FIXME: AudioRenderer */
+		name,
 		0,
 		&want,
 		&have,
@@ -119,6 +136,35 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 	{
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	}
+}
+
+uint16_t FACT_PlatformGetRendererCount()
+{
+	return SDL_GetNumAudioDevices(0);
+}
+
+void FACT_PlatformGetRendererDetails(
+	uint16_t index,
+	FACTRendererDetails *details
+) {
+	const char *name;
+	size_t len, i;
+
+	FACT_zero(details, sizeof(FACTRendererDetails));
+	if (index > SDL_GetNumAudioDevices(0))
+	{
+		return;
+	}
+
+	/* FIXME: wchar_t is an asshole */
+	details->rendererID[0] = L'0' + index;
+	name = SDL_GetAudioDeviceName(index, 0);
+	len = SDL_min(FACT_strlen(name), 0xFF);
+	for (i = 0; i < len; i += 1)
+	{
+		details->displayName[i] = name[i];
+	}
+	details->defaultDevice = (index == 0);
 }
 
 void* FACT_malloc(size_t size)

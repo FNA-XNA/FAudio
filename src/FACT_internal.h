@@ -430,8 +430,14 @@ void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len);
 
 /* Platform Functions */
 
-void FACT_PlatformInitEngine(FACTAudioEngine *engine);
+void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id);
 void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
+
+uint16_t FACT_PlatformGetRendererCount();
+void FACT_PlatformGetRendererDetails(
+	uint16_t index,
+	FACTRendererDetails *details
+);
 
 void* FACT_malloc(size_t size);
 void FACT_free(void *ptr);

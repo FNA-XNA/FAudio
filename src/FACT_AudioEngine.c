@@ -24,7 +24,7 @@ uint32_t FACTAudioEngine_GetRendererCount(
 	FACTAudioEngine *pEngine,
 	uint16_t *pnRendererCount
 ) {
-	/* TODO */
+	*pnRendererCount = FACT_PlatformGetRendererCount();
 	return 0;
 }
 
@@ -33,7 +33,10 @@ uint32_t FACTAudioEngine_GetRendererDetails(
 	uint16_t nRendererIndex,
 	FACTRendererDetails *pRendererDetails
 ) {
-	/* TODO */
+	FACT_PlatformGetRendererDetails(
+		nRendererIndex,
+		pRendererDetails
+	);
 	return 0;
 }
 
@@ -265,7 +268,10 @@ uint32_t FACTAudioEngine_Initialize(
 	/* Finally. */
 	assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
-	FACT_PlatformInitEngine(pEngine);
+	FACT_PlatformInitEngine(
+		pEngine,
+		pParams->pRendererID
+	);
 	return 0;
 }
 
