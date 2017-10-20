@@ -9,46 +9,83 @@
 
 #include <SDL.h>
 
-typedef struct FACTEngineDevice FACTEngineDevice;
-struct FACTEngineDevice
+typedef struct FACTEngineEntry FACTEngineEntry;
+struct FACTEngineEntry
 {
-	FACTEngineDevice *next;
 	FACTAudioEngine *engine;
-	SDL_AudioDeviceID device;
+	FACTEngineEntry *next;
 };
 
-FACTEngineDevice *devlist = NULL;
+typedef struct FACTAudioDevice FACTAudioDevice;
+struct FACTAudioDevice
+{
+	const char *name;
+	SDL_AudioDeviceID device;
+	FACTEngineEntry *engineList;
+	FACTAudioDevice *next;
+};
+
+FACTAudioDevice *devlist = NULL;
 
 void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 {
-	FACTAudioEngine *engine = (FACTAudioEngine*) userdata;
+	FACTAudioDevice *device = (FACTAudioDevice*) userdata;
+	FACTEngineEntry *engine = device->engineList;
+	FACTSoundBank *sb;
+	FACTWaveBank *wb;
+	FACTCue *cue;
+	FACTWave *wave;
 
-	/* TODO */
-	(void) engine;
+	/* FIXME: Can we avoid zeroing every time? Blech! */
 	SDL_memset(stream, '\0', len);
+
+	while (engine != NULL)
+	{
+		sb = engine->engine->sbList;
+		while (sb != NULL)
+		{
+			cue = sb->cueList;
+			while (cue != NULL)
+			{
+				/* TODO: Updates! */
+				cue = cue->next;
+			}
+			sb = sb->next;
+		}
+
+		wb = engine->engine->wbList;
+		while (wb != NULL)
+		{
+			wave = wb->waveList;
+			while (wave != NULL)
+			{
+				/* TODO: Mixing! */
+				wave = wave->next;
+			}
+			wb = wb->next;
+		}
+
+		engine = engine->next;
+	}
 }
 
 void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 {
+	FACTEngineEntry *entry, *entryList;
+	FACTAudioDevice *device, *deviceList;
 	SDL_AudioSpec want, have;
-	FACTEngineDevice *device;
-	FACTEngineDevice *list;
 	const char *name;
-	int renderer;
+	int32_t renderer;
 
 	if (!SDL_WasInit(SDL_INIT_AUDIO))
 	{
 		SDL_InitSubSystem(SDL_INIT_AUDIO);
 	}
 
-	/* By default, let's aim for a 48KHz float stream */
-	want.freq = 48000;
-	want.format = AUDIO_F32;
-	want.channels = 2; /* FIXME: Maybe aim for 5.1? */
-	want.silence = 0;
-	want.samples = 4096;
-	want.callback = FACT_MixCallback;
-	want.userdata = engine;
+	/* The entry to be added to the audio device */
+	entry = (FACTEngineEntry*) FACT_malloc(sizeof(FACTEngineEntry));
+	entry->engine = engine;
+	entry->next = NULL;
 
 	/* Use the device that the engine tells us to use */
 	if (id == NULL)
@@ -67,71 +104,142 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		name = SDL_GetAudioDeviceName(renderer, 0);
 	}
 
-	/* Pair the upcoming audio device with the audio engine */
-	device = (FACTEngineDevice*) FACT_malloc(sizeof(FACTEngineDevice));
-	device->next = NULL;
-	device->engine = engine;
-	device->device = SDL_OpenAudioDevice(
-		name,
-		0,
-		&want,
-		&have,
-		SDL_AUDIO_ALLOW_FORMAT_CHANGE
-	);
-	if (device->device == 0)
+	/* Check to see if the device is already opened */
+	device = devlist;
+	while (device != NULL)
 	{
-		FACT_free(device);
-		SDL_Log("%s\n", SDL_GetError());
-		SDL_assert(0 && "Failed to open audio device!");
+		if (FACT_strcmp(device->name, name) == 0)
+		{
+			break;
+		}
+		device = device->next;
 	}
-	else
-	{
 
-		/* Keep track of which engine is on which device */
+	/* Create a new device if the requested one is not in use yet */
+	if (device == NULL)
+	{
+		/* Allocate a new device container*/
+		device = (FACTAudioDevice*) FACT_malloc(
+			sizeof(FACTAudioDevice)
+		);
+		device->name = name;
+		device->engineList = entry;
+		device->next = NULL;
+
+		/* By default, let's aim for a 48KHz float stream */
+		want.freq = 48000;
+		want.format = AUDIO_F32;
+		want.channels = 2; /* FIXME: Maybe aim for 5.1? */
+		want.silence = 0;
+		want.samples = 4096;
+		want.callback = FACT_MixCallback;
+		want.userdata = device;
+
+		/* Open the device, finally */
+		device->device = SDL_OpenAudioDevice(
+			device->name,
+			0,
+			&want,
+			&have,
+			SDL_AUDIO_ALLOW_FORMAT_CHANGE
+		);
+		if (device->device == 0)
+		{
+			FACT_free(device);
+			FACT_free(entry);
+			SDL_Log("%s\n", SDL_GetError());
+			SDL_assert(0 && "Failed to open audio device!");
+			return;
+		}
+
+		/* Add to the device list */
 		if (devlist == NULL)
 		{
 			devlist = device;
 		}
 		else
 		{
-			list = devlist;
-			while (list->next != NULL)
+			deviceList = devlist;
+			while (deviceList->next != NULL)
 			{
-				list = list->next;
+				deviceList = deviceList->next;
 			}
-			list->next = device;
+			deviceList->next = device;
 		}
 
 		/* We're good to start! */
 		SDL_PauseAudioDevice(device->device, 0);
 	}
+	else /* Just add us to the existing device */
+	{
+		entryList = device->engineList;
+		while (entryList->next != NULL)
+		{
+			entryList = entryList->next;
+		}
+		entryList->next = entry;
+	}
 }
 
 void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 {
-	FACTEngineDevice *dev = devlist;
-	FACTEngineDevice *prev = devlist;
+	FACTEngineEntry *entry, *prevEntry;
+	FACTAudioDevice *dev = devlist;
+	FACTAudioDevice *prevDev = devlist;
+	uint8_t found = 0;
 	while (dev != NULL)
 	{
-		if (dev->engine == engine)
+		entry = dev->engineList;
+		prevEntry = dev->engineList;
+		while (entry != NULL)
 		{
-			/* FIXME: Multiple engines on one device...? */
-			SDL_CloseAudioDevice(dev->device);
-
-			if (dev == prev) /* First in list */
+			if (entry->engine == engine)
 			{
-				devlist = dev->next;
-				FACT_free(dev);
-				dev = devlist;
-				prev = devlist;
+				if (entry == prevEntry) /* First in list */
+				{
+					dev->engineList = entry->next;
+					FACT_free(entry);
+					entry = dev->engineList;
+					prevEntry = dev->engineList;
+				}
+				else
+				{
+					prevEntry->next = entry->next;
+					FACT_free(entry);
+					entry = prevEntry->next;
+				}
+				found = 1;
+				break;
 			}
 			else
 			{
-				prev->next = dev->next;
-				FACT_free(dev);
-				dev = prev->next;
+				prevEntry = entry;
+				entry = entry->next;
 			}
-			break;
+		}
+
+		if (found)
+		{
+			/* No more engines? We're done with this device. */
+			if (dev->engineList == NULL)
+			{
+				SDL_CloseAudioDevice(dev->device);
+				if (dev == prevDev) /* First in list */
+				{
+					devlist = dev->next;
+				}
+				else
+				{
+					prevDev = dev->next;
+				}
+				FACT_free(dev);
+			}
+			dev = NULL;
+		}
+		else
+		{
+			prevDev = dev;
+			dev = dev->next;
 		}
 	}
 
