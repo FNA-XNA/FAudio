@@ -29,6 +29,8 @@ std::vector<FACTWaveBank*> waveBanks;
 std::vector<std::string> wavebankNames;
 std::vector<bool> wavebankShows;
 
+std::vector<FACTWave*> waves;
+
 bool show_test_window = false;
 void FACTTool_Update()
 {
@@ -907,7 +909,21 @@ void FACTTool_Update()
 		ImGui::Separator();
 		for (uint32_t j = 0; j < waveBanks[i]->entryCount; j += 1)
 		{
-			ImGui::Text("%d", j);
+			char playText[16];
+			SDL_snprintf(playText, 16, "%d", j);
+			if (ImGui::Button(playText))
+			{
+				FACTWave *wave;
+				FACTWaveBank_Play(
+					waveBanks[i],
+					j,
+					0,
+					0,
+					0,
+					&wave
+				);
+				waves.push_back(wave);
+			}
 			ImGui::NextColumn();
 			ImGui::Text("%d", waveBanks[i]->entries[j].dwFlags);
 			ImGui::NextColumn();
@@ -937,5 +953,17 @@ void FACTTool_Update()
 
 		/* We out. */
 		ImGui::End();
+	}
+
+	/* Playing Waves */
+	for (size_t i = 0; i < waves.size(); i += 1)
+	{
+		uint32_t state;
+		FACTWave_GetState(waves[i], &state);
+		if (state & FACT_STATE_STOPPED)
+		{
+			FACTWave_Destroy(waves[i]);
+			waves.erase(waves.begin() + i);
+		}
 	}
 }
