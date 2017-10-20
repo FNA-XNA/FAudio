@@ -964,6 +964,7 @@ void FACTTool_Update()
 		{
 			FACTWave_Destroy(waves[i]);
 			waves.erase(waves.begin() + i);
+			i -= 1;
 		}
 	}
 }
