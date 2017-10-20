@@ -107,6 +107,7 @@ uint32_t FACTWaveBank_Prepare(
 	FACTWave *latest;
 
 	*ppWave = (FACTWave*) FACT_malloc(sizeof(FACTWave));
+	(*ppWave)->next = NULL;
 
 	/* Engine references */
 	(*ppWave)->parentBank = pWaveBank;
