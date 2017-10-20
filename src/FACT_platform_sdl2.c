@@ -37,7 +37,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTWave *wave;
 
 	/* FIXME: Can we avoid zeroing every time? Blech! */
-	SDL_memset(stream, '\0', len);
+	FACT_zero(stream, len);
 
 	while (engine != NULL)
 	{
