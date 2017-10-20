@@ -265,12 +265,16 @@ uint32_t FACTAudioEngine_Initialize(
 	/* Finally. */
 	assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
+	FACT_PlatformInitEngine(pEngine);
 	return 0;
 }
 
 uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 {
 	int i;
+
+	/* Shutdown the platform stream before freeing stuff! */
+	FACT_PlatformCloseEngine(pEngine);
 
 	/* Category data */
 	for (i = 0; i < pEngine->categoryCount; i += 1)

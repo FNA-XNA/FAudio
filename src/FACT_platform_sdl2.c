@@ -9,6 +9,118 @@
 
 #include <SDL.h>
 
+typedef struct FACTEngineDevice FACTEngineDevice;
+struct FACTEngineDevice
+{
+	FACTEngineDevice *next;
+	FACTAudioEngine *engine;
+	SDL_AudioDeviceID device;
+};
+
+FACTEngineDevice *devlist = NULL;
+
+void FACT_MixCallback(void *userdata, Uint8* stream, int len)
+{
+	/* TODO */
+	SDL_memset(stream, '\0', len);
+}
+
+void FACT_PlatformInitEngine(FACTAudioEngine *engine)
+{
+	SDL_AudioSpec want, have;
+	FACTEngineDevice *device;
+	FACTEngineDevice *list;
+
+	if (!SDL_WasInit(SDL_INIT_AUDIO))
+	{
+		SDL_InitSubSystem(SDL_INIT_AUDIO);
+	}
+
+	/* Pair the upcoming audio device with the audio engine */
+	device = (FACTEngineDevice*) FACT_malloc(sizeof(FACTEngineDevice));
+	device->next = NULL;
+	device->engine = engine;
+
+	/* By default, let's aim for a 48KHz float stream */
+	want.freq = 48000;
+	want.format = AUDIO_F32;
+	want.channels = 2; /* FIXME: Maybe aim for 5.1? */
+	want.silence = 0;
+	want.samples = 4096;
+	want.callback = FACT_MixCallback;
+	want.userdata = device;
+
+	device->device = SDL_OpenAudioDevice(
+		NULL, /* FIXME: AudioRenderer */
+		0,
+		&want,
+		&have,
+		SDL_AUDIO_ALLOW_FORMAT_CHANGE
+	);
+	if (device->device == 0)
+	{
+		FACT_free(device);
+		SDL_Log("%s\n", SDL_GetError());
+		SDL_assert(0 && "Failed to open audio device!");
+	}
+	else
+	{
+
+		/* Keep track of which engine is on which device */
+		if (devlist == NULL)
+		{
+			devlist = device;
+		}
+		else
+		{
+			list = devlist;
+			while (list->next != NULL)
+			{
+				list = list->next;
+			}
+			list->next = device;
+		}
+
+		/* We're good to start! */
+		SDL_PauseAudioDevice(device->device, 0);
+	}
+}
+
+void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
+{
+	FACTEngineDevice *dev = devlist;
+	FACTEngineDevice *prev = devlist;
+	while (dev != NULL)
+	{
+		if (dev->engine == engine)
+		{
+			/* FIXME: Multiple engines on one device...? */
+			SDL_CloseAudioDevice(dev->device);
+
+			if (dev == prev) /* First in list */
+			{
+				devlist = dev->next;
+				FACT_free(dev);
+				dev = devlist;
+				prev = devlist;
+			}
+			else
+			{
+				prev->next = dev->next;
+				FACT_free(dev);
+				dev = prev->next;
+			}
+			break;
+		}
+	}
+
+	/* No more devices? We're done here... */
+	if (devlist == NULL)
+	{
+		SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	}
+}
+
 void* FACT_malloc(size_t size)
 {
 	return SDL_malloc(size);
