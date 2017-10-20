@@ -105,6 +105,11 @@ void FACTTool_Update()
 				/* Load up file... */
 				OPENFILE(enginename)
 				FACTRuntimeParameters params;
+				SDL_memset(
+					&params,
+					'\0',
+					sizeof(FACTRuntimeParameters)
+				);
 				params.pGlobalSettingsBuffer = buf;
 				params.globalSettingsBufferSize = len;
 

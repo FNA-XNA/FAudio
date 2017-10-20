@@ -1072,6 +1072,7 @@ uint32_t FACT_ParseWaveBank(
 
 	wb = (FACTWaveBank*) FACT_malloc(sizeof(FACTWaveBank));
 	wb->parentEngine = pEngine;
+	wb->waveList = NULL;
 	wb->io = io;
 
 	/* Offset Table */
