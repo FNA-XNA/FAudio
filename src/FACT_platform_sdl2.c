@@ -22,6 +22,7 @@ struct FACTAudioDevice
 	const char *name;
 	SDL_AudioDeviceID device;
 	FACTEngineEntry *engineList;
+	uint8_t decodeCache[4096 * 2 * 2];
 	FACTAudioDevice *next;
 };
 
@@ -35,6 +36,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTWaveBank *wb;
 	FACTCue *cue;
 	FACTWave *wave;
+	uint32_t decodeLength;
 
 	/* FIXME: Can we avoid zeroing every time? Blech! */
 	FACT_zero(stream, len);
@@ -59,7 +61,22 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 			wave = wb->waveList;
 			while (wave != NULL)
 			{
-				/* TODO: Mixing! */
+				/* TODO: Decode length based on pitch/freq! */
+				decodeLength = wave->decode(
+					wave,
+					device->decodeCache,
+					4096
+				);
+				/* TODO: Resample with SDL_AudioStream!
+				 * For now, assume 16-bit stereo data...
+				 */
+				SDL_MixAudioFormat(
+					stream,
+					device->decodeCache,
+					AUDIO_S16,
+					decodeLength,
+					SDL_MIX_MAXVOLUME
+				);
 				wave = wave->next;
 			}
 			wb = wb->next;

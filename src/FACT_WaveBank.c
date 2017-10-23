@@ -105,6 +105,7 @@ uint32_t FACTWaveBank_Prepare(
 	FACTWave **ppWave
 ) {
 	FACTWave *latest;
+	FACTWaveBankMiniWaveFormat *fmt = &pWaveBank->entries[nWaveIndex].Format;
 
 	*ppWave = (FACTWave*) FACT_malloc(sizeof(FACTWave));
 	(*ppWave)->next = NULL;
@@ -121,7 +122,7 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		(*ppWave)->initialPosition = (uint32_t) (
 			( /* Samples per millisecond... */
-				(float) pWaveBank->entries[nWaveIndex].Format.nSamplesPerSec /
+				(float) fmt->nSamplesPerSec /
 				1000.0f
 			) * (float) dwPlayOffset
 		);
@@ -132,6 +133,65 @@ uint32_t FACTWaveBank_Prepare(
 	}
 	(*ppWave)->position = (*ppWave)->initialPosition;
 	(*ppWave)->loopCount = nLoopCount;
+
+	/* Decoding */
+	if (fmt->wFormatTag == 0x0) /* PCM */
+	{
+		if (fmt->wBitsPerSample == 1)
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoPCM16 :
+				FACT_INTERNAL_DecodeMonoPCM16;
+		}
+		else
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoPCM8 :
+				FACT_INTERNAL_DecodeMonoPCM8;
+		}
+	}
+	else if (fmt->wFormatTag == 0x2) /* ADPCM */
+	{
+		if (fmt->wBlockAlign == 0)
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoMSADPCM32 :
+				FACT_INTERNAL_DecodeMonoMSADPCM32;
+		}
+		else if (fmt->wBlockAlign == 16)
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoMSADPCM64 :
+				FACT_INTERNAL_DecodeMonoMSADPCM64;
+		}
+		else if (fmt->wBlockAlign == 48)
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoMSADPCM128 :
+				FACT_INTERNAL_DecodeMonoMSADPCM128;
+		}
+		else if (fmt->wBlockAlign == 112)
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoMSADPCM256 :
+				FACT_INTERNAL_DecodeMonoMSADPCM256;
+		}
+		else if (fmt->wBlockAlign == 240)
+		{
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
+				FACT_INTERNAL_DecodeStereoMSADPCM512 :
+				FACT_INTERNAL_DecodeMonoMSADPCM512;
+		}
+		else
+		{
+			assert(0 && "Unrecognized wBlockAlign!");
+		}
+	}
+	else /* Includes 0x1 - XMA, 0x3 - WMA */
+	{
+		assert(0 && "Rebuild your WaveBanks with ADPCM!");
+	}
+	(*ppWave)->msadpcmExtra = 0;
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)

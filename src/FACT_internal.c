@@ -285,3 +285,234 @@ void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len)
 {
 	/* TODO */
 }
+
+#define DECODE_FUNC(type, depth) \
+	uint32_t FACT_INTERNAL_Decode##type( \
+		FACTWave *wave, \
+		uint8_t *decodeCache, \
+		uint32_t samples \
+	) { \
+		/* Don't go past the end of the wave data. TODO: Loop Points */ \
+		uint32_t len = FACT_min( \
+			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
+				wave->position, \
+			samples * depth \
+		); \
+		/* Go to the spot in the WaveBank where our samples start */ \
+		wave->parentBank->io->seek( \
+			wave->parentBank->io, \
+			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
+				wave->position, \
+			0 \
+		); \
+		/* Just dump it straight into the decode cache */ \
+		wave->parentBank->io->read( \
+			wave->parentBank->io, \
+			decodeCache, \
+			len, \
+			1 \
+		); \
+		/* EOS? Stop! TODO: Loop Points */ \
+		wave->position += len; \
+		if (wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength) \
+		{ \
+			wave->state |= FACT_STATE_STOPPED; \
+			wave->state &= ~FACT_STATE_PLAYING; \
+		} \
+		return len; \
+	}
+DECODE_FUNC(MonoPCM8, 1)
+DECODE_FUNC(StereoPCM8, 2)
+DECODE_FUNC(MonoPCM16, 2)
+DECODE_FUNC(StereoPCM16, 4)
+#undef DECODE_FUNC
+
+typedef struct FACTMSADPCM1
+{
+	uint8_t predictor;
+	int16_t delta;
+	int16_t sample1;
+	int16_t sample2;
+} FACTMSADPCM1;
+
+typedef struct FACTMSADPCM2
+{
+	uint8_t l_predictor;
+	uint8_t r_predictor;
+	int16_t l_delta;
+	int16_t r_delta;
+	int16_t l_sample1;
+	int16_t r_sample1;
+	int16_t l_sample2;
+	int16_t r_sample2;
+} FACTMSADPCM2;
+
+static const int AdaptionTable[16] =
+{
+	230, 230, 230, 230, 307, 409, 512, 614,
+	768, 614, 512, 409, 307, 230, 230, 230
+};
+static const int AdaptCoeff_1[7] =
+{
+	256, 512, 0, 192, 240, 460, 392
+};
+static const int AdaptCoeff_2[7] =
+{
+	0, -256, 0, 64, 0, -208, -232
+};
+
+#define PARSE_NIBBLE(tgt, nib, pdct, s1, s2, dlta) \
+	signedNibble = (int8_t) nib; \
+	if (signedNibble & 0x08) \
+	{ \
+		signedNibble -= 0x10; \
+	} \
+	sampleInt = ( \
+		( \
+			(s1 * AdaptCoeff_1[pdct]) + \
+			(s2 * AdaptCoeff_2[pdct]) \
+		) / 256 \
+	); \
+	sampleInt += signedNibble * dlta; \
+	sample = FACT_clamp(sampleInt, -32768, 32767); \
+	s2 = s1; \
+	s1 = sample; \
+	dlta = (int16_t) (AdaptionTable[nib] * dlta / 256); \
+	tgt = sample;
+#define DECODE_MONO_BLOCK(target) \
+	PARSE_NIBBLE( \
+		target, \
+		nibbles[i] >> 4, \
+		preamble.predictor, \
+		preamble.sample1, \
+		preamble.sample2, \
+		preamble.delta \
+	) \
+	PARSE_NIBBLE( \
+		target, \
+		nibbles[i] & 0x0F, \
+		preamble.predictor, \
+		preamble.sample1, \
+		preamble.sample2, \
+		preamble.delta \
+	)
+#define DECODE_STEREO_BLOCK(target) \
+	PARSE_NIBBLE( \
+		target, \
+		nibbles[i] >> 4, \
+		preamble.l_predictor, \
+		preamble.l_sample1, \
+		preamble.l_sample2, \
+		preamble.l_delta \
+	) \
+	PARSE_NIBBLE( \
+		target, \
+		nibbles[i] & 0x0F, \
+		preamble.r_predictor, \
+		preamble.r_sample1, \
+		preamble.r_sample2, \
+		preamble.r_delta \
+	)
+#define DECODE_FUNC(type, align, bsize, chans, decodeblock) \
+	uint32_t FACT_INTERNAL_Decode##type( \
+		FACTWave *wave, \
+		uint8_t *decodeCache, \
+		uint32_t samples \
+	) { \
+		/* FIXME: Oh god all of this is so wrong */ \
+		/* Iterators */ \
+		uint8_t b, i; \
+		/* Temp storage for ADPCM blocks */ \
+		FACTMSADPCM##chans preamble; \
+		uint8_t nibbles[(align + 15) * chans]; \
+		int8_t signedNibble; \
+		int32_t sampleInt; \
+		int16_t sample; \
+		/* Decoded samples are always s16 */ \
+		uint16_t *pcm = (uint16_t*) decodeCache; \
+		/* How many blocks do we need? Do we go over a little bit? */ \
+		uint32_t blocks = samples / bsize; \
+		uint8_t extra = (samples % bsize) > 0; \
+		/* Don't go past the end of the wave data. TODO: Loop Points */ \
+		uint32_t len = FACT_min( \
+			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
+				wave->position, \
+			(blocks + extra) * bsize \
+		); \
+		/* Go to the spot in the WaveBank where our samples start */ \
+		wave->parentBank->io->seek( \
+			wave->parentBank->io, \
+			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
+				wave->position, \
+			0 \
+		); \
+		/* Read in each block directly to the decode cache */ \
+		for (b = 0; b < blocks; b += 1) \
+		{ \
+			wave->parentBank->io->read( \
+				wave->parentBank->io, \
+				&preamble, \
+				sizeof(preamble), \
+				1 \
+			); \
+			wave->parentBank->io->read( \
+				wave->parentBank->io, \
+				nibbles, \
+				sizeof(nibbles), \
+				1 \
+			); \
+			for (i = 0; i < ((align + 15) * chans); i += 1) \
+			{ \
+				decodeblock(*pcm++) \
+			} \
+		} \
+		/* For extra, decode into a separate cache for later */ \
+		if (extra > 0) \
+		{ \
+			wave->parentBank->io->read( \
+				wave->parentBank->io, \
+				&preamble, \
+				sizeof(preamble), \
+				1 \
+			); \
+			wave->parentBank->io->read( \
+				wave->parentBank->io, \
+				nibbles, \
+				sizeof(nibbles), \
+				1 \
+			); \
+			for (i = 0; i < ((align + 15) * chans); i += 1) \
+			{ \
+				decodeblock(wave->msadpcmCache[i]) \
+			} \
+			FACT_memcpy( \
+				pcm, \
+				wave->msadpcmCache, \
+				extra * 2 \
+			); \
+			FACT_memcpy( \
+				wave->msadpcmCache, \
+				&wave->msadpcmCache[extra], \
+				(align - extra) * 2 \
+			); \
+		} \
+		/* EOS? Stop! TODO: Loop Points */ \
+		wave->position += len; \
+		if (wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength) \
+		{ \
+			wave->state |= FACT_STATE_STOPPED; \
+			wave->state &= ~FACT_STATE_PLAYING; \
+		} \
+		return len; \
+	}
+DECODE_FUNC(MonoMSADPCM32,	  0,  32, 1, DECODE_MONO_BLOCK)
+DECODE_FUNC(MonoMSADPCM64,	 16,  64, 1, DECODE_MONO_BLOCK)
+DECODE_FUNC(MonoMSADPCM128,	 48, 128, 1, DECODE_MONO_BLOCK)
+DECODE_FUNC(MonoMSADPCM256,	112, 256, 1, DECODE_MONO_BLOCK)
+DECODE_FUNC(MonoMSADPCM512,	240, 512, 1, DECODE_MONO_BLOCK)
+DECODE_FUNC(StereoMSADPCM32,	  0,  32, 2, DECODE_STEREO_BLOCK)
+DECODE_FUNC(StereoMSADPCM64,	 16,  64, 2, DECODE_STEREO_BLOCK)
+DECODE_FUNC(StereoMSADPCM128,	 48, 128, 2, DECODE_STEREO_BLOCK)
+DECODE_FUNC(StereoMSADPCM256,	112, 256, 2, DECODE_STEREO_BLOCK)
+DECODE_FUNC(StereoMSADPCM512,	240, 512, 2, DECODE_STEREO_BLOCK)
+#undef DECODE_FUNC
