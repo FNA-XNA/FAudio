@@ -115,8 +115,11 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				}
 				else
 				{
+					/* We're at the end, give us the rest */
 					SDL_AudioStreamFlush(wave->cvt->stream);
 				}
+
+				/* ... then Mix, finally. */
 				if (SDL_AudioStreamAvailable(wave->cvt->stream))
 				{
 					resampleLength = SDL_AudioStreamGet(
@@ -124,8 +127,6 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						device->resampleCache,
 						sizeof(device->resampleCache)
 					);
-
-					/* ... then Mix, finally. */
 					SDL_MixAudioFormat(
 						stream,
 						device->resampleCache,
