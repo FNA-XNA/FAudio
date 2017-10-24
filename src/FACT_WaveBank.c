@@ -191,7 +191,6 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
-	(*ppWave)->msadpcmExtra = 0;
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)

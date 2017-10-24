@@ -380,8 +380,6 @@ struct FACTWave
 
 	/* Decoding */
 	FACTDecodeCallback decode;
-	uint8_t msadpcmCache[512];
-	uint8_t msadpcmExtra;
 };
 
 struct FACTCue
