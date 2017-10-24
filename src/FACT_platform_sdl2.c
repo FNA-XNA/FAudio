@@ -83,7 +83,19 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 			wave = wb->waveList;
 			while (wave != NULL)
 			{
+				/* Skip waves that aren't doing anything */
+				if (	(wave->state & FACT_STATE_PAUSED) ||
+					(wave->state & FACT_STATE_STOPPED)	)
+				{
+					wave = wave->next;
+					continue;
+				}
+
 				/* TODO: Decode length based on pitch! */
+				/* TODO: Volume mixing goes beyond what
+				 * MixAudioFormat can do. We need our own mix!
+				 * -flibit
+				 */
 
 				/* Decode... */
 				decodeLength = wave->decode(
@@ -93,25 +105,42 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				);
 
 				/* ... then Resample... */
-				SDL_AudioStreamPut(
-					wave->cvt->stream,
-					device->decodeCache,
-					decodeLength
-				);
-				resampleLength = SDL_AudioStreamGet(
-					wave->cvt->stream,
-					device->resampleCache,
-					sizeof(device->resampleCache)
-				);
+				if (decodeLength > 0)
+				{
+					SDL_AudioStreamPut(
+						wave->cvt->stream,
+						device->decodeCache,
+						decodeLength
+					);
+				}
+				else
+				{
+					SDL_AudioStreamFlush(wave->cvt->stream);
+				}
+				if (SDL_AudioStreamAvailable(wave->cvt->stream))
+				{
+					resampleLength = SDL_AudioStreamGet(
+						wave->cvt->stream,
+						device->resampleCache,
+						sizeof(device->resampleCache)
+					);
 
-				/* ... then Mix, finally. */
-				SDL_MixAudioFormat(
-					stream,
-					device->resampleCache,
-					DEVICE_FORMAT,
-					resampleLength,
-					SDL_MIX_MAXVOLUME /* TODO */
-				);
+					/* ... then Mix, finally. */
+					SDL_MixAudioFormat(
+						stream,
+						device->resampleCache,
+						DEVICE_FORMAT,
+						resampleLength,
+						wave->volume * SDL_MIX_MAXVOLUME
+					);
+				}
+				else
+				{
+					/* Looks like we're out, stop! */
+					wave->state |= FACT_STATE_STOPPED;
+					wave->state &= ~FACT_STATE_PLAYING;
+				}
+
 				wave = wave->next;
 			}
 			wb = wb->next;

@@ -314,13 +314,7 @@ void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len)
 			len, \
 			1 \
 		); \
-		/* EOS? Stop! TODO: Loop Points */ \
 		wave->position += len; \
-		if (wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength) \
-		{ \
-			wave->state |= FACT_STATE_STOPPED; \
-			wave->state &= ~FACT_STATE_PLAYING; \
-		} \
 		return len; \
 	}
 DECODE_FUNC(MonoPCM8, 1)
@@ -537,9 +531,6 @@ static const int32_t AdaptCoeff_2[7] =
 		/* len might be 0 if we just came back for tail samples */ \
 		if (len == 0) \
 		{ \
-			/* Okay, NOW we're done. */ \
-			wave->state |= FACT_STATE_STOPPED; \
-			wave->state &= ~FACT_STATE_PLAYING; \
 			return (pcm - decodeCache) * 2; \
 		} \
 		if (len < ((blocks + (extra > 0)) * ((16 + 22) * chans))) \
@@ -593,17 +584,7 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			pcm += extra; \
 		} \
-		/* EOS? Stop! TODO: Loop Points
-		 * Be careful though, there may be some extra samples at the
-		 * very end of the stream if the sample rate is weird.
-		 */ \
 		wave->position += len; \
-		if (	wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength && \
-			wave->msadpcmExtra == 0	) \
-		{ \
-			wave->state |= FACT_STATE_STOPPED; \
-			wave->state &= ~FACT_STATE_PLAYING; \
-		} \
 		return (pcm - decodeCache) * 2; \
 	}
 DECODE_FUNC(MonoMSADPCM32,	  0,  32, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
