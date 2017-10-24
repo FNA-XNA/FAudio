@@ -300,14 +300,14 @@ void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len)
 		); \
 		/* Go to the spot in the WaveBank where our samples start */ \
 		wave->parentBank->io->seek( \
-			wave->parentBank->io, \
+			wave->parentBank->io->data, \
 			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
 				wave->position, \
 			0 \
 		); \
 		/* Just dump it straight into the decode cache */ \
 		wave->parentBank->io->read( \
-			wave->parentBank->io, \
+			wave->parentBank->io->data, \
 			decodeCache, \
 			len, \
 			1 \
@@ -336,25 +336,25 @@ typedef struct FACTMSADPCM1
 } FACTMSADPCM1;
 #define READ_MONO_PREAMBLE \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.predictor, \
 		sizeof(preamble.predictor), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.delta, \
 		sizeof(preamble.delta), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.sample1, \
 		sizeof(preamble.sample1), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.sample2, \
 		sizeof(preamble.sample2), \
 		1 \
@@ -373,49 +373,49 @@ typedef struct FACTMSADPCM2
 } FACTMSADPCM2;
 #define READ_STEREO_PREAMBLE \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.l_predictor, \
 		sizeof(preamble.l_predictor), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.r_predictor, \
 		sizeof(preamble.r_predictor), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.l_delta, \
 		sizeof(preamble.l_delta), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.r_delta, \
 		sizeof(preamble.r_delta), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.l_sample1, \
 		sizeof(preamble.l_sample1), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.r_sample1, \
 		sizeof(preamble.r_sample1), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.l_sample2, \
 		sizeof(preamble.l_sample2), \
 		1 \
 	); \
 	wave->parentBank->io->read( \
-		wave->parentBank->io, \
+		wave->parentBank->io->data, \
 		&preamble.r_sample2, \
 		sizeof(preamble.r_sample2), \
 		1 \
@@ -452,6 +452,10 @@ static const int AdaptCoeff_2[7] =
 	s2 = s1; \
 	s1 = sample; \
 	dlta = (int16_t) (AdaptionTable[nib] * dlta / 256); \
+	if (dlta < 16) \
+	{ \
+		dlta = 16; \
+	} \
 	tgt = sample;
 #define DECODE_MONO_BLOCK(target) \
 	PARSE_NIBBLE( \
@@ -511,12 +515,16 @@ static const int AdaptCoeff_2[7] =
 			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
 				wave->position, \
 			blocks * ((align + 22) * chans) \
-		); /* FIXME: Toward the end? Clamp blocks too */ \
+		); \
+		if (len < (blocks * ((16 + 22) * 1))) \
+		{ \
+			blocks = len / ((16 + 22) * 1); \
+		} \
 		/* Stream buffer size should be a power of two */ \
 		assert(samples % bsize == 0); \
 		/* Go to the spot in the WaveBank where our samples start */ \
 		wave->parentBank->io->seek( \
-			wave->parentBank->io, \
+			wave->parentBank->io->data, \
 			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
 				wave->position, \
 			0 \
@@ -526,7 +534,7 @@ static const int AdaptCoeff_2[7] =
 		{ \
 			readpreamble \
 			wave->parentBank->io->read( \
-				wave->parentBank->io, \
+				wave->parentBank->io->data, \
 				nibbles, \
 				sizeof(nibbles), \
 				1 \
@@ -543,7 +551,7 @@ static const int AdaptCoeff_2[7] =
 			wave->state |= FACT_STATE_STOPPED; \
 			wave->state &= ~FACT_STATE_PLAYING; \
 		} \
-		return blocks * bsize; \
+		return blocks * bsize * 2; \
 	}
 DECODE_FUNC(MonoMSADPCM32,	  0,  32, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
 DECODE_FUNC(MonoMSADPCM64,	 16,  64, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
