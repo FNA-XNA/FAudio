@@ -97,7 +97,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				decodeLength = wave->decode(
 					wave,
 					device->decodeCache,
-					4096
+					DEVICE_BUFFERSIZE
 				);
 				SDL_MixAudioFormat(
 					stream,
@@ -354,6 +354,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 		DEVICE_CHANNELS,
 		DEVICE_FREQUENCY
 	);
+	/* FIXME: This number sucks. I need the remainder too. */
 	wave->cvt->frameSize = (uint32_t) (
 		(double) DEVICE_BUFFERSIZE *
 		((double) fmt->nSamplesPerSec / (double) DEVICE_FREQUENCY)
