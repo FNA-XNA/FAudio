@@ -534,10 +534,18 @@ static const int32_t AdaptCoeff_2[7] =
 				wave->position, \
 			(blocks + (extra > 0)) * ((align + 22) * chans) \
 		); \
+		/* len might be 0 if we just came back for tail samples */ \
+		if (len == 0) \
+		{ \
+			/* Okay, NOW we're done. */ \
+			wave->state |= FACT_STATE_STOPPED; \
+			wave->state &= ~FACT_STATE_PLAYING; \
+			return (pcm - decodeCache) * 2; \
+		} \
 		if (len < ((blocks + (extra > 0)) * ((16 + 22) * chans))) \
 		{ \
 			blocks = len / ((16 + 22) * chans); \
-			extra = 0; /* FIXME: ??? */ \
+			extra = len % ((16 + 22) * chans); \
 		} \
 		/* Go to the spot in the WaveBank where our samples start */ \
 		wave->parentBank->io->seek( \
@@ -585,9 +593,13 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			pcm += extra; \
 		} \
-		/* EOS? Stop! TODO: Loop Points */ \
+		/* EOS? Stop! TODO: Loop Points
+		 * Be careful though, there may be some extra samples at the
+		 * very end of the stream if the sample rate is weird.
+		 */ \
 		wave->position += len; \
-		if (wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength) \
+		if (	wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength && \
+			wave->extra == 0	) \
 		{ \
 			wave->state |= FACT_STATE_STOPPED; \
 			wave->state &= ~FACT_STATE_PLAYING; \
