@@ -9,17 +9,10 @@
 
 #include <SDL.h>
 
-#ifndef FLIBIT_IS_TESTING
-#define DEVICE_FORMAT AUDIO_S16
-#define DEVICE_FORMAT_SIZE 2
-#define DEVICE_FREQUENCY 16000
-#define DEVICE_CHANNELS 1
-#else
 #define DEVICE_FORMAT AUDIO_F32
 #define DEVICE_FORMAT_SIZE 4
 #define DEVICE_FREQUENCY 48000
 #define DEVICE_CHANNELS 2
-#endif
 #define DEVICE_BUFFERSIZE 4096
 
 struct FACTConverter
@@ -93,20 +86,6 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 			{
 				/* TODO: Decode length based on pitch! */
 
-#ifndef FLIBIT_IS_TESTING
-				decodeLength = wave->decode(
-					wave,
-					device->decodeCache,
-					DEVICE_BUFFERSIZE
-				);
-				SDL_MixAudioFormat(
-					stream,
-					(uint8_t*) device->decodeCache,
-					AUDIO_S16,
-					decodeLength,
-					SDL_MIX_MAXVOLUME
-				);
-#else
 				/* Decode... */
 				decodeLength = wave->decode(
 					wave,
@@ -134,7 +113,6 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					resampleLength,
 					SDL_MIX_MAXVOLUME /* TODO */
 				);
-#endif
 				wave = wave->next;
 			}
 			wb = wb->next;
@@ -331,6 +309,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 {
 	SDL_AudioFormat type;
 	FACTWaveBankMiniWaveFormat *fmt = &wave->parentBank->entries[wave->index].Format;
+
 	if (fmt->wFormatTag == 0x0) /* PCM */
 	{
 		type = (fmt->wBitsPerSample == 1) ?
@@ -345,6 +324,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 	{
 		SDL_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
+
 	wave->cvt = (FACTConverter*) FACT_malloc(sizeof(FACTConverter));
 	wave->cvt->stream = SDL_NewAudioStream(
 		type,
@@ -354,11 +334,22 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 		DEVICE_CHANNELS,
 		DEVICE_FREQUENCY
 	);
-	/* FIXME: This number sucks. I need the remainder too. */
-	wave->cvt->frameSize = (uint32_t) (
+
+	/* FIXME: This number sucks.
+	 * For now to keep from gaps forming we just aim upward if possible.
+	 * The SDL_AudioStream will keep the extra stuff for the next update.
+	 * -flibit
+	 */
+	wave->cvt->frameSize = (uint32_t) SDL_ceil(
 		(double) DEVICE_BUFFERSIZE *
 		((double) fmt->nSamplesPerSec / (double) DEVICE_FREQUENCY)
 	);
+	if (	fmt->nChannels == 2 &&
+		(wave->cvt->frameSize & 0x1)	)
+	{
+		/* Keep this as an even number! */
+		wave->cvt->frameSize += 1;
+	}
 }
 
 void FACT_PlatformCloseConverter(FACTWave *wave)
