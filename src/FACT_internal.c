@@ -588,7 +588,7 @@ static const int32_t AdaptCoeff_2[7] =
 			wave->state |= FACT_STATE_STOPPED; \
 			wave->state &= ~FACT_STATE_PLAYING; \
 		} \
-		return pcm - decodeCache; \
+		return (pcm - decodeCache) * 2; \
 	}
 DECODE_FUNC(MonoMSADPCM32,	  0,  32, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
 DECODE_FUNC(MonoMSADPCM64,	 16,  64, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
