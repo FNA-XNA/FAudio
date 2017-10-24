@@ -36,6 +36,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	}
 	assert(wave != NULL && "Could not find Wave reference!");
 
+	FACT_PlatformCloseConverter(pWave);
 	FACT_free(pWave);
 	return 0;
 }

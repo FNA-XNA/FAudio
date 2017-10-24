@@ -191,6 +191,8 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
+	(*ppWave)->msadpcmExtra = 0;
+	FACT_PlatformInitConverter(*ppWave);
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)
@@ -206,8 +208,6 @@ uint32_t FACTWaveBank_Prepare(
 		}
 		latest->next = *ppWave;
 	}
-
-	/* TODO: Wave decode cache, offset, blah blah blah */
 
 	return 0;
 }

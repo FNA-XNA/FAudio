@@ -9,6 +9,27 @@
 
 #include <SDL.h>
 
+#ifndef FLIBIT_IS_TESTING
+#define DEVICE_FORMAT AUDIO_S16
+#define DEVICE_FORMAT_SIZE 2
+#define DEVICE_FREQUENCY 16000
+#define DEVICE_CHANNELS 1
+#else
+#define DEVICE_FORMAT AUDIO_F32
+#define DEVICE_FORMAT_SIZE 4
+#define DEVICE_FREQUENCY 48000
+#define DEVICE_CHANNELS 2
+#endif
+#define DEVICE_BUFFERSIZE 4096
+
+struct FACTConverter
+{
+	SDL_AudioStream *stream;
+	uint32_t frameSize;
+};
+
+/* Internal Types */
+
 typedef struct FACTEngineEntry FACTEngineEntry;
 struct FACTEngineEntry
 {
@@ -22,11 +43,20 @@ struct FACTAudioDevice
 	const char *name;
 	SDL_AudioDeviceID device;
 	FACTEngineEntry *engineList;
-	uint8_t decodeCache[4096 * 2 * 2];
+	uint16_t decodeCache[DEVICE_BUFFERSIZE * 2];
+	uint8_t resampleCache[
+		DEVICE_BUFFERSIZE *
+		DEVICE_CHANNELS *
+		DEVICE_FORMAT_SIZE
+	];
 	FACTAudioDevice *next;
 };
 
+/* Globals */
+
 FACTAudioDevice *devlist = NULL;
+
+/* Mixer Thread */
 
 void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 {
@@ -36,7 +66,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTWaveBank *wb;
 	FACTCue *cue;
 	FACTWave *wave;
-	uint32_t decodeLength;
+	uint32_t decodeLength, resampleLength;
 
 	/* FIXME: Can we avoid zeroing every time? Blech! */
 	FACT_zero(stream, len);
@@ -61,22 +91,50 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 			wave = wb->waveList;
 			while (wave != NULL)
 			{
-				/* TODO: Decode length based on pitch/freq! */
+				/* TODO: Decode length based on pitch! */
+
+#ifndef FLIBIT_IS_TESTING
 				decodeLength = wave->decode(
 					wave,
 					device->decodeCache,
 					4096
 				);
-				/* TODO: Resample with SDL_AudioStream!
-				 * For now, assume 16-bit stereo data...
-				 */
 				SDL_MixAudioFormat(
 					stream,
-					device->decodeCache,
+					(uint8_t*) device->decodeCache,
 					AUDIO_S16,
 					decodeLength,
 					SDL_MIX_MAXVOLUME
 				);
+#else
+				/* Decode... */
+				decodeLength = wave->decode(
+					wave,
+					device->decodeCache,
+					wave->cvt->frameSize
+				);
+
+				/* ... then Resample... */
+				SDL_AudioStreamPut(
+					wave->cvt->stream,
+					device->decodeCache,
+					decodeLength
+				);
+				resampleLength = SDL_AudioStreamGet(
+					wave->cvt->stream,
+					device->resampleCache,
+					sizeof(device->resampleCache)
+				);
+
+				/* ... then Mix, finally. */
+				SDL_MixAudioFormat(
+					stream,
+					device->resampleCache,
+					DEVICE_FORMAT,
+					resampleLength,
+					SDL_MIX_MAXVOLUME /* TODO */
+				);
+#endif
 				wave = wave->next;
 			}
 			wb = wb->next;
@@ -85,6 +143,8 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 		engine = engine->next;
 	}
 }
+
+/* Platform Functions */
 
 void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 {
@@ -143,12 +203,12 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		device->engineList = entry;
 		device->next = NULL;
 
-		/* By default, let's aim for a 48KHz float stream */
-		want.freq = 48000;
-		want.format = AUDIO_F32;
-		want.channels = 2; /* FIXME: Maybe aim for 5.1? */
+		/* Enforce a default device format */
+		want.freq = DEVICE_FREQUENCY;
+		want.format = DEVICE_FORMAT;
+		want.channels = DEVICE_CHANNELS;
 		want.silence = 0;
-		want.samples = 4096;
+		want.samples = DEVICE_BUFFERSIZE;
 		want.callback = FACT_MixCallback;
 		want.userdata = device;
 
@@ -267,6 +327,45 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 	}
 }
 
+void FACT_PlatformInitConverter(FACTWave *wave)
+{
+	SDL_AudioFormat type;
+	FACTWaveBankMiniWaveFormat *fmt = &wave->parentBank->entries[wave->index].Format;
+	if (fmt->wFormatTag == 0x0) /* PCM */
+	{
+		type = (fmt->wBitsPerSample == 1) ?
+			AUDIO_S16 :
+			AUDIO_S8;
+	}
+	else if (fmt->wFormatTag == 0x2) /* ADPCM */
+	{
+		type = AUDIO_S16;
+	}
+	else /* Includes 0x1 - XMA, 0x3 - WMA */
+	{
+		SDL_assert(0 && "Rebuild your WaveBanks with ADPCM!");
+	}
+	wave->cvt = (FACTConverter*) FACT_malloc(sizeof(FACTConverter));
+	wave->cvt->stream = SDL_NewAudioStream(
+		type,
+		fmt->nChannels,
+		fmt->nSamplesPerSec,
+		DEVICE_FORMAT,
+		DEVICE_CHANNELS,
+		DEVICE_FREQUENCY
+	);
+	wave->cvt->frameSize = (uint32_t) (
+		(double) DEVICE_BUFFERSIZE *
+		((double) fmt->nSamplesPerSec / (double) DEVICE_FREQUENCY)
+	);
+}
+
+void FACT_PlatformCloseConverter(FACTWave *wave)
+{
+	SDL_FreeAudioStream(wave->cvt->stream);
+	FACT_free(wave->cvt);
+}
+
 uint16_t FACT_PlatformGetRendererCount()
 {
 	return SDL_GetNumAudioDevices(0);
@@ -314,6 +413,11 @@ void FACT_zero(void *ptr, size_t size)
 void FACT_memcpy(void *dst, void *src, size_t size)
 {
 	SDL_memcpy(dst, src, size);
+}
+
+void FACT_memmove(void *dst, void *src, size_t size)
+{
+	SDL_memmove(dst, src, size);
 }
 
 size_t FACT_strlen(const char *ptr)

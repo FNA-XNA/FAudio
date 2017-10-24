@@ -14,6 +14,10 @@
 
 #define FACT_VOLUME_0 180
 
+/* Internal Platform Types */
+
+typedef struct FACTConverter FACTConverter;
+
 /* Internal AudioEngine Types */
 
 typedef struct FACTAudioCategory
@@ -287,7 +291,7 @@ typedef struct FACTVariationTable
 
 typedef uint32_t (FACTCALL * FACTDecodeCallback)(
 	FACTWave *wave,
-	uint8_t *decodeCache,
+	uint16_t *decodeCache,
 	uint32_t samples
 );
 
@@ -380,6 +384,9 @@ struct FACTWave
 
 	/* Decoding */
 	FACTDecodeCallback decode;
+	FACTConverter *cvt;
+	uint16_t msadpcmCache[512];
+	uint16_t msadpcmExtra;
 };
 
 struct FACTCue
@@ -440,7 +447,7 @@ void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len);
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
-		uint8_t *decodeCache, \
+		uint16_t *decodeCache, \
 		uint32_t samples \
 	);
 DECODE_FUNC(MonoPCM8)
@@ -464,6 +471,9 @@ DECODE_FUNC(StereoMSADPCM512)
 void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id);
 void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
 
+void FACT_PlatformInitConverter(FACTWave *wave);
+void FACT_PlatformCloseConverter(FACTWave *wave);
+
 uint16_t FACT_PlatformGetRendererCount();
 void FACT_PlatformGetRendererDetails(
 	uint16_t index,
@@ -474,6 +484,7 @@ void* FACT_malloc(size_t size);
 void FACT_free(void *ptr);
 void FACT_zero(void *ptr, size_t size);
 void FACT_memcpy(void *dst, void *src, size_t size);
+void FACT_memmove(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
 int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
