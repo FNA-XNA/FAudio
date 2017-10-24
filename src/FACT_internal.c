@@ -286,6 +286,8 @@ void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len)
 	/* TODO */
 }
 
+/* PCM Reading */
+
 #define DECODE_FUNC(type, depth) \
 	uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
@@ -326,6 +328,8 @@ DECODE_FUNC(StereoPCM8, 2)
 DECODE_FUNC(MonoPCM16, 2)
 DECODE_FUNC(StereoPCM16, 4)
 #undef DECODE_FUNC
+
+/* MSADPCM Decoding */
 
 typedef struct FACTMSADPCM1
 {
