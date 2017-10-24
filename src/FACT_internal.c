@@ -516,9 +516,9 @@ static const int AdaptCoeff_2[7] =
 				wave->position, \
 			blocks * ((align + 22) * chans) \
 		); \
-		if (len < (blocks * ((16 + 22) * 1))) \
+		if (len < (blocks * ((16 + 22) * chans))) \
 		{ \
-			blocks = len / ((16 + 22) * 1); \
+			blocks = len / ((16 + 22) * chans); \
 		} \
 		/* Stream buffer size should be a power of two */ \
 		assert(samples % bsize == 0); \
