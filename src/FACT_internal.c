@@ -599,7 +599,7 @@ static const int32_t AdaptCoeff_2[7] =
 		 */ \
 		wave->position += len; \
 		if (	wave->position >= wave->parentBank->entries[wave->index].PlayRegion.dwLength && \
-			wave->extra == 0	) \
+			wave->msadpcmExtra == 0	) \
 		{ \
 			wave->state |= FACT_STATE_STOPPED; \
 			wave->state &= ~FACT_STATE_PLAYING; \
