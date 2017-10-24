@@ -18,7 +18,6 @@
 struct FACTConverter
 {
 	SDL_AudioStream *stream;
-	uint32_t frameSize;
 };
 
 /* Internal Types */
@@ -90,7 +89,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				decodeLength = wave->decode(
 					wave,
 					device->decodeCache,
-					wave->cvt->frameSize
+					DEVICE_BUFFERSIZE
 				);
 
 				/* ... then Resample... */
@@ -334,22 +333,6 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 		DEVICE_CHANNELS,
 		DEVICE_FREQUENCY
 	);
-
-	/* FIXME: This number sucks.
-	 * For now to keep from gaps forming we just aim upward if possible.
-	 * The SDL_AudioStream will keep the extra stuff for the next update.
-	 * -flibit
-	 */
-	wave->cvt->frameSize = (uint32_t) SDL_ceil(
-		(double) DEVICE_BUFFERSIZE *
-		((double) fmt->nSamplesPerSec / (double) DEVICE_FREQUENCY)
-	);
-	if (	fmt->nChannels == 2 &&
-		(wave->cvt->frameSize & 0x1)	)
-	{
-		/* Keep this as an even number! */
-		wave->cvt->frameSize += 1;
-	}
 }
 
 void FACT_PlatformCloseConverter(FACTWave *wave)
