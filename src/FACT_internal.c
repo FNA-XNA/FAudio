@@ -421,21 +421,21 @@ typedef struct FACTMSADPCM2
 		1 \
 	); \
 
-static const int AdaptionTable[16] =
+static const int32_t AdaptionTable[16] =
 {
 	230, 230, 230, 230, 307, 409, 512, 614,
 	768, 614, 512, 409, 307, 230, 230, 230
 };
-static const int AdaptCoeff_1[7] =
+static const int32_t AdaptCoeff_1[7] =
 {
 	256, 512, 0, 192, 240, 460, 392
 };
-static const int AdaptCoeff_2[7] =
+static const int32_t AdaptCoeff_2[7] =
 {
 	0, -256, 0, 64, 0, -208, -232
 };
 
-#define PARSE_NIBBLE(tgt, nib, pdct, s1, s2, dlta) \
+#define PARSE_NIBBLE(nib, pdct, s1, s2, dlta) \
 	signedNibble = (int8_t) nib; \
 	if (signedNibble & 0x08) \
 	{ \
@@ -451,41 +451,37 @@ static const int AdaptCoeff_2[7] =
 	sample = FACT_clamp(sampleInt, -32768, 32767); \
 	s2 = s1; \
 	s1 = sample; \
-	dlta = (int16_t) (AdaptionTable[nib] * dlta / 256); \
+	dlta = (int16_t) (AdaptionTable[nib] * (int32_t) dlta / 256); \
 	if (dlta < 16) \
 	{ \
 		dlta = 16; \
 	} \
-	tgt = sample;
-#define DECODE_MONO_BLOCK(target) \
+	*pcm++ = sample;
+#define DECODE_MONO_BLOCK \
 	PARSE_NIBBLE( \
-		target, \
-		nibbles[i] >> 4, \
+		(nibbles[i] >> 4), \
 		preamble.predictor, \
 		preamble.sample1, \
 		preamble.sample2, \
 		preamble.delta \
 	) \
 	PARSE_NIBBLE( \
-		target, \
-		nibbles[i] & 0x0F, \
+		(nibbles[i] & 0x0F), \
 		preamble.predictor, \
 		preamble.sample1, \
 		preamble.sample2, \
 		preamble.delta \
 	)
-#define DECODE_STEREO_BLOCK(target) \
+#define DECODE_STEREO_BLOCK \
 	PARSE_NIBBLE( \
-		target, \
-		nibbles[i] >> 4, \
+		(nibbles[i] >> 4), \
 		preamble.l_predictor, \
 		preamble.l_sample1, \
 		preamble.l_sample2, \
 		preamble.l_delta \
 	) \
 	PARSE_NIBBLE( \
-		target, \
-		nibbles[i] & 0x0F, \
+		(nibbles[i] & 0x0F), \
 		preamble.r_predictor, \
 		preamble.r_sample1, \
 		preamble.r_sample2, \
@@ -541,7 +537,7 @@ static const int AdaptCoeff_2[7] =
 			); \
 			for (i = 0; i < ((align + 15) * chans); i += 1) \
 			{ \
-				decodeblock(*pcm++) \
+				decodeblock \
 			} \
 		} \
 		/* EOS? Stop! TODO: Loop Points */ \
