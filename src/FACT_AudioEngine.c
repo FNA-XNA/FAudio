@@ -132,7 +132,7 @@ uint32_t FACTAudioEngine_Initialize(
 	dspParameterOffset = read_u32(&ptr);
 
 	/* Category data */
-	assert((ptr - start) == categoryOffset);
+	FACT_assert((ptr - start) == categoryOffset);
 	pEngine->categories = (FACTAudioCategory*) FACT_malloc(
 		sizeof(FACTAudioCategory) * pEngine->categoryCount
 	);
@@ -148,7 +148,7 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Variable data */
-	assert((ptr - start) == variableOffset);
+	FACT_assert((ptr - start) == variableOffset);
 	pEngine->variables = (FACTVariable*) FACT_malloc(
 		sizeof(FACTVariable) * pEngine->variableCount
 	);
@@ -172,7 +172,7 @@ uint32_t FACTAudioEngine_Initialize(
 	/* RPC data */
 	if (pEngine->rpcCount > 0)
 	{
-		assert((ptr - start) == rpcOffset);
+		FACT_assert((ptr - start) == rpcOffset);
 		pEngine->rpcs = (FACTRPC*) FACT_malloc(
 			sizeof(FACTRPC) *
 			pEngine->rpcCount
@@ -203,7 +203,7 @@ uint32_t FACTAudioEngine_Initialize(
 	/* DSP Preset data */
 	if (pEngine->dspPresetCount > 0)
 	{
-		assert((ptr - start) == dspPresetOffset);
+		FACT_assert((ptr - start) == dspPresetOffset);
 		pEngine->dspPresets = (FACTDSPPreset*) FACT_malloc(
 			sizeof(FACTDSPPreset) *
 			pEngine->dspPresetCount
@@ -224,7 +224,7 @@ uint32_t FACTAudioEngine_Initialize(
 		}
 
 		/* DSP Parameter data */
-		assert((ptr - start) == dspParameterOffset);
+		FACT_assert((ptr - start) == dspParameterOffset);
 		for (i = 0; i < pEngine->dspPresetCount; i += 1)
 		{
 			memsize = (
@@ -243,15 +243,15 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Blob #1, no idea what this is... */
-	assert((ptr - start) == blob1Offset);
+	FACT_assert((ptr - start) == blob1Offset);
 	ptr += blob1Count * 2;
 
 	/* Category Name Index data */
-	assert((ptr - start) == categoryNameIndexOffset);
+	FACT_assert((ptr - start) == categoryNameIndexOffset);
 	ptr += pEngine->categoryCount * 6; /* FIXME: index as assert value? */
 
 	/* Category Name data */
-	assert((ptr - start) == categoryNameOffset);
+	FACT_assert((ptr - start) == categoryNameOffset);
 	pEngine->categoryNames = (char**) FACT_malloc(
 		sizeof(char*) *
 		pEngine->categoryCount
@@ -265,15 +265,15 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Blob #2, no idea what this is... */
-	assert((ptr - start) == blob2Offset);
+	FACT_assert((ptr - start) == blob2Offset);
 	ptr += blob2Count * 2;
 
 	/* Variable Name Index data */
-	assert((ptr - start) == variableNameIndexOffset);
+	FACT_assert((ptr - start) == variableNameIndexOffset);
 	ptr += pEngine->variableCount * 6; /* FIXME: index as assert value? */
 
 	/* Variable Name data */
-	assert((ptr - start) == variableNameOffset);
+	FACT_assert((ptr - start) == variableNameOffset);
 	pEngine->variableNames = (char**) FACT_malloc(
 		sizeof(char*) *
 		pEngine->variableCount
@@ -287,7 +287,7 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Finally. */
-	assert((ptr - start) == pParams->globalSettingsBufferSize);
+	FACT_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
 	FACT_PlatformInitEngine(
 		pEngine,
@@ -399,7 +399,7 @@ void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 		clip->events[i].type = evtInfo & 0x001F;
 		clip->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
 
-		assert(read_u8(ptr) == 0xFF); /* Separator? */
+		FACT_assert(read_u8(ptr) == 0xFF); /* Separator? */
 
 		#define CLIPTYPE(t) (clip->events[i].type == t)
 		if (CLIPTYPE(FACTEVENT_STOP))
@@ -547,7 +547,7 @@ void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 				clip->events[i].value.equation.flags = read_u8(ptr);
 
 				/* SetValue, SetRandomValue, anything else? */
-				assert(clip->events[i].value.equation.flags & 0x0C);
+				FACT_assert(clip->events[i].value.equation.flags & 0x0C);
 
 				clip->events[i].value.equation.value1 = read_f32(ptr);
 				clip->events[i].value.equation.value2 = read_f32(ptr);
@@ -582,7 +582,7 @@ void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
 		}
 		else
 		{
-			assert(0 && "Unknown event type!");
+			FACT_assert(0 && "Unknown event type!");
 		}
 		#undef CLIPTYPE
 	}
@@ -691,7 +691,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	ptr += 64;
 
 	/* WaveBank Name data */
-	assert((ptr - start) == wavebankNameOffset);
+	FACT_assert((ptr - start) == wavebankNameOffset);
 	sb->wavebankNames = (char**) FACT_malloc(
 		sizeof(char*) *
 		sb->wavebankCount
@@ -705,7 +705,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	/* Sound data */
-	assert((ptr - start) == soundOffset);
+	FACT_assert((ptr - start) == soundOffset);
 	sb->sounds = (FACTSound*) FACT_malloc(
 		sizeof(FACTSound) *
 		sb->soundCount
@@ -801,7 +801,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			#undef COPYRPCBLOCK
 
 			/* FIXME: Does 0x08 mean something for RPCs...? */
-			assert((ptr - ptrBookmark) == rpcDataLength);
+			FACT_assert((ptr - ptrBookmark) == rpcDataLength);
 		}
 		else
 		{
@@ -860,7 +860,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			/* All Clip events are stored at the end of the block */
 			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
 			{
-				assert((ptr - start) == sb->sounds[i].clips[j].code);
+				FACT_assert((ptr - start) == sb->sounds[i].clips[j].code);
 				INTERNAL_FACTParseClipEvents(
 					&ptr,
 					&sb->sounds[i].clips[j]
@@ -878,7 +878,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	cur = 0;
 
 	/* Simple Cue data */
-	assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
+	FACT_assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
 	for (i = 0; i < cueSimpleCount; i += 1, cur += 1)
 	{
 		sb->cues[cur].flags = read_u8(&ptr);
@@ -892,7 +892,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	/* Complex Cue data */
-	assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
+	FACT_assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
 	for (i = 0; i < cueComplexCount; i += 1, cur += 1)
 	{
 		sb->cues[cur].flags = read_u8(&ptr);
@@ -914,7 +914,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	/* Variation data */
 	if (sb->variationCount > 0)
 	{
-		assert((ptr - start) == variationOffset);
+		FACT_assert((ptr - start) == variationOffset);
 		sb->variations = (FACTVariationTable*) FACT_malloc(
 			sizeof(FACTVariationTable) *
 			sb->variationCount
@@ -989,27 +989,27 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		else
 		{
-			assert(0 && "Unknown variation type!");
+			FACT_assert(0 && "Unknown variation type!");
 		}
 	}
 
 	/* FIXME: How is transition data structured? */
 	if (transitionOffset != -1)
 	{
-		assert((ptr - start) == transitionOffset);
+		FACT_assert((ptr - start) == transitionOffset);
 		ptr = start + cueHashOffset;
 	}
 
 	/* Cue Hash data? No idea what this is... */
-	assert((ptr - start) == cueHashOffset);
+	FACT_assert((ptr - start) == cueHashOffset);
 	ptr += 2 * cueTotalAlign;
 
 	/* Cue Name Index data */
-	assert((ptr - start) == cueNameIndexOffset);
+	FACT_assert((ptr - start) == cueNameIndexOffset);
 	ptr += 6 * sb->cueCount; /* FIXME: index as assert value? */
 
 	/* Cue Name data */
-	assert((ptr - start) == cueNameOffset);
+	FACT_assert((ptr - start) == cueNameOffset);
 	sb->cueNames = (char**) FACT_malloc(
 		sizeof(char*) *
 		sb->cueCount
@@ -1023,7 +1023,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	/* Finally. */
-	assert((ptr - start) == dwSize);
+	FACT_assert((ptr - start) == dwSize);
 	*ppSoundBank = sb;
 	return 0;
 }
@@ -1100,15 +1100,15 @@ uint32_t FACT_ParseWaveBank(
 	io->read(io->data, &wbtable, sizeof(wbtable), 1);
 
 	/* TODO: What are these...? */
-	assert(wbtable.unknownOffset1 == wbtable.playRegionOffset);
-	assert(wbtable.unknownLength1 == 0);
-	assert(wbtable.unknownOffset2 == 0);
-	assert(wbtable.unknownLength2 == 0);
+	FACT_assert(wbtable.unknownOffset1 == wbtable.playRegionOffset);
+	FACT_assert(wbtable.unknownLength1 == 0);
+	FACT_assert(wbtable.unknownOffset2 == 0);
+	FACT_assert(wbtable.unknownLength2 == 0);
 
 	/* WaveBank Info */
-	assert(io->seek(io->data, 0, 1) == wbtable.infoOffset);
+	FACT_assert(io->seek(io->data, 0, 1) == wbtable.infoOffset);
 	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
-	assert(wbinfo.streaming == isStreaming);
+	FACT_assert(wbinfo.streaming == isStreaming);
 	wb->streaming = wbinfo.streaming;
 	wb->entryCount = wbinfo.entryCount;
 	memsize = FACT_strlen(wbinfo.name) + 1;
@@ -1122,7 +1122,7 @@ uint32_t FACT_ParseWaveBank(
 	FACT_zero(wb->entryRefs, memsize);
 
 	/* WaveBank Entries */
-	assert(io->seek(io->data, 0, 1) == wbtable.entryTableOffset);
+	FACT_assert(io->seek(io->data, 0, 1) == wbtable.entryTableOffset);
 	if (wbinfo.flags & 0x0002)
 	{
 		for (i = 0; i < wbinfo.entryCount - 1; i += 1)
@@ -1331,7 +1331,7 @@ uint16_t FACTAudioEngine_GetCategory(
 		}
 	}
 
-	assert(0 && "Category name not found!");
+	FACT_assert(0 && "Category name not found!");
 	return 0;
 }
 
@@ -1437,7 +1437,7 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 			return i;
 		}
 	}
-	assert(0 && "Variable name not found!");
+	FACT_assert(0 && "Variable name not found!");
 	return 0;
 }
 
@@ -1447,9 +1447,9 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 	float nValue
 ) {
 	FACTVariable *var = &pEngine->variables[nIndex];
-	assert(var->accessibility & 0x01);
-	assert(var->accessibility & 0x04);
-	assert(!(var->accessibility & 0x02));
+	FACT_assert(var->accessibility & 0x01);
+	FACT_assert(var->accessibility & 0x04);
+	FACT_assert(!(var->accessibility & 0x02));
 	pEngine->globalVariableValues[nIndex] = FACT_clamp(
 		nValue,
 		var->minValue,
@@ -1464,8 +1464,8 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 	float *pnValue
 ) {
 	FACTVariable *var = &pEngine->variables[nIndex];
-	assert(var->accessibility & 0x01);
-	assert(var->accessibility & 0x04);
+	FACT_assert(var->accessibility & 0x01);
+	FACT_assert(var->accessibility & 0x04);
 	*pnValue = pEngine->globalVariableValues[nIndex];
 	return 0;
 }

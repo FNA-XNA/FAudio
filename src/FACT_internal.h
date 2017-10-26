@@ -7,8 +7,13 @@
 
 #include "FACT.h"
 
-/* FIXME: Remove this! */
+#ifdef FACT_UNKNOWN_PLATFORM
 #include <assert.h>
+#define FACT_assert assert
+#else
+#include <SDL_assert.h>
+#define FACT_assert SDL_assert
+#endif
 
 /* Internal Constants */
 

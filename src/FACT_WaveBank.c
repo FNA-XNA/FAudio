@@ -31,7 +31,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		prev = wb;
 		wb = wb->next;
 	}
-	assert(wb != NULL && "Could not find WaveBank reference!");
+	FACT_assert(wb != NULL && "Could not find WaveBank reference!");
 
 	FACT_free(pWaveBank->name);
 	FACT_free(pWaveBank->entries);
@@ -69,7 +69,7 @@ uint16_t FACTWaveBank_GetWaveIndex(
 	FACTWaveBank *pWaveBank,
 	const char *szFriendlyName
 ) {
-	assert(0 && "WaveBank name tables are not supported!");
+	FACT_assert(0 && "WaveBank name tables are not supported!");
 	return 0;
 }
 
@@ -184,12 +184,12 @@ uint32_t FACTWaveBank_Prepare(
 		}
 		else
 		{
-			assert(0 && "Unrecognized wBlockAlign!");
+			FACT_assert(0 && "Unrecognized wBlockAlign!");
 		}
 	}
 	else /* Includes 0x1 - XMA, 0x3 - WMA */
 	{
-		assert(0 && "Rebuild your WaveBanks with ADPCM!");
+		FACT_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
 	(*ppWave)->msadpcmExtra = 0;
 	FACT_PlatformInitConverter(*ppWave);

@@ -76,7 +76,7 @@ uint16_t FACTCue_GetVariableIndex(
 			return i;
 		}
 	}
-	assert(0 && "Variable name not found!");
+	FACT_assert(0 && "Variable name not found!");
 	return 0;
 }
 
@@ -86,9 +86,9 @@ uint32_t FACTCue_SetVariable(
 	float nValue
 ) {
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
-	assert(var->accessibility & 0x01);
-	assert(!(var->accessibility & 0x02));
-	assert(!(var->accessibility & 0x04));
+	FACT_assert(var->accessibility & 0x01);
+	FACT_assert(!(var->accessibility & 0x02));
+	FACT_assert(!(var->accessibility & 0x04));
 	pCue->variableValues[nIndex] = FACT_clamp(
 		nValue,
 		var->minValue,
@@ -103,8 +103,8 @@ uint32_t FACTCue_GetVariable(
 	float *nValue
 ) {
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
-	assert(var->accessibility & 0x01);
-	assert(!(var->accessibility & 0x04));
+	FACT_assert(var->accessibility & 0x01);
+	FACT_assert(!(var->accessibility & 0x04));
 	*nValue = pCue->variableValues[nIndex];
 	return 0;
 }

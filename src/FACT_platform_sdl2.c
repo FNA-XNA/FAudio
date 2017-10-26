@@ -230,7 +230,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 			FACT_free(device);
 			FACT_free(entry);
 			SDL_Log("%s\n", SDL_GetError());
-			SDL_assert(0 && "Failed to open audio device!");
+			FACT_assert(0 && "Failed to open audio device!");
 			return;
 		}
 
@@ -349,7 +349,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 	}
 	else /* Includes 0x1 - XMA, 0x3 - WMA */
 	{
-		SDL_assert(0 && "Rebuild your WaveBanks with ADPCM!");
+		FACT_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
 
 	wave->cvt = (FACTPlatformConverter*) SDL_NewAudioStream(

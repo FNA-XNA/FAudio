@@ -787,7 +787,7 @@ void FACTTool_Update()
 								}
 								else
 								{
-									assert(0 && "Unknown event type!");
+									FACT_assert(0 && "Unknown event type!");
 								}
 								ImGui::TreePop();
 							}

@@ -20,7 +20,7 @@ uint16_t FACTSoundBank_GetCueIndex(
 		}
 	}
 
-	assert(0 && "Cue name not found!");
+	FACT_assert(0 && "Cue name not found!");
 	return 0;
 }
 
@@ -53,7 +53,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 			}
 		}
 
-		assert(i < pSoundBank->variationCount && "Variation table not found!");
+		FACT_assert(i < pSoundBank->variationCount && "Variation table not found!");
 
 		if (pSoundBank->variations[i].flags == 3)
 		{
@@ -299,7 +299,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		prev = sb;
 		sb = sb->next;
 	}
-	assert(sb != NULL && "Could not find SoundBank reference!");
+	FACT_assert(sb != NULL && "Could not find SoundBank reference!");
 
 	/* Finally. */
 	FACT_free(sb);

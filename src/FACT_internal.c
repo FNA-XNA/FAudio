@@ -22,7 +22,7 @@ FACTRPC* FACT_INTERNAL_GetRPC(
 		}
 	}
 
-	assert(0 && "RPC code not found!");
+	FACT_assert(0 && "RPC code not found!");
 	return NULL;
 }
 
@@ -131,7 +131,7 @@ void FACT_INTERNAL_UpdateRPCs(
 			}
 			else
 			{
-				assert(0 && "Unhandled RPC parameter type!");
+				FACT_assert(0 && "Unhandled RPC parameter type!");
 			}
 		}
 	}
@@ -227,7 +227,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			/* TODO: FACT_INTERNAL_Marker(Marker*) */
 			break;
 		default:
-			assert(0 && "Unrecognized clip event type!");
+			FACT_assert(0 && "Unrecognized clip event type!");
 		}
 
 		/* Either loop or mark this event as complete */

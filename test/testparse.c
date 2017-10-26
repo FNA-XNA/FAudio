@@ -405,7 +405,7 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					assert(0 && "Unknown event type!");
+					FACT_assert(0 && "Unknown event type!");
 				}
 			}
 		}
