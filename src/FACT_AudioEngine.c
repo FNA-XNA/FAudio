@@ -993,7 +993,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sizeof(char*) *
 		sb->cueCount
 	);
-	for (int i = 0; i < sb->cueCount; i += 1)
+	for (i = 0; i < sb->cueCount; i += 1)
 	{
 		memsize = FACT_strlen((char*) ptr) + 1;
 		sb->cueNames[i] = (char*) FACT_malloc(memsize);
