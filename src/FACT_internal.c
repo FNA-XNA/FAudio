@@ -281,11 +281,6 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	return 0;
 }
 
-void FACT_INTERNAL_MixWave(FACTWave *wave, uint8_t *stream, uint32_t len)
-{
-	/* TODO */
-}
-
 /* PCM Reading */
 
 #define DECODE_FUNC(type, depth) \

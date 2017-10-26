@@ -56,18 +56,19 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	SDL_AudioStream *cvt;
 	uint32_t decodeLength, resampleLength;
 
-	/* FIXME: Can we avoid zeroing every time? Blech! */
 	FACT_zero(stream, len);
 
 	while (engine != NULL)
 	{
+		FACT_INTERNAL_UpdateEngine(engine->engine);
+
 		sb = engine->engine->sbList;
 		while (sb != NULL)
 		{
 			cue = sb->cueList;
 			while (cue != NULL)
 			{
-				/* TODO: Updates! */
+				FACT_INTERNAL_UpdateCue(cue);
 				cue = cue->next;
 			}
 			sb = sb->next;
