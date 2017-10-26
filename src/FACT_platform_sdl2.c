@@ -364,7 +364,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 
 void FACT_PlatformCloseConverter(FACTWave *wave)
 {
-	SDL_FreeAudioStream(wave->cvt);
+	SDL_FreeAudioStream((SDL_AudioStream*) wave->cvt);
 }
 
 uint16_t FACT_PlatformGetRendererCount()
