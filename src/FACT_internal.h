@@ -418,26 +418,6 @@ struct FACTCue
 	FACTSoundInstance soundInstance;
 };
 
-/* Helper Functions */
-
-#define READ_FUNC(type, size, suffix) \
-	static inline type read_##suffix(uint8_t **ptr) \
-	{ \
-		type result = *((type*) *ptr); \
-		*ptr += size; \
-		return result; \
-	}
-
-READ_FUNC(uint8_t, 1, u8)
-READ_FUNC(uint16_t, 2, u16)
-READ_FUNC(uint32_t, 4, u32)
-READ_FUNC(uint64_t, 8, u64)
-READ_FUNC(int16_t, 2, s16)
-READ_FUNC(int32_t, 4, s32)
-READ_FUNC(float, 4, f32)
-
-#undef READ_FUNC
-
 /* Internal functions */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
