@@ -16,7 +16,7 @@
 
 /* Internal Platform Types */
 
-typedef struct FACTConverter FACTConverter;
+typedef void* FACTPlatformConverter;
 
 /* Internal AudioEngine Types */
 
@@ -384,7 +384,7 @@ struct FACTWave
 
 	/* Decoding */
 	FACTDecodeCallback decode;
-	FACTConverter *cvt;
+	FACTPlatformConverter cvt;
 	uint16_t msadpcmCache[512];
 	uint16_t msadpcmExtra;
 };

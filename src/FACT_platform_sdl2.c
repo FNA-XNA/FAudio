@@ -15,11 +15,6 @@
 #define DEVICE_CHANNELS 2
 #define DEVICE_BUFFERSIZE 4096
 
-struct FACTConverter
-{
-	SDL_AudioStream *stream;
-};
-
 /* Internal Types */
 
 typedef struct FACTEngineEntry FACTEngineEntry;
@@ -58,6 +53,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTWaveBank *wb;
 	FACTCue *cue;
 	FACTWave *wave;
+	SDL_AudioStream *cvt;
 	uint32_t decodeLength, resampleLength;
 
 	/* FIXME: Can we avoid zeroing every time? Blech! */
@@ -105,10 +101,11 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				);
 
 				/* ... then Resample... */
+				cvt = (SDL_AudioStream*) wave->cvt;
 				if (decodeLength > 0)
 				{
 					SDL_AudioStreamPut(
-						wave->cvt->stream,
+						cvt,
 						device->decodeCache,
 						decodeLength
 					);
@@ -116,14 +113,14 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				else
 				{
 					/* We're at the end, give us the rest */
-					SDL_AudioStreamFlush(wave->cvt->stream);
+					SDL_AudioStreamFlush(cvt);
 				}
 
 				/* ... then Mix, finally. */
-				if (SDL_AudioStreamAvailable(wave->cvt->stream))
+				if (SDL_AudioStreamAvailable(cvt))
 				{
 					resampleLength = SDL_AudioStreamGet(
-						wave->cvt->stream,
+						cvt,
 						device->resampleCache,
 						sizeof(device->resampleCache)
 					);
@@ -354,8 +351,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 		SDL_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
 
-	wave->cvt = (FACTConverter*) FACT_malloc(sizeof(FACTConverter));
-	wave->cvt->stream = SDL_NewAudioStream(
+	wave->cvt = (FACTPlatformConverter*) SDL_NewAudioStream(
 		type,
 		fmt->nChannels,
 		fmt->nSamplesPerSec,
@@ -367,8 +363,7 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 
 void FACT_PlatformCloseConverter(FACTWave *wave)
 {
-	SDL_FreeAudioStream(wave->cvt->stream);
-	FACT_free(wave->cvt);
+	SDL_FreeAudioStream(wave->cvt);
 }
 
 uint16_t FACT_PlatformGetRendererCount()
