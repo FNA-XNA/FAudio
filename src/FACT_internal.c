@@ -310,7 +310,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			1 \
 		); \
 		wave->position += len; \
-		return len; \
+		return (len / depth); \
 	}
 DECODE_FUNC(MonoPCM8, 1)
 DECODE_FUNC(StereoPCM8, 2)
@@ -580,7 +580,7 @@ static const int32_t AdaptCoeff_2[7] =
 			pcm += extra; \
 		} \
 		wave->position += len; \
-		return (pcm - decodeCache) * 2; \
+		return (pcm - decodeCache) / chans; \
 	}
 DECODE_FUNC(MonoMSADPCM32,	  0,  32, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
 DECODE_FUNC(MonoMSADPCM64,	 16,  64, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)

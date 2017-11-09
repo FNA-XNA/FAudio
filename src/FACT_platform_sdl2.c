@@ -12,7 +12,7 @@
 #define DEVICE_FORMAT AUDIO_F32
 #define DEVICE_FORMAT_SIZE 4
 #define DEVICE_FREQUENCY 48000
-#define DEVICE_CHANNELS 2
+#define DEVICE_CHANNELS 1
 #define DEVICE_BUFFERSIZE 4096
 
 /* Internal Types */
@@ -31,17 +31,137 @@ struct FACTAudioDevice
 	SDL_AudioDeviceID device;
 	FACTEngineEntry *engineList;
 	uint16_t decodeCache[DEVICE_BUFFERSIZE * 2];
-	uint8_t resampleCache[
-		DEVICE_BUFFERSIZE *
-		DEVICE_CHANNELS *
-		DEVICE_FORMAT_SIZE
-	];
+	float resampleCache[DEVICE_BUFFERSIZE * 2];
 	FACTAudioDevice *next;
 };
 
 /* Globals */
 
 FACTAudioDevice *devlist = NULL;
+
+/* Resampling */
+
+/* Steps are stored in fixed-point with 12 bits for the fraction:
+ *
+ * 00000000000000000000 000000000000
+ * ^ Integer block (20) ^ Fraction block (12)
+ *
+ * For example, to get 1.5:
+ * 00000000000000000001 100000000000
+ *
+ * The Integer block works exactly like you'd expect.
+ * The Fraction block is divided by the Integer's "One" value.
+ * So, the above Fraction represented visually...
+ *   1 << 11
+ *   -------
+ *   1 << 12
+ * ... which, simplified, is...
+ *   1 << 0
+ *   ------
+ *   1 << 1
+ * ... in other words, 1 / 2, or 0.5.
+ */
+typedef uint32_t fixed32;
+#define FIXED_PRECISION		12
+#define FIXED_ONE		(1 << FIXED_PRECISION)
+
+/* Quick way to drop parts */
+#define FIXED_FRACTION_MASK	(FIXED_ONE - 1)
+#define FIXED_INTEGER_MASK	~RESAMPLE_FRACTION_MASK
+
+/* Helper macros to convert fixed to float */
+#define DOUBLE_TO_FIXED(dbl) \
+	((fixed32) (dbl * FIXED_ONE + 0.5)) /* FIXME: Just round, or ceil? */
+#define FIXED_TO_DOUBLE(fxd) ( \
+	(double) (fxd >> FIXED_PRECISION) + /* Integer part */ \
+	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
+)
+
+/* Callback for resampling wavedata, varies based on bit depth */
+typedef void (FACTCALL * FACTResample)(
+	float *dst,
+	void *srcRaw,
+	fixed32 *offset,
+	fixed32 step,
+	uint32_t dstLen
+);
+
+typedef struct FACTResampleState
+{
+	/* Checked against wave->pitch for redundancy */
+	uint16_t pitch;
+
+	/* Okay, so here's what all that fixed-point goo is for:
+	 *
+	 * Inevitably you're going to run into weird sample rates,
+	 * both from WaveBank data and from pitch shifting changes.
+	 *
+	 * How we deal with this is by calculating a fixed "step"
+	 * value that steps from sample to sample at the speed needed
+	 * to get the correct output sample rate, and the offset
+	 * is stored as separate integer and fraction values.
+	 *
+	 * This allows us to do weird fractional steps between samples,
+	 * while at the same time not letting it drift off into death
+	 * thanks to floating point madness.
+	 */
+	fixed32 step;
+	fixed32 offset;
+
+	/* Padding used for smooth resampling from block to block */
+	float padding[2][128]; /* FIXME: Arbitrary 64-pre 64-post */
+
+	/* Resample func, varies based on bit depth */
+	FACTResample resample;
+} FACTResampleState;
+
+void FACT_INTERNAL_CalculateStep(FACTWave *wave)
+{
+	FACTResampleState *state = (FACTResampleState*) wave->cvt;
+	double stepd = (
+		SDL_pow(2.0, wave->pitch / 1200.0) *
+		(double) wave->parentBank->entries[wave->index].Format.nSamplesPerSec /
+		(double) DEVICE_FREQUENCY
+	);
+	state->step = DOUBLE_TO_FIXED(stepd);
+}
+
+/* TODO: Something fancier than a linear resampler */
+#define RESAMPLE_FUNC(type, div) \
+	void FACT_INTERNAL_Resample_##type( \
+		float *dst, \
+		void *srcRaw, \
+		fixed32 *offset, \
+		fixed32 step, \
+		uint32_t dstLen \
+	) { \
+		uint32_t i; \
+		fixed32 cur = *offset & FIXED_FRACTION_MASK; \
+		type *src = (type*) srcRaw; \
+		for (i = 0; i < dstLen; i += 1) \
+		{ \
+			/* lerp, then convert to float value */ \
+			dst[i] = (float) ( \
+				src[0] + \
+				(src[1] - src[0]) * FIXED_TO_DOUBLE(cur) \
+			) / div; \
+			/* Increment fraction offset by the stepping value */ \
+			*offset += step; \
+			cur += step; \
+			/* Only increment the sample offset by integer values.
+			 * Sometimes this will be 0 until cur accumulates
+			 * enough steps, especially for "slow" rates.
+			 */ \
+			src += cur >> FIXED_PRECISION; \
+			/* Now that any integer has been added, drop it.
+			 * The offset pointer will preserve the total.
+			 */ \
+			cur &= FIXED_FRACTION_MASK; \
+		} \
+	}
+RESAMPLE_FUNC(int8_t, 128.0f)
+RESAMPLE_FUNC(int16_t, 32768.0f)
+#undef RESAMPLE_FUNC
 
 /* Mixer Thread */
 
@@ -53,7 +173,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTWaveBank *wb;
 	FACTCue *cue;
 	FACTWave *wave;
-	SDL_AudioStream *cvt;
+	FACTResampleState *state;
 	uint32_t decodeLength, resampleLength;
 
 	FACT_zero(stream, len);
@@ -88,48 +208,58 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					continue;
 				}
 
-				/* TODO: Decode length based on pitch! */
 				/* TODO: Volume mixing goes beyond what
 				 * MixAudioFormat can do. We need our own mix!
 				 * -flibit
 				 */
+				/* TODO: Downmix stereo to mono for 3D audio,
+				 * Otherwise have a special stereo mix path
+				 */
+
+				/* Grab resampler, update pitch if needed */
+				state = (FACTResampleState*) wave->cvt;
+				if (wave->pitch != state->pitch)
+				{
+					state->pitch = wave->pitch;
+					FACT_INTERNAL_CalculateStep(wave);
+				}
+
+				/* TODO: What should this actually be?
+				 * We need padding and stuff, right?
+				 */
+				decodeLength = (uint32_t) (
+					DEVICE_BUFFERSIZE *
+					FIXED_TO_DOUBLE(state->step)
+				);
 
 				/* Decode... */
 				decodeLength = wave->decode(
 					wave,
 					device->decodeCache,
-					DEVICE_BUFFERSIZE
+					decodeLength
 				);
 
 				/* ... then Resample... */
-				cvt = (SDL_AudioStream*) wave->cvt;
-				if (decodeLength > 0)
-				{
-					SDL_AudioStreamPut(
-						cvt,
-						device->decodeCache,
-						decodeLength
-					);
-				}
-				else
-				{
-					/* We're at the end, give us the rest */
-					SDL_AudioStreamFlush(cvt);
-				}
+				resampleLength = (uint32_t) (
+					decodeLength /
+					FIXED_TO_DOUBLE(state->step)
+				);
+				state->resample(
+					device->resampleCache,
+					device->decodeCache,
+					&state->offset,
+					state->step,
+					resampleLength
+				);
 
 				/* ... then Mix, finally. */
-				if (SDL_AudioStreamAvailable(cvt))
+				if (resampleLength > 0)
 				{
-					resampleLength = SDL_AudioStreamGet(
-						cvt,
-						device->resampleCache,
-						sizeof(device->resampleCache)
-					);
 					SDL_MixAudioFormat(
 						stream,
-						device->resampleCache,
+						(Uint8*) device->resampleCache,
 						DEVICE_FORMAT,
-						resampleLength,
+						resampleLength * 4,
 						wave->volume * SDL_MIX_MAXVOLUME
 					);
 				}
@@ -334,37 +464,27 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 
 void FACT_PlatformInitConverter(FACTWave *wave)
 {
-	SDL_AudioFormat type;
 	FACTWaveBankMiniWaveFormat *fmt = &wave->parentBank->entries[wave->index].Format;
-
-	if (fmt->wFormatTag == 0x0) /* PCM */
-	{
-		type = (fmt->wBitsPerSample == 1) ?
-			AUDIO_S16 :
-			AUDIO_S8;
-	}
-	else if (fmt->wFormatTag == 0x2) /* ADPCM */
-	{
-		type = AUDIO_S16;
-	}
-	else /* Includes 0x1 - XMA, 0x3 - WMA */
-	{
-		FACT_assert(0 && "Rebuild your WaveBanks with ADPCM!");
-	}
-
-	wave->cvt = (FACTPlatformConverter*) SDL_NewAudioStream(
-		type,
-		fmt->nChannels,
-		fmt->nSamplesPerSec,
-		DEVICE_FORMAT,
-		DEVICE_CHANNELS,
-		DEVICE_FREQUENCY
+	FACTResampleState *state = (FACTResampleState*) FACT_malloc(
+		sizeof(FACTResampleState)
 	);
+	FACT_zero(state, sizeof(FACTResampleState));
+	state->pitch = wave->pitch;
+	if (fmt->wFormatTag == 0x0 && fmt->wBitsPerSample == 0)
+	{
+		state->resample = FACT_INTERNAL_Resample_int8_t;
+	}
+	else
+	{
+		state->resample = FACT_INTERNAL_Resample_int16_t;
+	}
+	wave->cvt = (FACTPlatformConverter*) state;
+	FACT_INTERNAL_CalculateStep(wave);
 }
 
 void FACT_PlatformCloseConverter(FACTWave *wave)
 {
-	SDL_FreeAudioStream((SDL_AudioStream*) wave->cvt);
+	FACT_free(wave->cvt);
 }
 
 uint16_t FACT_PlatformGetRendererCount()
