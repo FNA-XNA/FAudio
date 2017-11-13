@@ -17,6 +17,9 @@
 
 /* Internal Types */
 
+/* FIXME: Arbitrary 1-pre 1-post */
+#define RESAMPLE_PADDING 1
+
 typedef struct FACTEngineEntry FACTEngineEntry;
 struct FACTEngineEntry
 {
@@ -30,7 +33,7 @@ struct FACTAudioDevice
 	const char *name;
 	SDL_AudioDeviceID device;
 	FACTEngineEntry *engineList;
-	uint16_t decodeCache[DEVICE_BUFFERSIZE * 2];
+	uint16_t decodeCache[DEVICE_BUFFERSIZE * 2 + RESAMPLE_PADDING * 2];
 	float resampleCache[DEVICE_BUFFERSIZE * 2];
 	FACTAudioDevice *next;
 };
@@ -109,7 +112,7 @@ typedef struct FACTResampleState
 	fixed32 offset;
 
 	/* Padding used for smooth resampling from block to block */
-	float padding[2][128]; /* FIXME: Arbitrary 64-pre 64-post */
+	float padding[2][RESAMPLE_PADDING * 2];
 
 	/* Resample func, varies based on bit depth */
 	FACTResample resample;
@@ -174,6 +177,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTCue *cue;
 	FACTWave *wave;
 	FACTResampleState *state;
+	uint64_t sizeRequest;
 	uint32_t decodeLength, resampleLength;
 
 	FACT_zero(stream, len);
@@ -208,10 +212,6 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					continue;
 				}
 
-				/* TODO: Volume mixing goes beyond what
-				 * MixAudioFormat can do. We need our own mix!
-				 * -flibit
-				 */
 				/* TODO: Downmix stereo to mono for 3D audio,
 				 * Otherwise have a special stereo mix path
 				 */
@@ -224,26 +224,74 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					FACT_INTERNAL_CalculateStep(wave);
 				}
 
-				/* TODO: What should this actually be?
-				 * We need padding and stuff, right?
+				/* The easy part is just multiplying the final
+				 * output size with the step to get the "real"
+				 * buffer size. But we also need to ceil() to
+				 * get the extra sample needed for interpolating
+				 * past the "end" of the unresampled buffer.
 				 */
-				decodeLength = (uint32_t) (
-					DEVICE_BUFFERSIZE *
-					FIXED_TO_DOUBLE(state->step)
+				sizeRequest = DEVICE_BUFFERSIZE * state->step;
+				sizeRequest += (
+					/* If frac > 0, int goes up by one... */
+					(state->offset + FIXED_FRACTION_MASK) &
+					/* ... then we chop off anything left */
+					FIXED_FRACTION_MASK
 				);
+				sizeRequest >>= FIXED_PRECISION;
+
+				/* Only add half the padding length!
+				 * For the starting buffer, we have no pre-pad,
+				 * for all remaining buffers we memcpy the end
+				 * and that becomes the new pre-pad.
+				 */
+				sizeRequest += RESAMPLE_PADDING;
+
+				/* FIXME: Can high sample rates ruin this? */
+				decodeLength = (uint32_t) sizeRequest;
+				FACT_assert(decodeLength == sizeRequest);
 
 				/* Decode... */
-				decodeLength = wave->decode(
-					wave,
-					device->decodeCache,
-					decodeLength
-				);
+				if (state->offset == 0)
+				{
+					decodeLength = wave->decode(
+						wave,
+						device->decodeCache,
+						decodeLength
+					);
+				}
+				else
+				{
+					/* Copy the end to the start first! */
+					FACT_memcpy(
+						device->decodeCache,
+						(
+							device->decodeCache +
+							(DEVICE_BUFFERSIZE * 2) +
+							RESAMPLE_PADDING
+						),
+						RESAMPLE_PADDING * 2
+					);
+					/* Don't overwrite the start! */
+					decodeLength = wave->decode(
+						wave,
+						device->decodeCache + RESAMPLE_PADDING,
+						decodeLength
+					);
+				}
+
+				/* Now that we have the raw samples, now we have
+				 * to reverse some of the math to get the real
+				 * output size (read: Drop the padding numbers)
+				 */
+				sizeRequest = decodeLength - RESAMPLE_PADDING;
+				/* uint32_t to fixed32 */
+				sizeRequest <<= FIXED_PRECISION;
+				/* Division also turns fixed32 into uint32_t */
+				sizeRequest /= state->step;
 
 				/* ... then Resample... */
-				resampleLength = (uint32_t) (
-					decodeLength /
-					FIXED_TO_DOUBLE(state->step)
-				);
+				resampleLength = (uint32_t) sizeRequest;
+				FACT_assert(resampleLength == sizeRequest);
 				state->resample(
 					device->resampleCache,
 					device->decodeCache,
@@ -255,6 +303,10 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				/* ... then Mix, finally. */
 				if (resampleLength > 0)
 				{
+					/* TODO: Volume mixing goes beyond what
+					 * MixAudioFormat can do. We need our own mix!
+					 * -flibit
+					 */
 					SDL_MixAudioFormat(
 						stream,
 						(Uint8*) device->resampleCache,
