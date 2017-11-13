@@ -429,9 +429,9 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		device = (FACTAudioDevice*) FACT_malloc(
 			sizeof(FACTAudioDevice)
 		);
+		FACT_zero(device, sizeof(FACTAudioDevice));
 		device->name = name;
 		device->engineList = entry;
-		device->next = NULL;
 
 		/* Enforce a default device format */
 		want.freq = DEVICE_FREQUENCY;
