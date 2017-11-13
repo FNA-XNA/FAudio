@@ -30,8 +30,6 @@ struct FACTAudioDevice
 	const char *name;
 	SDL_AudioDeviceID device;
 	FACTEngineEntry *engineList;
-	int16_t decodeCache[DEVICE_BUFFERSIZE * 2 + RESAMPLE_PADDING * 2];
-	float resampleCache[DEVICE_BUFFERSIZE * 2];
 	FACTAudioDevice *next;
 };
 
@@ -62,6 +60,8 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTCue *cue;
 	FACTWave *wave;
 	uint32_t samples;
+	int16_t decodeCache[DEVICE_BUFFERSIZE * 2 + RESAMPLE_PADDING * 2];
+	float resampleCache[DEVICE_BUFFERSIZE * 2];
 
 	FACT_zero(stream, len);
 
@@ -105,8 +105,8 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				/* Decode and resample wavedata */
 				samples = FACT_INTERNAL_GetWave(
 					wave,
-					device->decodeCache,
-					device->resampleCache,
+					decodeCache,
+					resampleCache,
 					DEVICE_BUFFERSIZE
 				);
 
@@ -119,7 +119,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					 */
 					SDL_MixAudioFormat(
 						stream,
-						(Uint8*) device->resampleCache,
+						(Uint8*) resampleCache,
 						DEVICE_FORMAT,
 						samples * DEVICE_FORMAT_SIZE,
 						wave->volume * SDL_MIX_MAXVOLUME
@@ -196,7 +196,6 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		device = (FACTAudioDevice*) FACT_malloc(
 			sizeof(FACTAudioDevice)
 		);
-		FACT_zero(device, sizeof(FACTAudioDevice));
 		device->name = name;
 		device->engineList = entry;
 
