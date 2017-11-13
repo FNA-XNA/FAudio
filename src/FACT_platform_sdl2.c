@@ -103,7 +103,7 @@ typedef struct FACTResampleState
 	fixed32 offset;
 
 	/* Padding used for smooth resampling from block to block */
-	float padding[2][RESAMPLE_PADDING * 2];
+	int16_t padding[2][RESAMPLE_PADDING];
 } FACTResampleState;
 
 void FACT_INTERNAL_CalculateStep(FACTWave *wave)
@@ -225,18 +225,36 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				 */
 				if (state->step == FIXED_ONE)
 				{
-					decodeLength = wave->decode(
-						wave,
-						device->decodeCache,
-						DEVICE_BUFFERSIZE
-					);
+					decodeLength = DEVICE_BUFFERSIZE;
+					if (state->offset & FIXED_FRACTION_MASK)
+					{
+						device->decodeCache[0] = state->padding[0][0];
+						decodeLength = wave->decode(
+							wave,
+							device->decodeCache + 1,
+							DEVICE_BUFFERSIZE - 1
+						);
+						state->offset += decodeLength * FIXED_ONE;
+						decodeLength += 1;
+					}
+					else
+					{
+						decodeLength = wave->decode(
+							wave,
+							device->decodeCache,
+							DEVICE_BUFFERSIZE
+						);
+						state->offset += decodeLength * FIXED_ONE;
+					}
 					FACT_INTERNAL_FastConvert(
 						device->resampleCache,
 						device->decodeCache,
 						decodeLength
 					);
 					resampleLength = decodeLength;
-					state->offset += decodeLength * FIXED_ONE;
+					state->padding[0][0] = device->decodeCache[
+						decodeLength - 1
+					];
 					goto mixjmp;
 				}
 
@@ -278,21 +296,19 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				else
 				{
 					/* Copy the end to the start first! */
-					FACT_memcpy(
-						device->decodeCache,
-						(
-							device->decodeCache +
-							(DEVICE_BUFFERSIZE * 2) +
-							RESAMPLE_PADDING
-						),
-						RESAMPLE_PADDING * 2
-					);
+					device->decodeCache[0] = state->padding[0][0];
+
 					/* Don't overwrite the start! */
 					decodeLength = wave->decode(
 						wave,
 						device->decodeCache + RESAMPLE_PADDING,
 						decodeLength
 					);
+
+					/* The end will be the start next time */
+					state->padding[0][0] = device->decodeCache[
+						decodeLength - 1
+					];
 				}
 
 				/* Now that we have the raw samples, now we have
