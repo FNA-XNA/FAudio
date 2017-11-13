@@ -19,9 +19,72 @@
 
 #define FACT_VOLUME_0 180
 
-/* Internal Platform Types */
+/* Resampling */
 
-typedef void* FACTPlatformConverter;
+/* Steps are stored in fixed-point with 12 bits for the fraction:
+ *
+ * 00000000000000000000 000000000000
+ * ^ Integer block (20) ^ Fraction block (12)
+ *
+ * For example, to get 1.5:
+ * 00000000000000000001 100000000000
+ *
+ * The Integer block works exactly like you'd expect.
+ * The Fraction block is divided by the Integer's "One" value.
+ * So, the above Fraction represented visually...
+ *   1 << 11
+ *   -------
+ *   1 << 12
+ * ... which, simplified, is...
+ *   1 << 0
+ *   ------
+ *   1 << 1
+ * ... in other words, 1 / 2, or 0.5.
+ */
+typedef uint32_t fixed32;
+#define FIXED_PRECISION		12
+#define FIXED_ONE		(1 << FIXED_PRECISION)
+
+/* Quick way to drop parts */
+#define FIXED_FRACTION_MASK	(FIXED_ONE - 1)
+#define FIXED_INTEGER_MASK	~RESAMPLE_FRACTION_MASK
+
+/* Helper macros to convert fixed to float */
+#define DOUBLE_TO_FIXED(dbl) \
+	((fixed32) (dbl * FIXED_ONE + 0.5)) /* FIXME: Just round, or ceil? */
+#define FIXED_TO_DOUBLE(fxd) ( \
+	(double) (fxd >> FIXED_PRECISION) + /* Integer part */ \
+	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
+)
+
+/* FIXME: Arbitrary 1-pre 1-post */
+#define RESAMPLE_PADDING 1
+
+typedef struct FACTResampleState
+{
+	/* Checked against wave->pitch for redundancy */
+	uint16_t pitch;
+
+	/* Okay, so here's what all that fixed-point goo is for:
+	 *
+	 * Inevitably you're going to run into weird sample rates,
+	 * both from WaveBank data and from pitch shifting changes.
+	 *
+	 * How we deal with this is by calculating a fixed "step"
+	 * value that steps from sample to sample at the speed needed
+	 * to get the correct output sample rate, and the offset
+	 * is stored as separate integer and fraction values.
+	 *
+	 * This allows us to do weird fractional steps between samples,
+	 * while at the same time not letting it drift off into death
+	 * thanks to floating point madness.
+	 */
+	fixed32 step;
+	fixed32 offset;
+
+	/* Padding used for smooth resampling from block to block */
+	int16_t padding[2][RESAMPLE_PADDING];
+} FACTResampleState;
 
 /* Internal AudioEngine Types */
 
@@ -389,7 +452,7 @@ struct FACTWave
 
 	/* Decoding */
 	FACTDecodeCallback decode;
-	FACTPlatformConverter cvt;
+	FACTResampleState resample;
 	uint16_t msadpcmCache[512];
 	uint16_t msadpcmExtra;
 };
@@ -427,6 +490,12 @@ struct FACTCue
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue);
+uint32_t FACT_INTERNAL_GetWave(
+	FACTWave *wave,
+	int16_t *decodeCache,
+	float *resampleCache,
+	uint32_t samples
+);
 
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
@@ -455,8 +524,7 @@ DECODE_FUNC(StereoMSADPCM512)
 void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id);
 void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
 
-void FACT_PlatformInitConverter(FACTWave *wave);
-void FACT_PlatformCloseConverter(FACTWave *wave);
+void FACT_PlatformInitResampler(FACTWave *wave);
 
 uint16_t FACT_PlatformGetRendererCount();
 void FACT_PlatformGetRendererDetails(

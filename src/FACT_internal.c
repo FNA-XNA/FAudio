@@ -150,6 +150,50 @@ void FACT_INTERNAL_SetDSPParameter(
 	);
 }
 
+/* TODO: Something fancier than a linear resampler */
+void FACT_INTERNAL_Resample(
+	float *dst,
+	int16_t *src,
+	fixed32 *offset,
+	fixed32 step,
+	uint32_t dstLen
+) {
+	uint32_t i;
+	fixed32 cur = *offset & FIXED_FRACTION_MASK;
+	for (i = 0; i < dstLen; i += 1)
+	{
+		/* lerp, then convert to float value */
+		dst[i] = (float) (
+			src[0] +
+			(src[1] - src[0]) * FIXED_TO_DOUBLE(cur)
+		) / 32768.0f;
+		/* Increment fraction offset by the stepping value */
+		*offset += step;
+		cur += step;
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		src += cur >> FIXED_PRECISION;
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur &= FIXED_FRACTION_MASK;
+	}
+}
+
+void FACT_INTERNAL_FastConvert(
+	float *dst,
+	int16_t *src,
+	uint32_t dstLen
+) {
+	uint32_t i;
+	for (i = 0; i < dstLen; i += 1)
+	{
+		dst[i] = src[i] / 32768.0f;
+	}
+}
+
 /* The functions below should be called by the platform mixer! */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
@@ -281,7 +325,158 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	return 0;
 }
 
-/* PCM Reading */
+uint32_t FACT_INTERNAL_GetWave(
+	FACTWave *wave,
+	int16_t *decodeCache,
+	float *resampleCache,
+	uint32_t samples
+) {
+	uint64_t sizeRequest;
+	uint32_t decodeLength, resampleLength = 0;
+
+	/* TODO: Downmix stereo to mono for 3D audio,
+	 * Otherwise have a special stereo mix path
+	 */
+
+	/* If the sample rates match, skip a LOT of work
+	 * and go straight to the mixer
+	 */
+	if (wave->resample.step == FIXED_ONE)
+	{
+		decodeLength = samples;
+		if (wave->resample.offset & FIXED_FRACTION_MASK)
+		{
+			FACT_memcpy(
+				decodeCache,
+				wave->resample.padding[0],
+				RESAMPLE_PADDING * 2
+			);
+			decodeLength = wave->decode(
+				wave,
+				decodeCache + RESAMPLE_PADDING,
+				samples - RESAMPLE_PADDING
+			);
+			wave->resample.offset += decodeLength * FIXED_ONE;
+			decodeLength += RESAMPLE_PADDING;
+		}
+		else
+		{
+			decodeLength = wave->decode(
+				wave,
+				decodeCache,
+				samples
+			);
+			wave->resample.offset += decodeLength * FIXED_ONE;
+		}
+		resampleLength = decodeLength;
+		if (resampleLength > 0)
+		{
+			FACT_memcpy(
+				wave->resample.padding[0],
+				(
+					decodeCache +
+					decodeLength -
+					RESAMPLE_PADDING
+				),
+				RESAMPLE_PADDING * 2
+			);
+			FACT_INTERNAL_FastConvert(
+				resampleCache,
+				decodeCache,
+				resampleLength
+			);
+		}
+		return resampleLength;
+	}
+
+	/* The easy part is just multiplying the final
+	 * output size with the step to get the "real"
+	 * buffer size. But we also need to ceil() to
+	 * get the extra sample needed for interpolating
+	 * past the "end" of the unresampled buffer.
+	 */
+	sizeRequest = samples * wave->resample.step;
+	sizeRequest += (
+		/* If frac > 0, int goes up by one... */
+		(wave->resample.offset + FIXED_FRACTION_MASK) &
+		/* ... then we chop off anything left */
+		FIXED_FRACTION_MASK
+	);
+	sizeRequest >>= FIXED_PRECISION;
+
+	/* Only add half the padding length!
+	 * For the starting buffer, we have no pre-pad,
+	 * for all remaining buffers we memcpy the end
+	 * and that becomes the new pre-pad.
+	 */
+	sizeRequest += RESAMPLE_PADDING;
+
+	/* FIXME: Can high sample rates ruin this? */
+	decodeLength = (uint32_t) sizeRequest;
+	FACT_assert(decodeLength == sizeRequest);
+
+	/* Decode... */
+	if (wave->resample.offset == 0)
+	{
+		decodeLength = wave->decode(
+			wave,
+			decodeCache,
+			decodeLength
+		);
+	}
+	else
+	{
+		/* Copy the end to the start first! */
+		FACT_memcpy(
+			decodeCache,
+			wave->resample.padding[0],
+			RESAMPLE_PADDING * 2
+		);
+
+		/* Don't overwrite the start! */
+		decodeLength = wave->decode(
+			wave,
+			decodeCache + RESAMPLE_PADDING,
+			decodeLength
+		);
+	}
+
+	/* ... then Resample... */
+	if (decodeLength > 0)
+	{
+		/* The end will be the start next time */
+		FACT_memcpy(
+			wave->resample.padding[0],
+			(
+				decodeCache +
+				decodeLength -
+				RESAMPLE_PADDING
+			),
+			RESAMPLE_PADDING * 2
+		);
+
+		/* Now that we have the raw samples, now we have
+		 * to reverse some of the math to get the real
+		 * output size (read: Drop the padding numbers)
+		 */
+		sizeRequest = decodeLength - RESAMPLE_PADDING;
+		/* uint32_t to fixed32 */
+		sizeRequest <<= FIXED_PRECISION;
+		/* Division also turns fixed32 into uint32_t */
+		sizeRequest /= wave->resample.step;
+
+		resampleLength = (uint32_t) sizeRequest;
+		FACT_assert(resampleLength == sizeRequest);
+		FACT_INTERNAL_Resample(
+			resampleCache,
+			decodeCache,
+			&wave->resample.offset,
+			wave->resample.step,
+			resampleLength
+		);
+	}
+	return resampleLength;
+}
 
 /* 8-bit PCM Decoding */
 

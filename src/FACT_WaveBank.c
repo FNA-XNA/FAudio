@@ -192,7 +192,11 @@ uint32_t FACTWaveBank_Prepare(
 		FACT_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
 	(*ppWave)->msadpcmExtra = 0;
-	FACT_PlatformInitConverter(*ppWave);
+
+	/* Resampling */
+	FACT_zero(&(*ppWave)->resample, sizeof(FACTResampleState));
+	(*ppWave)->resample.pitch = (*ppWave)->pitch;
+	FACT_PlatformInitResampler(*ppWave);
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)
