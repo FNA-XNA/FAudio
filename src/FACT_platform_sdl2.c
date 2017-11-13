@@ -248,6 +248,9 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					FACT_INTERNAL_CalculateStep(wave);
 				}
 
+				/* If the sample rates match, skip a LOT of work
+				 * and go straight to the mixer
+				 */
 				if (state->step == FIXED_ONE)
 				{
 					decodeLength = wave->decode(
@@ -261,6 +264,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						decodeLength
 					);
 					resampleLength = decodeLength;
+					state->offset += decodeLength * FIXED_ONE;
 					goto mixjmp;
 				}
 
