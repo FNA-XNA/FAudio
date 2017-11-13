@@ -228,14 +228,18 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					decodeLength = DEVICE_BUFFERSIZE;
 					if (state->offset & FIXED_FRACTION_MASK)
 					{
-						device->decodeCache[0] = state->padding[0][0];
+						FACT_memcpy(
+							device->decodeCache,
+							state->padding[0],
+							RESAMPLE_PADDING * 2
+						);
 						decodeLength = wave->decode(
 							wave,
-							device->decodeCache + 1,
-							DEVICE_BUFFERSIZE - 1
+							device->decodeCache + RESAMPLE_PADDING,
+							DEVICE_BUFFERSIZE - RESAMPLE_PADDING
 						);
 						state->offset += decodeLength * FIXED_ONE;
-						decodeLength += 1;
+						decodeLength += RESAMPLE_PADDING;
 					}
 					else
 					{
@@ -249,9 +253,15 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 					resampleLength = decodeLength;
 					if (resampleLength > 0)
 					{
-						state->padding[0][0] = device->decodeCache[
-							decodeLength - 1
-						];
+						FACT_memcpy(
+							state->padding[0],
+							(
+								device->decodeCache +
+								decodeLength -
+								RESAMPLE_PADDING
+							),
+							RESAMPLE_PADDING * 2
+						);
 						FACT_INTERNAL_FastConvert(
 							device->resampleCache,
 							device->decodeCache,
@@ -299,7 +309,11 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				else
 				{
 					/* Copy the end to the start first! */
-					device->decodeCache[0] = state->padding[0][0];
+					FACT_memcpy(
+						device->decodeCache,
+						state->padding[0],
+						RESAMPLE_PADDING * 2
+					);
 
 					/* Don't overwrite the start! */
 					decodeLength = wave->decode(
@@ -313,9 +327,15 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				if (decodeLength > 0)
 				{
 					/* The end will be the start next time */
-					state->padding[0][0] = device->decodeCache[
-						decodeLength - 1
-					];
+					FACT_memcpy(
+						state->padding[0],
+						(
+							device->decodeCache +
+							decodeLength -
+							RESAMPLE_PADDING
+						),
+						RESAMPLE_PADDING * 2
+					);
 
 					/* Now that we have the raw samples, now we have
 					 * to reverse some of the math to get the real
