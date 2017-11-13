@@ -387,6 +387,11 @@ uint32_t FACT_INTERNAL_GetWave(
 		return resampleLength;
 	}
 
+	/* FIXME: Somewhere in here is a Valgrind error.
+	 * You should get a 'conditional on uninitialized value' in
+	 * MixAudioFormat, which means we're not filling out 100% of the cache.
+	 */
+
 	/* The easy part is just multiplying the final output size with the step
 	 * to get the "real" buffer size. But we also need to ceil() to get the
 	 * extra sample needed for interpolating past the "end" of the
