@@ -295,11 +295,6 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						device->decodeCache,
 						decodeLength
 					);
-
-					/* The end will be the start next time */
-					state->padding[0][0] = device->decodeCache[
-						decodeLength - 1
-					];
 				}
 				else
 				{
