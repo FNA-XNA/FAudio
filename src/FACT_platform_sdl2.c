@@ -33,7 +33,7 @@ struct FACTAudioDevice
 	const char *name;
 	SDL_AudioDeviceID device;
 	FACTEngineEntry *engineList;
-	uint16_t decodeCache[DEVICE_BUFFERSIZE * 2 + RESAMPLE_PADDING * 2];
+	int16_t decodeCache[DEVICE_BUFFERSIZE * 2 + RESAMPLE_PADDING * 2];
 	float resampleCache[DEVICE_BUFFERSIZE * 2];
 	FACTAudioDevice *next;
 };
@@ -80,20 +80,6 @@ typedef uint32_t fixed32;
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
 )
 
-/* Callbacks for resampling wavedata, varies based on bit depth */
-typedef void (FACTCALL * FACTResample)(
-	float *dst,
-	void *srcRaw,
-	fixed32 *offset,
-	fixed32 step,
-	uint32_t dstLen
-);
-typedef void (FACTCALL * FACTFastConvert)(
-	float *dst,
-	void *srcRaw,
-	uint32_t dstLen
-);
-
 typedef struct FACTResampleState
 {
 	/* Checked against wave->pitch for redundancy */
@@ -118,10 +104,6 @@ typedef struct FACTResampleState
 
 	/* Padding used for smooth resampling from block to block */
 	float padding[2][RESAMPLE_PADDING * 2];
-
-	/* Resample func, varies based on bit depth */
-	FACTResample resample;
-	FACTFastConvert fastcvt;
 } FACTResampleState;
 
 void FACT_INTERNAL_CalculateStep(FACTWave *wave)
@@ -136,59 +118,49 @@ void FACT_INTERNAL_CalculateStep(FACTWave *wave)
 }
 
 /* TODO: Something fancier than a linear resampler */
-#define RESAMPLE_FUNC(type, div) \
-	void FACT_INTERNAL_Resample_##type( \
-		float *dst, \
-		void *srcRaw, \
-		fixed32 *offset, \
-		fixed32 step, \
-		uint32_t dstLen \
-	) { \
-		uint32_t i; \
-		fixed32 cur = *offset & FIXED_FRACTION_MASK; \
-		type *src = (type*) srcRaw; \
-		for (i = 0; i < dstLen; i += 1) \
-		{ \
-			/* lerp, then convert to float value */ \
-			dst[i] = (float) ( \
-				src[0] + \
-				(src[1] - src[0]) * FIXED_TO_DOUBLE(cur) \
-			) / div; \
-			/* Increment fraction offset by the stepping value */ \
-			*offset += step; \
-			cur += step; \
-			/* Only increment the sample offset by integer values.
-			 * Sometimes this will be 0 until cur accumulates
-			 * enough steps, especially for "slow" rates.
-			 */ \
-			src += cur >> FIXED_PRECISION; \
-			/* Now that any integer has been added, drop it.
-			 * The offset pointer will preserve the total.
-			 */ \
-			cur &= FIXED_FRACTION_MASK; \
-		} \
+void FACT_INTERNAL_Resample(
+	float *dst,
+	int16_t *src,
+	fixed32 *offset,
+	fixed32 step,
+	uint32_t dstLen
+) {
+	uint32_t i;
+	fixed32 cur = *offset & FIXED_FRACTION_MASK;
+	for (i = 0; i < dstLen; i += 1)
+	{
+		/* lerp, then convert to float value */
+		dst[i] = (float) (
+			src[0] +
+			(src[1] - src[0]) * FIXED_TO_DOUBLE(cur)
+		) / 32768.0f;
+		/* Increment fraction offset by the stepping value */
+		*offset += step;
+		cur += step;
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		src += cur >> FIXED_PRECISION;
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur &= FIXED_FRACTION_MASK;
 	}
-RESAMPLE_FUNC(int8_t, 128.0f)
-RESAMPLE_FUNC(int16_t, 32768.0f)
-#undef RESAMPLE_FUNC
+}
 
 /* Fast path for input rate == output rate */
-#define RESAMPLE_FUNC(type, div) \
-	void FACT_INTERNAL_FastConvert_##type( \
-		float *dst, \
-		void *srcRaw, \
-		uint32_t dstLen \
-	) { \
-		uint32_t i; \
-		type *src = (type*) srcRaw; \
-		for (i = 0; i < dstLen; i += 1) \
-		{ \
-			dst[i] = src[i] / div; \
-		} \
+void FACT_INTERNAL_FastConvert(
+	float *dst,
+	int16_t *src,
+	uint32_t dstLen
+) {
+	uint32_t i;
+	for (i = 0; i < dstLen; i += 1)
+	{
+		dst[i] = src[i] / 32768.0f;
 	}
-RESAMPLE_FUNC(int8_t, 128.0f)
-RESAMPLE_FUNC(int16_t, 32768.0f)
-#undef RESAMPLE_FUNC
+}
 
 /* Mixer Thread */
 
@@ -258,7 +230,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						device->decodeCache,
 						DEVICE_BUFFERSIZE
 					);
-					state->fastcvt(
+					FACT_INTERNAL_FastConvert(
 						device->resampleCache,
 						device->decodeCache,
 						decodeLength
@@ -336,7 +308,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				/* ... then Resample... */
 				resampleLength = (uint32_t) sizeRequest;
 				FACT_assert(resampleLength == sizeRequest);
-				state->resample(
+				FACT_INTERNAL_Resample(
 					device->resampleCache,
 					device->decodeCache,
 					&state->offset,
@@ -561,22 +533,11 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 
 void FACT_PlatformInitConverter(FACTWave *wave)
 {
-	FACTWaveBankMiniWaveFormat *fmt = &wave->parentBank->entries[wave->index].Format;
 	FACTResampleState *state = (FACTResampleState*) FACT_malloc(
 		sizeof(FACTResampleState)
 	);
 	FACT_zero(state, sizeof(FACTResampleState));
 	state->pitch = wave->pitch;
-	if (fmt->wFormatTag == 0x0 && fmt->wBitsPerSample == 0)
-	{
-		state->resample = FACT_INTERNAL_Resample_int8_t;
-		state->fastcvt = FACT_INTERNAL_FastConvert_int8_t;
-	}
-	else
-	{
-		state->resample = FACT_INTERNAL_Resample_int16_t;
-		state->fastcvt = FACT_INTERNAL_FastConvert_int16_t;
-	}
 	wave->cvt = (FACTPlatformConverter*) state;
 	FACT_INTERNAL_CalculateStep(wave);
 }

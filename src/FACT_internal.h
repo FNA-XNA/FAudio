@@ -296,7 +296,7 @@ typedef struct FACTVariationTable
 
 typedef uint32_t (FACTCALL * FACTDecodeCallback)(
 	FACTWave *wave,
-	uint16_t *decodeCache,
+	int16_t *decodeCache,
 	uint32_t samples
 );
 
@@ -431,7 +431,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue);
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
-		uint16_t *decodeCache, \
+		int16_t *decodeCache, \
 		uint32_t samples \
 	);
 DECODE_FUNC(MonoPCM8)

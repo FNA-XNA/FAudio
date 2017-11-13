@@ -283,10 +283,53 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 
 /* PCM Reading */
 
+/* 8-bit PCM Decoding */
+
 #define DECODE_FUNC(type, depth) \
 	uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
-		uint16_t *decodeCache, \
+		int16_t *decodeCache, \
+		uint32_t samples \
+	) { \
+		uint32_t i; \
+		int8_t sample; \
+		/* Don't go past the end of the wave data. TODO: Loop Points */ \
+		uint32_t len = FACT_min( \
+			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
+				wave->position, \
+			samples * depth \
+		); \
+		/* Go to the spot in the WaveBank where our samples start */ \
+		wave->parentBank->io->seek( \
+			wave->parentBank->io->data, \
+			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
+				wave->position, \
+			0 \
+		); \
+		/* Read each sample, convert to 16-bit. Slow as hell. */ \
+		for (i = 0; i < len; i += 1) \
+		{ \
+			wave->parentBank->io->read( \
+				wave->parentBank->io->data, \
+				&sample, \
+				1, \
+				1 \
+			); \
+			decodeCache[i] = (int16_t) sample << 8; \
+		} \
+		wave->position += len; \
+		return (len / depth); \
+	}
+DECODE_FUNC(MonoPCM8, 1)
+DECODE_FUNC(StereoPCM8, 2)
+#undef DECODE_FUNC
+
+/* 16-bit PCM Decoding */
+
+#define DECODE_FUNC(type, depth) \
+	uint32_t FACT_INTERNAL_Decode##type( \
+		FACTWave *wave, \
+		int16_t *decodeCache, \
 		uint32_t samples \
 	) { \
 		/* Don't go past the end of the wave data. TODO: Loop Points */ \
@@ -312,8 +355,6 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		wave->position += len; \
 		return (len / depth); \
 	}
-DECODE_FUNC(MonoPCM8, 1)
-DECODE_FUNC(StereoPCM8, 2)
 DECODE_FUNC(MonoPCM16, 2)
 DECODE_FUNC(StereoPCM16, 4)
 #undef DECODE_FUNC
@@ -493,7 +534,7 @@ static const int32_t AdaptCoeff_2[7] =
 #define DECODE_FUNC(type, align, bsize, chans, readpreamble, decodeblock) \
 	uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
-		uint16_t *decodeCache, \
+		int16_t *decodeCache, \
 		uint32_t samples \
 	) { \
 		/* Iterators */ \
@@ -505,7 +546,7 @@ static const int32_t AdaptCoeff_2[7] =
 		int32_t sampleInt; \
 		int16_t sample; \
 		/* Keep decodeCache as-is to calculate return value */ \
-		uint16_t *pcm = decodeCache; \
+		int16_t *pcm = decodeCache; \
 		/* Have extra? Throw it in! */ \
 		if (wave->msadpcmExtra > 0) \
 		{ \
