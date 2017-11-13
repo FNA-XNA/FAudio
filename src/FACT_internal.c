@@ -150,50 +150,6 @@ void FACT_INTERNAL_SetDSPParameter(
 	);
 }
 
-/* TODO: Something fancier than a linear resampler */
-void FACT_INTERNAL_Resample(
-	float *dst,
-	int16_t *src,
-	fixed32 *offset,
-	fixed32 step,
-	uint32_t dstLen
-) {
-	uint32_t i;
-	fixed32 cur = *offset & FIXED_FRACTION_MASK;
-	for (i = 0; i < dstLen; i += 1)
-	{
-		/* lerp, then convert to float value */
-		dst[i] = (float) (
-			src[0] +
-			(src[1] - src[0]) * FIXED_TO_DOUBLE(cur)
-		) / 32768.0f;
-		/* Increment fraction offset by the stepping value */
-		*offset += step;
-		cur += step;
-		/* Only increment the sample offset by integer values.
-		 * Sometimes this will be 0 until cur accumulates
-		 * enough steps, especially for "slow" rates.
-		 */
-		src += cur >> FIXED_PRECISION;
-		/* Now that any integer has been added, drop it.
-		 * The offset pointer will preserve the total.
-		 */
-		cur &= FIXED_FRACTION_MASK;
-	}
-}
-
-void FACT_INTERNAL_FastConvert(
-	float *dst,
-	int16_t *src,
-	uint32_t dstLen
-) {
-	uint32_t i;
-	for (i = 0; i < dstLen; i += 1)
-	{
-		dst[i] = src[i] / 32768.0f;
-	}
-}
-
 /* The functions below should be called by the platform mixer! */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
@@ -331,6 +287,8 @@ uint32_t FACT_INTERNAL_GetWave(
 	float *resampleCache,
 	uint32_t samples
 ) {
+	uint32_t i;
+	fixed32 cur;
 	uint64_t sizeRequest;
 	uint32_t decodeLength, resampleLength = 0;
 
@@ -378,11 +336,12 @@ uint32_t FACT_INTERNAL_GetWave(
 				),
 				RESAMPLE_PADDING * 2
 			);
-			FACT_INTERNAL_FastConvert(
-				resampleCache,
-				decodeCache,
-				resampleLength
-			);
+
+			/* Lazy int16_t to float */
+			for (i = 0; i < resampleLength; i += 1)
+			{
+				resampleCache[i] = decodeCache[i] / 32768.0f;
+			}
 		}
 		return resampleLength;
 	}
@@ -468,13 +427,32 @@ uint32_t FACT_INTERNAL_GetWave(
 
 		resampleLength = (uint32_t) sizeRequest;
 		FACT_assert(resampleLength == sizeRequest);
-		FACT_INTERNAL_Resample(
-			resampleCache,
-			decodeCache,
-			&wave->resample.offset,
-			wave->resample.step,
-			resampleLength
-		);
+
+		/* TODO: Something fancier than a linear resampler */
+		cur = wave->resample.offset & FIXED_FRACTION_MASK;
+		for (i = 0; i < resampleLength; i += 1)
+		{
+			/* lerp, then convert to float value */
+			resampleCache[i] = (float) (
+				decodeCache[0] +
+				(decodeCache[1] - decodeCache[0]) * FIXED_TO_DOUBLE(cur)
+			) / 32768.0f;
+
+			/* Increment fraction offset by the stepping value */
+			wave->resample.offset += wave->resample.step;
+			cur += wave->resample.step;
+
+			/* Only increment the sample offset by integer values.
+			 * Sometimes this will be 0 until cur accumulates
+			 * enough steps, especially for "slow" rates.
+			 */
+			decodeCache += cur >> FIXED_PRECISION;
+
+			/* Now that any integer has been added, drop it.
+			 * The offset pointer will preserve the total.
+			 */
+			cur &= FIXED_FRACTION_MASK;
+		}
 	}
 	return resampleLength;
 }
