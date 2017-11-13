@@ -246,15 +246,18 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						);
 						state->offset += decodeLength * FIXED_ONE;
 					}
-					FACT_INTERNAL_FastConvert(
-						device->resampleCache,
-						device->decodeCache,
-						decodeLength
-					);
 					resampleLength = decodeLength;
-					state->padding[0][0] = device->decodeCache[
-						decodeLength - 1
-					];
+					if (resampleLength > 0)
+					{
+						state->padding[0][0] = device->decodeCache[
+							decodeLength - 1
+						];
+						FACT_INTERNAL_FastConvert(
+							device->resampleCache,
+							device->decodeCache,
+							resampleLength
+						);
+					}
 					goto mixjmp;
 				}
 
@@ -292,6 +295,11 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						device->decodeCache,
 						decodeLength
 					);
+
+					/* The end will be the start next time */
+					state->padding[0][0] = device->decodeCache[
+						decodeLength - 1
+					];
 				}
 				else
 				{
@@ -304,33 +312,40 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 						device->decodeCache + RESAMPLE_PADDING,
 						decodeLength
 					);
+				}
 
+				/* ... then Resample... */
+				if (decodeLength > 0)
+				{
 					/* The end will be the start next time */
 					state->padding[0][0] = device->decodeCache[
 						decodeLength - 1
 					];
+
+					/* Now that we have the raw samples, now we have
+					 * to reverse some of the math to get the real
+					 * output size (read: Drop the padding numbers)
+					 */
+					sizeRequest = decodeLength - RESAMPLE_PADDING;
+					/* uint32_t to fixed32 */
+					sizeRequest <<= FIXED_PRECISION;
+					/* Division also turns fixed32 into uint32_t */
+					sizeRequest /= state->step;
+
+					resampleLength = (uint32_t) sizeRequest;
+					FACT_assert(resampleLength == sizeRequest);
+					FACT_INTERNAL_Resample(
+						device->resampleCache,
+						device->decodeCache,
+						&state->offset,
+						state->step,
+						resampleLength
+					);
 				}
-
-				/* Now that we have the raw samples, now we have
-				 * to reverse some of the math to get the real
-				 * output size (read: Drop the padding numbers)
-				 */
-				sizeRequest = decodeLength - RESAMPLE_PADDING;
-				/* uint32_t to fixed32 */
-				sizeRequest <<= FIXED_PRECISION;
-				/* Division also turns fixed32 into uint32_t */
-				sizeRequest /= state->step;
-
-				/* ... then Resample... */
-				resampleLength = (uint32_t) sizeRequest;
-				FACT_assert(resampleLength == sizeRequest);
-				FACT_INTERNAL_Resample(
-					device->resampleCache,
-					device->decodeCache,
-					&state->offset,
-					state->step,
-					resampleLength
-				);
+				else
+				{
+					resampleLength = 0;
+				}
 
 				/* ... then Mix, finally. */
 mixjmp:
