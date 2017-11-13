@@ -338,9 +338,7 @@ uint32_t FACT_INTERNAL_GetWave(
 	 * Otherwise have a special stereo mix path
 	 */
 
-	/* If the sample rates match, skip a LOT of work
-	 * and go straight to the mixer
-	 */
+	/* If the sample rates match, just decode and convert to float */
 	if (wave->resample.step == FIXED_ONE)
 	{
 		decodeLength = samples;
@@ -389,11 +387,10 @@ uint32_t FACT_INTERNAL_GetWave(
 		return resampleLength;
 	}
 
-	/* The easy part is just multiplying the final
-	 * output size with the step to get the "real"
-	 * buffer size. But we also need to ceil() to
-	 * get the extra sample needed for interpolating
-	 * past the "end" of the unresampled buffer.
+	/* The easy part is just multiplying the final output size with the step
+	 * to get the "real" buffer size. But we also need to ceil() to get the
+	 * extra sample needed for interpolating past the "end" of the
+	 * unresampled buffer.
 	 */
 	sizeRequest = samples * wave->resample.step;
 	sizeRequest += (
@@ -405,9 +402,8 @@ uint32_t FACT_INTERNAL_GetWave(
 	sizeRequest >>= FIXED_PRECISION;
 
 	/* Only add half the padding length!
-	 * For the starting buffer, we have no pre-pad,
-	 * for all remaining buffers we memcpy the end
-	 * and that becomes the new pre-pad.
+	 * For the starting buffer, we have no pre-pad, for all remaining
+	 * buffers we memcpy the end and that becomes the new pre-pad.
 	 */
 	sizeRequest += RESAMPLE_PADDING;
 
@@ -455,9 +451,9 @@ uint32_t FACT_INTERNAL_GetWave(
 			RESAMPLE_PADDING * 2
 		);
 
-		/* Now that we have the raw samples, now we have
-		 * to reverse some of the math to get the real
-		 * output size (read: Drop the padding numbers)
+		/* Now that we have the raw samples, we have to reverse some of
+		 * the math to get the real output size (read: Drop the padding
+		 * numbers)
 		 */
 		sizeRequest = decodeLength - RESAMPLE_PADDING;
 		/* uint32_t to fixed32 */
