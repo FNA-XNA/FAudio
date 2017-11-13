@@ -80,12 +80,17 @@ typedef uint32_t fixed32;
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
 )
 
-/* Callback for resampling wavedata, varies based on bit depth */
+/* Callbacks for resampling wavedata, varies based on bit depth */
 typedef void (FACTCALL * FACTResample)(
 	float *dst,
 	void *srcRaw,
 	fixed32 *offset,
 	fixed32 step,
+	uint32_t dstLen
+);
+typedef void (FACTCALL * FACTFastConvert)(
+	float *dst,
+	void *srcRaw,
 	uint32_t dstLen
 );
 
@@ -116,6 +121,7 @@ typedef struct FACTResampleState
 
 	/* Resample func, varies based on bit depth */
 	FACTResample resample;
+	FACTFastConvert fastcvt;
 } FACTResampleState;
 
 void FACT_INTERNAL_CalculateStep(FACTWave *wave)
@@ -160,6 +166,24 @@ void FACT_INTERNAL_CalculateStep(FACTWave *wave)
 			 * The offset pointer will preserve the total.
 			 */ \
 			cur &= FIXED_FRACTION_MASK; \
+		} \
+	}
+RESAMPLE_FUNC(int8_t, 128.0f)
+RESAMPLE_FUNC(int16_t, 32768.0f)
+#undef RESAMPLE_FUNC
+
+/* Fast path for input rate == output rate */
+#define RESAMPLE_FUNC(type, div) \
+	void FACT_INTERNAL_FastConvert_##type( \
+		float *dst, \
+		void *srcRaw, \
+		uint32_t dstLen \
+	) { \
+		uint32_t i; \
+		type *src = (type*) srcRaw; \
+		for (i = 0; i < dstLen; i += 1) \
+		{ \
+			dst[i] = src[i] / div; \
 		} \
 	}
 RESAMPLE_FUNC(int8_t, 128.0f)
@@ -222,6 +246,22 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				{
 					state->pitch = wave->pitch;
 					FACT_INTERNAL_CalculateStep(wave);
+				}
+
+				if (state->step == FIXED_ONE)
+				{
+					decodeLength = wave->decode(
+						wave,
+						device->decodeCache,
+						DEVICE_BUFFERSIZE
+					);
+					state->fastcvt(
+						device->resampleCache,
+						device->decodeCache,
+						decodeLength
+					);
+					resampleLength = decodeLength;
+					goto mixjmp;
 				}
 
 				/* The easy part is just multiplying the final
@@ -301,6 +341,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				);
 
 				/* ... then Mix, finally. */
+mixjmp:
 				if (resampleLength > 0)
 				{
 					/* TODO: Volume mixing goes beyond what
@@ -525,10 +566,12 @@ void FACT_PlatformInitConverter(FACTWave *wave)
 	if (fmt->wFormatTag == 0x0 && fmt->wBitsPerSample == 0)
 	{
 		state->resample = FACT_INTERNAL_Resample_int8_t;
+		state->fastcvt = FACT_INTERNAL_FastConvert_int8_t;
 	}
 	else
 	{
 		state->resample = FACT_INTERNAL_Resample_int16_t;
+		state->fastcvt = FACT_INTERNAL_FastConvert_int16_t;
 	}
 	wave->cvt = (FACTPlatformConverter*) state;
 	FACT_INTERNAL_CalculateStep(wave);
