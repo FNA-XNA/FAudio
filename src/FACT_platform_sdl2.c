@@ -374,7 +374,7 @@ mixjmp:
 						stream,
 						(Uint8*) device->resampleCache,
 						DEVICE_FORMAT,
-						resampleLength * 4,
+						resampleLength * DEVICE_FORMAT_SIZE,
 						wave->volume * SDL_MIX_MAXVOLUME
 					);
 				}
