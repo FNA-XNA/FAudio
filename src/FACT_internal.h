@@ -453,7 +453,7 @@ struct FACTWave
 	/* Decoding */
 	FACTDecodeCallback decode;
 	FACTResampleState resample;
-	uint16_t msadpcmCache[512];
+	int16_t msadpcmCache[512];
 	uint16_t msadpcmExtra;
 };
 

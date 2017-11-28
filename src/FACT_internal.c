@@ -346,11 +346,6 @@ uint32_t FACT_INTERNAL_GetWave(
 		return resampleLength;
 	}
 
-	/* FIXME: Somewhere in here is a Valgrind error.
-	 * You should get a 'conditional on uninitialized value' in
-	 * MixAudioFormat, which means we're not filling out 100% of the cache.
-	 */
-
 	/* The easy part is just multiplying the final output size with the step
 	 * to get the "real" buffer size. But we also need to ceil() to get the
 	 * extra sample needed for interpolating past the "end" of the
@@ -721,6 +716,7 @@ static const int32_t AdaptCoeff_2[7] =
 		int16_t sample; \
 		/* Keep decodeCache as-is to calculate return value */ \
 		int16_t *pcm = decodeCache; \
+		int16_t *pcmExtra = wave->msadpcmCache; \
 		/* Have extra? Throw it in! */ \
 		if (wave->msadpcmExtra > 0) \
 		{ \
@@ -774,7 +770,8 @@ static const int32_t AdaptCoeff_2[7] =
 		/* Have extra? Go to the MSADPCM cache */ \
 		if (extra > 0) \
 		{ \
-			readpreamble(wave->msadpcmCache) \
+			readpreamble(pcmExtra) \
+			pcmExtra += 2 * chans; \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
@@ -783,7 +780,7 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			for (i = 0; i < ((align + 15) * chans); i += 1) \
 			{ \
-				decodeblock(wave->msadpcmCache[i + (2 * chans)]) \
+				decodeblock(*pcmExtra++) \
 			} \
 			wave->msadpcmExtra = bsize - extra; \
 			FACT_memcpy(pcm, wave->msadpcmCache, extra * 2); \
