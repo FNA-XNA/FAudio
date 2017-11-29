@@ -455,6 +455,7 @@ struct FACTWave
 	FACTResampleState resample;
 	int16_t msadpcmCache[512];
 	uint16_t msadpcmExtra;
+	uint8_t stereo; /* Forced to 0 on Apply3D */
 };
 
 struct FACTCue

@@ -135,17 +135,18 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->loopCount = nLoopCount;
 
 	/* Decoding */
+	(*ppWave)->stereo = fmt->nChannels == 2;
 	if (fmt->wFormatTag == 0x0) /* PCM */
 	{
 		if (fmt->wBitsPerSample == 1)
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoPCM16 :
 				FACT_INTERNAL_DecodeMonoPCM16;
 		}
 		else
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoPCM8 :
 				FACT_INTERNAL_DecodeMonoPCM8;
 		}
@@ -154,31 +155,31 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		if (fmt->wBlockAlign == 0)
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoMSADPCM32 :
 				FACT_INTERNAL_DecodeMonoMSADPCM32;
 		}
 		else if (fmt->wBlockAlign == 16)
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoMSADPCM64 :
 				FACT_INTERNAL_DecodeMonoMSADPCM64;
 		}
 		else if (fmt->wBlockAlign == 48)
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoMSADPCM128 :
 				FACT_INTERNAL_DecodeMonoMSADPCM128;
 		}
 		else if (fmt->wBlockAlign == 112)
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoMSADPCM256 :
 				FACT_INTERNAL_DecodeMonoMSADPCM256;
 		}
 		else if (fmt->wBlockAlign == 240)
 		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
+			(*ppWave)->decode = (*ppWave)->stereo ?
 				FACT_INTERNAL_DecodeStereoMSADPCM512 :
 				FACT_INTERNAL_DecodeMonoMSADPCM512;
 		}
