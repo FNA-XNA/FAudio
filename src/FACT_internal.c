@@ -817,9 +817,9 @@ static const int32_t AdaptCoeff_2[7] =
 
 /* Mono */
 
-#define DECODE_MONO_BLOCK(target1, target2) \
+#define DECODE_MONO_BLOCK(target) \
 	PARSE_NIBBLE( \
-		target1, \
+		target, \
 		(nibbles[i] >> 4), \
 		predictor, \
 		sample1, \
@@ -827,7 +827,7 @@ static const int32_t AdaptCoeff_2[7] =
 		delta \
 	) \
 	PARSE_NIBBLE( \
-		target2, \
+		target, \
 		(nibbles[i] & 0x0F), \
 		predictor, \
 		sample1, \
@@ -929,7 +929,7 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			for (i = 0; i < (align + 15); i += 1) \
 			{ \
-				DECODE_MONO_BLOCK(*pcm++, *pcm++) \
+				DECODE_MONO_BLOCK(*pcm++) \
 			} \
 		} \
 		/* Have extra? Go to the MSADPCM cache */ \
@@ -944,7 +944,7 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			for (i = 0; i < (align + 15); i += 1) \
 			{ \
-				DECODE_MONO_BLOCK(*pcmExtra++, *pcmExtra++) \
+				DECODE_MONO_BLOCK(*pcmExtra++) \
 			} \
 			wave->msadpcmExtra = bsize - extra; \
 			FACT_memcpy(pcm, wave->msadpcmCache, extra * 2); \
