@@ -12,7 +12,7 @@
 #define DEVICE_FORMAT AUDIO_F32
 #define DEVICE_FORMAT_SIZE 4
 #define DEVICE_FREQUENCY 48000
-#define DEVICE_CHANNELS 1
+#define DEVICE_CHANNELS 2
 #define DEVICE_BUFFERSIZE 4096
 
 /* Internal Types */
@@ -60,8 +60,10 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTCue *cue;
 	FACTWave *wave;
 	uint32_t samples;
-	int16_t decodeCache[DEVICE_BUFFERSIZE * 2 + RESAMPLE_PADDING * 2];
-	float resampleCache[DEVICE_BUFFERSIZE * 2];
+	int16_t decodeCache[2][DEVICE_BUFFERSIZE + RESAMPLE_PADDING];
+	float resampleCache[2][DEVICE_BUFFERSIZE];
+	uint32_t i;
+	float *out = (float*) stream;
 
 	FACT_zero(stream, len);
 
@@ -105,25 +107,29 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 				/* Decode and resample wavedata */
 				samples = FACT_INTERNAL_GetWave(
 					wave,
-					decodeCache,
-					resampleCache,
+					decodeCache[0],
+					decodeCache[1],
+					resampleCache[0],
+					resampleCache[1],
 					DEVICE_BUFFERSIZE
 				);
 
 				/* ... then mix, finally. */
 				if (samples > 0)
 				{
-					/* TODO: Volume mixing goes beyond what
-					 * MixAudioFormat can do. We need our own mix!
-					 * -flibit
-					 */
-					SDL_MixAudioFormat(
-						stream,
-						(Uint8*) resampleCache,
-						DEVICE_FORMAT,
-						samples * DEVICE_FORMAT_SIZE,
-						wave->volume * SDL_MIX_MAXVOLUME
-					);
+					for (i = 0; i < samples; i += 1)
+					{
+						out[i * 2] = FACT_clamp(
+							out[i * 2] + (resampleCache[0][i] * wave->volume),
+							-FACTVOLUME_MAX,
+							FACTVOLUME_MAX
+						);
+						out[i * 2 + 1] = FACT_clamp(
+							out[i * 2 + 1] + (resampleCache[wave->stereo][i] * wave->volume),
+							-FACTVOLUME_MAX,
+							FACTVOLUME_MAX
+						);
+					}
 				}
 				else
 				{

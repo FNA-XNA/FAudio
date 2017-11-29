@@ -359,7 +359,8 @@ typedef struct FACTVariationTable
 
 typedef uint32_t (FACTCALL * FACTDecodeCallback)(
 	FACTWave *wave,
-	int16_t *decodeCache,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
 	uint32_t samples
 );
 
@@ -493,15 +494,18 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue);
 uint32_t FACT_INTERNAL_GetWave(
 	FACTWave *wave,
-	int16_t *decodeCache,
-	float *resampleCache,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	float *resampleCacheL,
+	float *resampleCacheR,
 	uint32_t samples
 );
 
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
-		int16_t *decodeCache, \
+		int16_t *decodeCacheL, \
+		int16_t *decodeCacheR, \
 		uint32_t samples \
 	);
 DECODE_FUNC(MonoPCM8)
@@ -518,6 +522,13 @@ DECODE_FUNC(StereoMSADPCM64)
 DECODE_FUNC(StereoMSADPCM128)
 DECODE_FUNC(StereoMSADPCM256)
 DECODE_FUNC(StereoMSADPCM512)
+DECODE_FUNC(StereoToMonoPCM8)
+DECODE_FUNC(StereoToMonoPCM16)
+DECODE_FUNC(StereoToMonoMSADPCM32)
+DECODE_FUNC(StereoToMonoMSADPCM64)
+DECODE_FUNC(StereoToMonoMSADPCM128)
+DECODE_FUNC(StereoToMonoMSADPCM256)
+DECODE_FUNC(StereoToMonoMSADPCM512)
 #undef DECODE_FUNC
 
 /* Platform Functions */

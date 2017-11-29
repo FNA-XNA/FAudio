@@ -283,8 +283,10 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 
 uint32_t FACT_INTERNAL_GetWave(
 	FACTWave *wave,
-	int16_t *decodeCache,
-	float *resampleCache,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	float *resampleCacheL,
+	float *resampleCacheR,
 	uint32_t samples
 ) {
 	uint32_t i;
@@ -303,13 +305,19 @@ uint32_t FACT_INTERNAL_GetWave(
 		if (wave->resample.offset & FIXED_FRACTION_MASK)
 		{
 			FACT_memcpy(
-				decodeCache,
+				decodeCacheL,
 				wave->resample.padding[0],
+				RESAMPLE_PADDING * 2
+			);
+			FACT_memcpy(
+				decodeCacheR,
+				wave->resample.padding[1],
 				RESAMPLE_PADDING * 2
 			);
 			decodeLength = wave->decode(
 				wave,
-				decodeCache + RESAMPLE_PADDING,
+				decodeCacheL + RESAMPLE_PADDING,
+				decodeCacheR + RESAMPLE_PADDING,
 				samples - RESAMPLE_PADDING
 			);
 			wave->resample.offset += decodeLength * FIXED_ONE;
@@ -319,7 +327,8 @@ uint32_t FACT_INTERNAL_GetWave(
 		{
 			decodeLength = wave->decode(
 				wave,
-				decodeCache,
+				decodeCacheL,
+				decodeCacheR,
 				samples
 			);
 			wave->resample.offset += decodeLength * FIXED_ONE;
@@ -330,7 +339,16 @@ uint32_t FACT_INTERNAL_GetWave(
 			FACT_memcpy(
 				wave->resample.padding[0],
 				(
-					decodeCache +
+					decodeCacheL +
+					decodeLength -
+					RESAMPLE_PADDING
+				),
+				RESAMPLE_PADDING * 2
+			);
+			FACT_memcpy(
+				wave->resample.padding[1],
+				(
+					decodeCacheR +
 					decodeLength -
 					RESAMPLE_PADDING
 				),
@@ -338,9 +356,20 @@ uint32_t FACT_INTERNAL_GetWave(
 			);
 
 			/* Lazy int16_t to float */
-			for (i = 0; i < resampleLength; i += 1)
+			if (wave->stereo)
 			{
-				resampleCache[i] = decodeCache[i] / 32768.0f;
+				for (i = 0; i < resampleLength; i += 1)
+				{
+					resampleCacheL[i] = decodeCacheL[i] / 32768.0f;
+					resampleCacheR[i] = decodeCacheR[i] / 32768.0f;
+				}
+			}
+			else
+			{
+				for (i = 0; i < resampleLength; i += 1)
+				{
+					resampleCacheL[i] = decodeCacheL[i] / 32768.0f;
+				}
 			}
 		}
 		return resampleLength;
@@ -375,7 +404,8 @@ uint32_t FACT_INTERNAL_GetWave(
 	{
 		decodeLength = wave->decode(
 			wave,
-			decodeCache,
+			decodeCacheL,
+			decodeCacheR,
 			decodeLength
 		);
 	}
@@ -383,15 +413,21 @@ uint32_t FACT_INTERNAL_GetWave(
 	{
 		/* Copy the end to the start first! */
 		FACT_memcpy(
-			decodeCache,
+			decodeCacheL,
 			wave->resample.padding[0],
+			RESAMPLE_PADDING * 2
+		);
+		FACT_memcpy(
+			decodeCacheR,
+			wave->resample.padding[1],
 			RESAMPLE_PADDING * 2
 		);
 
 		/* Don't overwrite the start! */
 		decodeLength = wave->decode(
 			wave,
-			decodeCache + RESAMPLE_PADDING,
+			decodeCacheL + RESAMPLE_PADDING,
+			decodeCacheR + RESAMPLE_PADDING,
 			decodeLength
 		);
 	}
@@ -403,7 +439,16 @@ uint32_t FACT_INTERNAL_GetWave(
 		FACT_memcpy(
 			wave->resample.padding[0],
 			(
-				decodeCache +
+				decodeCacheL +
+				decodeLength -
+				RESAMPLE_PADDING
+			),
+			RESAMPLE_PADDING * 2
+		);
+		FACT_memcpy(
+			wave->resample.padding[1],
+			(
+				decodeCacheR +
 				decodeLength -
 				RESAMPLE_PADDING
 			),
@@ -425,28 +470,62 @@ uint32_t FACT_INTERNAL_GetWave(
 
 		/* TODO: Something fancier than a linear resampler */
 		cur = wave->resample.offset & FIXED_FRACTION_MASK;
-		for (i = 0; i < resampleLength; i += 1)
+		if (wave->stereo)
 		{
-			/* lerp, then convert to float value */
-			resampleCache[i] = (float) (
-				decodeCache[0] +
-				(decodeCache[1] - decodeCache[0]) * FIXED_TO_DOUBLE(cur)
-			) / 32768.0f;
+			for (i = 0; i < resampleLength; i += 1)
+			{
+				/* lerp, then convert to float value */
+				resampleCacheL[i] = (float) (
+					decodeCacheL[0] +
+					(decodeCacheL[1] - decodeCacheL[0]) * FIXED_TO_DOUBLE(cur)
+				) / 32768.0f;
+				resampleCacheR[i] = (float) (
+					decodeCacheR[0] +
+					(decodeCacheR[1] - decodeCacheR[0]) * FIXED_TO_DOUBLE(cur)
+				) / 32768.0f;
 
-			/* Increment fraction offset by the stepping value */
-			wave->resample.offset += wave->resample.step;
-			cur += wave->resample.step;
+				/* Increment fraction offset by the stepping value */
+				wave->resample.offset += wave->resample.step;
+				cur += wave->resample.step;
 
-			/* Only increment the sample offset by integer values.
-			 * Sometimes this will be 0 until cur accumulates
-			 * enough steps, especially for "slow" rates.
-			 */
-			decodeCache += cur >> FIXED_PRECISION;
+				/* Only increment the sample offset by integer values.
+				 * Sometimes this will be 0 until cur accumulates
+				 * enough steps, especially for "slow" rates.
+				 */
+				decodeCacheL += cur >> FIXED_PRECISION;
+				decodeCacheR += cur >> FIXED_PRECISION;
 
-			/* Now that any integer has been added, drop it.
-			 * The offset pointer will preserve the total.
-			 */
-			cur &= FIXED_FRACTION_MASK;
+				/* Now that any integer has been added, drop it.
+				 * The offset pointer will preserve the total.
+				 */
+				cur &= FIXED_FRACTION_MASK;
+			}
+		}
+		else
+		{
+			for (i = 0; i < resampleLength; i += 1)
+			{
+				/* lerp, then convert to float value */
+				resampleCacheL[i] = (float) (
+					decodeCacheL[0] +
+					(decodeCacheL[1] - decodeCacheL[0]) * FIXED_TO_DOUBLE(cur)
+				) / 32768.0f;
+
+				/* Increment fraction offset by the stepping value */
+				wave->resample.offset += wave->resample.step;
+				cur += wave->resample.step;
+
+				/* Only increment the sample offset by integer values.
+				 * Sometimes this will be 0 until cur accumulates
+				 * enough steps, especially for "slow" rates.
+				 */
+				decodeCacheL += cur >> FIXED_PRECISION;
+
+				/* Now that any integer has been added, drop it.
+				 * The offset pointer will preserve the total.
+				 */
+				cur &= FIXED_FRACTION_MASK;
+			}
 		}
 	}
 	return resampleLength;
@@ -454,181 +533,250 @@ uint32_t FACT_INTERNAL_GetWave(
 
 /* 8-bit PCM Decoding */
 
-#define DECODE_FUNC(type, depth) \
-	uint32_t FACT_INTERNAL_Decode##type( \
-		FACTWave *wave, \
-		int16_t *decodeCache, \
-		uint32_t samples \
-	) { \
-		uint32_t i; \
-		int8_t sample; \
-		/* Don't go past the end of the wave data. TODO: Loop Points */ \
-		uint32_t len = FACT_min( \
-			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
-				wave->position, \
-			samples * depth \
-		); \
-		/* Go to the spot in the WaveBank where our samples start */ \
-		wave->parentBank->io->seek( \
-			wave->parentBank->io->data, \
-			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
-				wave->position, \
-			0 \
-		); \
-		/* Read each sample, convert to 16-bit. Slow as hell. */ \
-		for (i = 0; i < len; i += 1) \
-		{ \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				&sample, \
-				1, \
-				1 \
-			); \
-			decodeCache[i] = (int16_t) sample << 8; \
-		} \
-		wave->position += len; \
-		return (len / depth); \
+uint32_t FACT_INTERNAL_DecodeMonoPCM8(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	uint32_t i;
+	int8_t sample;
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		samples
+	);
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read each sample, convert to 16-bit. Slow as hell. */
+	for (i = 0; i < len; i += 1)
+	{
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			&sample,
+			1,
+			1
+		);
+		decodeCacheL[i] = (int16_t) sample << 8;
 	}
-DECODE_FUNC(MonoPCM8, 1)
-DECODE_FUNC(StereoPCM8, 2)
-#undef DECODE_FUNC
+
+	wave->position += len;
+	return len;
+}
+
+uint32_t FACT_INTERNAL_DecodeStereoPCM8(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	uint32_t i;
+	int8_t sample[2];
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		samples * 2
+	);
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read each sample, convert to 16-bit. Slow as hell. */
+	for (i = 0; i < len; i += 2)
+	{
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			sample,
+			1,
+			2
+		);
+		decodeCacheL[i] = (int16_t) sample[0] << 8;
+		decodeCacheR[i] = (int16_t) sample[1] << 8;
+	}
+
+	wave->position += len;
+	return len / 2;
+}
+
+uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM8(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	uint32_t i;
+	int8_t sample[2];
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		samples * 2
+	);
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read each sample, convert to 16-bit. Slow as hell. */
+	for (i = 0; i < len; i += 2)
+	{
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			sample,
+			1,
+			2
+		);
+		decodeCacheL[i] = (
+			(int16_t) sample[0] + (int16_t) sample[1]
+		) << 7;
+	}
+
+	wave->position += len;
+	return len / 2;
+}
 
 /* 16-bit PCM Decoding */
 
-#define DECODE_FUNC(type, depth) \
-	uint32_t FACT_INTERNAL_Decode##type( \
-		FACTWave *wave, \
-		int16_t *decodeCache, \
-		uint32_t samples \
-	) { \
-		/* Don't go past the end of the wave data. TODO: Loop Points */ \
-		uint32_t len = FACT_min( \
-			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
-				wave->position, \
-			samples * depth \
-		); \
-		/* Go to the spot in the WaveBank where our samples start */ \
-		wave->parentBank->io->seek( \
-			wave->parentBank->io->data, \
-			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
-				wave->position, \
-			0 \
-		); \
-		/* Just dump it straight into the decode cache */ \
-		wave->parentBank->io->read( \
-			wave->parentBank->io->data, \
-			decodeCache, \
-			len, \
-			1 \
-		); \
-		wave->position += len; \
-		return (len / depth); \
+uint32_t FACT_INTERNAL_DecodeMonoPCM16(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		samples * 2
+	);
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Just dump it straight into the decode cache */
+	wave->parentBank->io->read(
+		wave->parentBank->io->data,
+		decodeCacheL,
+		len,
+		1
+	);
+
+	wave->position += len;
+	return len / 2;
+}
+
+uint32_t FACT_INTERNAL_DecodeStereoPCM16(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	uint32_t i;
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		samples * 4
+	);
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read each sample into the right channel. Slow as hell. */
+	for (i = 0; i < (len / 4); i += 1)
+	{
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			&decodeCacheL[i],
+			2,
+			1
+		);
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			&decodeCacheR[i],
+			2,
+			1
+		);
 	}
-DECODE_FUNC(MonoPCM16, 2)
-DECODE_FUNC(StereoPCM16, 4)
-#undef DECODE_FUNC
+
+	wave->position += len;
+	return len / 4;
+}
+
+uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM16(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	uint32_t i;
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		samples * 4
+	);
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read each sample into the right channel. Slow as hell. */
+	for (i = 0; i < (len / 4); i += 1)
+	{
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			decodeCacheR,
+			4,
+			1
+		);
+		decodeCacheL[i] = (int16_t) ((
+			(int32_t) decodeCacheR[0] + (int32_t) decodeCacheR[1]
+		) / 2);
+	}
+
+	wave->position += len;
+	return len / 4;
+}
 
 /* MSADPCM Decoding */
-
-typedef struct FACTMSADPCM1
-{
-	uint8_t predictor;
-	int16_t delta;
-	int16_t sample1;
-	int16_t sample2;
-} FACTMSADPCM1;
-#define READ_MONO_PREAMBLE(target) \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.predictor, \
-		sizeof(preamble.predictor), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.delta, \
-		sizeof(preamble.delta), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.sample1, \
-		sizeof(preamble.sample1), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.sample2, \
-		sizeof(preamble.sample2), \
-		1 \
-	); \
-	target[0] = preamble.sample2; \
-	target[1] = preamble.sample1;
-
-typedef struct FACTMSADPCM2
-{
-	uint8_t l_predictor;
-	uint8_t r_predictor;
-	int16_t l_delta;
-	int16_t r_delta;
-	int16_t l_sample1;
-	int16_t r_sample1;
-	int16_t l_sample2;
-	int16_t r_sample2;
-} FACTMSADPCM2;
-#define READ_STEREO_PREAMBLE(target) \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.l_predictor, \
-		sizeof(preamble.l_predictor), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.r_predictor, \
-		sizeof(preamble.r_predictor), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.l_delta, \
-		sizeof(preamble.l_delta), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.r_delta, \
-		sizeof(preamble.r_delta), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.l_sample1, \
-		sizeof(preamble.l_sample1), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.r_sample1, \
-		sizeof(preamble.r_sample1), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.l_sample2, \
-		sizeof(preamble.l_sample2), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&preamble.r_sample2, \
-		sizeof(preamble.r_sample2), \
-		1 \
-	); \
-	target[0] = preamble.l_sample2; \
-	target[1] = preamble.r_sample2; \
-	target[2] = preamble.l_sample1; \
-	target[3] = preamble.r_sample1;
 
 static const int32_t AdaptionTable[16] =
 {
@@ -666,56 +814,74 @@ static const int32_t AdaptCoeff_2[7] =
 		dlta = 16; \
 	} \
 	tgt = sample;
-#define DECODE_MONO_BLOCK(target) \
+
+/* Mono */
+
+#define DECODE_MONO_BLOCK(target1, target2) \
 	PARSE_NIBBLE( \
-		target, \
+		target1, \
 		(nibbles[i] >> 4), \
-		preamble.predictor, \
-		preamble.sample1, \
-		preamble.sample2, \
-		preamble.delta \
+		predictor, \
+		sample1, \
+		sample2, \
+		delta \
 	) \
 	PARSE_NIBBLE( \
-		target, \
+		target2, \
 		(nibbles[i] & 0x0F), \
-		preamble.predictor, \
-		preamble.sample1, \
-		preamble.sample2, \
-		preamble.delta \
+		predictor, \
+		sample1, \
+		sample2, \
+		delta \
 	)
-#define DECODE_STEREO_BLOCK(target) \
-	PARSE_NIBBLE( \
-		target, \
-		(nibbles[i] >> 4), \
-		preamble.l_predictor, \
-		preamble.l_sample1, \
-		preamble.l_sample2, \
-		preamble.l_delta \
-	) \
-	PARSE_NIBBLE( \
-		target, \
-		(nibbles[i] & 0x0F), \
-		preamble.r_predictor, \
-		preamble.r_sample1, \
-		preamble.r_sample2, \
-		preamble.r_delta \
-	)
-#define DECODE_FUNC(type, align, bsize, chans, readpreamble, decodeblock) \
+#define READ_MONO_PREAMBLE(target) \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&predictor, \
+		sizeof(predictor), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&delta, \
+		sizeof(delta), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&sample1, \
+		sizeof(sample1), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&sample2, \
+		sizeof(sample2), \
+		1 \
+	); \
+	*target++ = sample2; \
+	*target++ = sample1;
+
+#define DECODE_FUNC(type, align, bsize) \
 	uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
-		int16_t *decodeCache, \
+		int16_t *decodeCacheL, \
+		int16_t *decodeCacheR, \
 		uint32_t samples \
 	) { \
 		/* Iterators */ \
 		uint8_t b, i; \
 		/* Temp storage for ADPCM blocks */ \
-		FACTMSADPCM##chans preamble; \
-		uint8_t nibbles[(align + 15) * chans]; \
+		uint8_t predictor; \
+		int16_t delta; \
+		int16_t sample1; \
+		int16_t sample2; \
+		uint8_t nibbles[(align + 15)]; \
 		int8_t signedNibble; \
 		int32_t sampleInt; \
 		int16_t sample; \
 		/* Keep decodeCache as-is to calculate return value */ \
-		int16_t *pcm = decodeCache; \
+		int16_t *pcm = decodeCacheL; \
 		int16_t *pcmExtra = wave->msadpcmCache; \
 		/* Have extra? Throw it in! */ \
 		if (wave->msadpcmExtra > 0) \
@@ -732,17 +898,17 @@ static const int32_t AdaptCoeff_2[7] =
 		uint32_t len = FACT_min( \
 			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
 				wave->position, \
-			(blocks + (extra > 0)) * ((align + 22) * chans) \
+			(blocks + (extra > 0)) * ((align + 22)) \
 		); \
 		/* len might be 0 if we just came back for tail samples */ \
 		if (len == 0) \
 		{ \
-			return (pcm - decodeCache) * 2; \
+			return (pcm - decodeCacheL) * 2; \
 		} \
-		if (len < ((blocks + (extra > 0)) * ((16 + 22) * chans))) \
+		if (len < ((blocks + (extra > 0)) * ((16 + 22)))) \
 		{ \
-			blocks = len / ((16 + 22) * chans); \
-			extra = len % ((16 + 22) * chans); \
+			blocks = len / (16 + 22); \
+			extra = len % (16 + 22); \
 		} \
 		/* Go to the spot in the WaveBank where our samples start */ \
 		wave->parentBank->io->seek( \
@@ -754,33 +920,31 @@ static const int32_t AdaptCoeff_2[7] =
 		/* Read in each block directly to the decode cache */ \
 		for (b = 0; b < blocks; b += 1) \
 		{ \
-			readpreamble(pcm) \
-			pcm += 2 * chans; \
+			READ_MONO_PREAMBLE(pcm) \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
 				sizeof(nibbles), \
 				1 \
 			); \
-			for (i = 0; i < ((align + 15) * chans); i += 1) \
+			for (i = 0; i < (align + 15); i += 1) \
 			{ \
-				decodeblock(*pcm++) \
+				DECODE_MONO_BLOCK(*pcm++, *pcm++) \
 			} \
 		} \
 		/* Have extra? Go to the MSADPCM cache */ \
 		if (extra > 0) \
 		{ \
-			readpreamble(pcmExtra) \
-			pcmExtra += 2 * chans; \
+			READ_MONO_PREAMBLE(pcmExtra) \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
 				sizeof(nibbles), \
 				1 \
 			); \
-			for (i = 0; i < ((align + 15) * chans); i += 1) \
+			for (i = 0; i < (align + 15); i += 1) \
 			{ \
-				decodeblock(*pcmExtra++) \
+				DECODE_MONO_BLOCK(*pcmExtra++, *pcmExtra++) \
 			} \
 			wave->msadpcmExtra = bsize - extra; \
 			FACT_memcpy(pcm, wave->msadpcmCache, extra * 2); \
@@ -792,16 +956,334 @@ static const int32_t AdaptCoeff_2[7] =
 			pcm += extra; \
 		} \
 		wave->position += len; \
-		return (pcm - decodeCache) / chans; \
+		return (pcm - decodeCacheL); \
 	}
-DECODE_FUNC(MonoMSADPCM32,	  0,  32, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
-DECODE_FUNC(MonoMSADPCM64,	 16,  64, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
-DECODE_FUNC(MonoMSADPCM128,	 48, 128, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
-DECODE_FUNC(MonoMSADPCM256,	112, 256, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
-DECODE_FUNC(MonoMSADPCM512,	240, 512, 1, READ_MONO_PREAMBLE, DECODE_MONO_BLOCK)
-DECODE_FUNC(StereoMSADPCM32,	  0,  32, 2, READ_STEREO_PREAMBLE, DECODE_STEREO_BLOCK)
-DECODE_FUNC(StereoMSADPCM64,	 16,  64, 2, READ_STEREO_PREAMBLE, DECODE_STEREO_BLOCK)
-DECODE_FUNC(StereoMSADPCM128,	 48, 128, 2, READ_STEREO_PREAMBLE, DECODE_STEREO_BLOCK)
-DECODE_FUNC(StereoMSADPCM256,	112, 256, 2, READ_STEREO_PREAMBLE, DECODE_STEREO_BLOCK)
-DECODE_FUNC(StereoMSADPCM512,	240, 512, 2, READ_STEREO_PREAMBLE, DECODE_STEREO_BLOCK)
+DECODE_FUNC(MonoMSADPCM32,	  0,  32)
+DECODE_FUNC(MonoMSADPCM64,	 16,  64)
+DECODE_FUNC(MonoMSADPCM128,	 48, 128)
+DECODE_FUNC(MonoMSADPCM256,	112, 256)
+DECODE_FUNC(MonoMSADPCM512,	240, 512)
+#undef DECODE_FUNC
+
+/* Stereo Shared Macros */
+
+#define DECODE_STEREO_BLOCK(target1, target2) \
+	PARSE_NIBBLE( \
+		target1, \
+		(nibbles[i] >> 4), \
+		l_predictor, \
+		l_sample1, \
+		l_sample2, \
+		l_delta \
+	) \
+	PARSE_NIBBLE( \
+		target2, \
+		(nibbles[i] & 0x0F), \
+		r_predictor, \
+		r_sample1, \
+		r_sample2, \
+		r_delta \
+	)
+#define READ_STEREO_PREAMBLE \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&l_predictor, \
+		sizeof(l_predictor), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&r_predictor, \
+		sizeof(r_predictor), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&l_delta, \
+		sizeof(l_delta), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&r_delta, \
+		sizeof(r_delta), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&l_sample1, \
+		sizeof(l_sample1), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&r_sample1, \
+		sizeof(r_sample1), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&l_sample2, \
+		sizeof(l_sample2), \
+		1 \
+	); \
+	wave->parentBank->io->read( \
+		wave->parentBank->io->data, \
+		&r_sample2, \
+		sizeof(r_sample2), \
+		1 \
+	);
+
+/* Stereo */
+#define DECODE_FUNC(type, align, bsize) \
+	uint32_t FACT_INTERNAL_Decode##type( \
+		FACTWave *wave, \
+		int16_t *decodeCacheL, \
+		int16_t *decodeCacheR, \
+		uint32_t samples \
+	) { \
+		/* Iterators */ \
+		uint8_t b, i; \
+		/* Temp storage for ADPCM blocks */ \
+		uint8_t l_predictor; \
+		uint8_t r_predictor; \
+		int16_t l_delta; \
+		int16_t r_delta; \
+		int16_t l_sample1; \
+		int16_t r_sample1; \
+		int16_t l_sample2; \
+		int16_t r_sample2; \
+		uint8_t nibbles[(align + 15) * 2]; \
+		int8_t signedNibble; \
+		int32_t sampleInt; \
+		int16_t sample; \
+		/* Keep decodeCache as-is to calculate return value */ \
+		int16_t *pcmL = decodeCacheL; \
+		int16_t *pcmR = decodeCacheR; \
+		int16_t *pcmExtra = wave->msadpcmCache; \
+		/* Have extra? Throw it in! */ \
+		if (wave->msadpcmExtra > 0) \
+		{ \
+			for (i = 0; i < wave->msadpcmExtra; i += 2) \
+			{ \
+				*pcmL++ = wave->msadpcmCache[i]; \
+				*pcmR++ = wave->msadpcmCache[i + 1]; \
+			} \
+			samples -= wave->msadpcmExtra; \
+			wave->msadpcmExtra = 0; \
+		} \
+		/* How many blocks do we need? */ \
+		uint32_t blocks = samples / bsize; \
+		uint16_t extra = samples % bsize; \
+		/* Don't go past the end of the wave data. TODO: Loop Points */ \
+		uint32_t len = FACT_min( \
+			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
+				wave->position, \
+			(blocks + (extra > 0)) * ((align + 22) * 2) \
+		); \
+		/* len might be 0 if we just came back for tail samples */ \
+		if (len == 0) \
+		{ \
+			return (pcmL - decodeCacheL) * 2; \
+		} \
+		if (len < ((blocks + (extra > 0)) * ((16 + 22) * 2))) \
+		{ \
+			blocks = len / ((16 + 22) * 2); \
+			extra = len % ((16 + 22) * 2); \
+		} \
+		/* Go to the spot in the WaveBank where our samples start */ \
+		wave->parentBank->io->seek( \
+			wave->parentBank->io->data, \
+			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
+				wave->position, \
+			0 \
+		); \
+		/* Read in each block directly to the decode cache */ \
+		for (b = 0; b < blocks; b += 1) \
+		{ \
+			READ_STEREO_PREAMBLE \
+			*pcmL++ = l_sample1; \
+			*pcmR++ = r_sample1; \
+			*pcmL++ = l_sample2; \
+			*pcmR++ = r_sample2; \
+			wave->parentBank->io->read( \
+				wave->parentBank->io->data, \
+				nibbles, \
+				sizeof(nibbles), \
+				1 \
+			); \
+			for (i = 0; i < ((align + 15) * 2); i += 1) \
+			{ \
+				DECODE_STEREO_BLOCK(*pcmL++, *pcmR++) \
+			} \
+		} \
+		/* Have extra? Go to the MSADPCM cache */ \
+		if (extra > 0) \
+		{ \
+			READ_STEREO_PREAMBLE \
+			*pcmExtra++ = l_sample1; \
+			*pcmExtra++ = r_sample1; \
+			*pcmExtra++ = l_sample2; \
+			*pcmExtra++ = r_sample2; \
+			wave->parentBank->io->read( \
+				wave->parentBank->io->data, \
+				nibbles, \
+				sizeof(nibbles), \
+				1 \
+			); \
+			for (i = 0; i < ((align + 15) * 2); i += 1) \
+			{ \
+				DECODE_STEREO_BLOCK(*pcmExtra++, *pcmExtra++) \
+			} \
+			wave->msadpcmExtra = bsize - extra; \
+			for (i = 0; i < extra; i += 2) \
+			{ \
+				*pcmL++ = wave->msadpcmCache[i]; \
+				*pcmR++ = wave->msadpcmCache[i + 1]; \
+			} \
+			FACT_memmove( \
+				wave->msadpcmCache, \
+				wave->msadpcmCache + extra, \
+				wave->msadpcmExtra * 2 \
+			); \
+		} \
+		wave->position += len; \
+		return (pcmL - decodeCacheL); \
+	}
+DECODE_FUNC(StereoMSADPCM32,	  0,  32)
+DECODE_FUNC(StereoMSADPCM64,	 16,  64)
+DECODE_FUNC(StereoMSADPCM128,	 48, 128)
+DECODE_FUNC(StereoMSADPCM256,	112, 256)
+DECODE_FUNC(StereoMSADPCM512,	240, 512)
+#undef DECODE_FUNC
+
+/* StereoToMono */
+#define DECODE_FUNC(type, align, bsize) \
+	uint32_t FACT_INTERNAL_Decode##type( \
+		FACTWave *wave, \
+		int16_t *decodeCacheL, \
+		int16_t *decodeCacheR, \
+		uint32_t samples \
+	) { \
+		/* Iterators */ \
+		uint8_t b, i; \
+		/* Temp storage for ADPCM blocks */ \
+		uint8_t l_predictor; \
+		uint8_t r_predictor; \
+		int16_t l_delta; \
+		int16_t r_delta; \
+		int16_t l_sample1; \
+		int16_t r_sample1; \
+		int16_t l_sample2; \
+		int16_t r_sample2; \
+		uint8_t nibbles[(align + 15) * 2]; \
+		int8_t signedNibble; \
+		int32_t sampleInt; \
+		int16_t sample; \
+		/* Keep decodeCache as-is to calculate return value */ \
+		int16_t *pcm = decodeCacheL; \
+		int16_t *pcmExtra = wave->msadpcmCache; \
+		/* Have extra? Throw it in! */ \
+		if (wave->msadpcmExtra > 0) \
+		{ \
+			for (i = 0; i < wave->msadpcmExtra; i += 2) \
+			{ \
+				*pcm++ = (int16_t) (( \
+					(int32_t) wave->msadpcmCache[i] + \
+					(int32_t) wave->msadpcmCache[i + 1] \
+				) / 2); \
+			} \
+			samples -= wave->msadpcmExtra / 2; \
+			wave->msadpcmExtra = 0; \
+		} \
+		/* How many blocks do we need? */ \
+		uint32_t blocks = samples / bsize; \
+		uint16_t extra = samples % bsize; \
+		/* Don't go past the end of the wave data. TODO: Loop Points */ \
+		uint32_t len = FACT_min( \
+			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
+				wave->position, \
+			(blocks + (extra > 0)) * ((align + 22) * 2) \
+		); \
+		/* len might be 0 if we just came back for tail samples */ \
+		if (len == 0) \
+		{ \
+			return (pcm - decodeCacheL) * 2; \
+		} \
+		if (len < ((blocks + (extra > 0)) * ((16 + 22) * 2))) \
+		{ \
+			blocks = len / ((16 + 22) * 2); \
+			extra = len % ((16 + 22) * 2); \
+		} \
+		/* Go to the spot in the WaveBank where our samples start */ \
+		wave->parentBank->io->seek( \
+			wave->parentBank->io->data, \
+			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
+				wave->position, \
+			0 \
+		); \
+		/* Read in each block directly to the decode cache */ \
+		for (b = 0; b < blocks; b += 1) \
+		{ \
+			READ_STEREO_PREAMBLE \
+			*pcm++ = (int16_t) (( \
+				(int32_t) l_sample1 + (int32_t) r_sample1 \
+			) / 2); \
+			*pcm++ = (int16_t) (( \
+				(int32_t) l_sample2 + (int32_t) r_sample2 \
+			) / 2); \
+			wave->parentBank->io->read( \
+				wave->parentBank->io->data, \
+				nibbles, \
+				sizeof(nibbles), \
+				1 \
+			); \
+			for (i = 0; i < ((align + 15) * 2); i += 1) \
+			{ \
+				DECODE_STEREO_BLOCK(decodeCacheR[0], decodeCacheR[1]) \
+				*pcm++ = (int16_t) (( \
+					(int32_t) decodeCacheR[0] + (int32_t) decodeCacheR[1] \
+				) / 2); \
+			} \
+		} \
+		/* Have extra? Go to the MSADPCM cache */ \
+		if (extra > 0) \
+		{ \
+			READ_STEREO_PREAMBLE \
+			*pcmExtra++ = l_sample1; \
+			*pcmExtra++ = r_sample1; \
+			*pcmExtra++ = l_sample2; \
+			*pcmExtra++ = r_sample2; \
+			wave->parentBank->io->read( \
+				wave->parentBank->io->data, \
+				nibbles, \
+				sizeof(nibbles), \
+				1 \
+			); \
+			for (i = 0; i < ((align + 15) * 2); i += 1) \
+			{ \
+				DECODE_STEREO_BLOCK(*pcmExtra++, *pcmExtra++) \
+			} \
+			wave->msadpcmExtra = bsize - extra; \
+			for (i = 0; i < extra; i += 2) \
+			{ \
+				*pcm++ = (int16_t) (( \
+					(int32_t) wave->msadpcmCache[i] + \
+					(int32_t) wave->msadpcmCache[i + 1] \
+				) / 2); \
+			} \
+			FACT_memmove( \
+				wave->msadpcmCache, \
+				wave->msadpcmCache + extra, \
+				wave->msadpcmExtra * 2 \
+			); \
+		} \
+		wave->position += len; \
+		return (pcm - decodeCacheL); \
+	}
+DECODE_FUNC(StereoToMonoMSADPCM32,	  0,  32)
+DECODE_FUNC(StereoToMonoMSADPCM64,	 16,  64)
+DECODE_FUNC(StereoToMonoMSADPCM128,	 48, 128)
+DECODE_FUNC(StereoToMonoMSADPCM256,	112, 256)
+DECODE_FUNC(StereoToMonoMSADPCM512,	240, 512)
 #undef DECODE_FUNC
