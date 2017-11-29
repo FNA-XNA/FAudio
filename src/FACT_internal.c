@@ -294,10 +294,6 @@ uint32_t FACT_INTERNAL_GetWave(
 	uint64_t sizeRequest;
 	uint32_t decodeLength, resampleLength = 0;
 
-	/* TODO: Downmix stereo to mono for 3D audio,
-	 * Otherwise have a special stereo mix path
-	 */
-
 	/* If the sample rates match, just decode and convert to float */
 	if (wave->resample.step == FIXED_ONE)
 	{
