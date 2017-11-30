@@ -221,7 +221,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 			0,
 			&want,
 			&have,
-			SDL_AUDIO_ALLOW_FORMAT_CHANGE
+			SDL_AUDIO_ALLOW_CHANNELS_CHANGE
 		);
 		if (device->device == 0)
 		{
@@ -241,7 +241,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		device->format.Format.wBitsPerSample = DEVICE_FORMAT_SIZE * 8;
 		device->format.Format.cbSize = 0; /* ? */
 		device->format.Samples.wValidBitsPerSample = DEVICE_FORMAT_SIZE * 8;
-		device->format.dwChannelMask = SPEAKER_STEREO;
+		device->format.dwChannelMask = SPEAKER_STEREO; /* FIXME */
 		FACT_zero(&device->format.SubFormat, sizeof(FACTGUID)); /* ? */
 
 		/* Add to the device list */
