@@ -102,12 +102,14 @@ void FACT_INTERNAL_UpdateRPCs(
 					"AttackTime"
 				) == 0) {
 					/* TODO: AttackTime */
+					rpcResult = 0.0f;
 				}
 				else if (FACT_strcmp(
 					engine->variableNames[rpc->variable],
 					"ReleaseTime"
 				) == 0) {
 					/* TODO: ReleaseTime */
+					rpcResult = 0.0f;
 				}
 				else
 				{
