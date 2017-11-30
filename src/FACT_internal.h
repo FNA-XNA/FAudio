@@ -543,6 +543,10 @@ void FACT_PlatformGetRendererDetails(
 	uint16_t index,
 	FACTRendererDetails *details
 );
+void FACT_PlatformGetFinalMixFormat(
+	FACTAudioEngine *pEngine,
+	FACTWaveFormatExtensible *pFinalMixFormat
+);
 
 void* FACT_malloc(size_t size);
 void FACT_free(void *ptr);

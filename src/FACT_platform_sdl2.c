@@ -29,6 +29,7 @@ struct FACTAudioDevice
 {
 	const char *name;
 	SDL_AudioDeviceID device;
+	FACTWaveFormatExtensible format;
 	FACTEngineEntry *engineList;
 	FACTAudioDevice *next;
 };
@@ -231,6 +232,18 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 			return;
 		}
 
+		/* Write up the format */
+		device->format.Format.wFormatTag = 1;
+		device->format.Format.nChannels = have.channels;
+		device->format.Format.nSamplesPerSec = have.freq;
+		device->format.Format.nAvgBytesPerSec = have.freq * DEVICE_FORMAT_SIZE;
+		device->format.Format.nBlockAlign = 0; /* ? */
+		device->format.Format.wBitsPerSample = DEVICE_FORMAT_SIZE * 8;
+		device->format.Format.cbSize = 0; /* ? */
+		device->format.Samples.wValidBitsPerSample = DEVICE_FORMAT_SIZE * 8;
+		device->format.dwChannelMask = SPEAKER_STEREO;
+		FACT_zero(&device->format.SubFormat, sizeof(FACTGUID)); /* ? */
+
 		/* Add to the device list */
 		if (devlist == NULL)
 		{
@@ -361,6 +374,30 @@ void FACT_PlatformGetRendererDetails(
 		details->displayName[i] = name[i];
 	}
 	details->defaultDevice = (index == 0);
+}
+
+void FACT_PlatformGetFinalMixFormat(
+	FACTAudioEngine *pEngine,
+	FACTWaveFormatExtensible *pFinalMixFormat
+) {
+	FACTEngineEntry *entry;
+	FACTAudioDevice *dev = devlist;
+	while (dev != NULL)
+	{
+		entry = dev->engineList;
+		while (entry != NULL)
+		{
+			if (entry->engine == pEngine)
+			{
+				FACT_memcpy(
+					pFinalMixFormat,
+					&dev->format,
+					sizeof(FACTWaveFormatExtensible)
+				);
+				return;
+			}
+		}
+	}
 }
 
 void* FACT_malloc(size_t size)

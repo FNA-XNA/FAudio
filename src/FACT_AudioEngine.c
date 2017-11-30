@@ -65,7 +65,10 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 	FACTAudioEngine *pEngine,
 	FACTWaveFormatExtensible *pFinalMixFormat
 ) {
-	/* TODO */
+	FACT_PlatformGetFinalMixFormat(
+		pEngine,
+		pFinalMixFormat
+	);
 	return 0;
 }
 
