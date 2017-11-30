@@ -396,7 +396,9 @@ void FACT_PlatformGetFinalMixFormat(
 				);
 				return;
 			}
+			entry = entry->next;
 		}
+		dev = dev->next;
 	}
 }
 
