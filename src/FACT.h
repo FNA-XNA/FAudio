@@ -622,6 +622,191 @@ FACTAPI uint32_t FACTCue_SetOutputVoiceMatrix(
 	const float *pLevelMatrix /* SourceChannels * DestinationChannels */
 );
 
+/* 3D Audio API */
+
+#define FACT3DAUDIO_PI			3.141592654f
+#define FACT3DAUDIO_2PI			6.283185307f
+
+#define LEFT_AZIMUTH			(3.0f * FACT3DAUDIO_PI / 2.0f)
+#define RIGHT_AZIMUTH			(FACT3DAUDIO_PI / 2.0f)
+#define FRONT_LEFT_AZIMUTH		(7.0f * FACT3DAUDIO_PI / 4.0f)
+#define FRONT_RIGHT_AZIMUTH		(FACT3DAUDIO_PI / 4.0f)
+#define FRONT_CENTER_AZIMUTH		0.0f
+#define LOW_FREQUENCY_AZIMUTH		FACT3DAUDIO_2PI
+#define BACK_LEFT_AZIMUTH		(5.0f * FACT3DAUDIO_PI / 4.0f)
+#define BACK_RIGHT_AZIMUTH		(3.0f * FACT3DAUDIO_PI / 4.0f)
+#define BACK_CENTER_AZIMUTH		FACT3DAUDIO_PI
+#define FRONT_LEFT_OF_CENTER_AZIMUTH	(15.0f * FACT3DAUDIO_PI / 8.0f)
+#define FRONT_RIGHT_OF_CENTER_AZIMUTH	(FACT3DAUDIO_PI / 8.0f)
+
+#define FACT3DAUDIO_CALCULATE_MATRIX		0x00000001
+#define FACT3DAUDIO_CALCULATE_DELAY		0x00000002
+#define FACT3DAUDIO_CALCULATE_LPF_DIRECT	0x00000004
+#define FACT3DAUDIO_CALCULATE_LPF_REVERB	0x00000008
+#define FACT3DAUDIO_CALCULATE_REVERB		0x00000010
+#define FACT3DAUDIO_CALCULATE_DOPPLER		0x00000020
+#define FACT3DAUDIO_CALCULATE_EMITTER_ANGLE	0x00000040
+#define FACT3DAUDIO_CALCULATE_ZEROCENTER	0x00010000
+#define FACT3DAUDIO_CALCULATE_REDIRECT_TO_LFE	0x00020000
+
+#define FACT3DAUDIO_HANDLE_BYTESIZE 20
+typedef uint8_t FACT3DAUDIO_HANDLE[FACT3DAUDIO_HANDLE_BYTESIZE];
+
+typedef struct FACT3DAUDIO_VECTOR
+{
+	float x;
+	float y;
+	float z;
+} FACT3DAUDIO_VECTOR;
+
+typedef struct FACT3DAUDIO_DISTANCE_CURVE_POINT
+{
+	float Distance;
+	float DSPSetting;
+} FACT3DAUDIO_DISTANCE_CURVE_POINT;
+
+typedef struct FACT3DAUDIO_DISTANCE_CURVE
+{
+	FACT3DAUDIO_DISTANCE_CURVE_POINT *pPoints;
+	uint32_t PointCount;
+} FACT3DAUDIO_DISTANCE_CURVE;
+
+typedef struct FACT3DAUDIO_CONE
+{
+	float InnerAngle;
+	float OuterAngle;
+	float InnerVolume;
+	float OuterVolume;
+	float InnerLPF;
+	float OuterLPF;
+	float InnerReverb;
+	float OuterReverb;
+} FACT3DAUDIO_CONE;
+
+typedef struct FACT3DAUDIO_LISTENER
+{
+	FACT3DAUDIO_VECTOR OrientFront;
+	FACT3DAUDIO_VECTOR OrientTop;
+	FACT3DAUDIO_VECTOR Position;
+	FACT3DAUDIO_VECTOR Velocity;
+	FACT3DAUDIO_CONE *pCone;
+} FACT3DAUDIO_LISTENER;
+
+typedef struct FACT3DAUDIO_EMITTER
+{
+	FACT3DAUDIO_CONE *pCone;
+	FACT3DAUDIO_VECTOR OrientFront;
+	FACT3DAUDIO_VECTOR OrientTop;
+	FACT3DAUDIO_VECTOR Position;
+	FACT3DAUDIO_VECTOR Velocity;
+	float InnerRadius;
+	float InnerRadiusAngle;
+	uint32_t ChannelCount;
+	float ChannelRadius;
+	float *pChannelAzimuths;
+	FACT3DAUDIO_DISTANCE_CURVE *pVolumeCurve;
+	FACT3DAUDIO_DISTANCE_CURVE *pLFECurve;
+	FACT3DAUDIO_DISTANCE_CURVE *pLPFDirectCurve;
+	FACT3DAUDIO_DISTANCE_CURVE *pLPFReverbCurve;
+	FACT3DAUDIO_DISTANCE_CURVE *pReverbCurve;
+	float CurveDistanceScaler;
+	float DopplerScaler;
+} FACT3DAUDIO_EMITTER;
+
+typedef struct FACT3DAUDIO_DSP_SETTINGS
+{
+	float *pMatrixCoefficients;
+	float *pDelayTimes;
+	uint32_t SrcChannelCount;
+	uint32_t DstChannelCount;
+	float LPFDirectCoefficient;
+	float LPFReverbCoefficient;
+	float ReverbLevel;
+	float DopplerFactor;
+	float EmitterToListenerAngle;
+	float EmitterToListenerDistance;
+	float EmitterVelocityComponent;
+	float ListenerVelocityComponent;
+} FACT3DAUDIO_DSP_SETTINGS;
+
+static const float aStereoLayout[] =
+{
+	LEFT_AZIMUTH,
+	RIGHT_AZIMUTH
+};
+static const float a2Point1Layout[] =
+{
+	LEFT_AZIMUTH,
+	RIGHT_AZIMUTH,
+	LOW_FREQUENCY_AZIMUTH
+};
+static const float aQuadLayout[] =
+{
+	FRONT_LEFT_AZIMUTH,
+	FRONT_RIGHT_AZIMUTH,
+	BACK_LEFT_AZIMUTH,
+	BACK_RIGHT_AZIMUTH
+};
+static const float a4Point1Layout[] =
+{
+	FRONT_LEFT_AZIMUTH,
+	FRONT_RIGHT_AZIMUTH,
+	LOW_FREQUENCY_AZIMUTH,
+	BACK_LEFT_AZIMUTH,
+	BACK_RIGHT_AZIMUTH
+};
+static const float a5Point1Layout[] =
+{
+	FRONT_LEFT_AZIMUTH,
+	FRONT_RIGHT_AZIMUTH,
+	FRONT_CENTER_AZIMUTH,
+	LOW_FREQUENCY_AZIMUTH,
+	BACK_LEFT_AZIMUTH,
+	BACK_RIGHT_AZIMUTH
+};
+static const float a7Point1Layout[] =
+{
+	FRONT_LEFT_AZIMUTH,
+	FRONT_RIGHT_AZIMUTH,
+	FRONT_CENTER_AZIMUTH,
+	LOW_FREQUENCY_AZIMUTH,
+	BACK_LEFT_AZIMUTH,
+	BACK_RIGHT_AZIMUTH,
+	LEFT_AZIMUTH,
+	RIGHT_AZIMUTH
+};
+
+FACTAPI void FACT3DAudioInitialize(
+	uint32_t SpeakerChannelMask,
+	float SpeedOfSound,
+	FACT3DAUDIO_HANDLE Instance
+);
+
+FACTAPI void FACT3DAudioCalculate(
+	const FACT3DAUDIO_HANDLE Instance,
+	const FACT3DAUDIO_LISTENER *pListener,
+	const FACT3DAUDIO_EMITTER *pEmitter,
+	uint32_t Flags,
+	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings
+);
+
+FACTAPI uint32_t FACT3DInitialize(
+	FACTAudioEngine *pEngine,
+	FACT3DAUDIO_HANDLE F3DInstance
+);
+
+FACTAPI uint32_t FACT3DCalculate(
+	FACT3DAUDIO_HANDLE F3DInstance,
+	const FACT3DAUDIO_LISTENER *pListener,
+	FACT3DAUDIO_EMITTER *pEmitter,
+	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings
+);
+
+FACTAPI uint32_t FACT3DApply(
+	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings,
+	FACTCue *pCue
+);
+
 /* FACT I/O API */
 
 typedef struct FACTIOStream FACTIOStream;
