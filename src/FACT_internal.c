@@ -539,13 +539,19 @@ uint32_t FACT_INTERNAL_DecodeMonoPCM8(
 ) {
 	uint32_t i;
 	int8_t sample;
+	uint32_t end, len;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		samples
-	);
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples;
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(end - wave->position, samples);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -567,7 +573,21 @@ uint32_t FACT_INTERNAL_DecodeMonoPCM8(
 		decodeCacheL[i] = (int16_t) sample << 8;
 	}
 
+	/* Increment I/O offset, len now represents samples read */
 	wave->position += len;
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample;
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeMonoPCM8(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
 	return len;
 }
 
@@ -579,13 +599,19 @@ uint32_t FACT_INTERNAL_DecodeStereoPCM8(
 ) {
 	uint32_t i;
 	int8_t sample[2];
+	uint32_t end, len;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		samples * 2
-	);
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples * 2;
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(end - wave->position, samples * 2);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -608,8 +634,24 @@ uint32_t FACT_INTERNAL_DecodeStereoPCM8(
 		decodeCacheR[i] = (int16_t) sample[1] << 8;
 	}
 
+	/* Increment I/O offset, len now represents samples read */
 	wave->position += len;
-	return len / 2;
+	len >>= 1;
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample * 2;
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeStereoPCM8(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+
+	return len;
 }
 
 uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM8(
@@ -620,13 +662,19 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM8(
 ) {
 	uint32_t i;
 	int8_t sample[2];
+	uint32_t end, len;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		samples * 2
-	);
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples * 2;
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(end - wave->position, samples * 2);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -650,8 +698,23 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM8(
 		) << 7;
 	}
 
+	/* Increment I/O offset, len now represents samples read */
 	wave->position += len;
-	return len / 2;
+	len >>= 1;
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample * 2;
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeStereoToMonoPCM8(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
 
 /* 16-bit PCM Decoding */
@@ -662,12 +725,19 @@ uint32_t FACT_INTERNAL_DecodeMonoPCM16(
 	int16_t *decodeCacheR,
 	uint32_t samples
 ) {
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		samples * 2
-	);
+	uint32_t end, len;
+
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples * 2;
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(end - wave->position, samples * 2);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -685,8 +755,23 @@ uint32_t FACT_INTERNAL_DecodeMonoPCM16(
 		1
 	);
 
+	/* Increment I/O offset, len now represents samples read */
 	wave->position += len;
-	return len / 2;
+	len >>= 1;
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample * 2;
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeMonoPCM16(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
 
 uint32_t FACT_INTERNAL_DecodeStereoPCM16(
@@ -696,13 +781,19 @@ uint32_t FACT_INTERNAL_DecodeStereoPCM16(
 	uint32_t samples
 ) {
 	uint32_t i;
+	uint32_t end, len;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		samples * 4
-	);
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples * 4;
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(end - wave->position, samples * 4);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -729,8 +820,23 @@ uint32_t FACT_INTERNAL_DecodeStereoPCM16(
 		);
 	}
 
+	/* Increment I/O offset, len now represents samples read */
 	wave->position += len;
-	return len / 4;
+	len >>= 2;
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample * 4;
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeStereoPCM16(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
 
 uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM16(
@@ -740,13 +846,19 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM16(
 	uint32_t samples
 ) {
 	uint32_t i;
+	uint32_t end, len;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		samples * 4
-	);
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples * 4;
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(end - wave->position, samples * 4);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -770,8 +882,23 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM16(
 		) / 2);
 	}
 
+	/* Increment I/O offset, len now represents samples read */
 	wave->position += len;
-	return len / 4;
+	len >>= 2;
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample * 4;
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeStereoToMonoPCM16(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
 
 /* MSADPCM Decoding */
