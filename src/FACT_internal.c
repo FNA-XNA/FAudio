@@ -903,90 +903,89 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoPCM16(
 
 /* MSADPCM Decoding */
 
-static const int32_t AdaptionTable[16] =
-{
-	230, 230, 230, 230, 307, 409, 512, 614,
-	768, 614, 512, 409, 307, 230, 230, 230
-};
-static const int32_t AdaptCoeff_1[7] =
-{
-	256, 512, 0, 192, 240, 460, 392
-};
-static const int32_t AdaptCoeff_2[7] =
-{
-	0, -256, 0, 64, 0, -208, -232
-};
+static inline int16_t FACT_INTERNAL_ParseNibble(
+	uint8_t nibble,
+	uint8_t predictor,
+	int16_t *delta,
+	int16_t *sample1,
+	int16_t *sample2
+) {
+	static const int32_t AdaptionTable[16] =
+	{
+		230, 230, 230, 230, 307, 409, 512, 614,
+		768, 614, 512, 409, 307, 230, 230, 230
+	};
+	static const int32_t AdaptCoeff_1[7] =
+	{
+		256, 512, 0, 192, 240, 460, 392
+	};
+	static const int32_t AdaptCoeff_2[7] =
+	{
+		0, -256, 0, 64, 0, -208, -232
+	};
 
-#define PARSE_NIBBLE(tgt, nib, pdct, s1, s2, dlta) \
-	signedNibble = (int8_t) nib; \
-	if (signedNibble & 0x08) \
-	{ \
-		signedNibble -= 0x10; \
-	} \
-	sampleInt = ( \
-		( \
-			(s1 * AdaptCoeff_1[pdct]) + \
-			(s2 * AdaptCoeff_2[pdct]) \
-		) / 256 \
-	); \
-	sampleInt += signedNibble * dlta; \
-	sample = FACT_clamp(sampleInt, -32768, 32767); \
-	s2 = s1; \
-	s1 = sample; \
-	dlta = (int16_t) (AdaptionTable[nib] * (int32_t) dlta / 256); \
-	if (dlta < 16) \
-	{ \
-		dlta = 16; \
-	} \
-	tgt = sample;
+	int8_t signedNibble;
+	int32_t sampleInt;
+	int16_t sample;
+
+	signedNibble = (int8_t) nibble;
+	if (signedNibble & 0x08)
+	{
+		signedNibble -= 0x10;
+	}
+
+	sampleInt = (
+		(*sample1 * AdaptCoeff_1[predictor]) +
+		(*sample2 * AdaptCoeff_2[predictor])
+	) / 256;
+	sampleInt += signedNibble * (*delta);
+	sample = FACT_clamp(sampleInt, -32768, 32767);
+
+	*sample2 = *sample1;
+	*sample1 = sample;
+	*delta = (int16_t) (AdaptionTable[nibble] * (int32_t) (*delta) / 256);
+	if (*delta < 16)
+	{
+		*delta = 16;
+	}
+	return sample;
+}
+
+static inline void FACT_INTERNAL_ReadMonoPreamble(
+	FACTIOStream *io,
+	uint8_t *predictor,
+	int16_t *delta,
+	int16_t *sample1,
+	int16_t *sample2
+) {
+	io->read(io->data, predictor,	sizeof(*predictor),	1);
+	io->read(io->data, delta,	sizeof(*delta),		1);
+	io->read(io->data, sample1,	sizeof(*sample1),	1);
+	io->read(io->data, sample2,	sizeof(*sample2),	1);
+}
+
+static inline void FACT_INTERNAL_ReadStereoPreamble(
+	FACTIOStream *io,
+	uint8_t *predictor_l,
+	uint8_t *predictor_r,
+	int16_t *delta_l,
+	int16_t *delta_r,
+	int16_t *sample1_l,
+	int16_t *sample1_r,
+	int16_t *sample2_l,
+	int16_t *sample2_r
+) {
+	io->read(io->data, predictor_l,	sizeof(*predictor_l),	1);
+	io->read(io->data, predictor_r,	sizeof(*predictor_r),	1);
+	io->read(io->data, delta_l,	sizeof(*delta_l),	1);
+	io->read(io->data, delta_r,	sizeof(*delta_r),	1);
+	io->read(io->data, sample1_l,	sizeof(*sample1_l),	1);
+	io->read(io->data, sample1_r,	sizeof(*sample1_r),	1);
+	io->read(io->data, sample2_l,	sizeof(*sample2_l),	1);
+	io->read(io->data, sample2_r,	sizeof(*sample2_r),	1);
+}
 
 /* Mono */
-
-#define DECODE_MONO_BLOCK(target) \
-	PARSE_NIBBLE( \
-		target, \
-		(nibbles[i] >> 4), \
-		predictor, \
-		sample1, \
-		sample2, \
-		delta \
-	) \
-	PARSE_NIBBLE( \
-		target, \
-		(nibbles[i] & 0x0F), \
-		predictor, \
-		sample1, \
-		sample2, \
-		delta \
-	)
-#define READ_MONO_PREAMBLE(target) \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&predictor, \
-		sizeof(predictor), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&delta, \
-		sizeof(delta), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&sample1, \
-		sizeof(sample1), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&sample2, \
-		sizeof(sample2), \
-		1 \
-	); \
-	*target++ = sample2; \
-	*target++ = sample1;
-
 #define DECODE_FUNC(type, align, bsize) \
 	uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \
@@ -1002,9 +1001,6 @@ static const int32_t AdaptCoeff_2[7] =
 		int16_t sample1; \
 		int16_t sample2; \
 		uint8_t nibbles[(align + 15)]; \
-		int8_t signedNibble; \
-		int32_t sampleInt; \
-		int16_t sample; \
 		/* Keep decodeCache as-is to calculate return value */ \
 		int16_t *pcm = decodeCacheL; \
 		int16_t *pcmExtra = wave->msadpcmCache; \
@@ -1045,7 +1041,15 @@ static const int32_t AdaptCoeff_2[7] =
 		/* Read in each block directly to the decode cache */ \
 		for (b = 0; b < blocks; b += 1) \
 		{ \
-			READ_MONO_PREAMBLE(pcm) \
+			FACT_INTERNAL_ReadMonoPreamble( \
+				wave->parentBank->io, \
+				&predictor, \
+				&delta, \
+				&sample1, \
+				&sample2 \
+			); \
+			*pcm++ = sample2; \
+			*pcm++ = sample1; \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
@@ -1054,13 +1058,34 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			for (i = 0; i < (align + 15); i += 1) \
 			{ \
-				DECODE_MONO_BLOCK(*pcm++) \
+				*pcm++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] >> 4, \
+					predictor, \
+					&delta, \
+					&sample1, \
+					&sample2 \
+				); \
+				*pcm++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] & 0x0F, \
+					predictor, \
+					&delta, \
+					&sample1, \
+					&sample2 \
+				); \
 			} \
 		} \
 		/* Have extra? Go to the MSADPCM cache */ \
 		if (extra > 0) \
 		{ \
-			READ_MONO_PREAMBLE(pcmExtra) \
+			FACT_INTERNAL_ReadMonoPreamble( \
+				wave->parentBank->io, \
+				&predictor, \
+				&delta, \
+				&sample1, \
+				&sample2 \
+			); \
+			*pcmExtra++ = sample2; \
+			*pcmExtra++ = sample1; \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
@@ -1069,7 +1094,20 @@ static const int32_t AdaptCoeff_2[7] =
 			); \
 			for (i = 0; i < (align + 15); i += 1) \
 			{ \
-				DECODE_MONO_BLOCK(*pcmExtra++) \
+				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] >> 4, \
+					predictor, \
+					&delta, \
+					&sample1, \
+					&sample2 \
+				); \
+				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] & 0x0F, \
+					predictor, \
+					&delta, \
+					&sample1, \
+					&sample2 \
+				); \
 			} \
 			wave->msadpcmExtra = bsize - extra; \
 			FACT_memcpy(pcm, wave->msadpcmCache, extra * 2); \
@@ -1089,75 +1127,6 @@ DECODE_FUNC(MonoMSADPCM128,	 48, 128)
 DECODE_FUNC(MonoMSADPCM256,	112, 256)
 DECODE_FUNC(MonoMSADPCM512,	240, 512)
 #undef DECODE_FUNC
-
-/* Stereo Shared Macros */
-
-#define DECODE_STEREO_BLOCK(target1, target2) \
-	PARSE_NIBBLE( \
-		target1, \
-		(nibbles[i] >> 4), \
-		l_predictor, \
-		l_sample1, \
-		l_sample2, \
-		l_delta \
-	) \
-	PARSE_NIBBLE( \
-		target2, \
-		(nibbles[i] & 0x0F), \
-		r_predictor, \
-		r_sample1, \
-		r_sample2, \
-		r_delta \
-	)
-#define READ_STEREO_PREAMBLE \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&l_predictor, \
-		sizeof(l_predictor), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&r_predictor, \
-		sizeof(r_predictor), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&l_delta, \
-		sizeof(l_delta), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&r_delta, \
-		sizeof(r_delta), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&l_sample1, \
-		sizeof(l_sample1), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&r_sample1, \
-		sizeof(r_sample1), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&l_sample2, \
-		sizeof(l_sample2), \
-		1 \
-	); \
-	wave->parentBank->io->read( \
-		wave->parentBank->io->data, \
-		&r_sample2, \
-		sizeof(r_sample2), \
-		1 \
-	);
 
 /* Stereo */
 #define DECODE_FUNC(type, align, bsize) \
@@ -1179,9 +1148,6 @@ DECODE_FUNC(MonoMSADPCM512,	240, 512)
 		int16_t l_sample2; \
 		int16_t r_sample2; \
 		uint8_t nibbles[(align + 15) * 2]; \
-		int8_t signedNibble; \
-		int32_t sampleInt; \
-		int16_t sample; \
 		/* Keep decodeCache as-is to calculate return value */ \
 		int16_t *pcmL = decodeCacheL; \
 		int16_t *pcmR = decodeCacheR; \
@@ -1226,11 +1192,21 @@ DECODE_FUNC(MonoMSADPCM512,	240, 512)
 		/* Read in each block directly to the decode cache */ \
 		for (b = 0; b < blocks; b += 1) \
 		{ \
-			READ_STEREO_PREAMBLE \
-			*pcmL++ = l_sample1; \
-			*pcmR++ = r_sample1; \
+			FACT_INTERNAL_ReadStereoPreamble( \
+				wave->parentBank->io, \
+				&l_predictor, \
+				&r_predictor, \
+				&l_delta, \
+				&r_delta, \
+				&l_sample1, \
+				&r_sample1, \
+				&l_sample2, \
+				&r_sample2 \
+			); \
 			*pcmL++ = l_sample2; \
 			*pcmR++ = r_sample2; \
+			*pcmL++ = l_sample1; \
+			*pcmR++ = r_sample1; \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
@@ -1239,17 +1215,40 @@ DECODE_FUNC(MonoMSADPCM512,	240, 512)
 			); \
 			for (i = 0; i < ((align + 15) * 2); i += 1) \
 			{ \
-				DECODE_STEREO_BLOCK(*pcmL++, *pcmR++) \
+				*pcmL++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] >> 4, \
+					l_predictor, \
+					&l_delta, \
+					&l_sample1, \
+					&l_sample2 \
+				); \
+				*pcmR++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] & 0x0F, \
+					r_predictor, \
+					&r_delta, \
+					&r_sample1, \
+					&r_sample2 \
+				); \
 			} \
 		} \
 		/* Have extra? Go to the MSADPCM cache */ \
 		if (extra > 0) \
 		{ \
-			READ_STEREO_PREAMBLE \
-			*pcmExtra++ = l_sample1; \
-			*pcmExtra++ = r_sample1; \
+			FACT_INTERNAL_ReadStereoPreamble( \
+				wave->parentBank->io, \
+				&l_predictor, \
+				&r_predictor, \
+				&l_delta, \
+				&r_delta, \
+				&l_sample1, \
+				&r_sample1, \
+				&l_sample2, \
+				&r_sample2 \
+			); \
 			*pcmExtra++ = l_sample2; \
 			*pcmExtra++ = r_sample2; \
+			*pcmExtra++ = l_sample1; \
+			*pcmExtra++ = r_sample1; \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
@@ -1258,7 +1257,20 @@ DECODE_FUNC(MonoMSADPCM512,	240, 512)
 			); \
 			for (i = 0; i < ((align + 15) * 2); i += 1) \
 			{ \
-				DECODE_STEREO_BLOCK(*pcmExtra++, *pcmExtra++) \
+				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] >> 4, \
+					l_predictor, \
+					&l_delta, \
+					&l_sample1, \
+					&l_sample2 \
+				); \
+				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] & 0x0F, \
+					r_predictor, \
+					&r_delta, \
+					&r_sample1, \
+					&r_sample2 \
+				); \
 			} \
 			wave->msadpcmExtra = bsize - extra; \
 			for (i = 0; i < extra; i += 2) \
@@ -1302,9 +1314,6 @@ DECODE_FUNC(StereoMSADPCM512,	240, 512)
 		int16_t l_sample2; \
 		int16_t r_sample2; \
 		uint8_t nibbles[(align + 15) * 2]; \
-		int8_t signedNibble; \
-		int32_t sampleInt; \
-		int16_t sample; \
 		/* Keep decodeCache as-is to calculate return value */ \
 		int16_t *pcm = decodeCacheL; \
 		int16_t *pcmExtra = wave->msadpcmCache; \
@@ -1350,12 +1359,22 @@ DECODE_FUNC(StereoMSADPCM512,	240, 512)
 		/* Read in each block directly to the decode cache */ \
 		for (b = 0; b < blocks; b += 1) \
 		{ \
-			READ_STEREO_PREAMBLE \
-			*pcm++ = (int16_t) (( \
-				(int32_t) l_sample1 + (int32_t) r_sample1 \
-			) / 2); \
+			FACT_INTERNAL_ReadStereoPreamble( \
+				wave->parentBank->io, \
+				&l_predictor, \
+				&r_predictor, \
+				&l_delta, \
+				&r_delta, \
+				&l_sample1, \
+				&r_sample1, \
+				&l_sample2, \
+				&r_sample2 \
+			); \
 			*pcm++ = (int16_t) (( \
 				(int32_t) l_sample2 + (int32_t) r_sample2 \
+			) / 2); \
+			*pcm++ = (int16_t) (( \
+				(int32_t) l_sample1 + (int32_t) r_sample1 \
 			) / 2); \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
@@ -1365,20 +1384,44 @@ DECODE_FUNC(StereoMSADPCM512,	240, 512)
 			); \
 			for (i = 0; i < ((align + 15) * 2); i += 1) \
 			{ \
-				DECODE_STEREO_BLOCK(decodeCacheR[0], decodeCacheR[1]) \
+				decodeCacheR[0] = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] >> 4, \
+					l_predictor, \
+					&l_delta, \
+					&l_sample1, \
+					&l_sample2 \
+				); \
+				decodeCacheR[1] = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] & 0x0F, \
+					r_predictor, \
+					&r_delta, \
+					&r_sample1, \
+					&r_sample2 \
+				); \
 				*pcm++ = (int16_t) (( \
-					(int32_t) decodeCacheR[0] + (int32_t) decodeCacheR[1] \
+					(int32_t) decodeCacheR[0] + \
+					(int32_t) decodeCacheR[1] \
 				) / 2); \
 			} \
 		} \
 		/* Have extra? Go to the MSADPCM cache */ \
 		if (extra > 0) \
 		{ \
-			READ_STEREO_PREAMBLE \
-			*pcmExtra++ = l_sample1; \
-			*pcmExtra++ = r_sample1; \
+			FACT_INTERNAL_ReadStereoPreamble( \
+				wave->parentBank->io, \
+				&l_predictor, \
+				&r_predictor, \
+				&l_delta, \
+				&r_delta, \
+				&l_sample1, \
+				&r_sample1, \
+				&l_sample2, \
+				&r_sample2 \
+			); \
 			*pcmExtra++ = l_sample2; \
 			*pcmExtra++ = r_sample2; \
+			*pcmExtra++ = l_sample1; \
+			*pcmExtra++ = r_sample1; \
 			wave->parentBank->io->read( \
 				wave->parentBank->io->data, \
 				nibbles, \
@@ -1387,7 +1430,20 @@ DECODE_FUNC(StereoMSADPCM512,	240, 512)
 			); \
 			for (i = 0; i < ((align + 15) * 2); i += 1) \
 			{ \
-				DECODE_STEREO_BLOCK(*pcmExtra++, *pcmExtra++) \
+				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] >> 4, \
+					l_predictor, \
+					&l_delta, \
+					&l_sample1, \
+					&l_sample2 \
+				); \
+				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
+					nibbles[i] & 0x0F, \
+					r_predictor, \
+					&r_delta, \
+					&r_sample1, \
+					&r_sample2 \
+				); \
 			} \
 			wave->msadpcmExtra = bsize - extra; \
 			for (i = 0; i < extra; i += 2) \
