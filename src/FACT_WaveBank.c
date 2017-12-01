@@ -153,40 +153,9 @@ uint32_t FACTWaveBank_Prepare(
 	}
 	else if (fmt->wFormatTag == 0x2) /* ADPCM */
 	{
-		if (fmt->wBlockAlign == 0)
-		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
-				FACT_INTERNAL_DecodeStereoMSADPCM32 :
-				FACT_INTERNAL_DecodeMonoMSADPCM32;
-		}
-		else if (fmt->wBlockAlign == 16)
-		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
-				FACT_INTERNAL_DecodeStereoMSADPCM64 :
-				FACT_INTERNAL_DecodeMonoMSADPCM64;
-		}
-		else if (fmt->wBlockAlign == 48)
-		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
-				FACT_INTERNAL_DecodeStereoMSADPCM128 :
-				FACT_INTERNAL_DecodeMonoMSADPCM128;
-		}
-		else if (fmt->wBlockAlign == 112)
-		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
-				FACT_INTERNAL_DecodeStereoMSADPCM256 :
-				FACT_INTERNAL_DecodeMonoMSADPCM256;
-		}
-		else if (fmt->wBlockAlign == 240)
-		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
-				FACT_INTERNAL_DecodeStereoMSADPCM512 :
-				FACT_INTERNAL_DecodeMonoMSADPCM512;
-		}
-		else
-		{
-			FACT_assert(0 && "Unrecognized wBlockAlign!");
-		}
+		(*ppWave)->decode = (*ppWave)->stereo ?
+			FACT_INTERNAL_DecodeStereoMSADPCM :
+			FACT_INTERNAL_DecodeMonoMSADPCM;
 	}
 	else /* Includes 0x1 - XMA, 0x3 - WMA */
 	{

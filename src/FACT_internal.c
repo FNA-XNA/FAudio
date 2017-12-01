@@ -985,486 +985,506 @@ static inline void FACT_INTERNAL_ReadStereoPreamble(
 	io->read(io->data, sample2_r,	sizeof(*sample2_r),	1);
 }
 
-/* Mono */
-#define DECODE_FUNC(bsize, align) \
-	uint32_t FACT_INTERNAL_DecodeMonoMSADPCM##bsize( \
-		FACTWave *wave, \
-		int16_t *decodeCacheL, \
-		int16_t *decodeCacheR, \
-		uint32_t samples \
-	) { \
-		/* Iterators */ \
-		uint8_t b, i; \
-		/* Temp storage for ADPCM blocks */ \
-		uint8_t predictor; \
-		int16_t delta; \
-		int16_t sample1; \
-		int16_t sample2; \
-		uint8_t nibbles[(align + 15)]; \
-		/* Keep decodeCache as-is to calculate return value */ \
-		int16_t *pcm = decodeCacheL; \
-		int16_t *pcmExtra = wave->msadpcmCache; \
-		/* Have extra? Throw it in! */ \
-		if (wave->msadpcmExtra > 0) \
-		{ \
-			FACT_memcpy(pcm, wave->msadpcmCache, wave->msadpcmExtra * 2); \
-			pcm += wave->msadpcmExtra; \
-			samples -= wave->msadpcmExtra; \
-			wave->msadpcmExtra = 0; \
-		} \
-		/* How many blocks do we need? */ \
-		uint32_t blocks = samples / bsize; \
-		uint16_t extra = samples % bsize; \
-		/* Don't go past the end of the wave data. TODO: Loop Points */ \
-		uint32_t len = FACT_min( \
-			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
-				wave->position, \
-			(blocks + (extra > 0)) * ((align + 22)) \
-		); \
-		/* len might be 0 if we just came back for tail samples */ \
-		if (len == 0) \
-		{ \
-			return (pcm - decodeCacheL) * 2; \
-		} \
-		if (len < ((blocks + (extra > 0)) * ((16 + 22)))) \
-		{ \
-			blocks = len / (16 + 22); \
-			extra = len % (16 + 22); \
-		} \
-		/* Go to the spot in the WaveBank where our samples start */ \
-		wave->parentBank->io->seek( \
-			wave->parentBank->io->data, \
-			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
-				wave->position, \
-			0 \
-		); \
-		/* Read in each block directly to the decode cache */ \
-		for (b = 0; b < blocks; b += 1) \
-		{ \
-			FACT_INTERNAL_ReadMonoPreamble( \
-				wave->parentBank->io, \
-				&predictor, \
-				&delta, \
-				&sample1, \
-				&sample2 \
-			); \
-			*pcm++ = sample2; \
-			*pcm++ = sample1; \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				nibbles, \
-				sizeof(nibbles), \
-				1 \
-			); \
-			for (i = 0; i < (align + 15); i += 1) \
-			{ \
-				*pcm++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] >> 4, \
-					predictor, \
-					&delta, \
-					&sample1, \
-					&sample2 \
-				); \
-				*pcm++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] & 0x0F, \
-					predictor, \
-					&delta, \
-					&sample1, \
-					&sample2 \
-				); \
-			} \
-		} \
-		/* Have extra? Go to the MSADPCM cache */ \
-		if (extra > 0) \
-		{ \
-			FACT_INTERNAL_ReadMonoPreamble( \
-				wave->parentBank->io, \
-				&predictor, \
-				&delta, \
-				&sample1, \
-				&sample2 \
-			); \
-			*pcmExtra++ = sample2; \
-			*pcmExtra++ = sample1; \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				nibbles, \
-				sizeof(nibbles), \
-				1 \
-			); \
-			for (i = 0; i < (align + 15); i += 1) \
-			{ \
-				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] >> 4, \
-					predictor, \
-					&delta, \
-					&sample1, \
-					&sample2 \
-				); \
-				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] & 0x0F, \
-					predictor, \
-					&delta, \
-					&sample1, \
-					&sample2 \
-				); \
-			} \
-			wave->msadpcmExtra = bsize - extra; \
-			FACT_memcpy(pcm, wave->msadpcmCache, extra * 2); \
-			FACT_memmove( \
-				wave->msadpcmCache, \
-				wave->msadpcmCache + extra, \
-				wave->msadpcmExtra * 2 \
-			); \
-			pcm += extra; \
-		} \
-		wave->position += len; \
-		return (pcm - decodeCacheL); \
-	}
-DECODE_FUNC( 32,   0)
-DECODE_FUNC( 64,  16)
-DECODE_FUNC(128,  48)
-DECODE_FUNC(256, 112)
-DECODE_FUNC(512, 240)
-#undef DECODE_FUNC
+uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	/* Iterators */
+	uint8_t b, i;
 
-/* Stereo */
-#define DECODE_FUNC(bsize, align) \
-	uint32_t FACT_INTERNAL_DecodeStereoMSADPCM##bsize( \
-		FACTWave *wave, \
-		int16_t *decodeCacheL, \
-		int16_t *decodeCacheR, \
-		uint32_t samples \
-	) { \
-		/* Iterators */ \
-		uint8_t b, i; \
-		/* Temp storage for ADPCM blocks */ \
-		uint8_t l_predictor; \
-		uint8_t r_predictor; \
-		int16_t l_delta; \
-		int16_t r_delta; \
-		int16_t l_sample1; \
-		int16_t r_sample1; \
-		int16_t l_sample2; \
-		int16_t r_sample2; \
-		uint8_t nibbles[(align + 15) * 2]; \
-		/* Keep decodeCache as-is to calculate return value */ \
-		int16_t *pcmL = decodeCacheL; \
-		int16_t *pcmR = decodeCacheR; \
-		int16_t *pcmExtra = wave->msadpcmCache; \
-		/* Have extra? Throw it in! */ \
-		if (wave->msadpcmExtra > 0) \
-		{ \
-			for (i = 0; i < wave->msadpcmExtra; i += 2) \
-			{ \
-				*pcmL++ = wave->msadpcmCache[i]; \
-				*pcmR++ = wave->msadpcmCache[i + 1]; \
-			} \
-			samples -= wave->msadpcmExtra; \
-			wave->msadpcmExtra = 0; \
-		} \
-		/* How many blocks do we need? */ \
-		uint32_t blocks = samples / bsize; \
-		uint16_t extra = samples % bsize; \
-		/* Don't go past the end of the wave data. TODO: Loop Points */ \
-		uint32_t len = FACT_min( \
-			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
-				wave->position, \
-			(blocks + (extra > 0)) * ((align + 22) * 2) \
-		); \
-		/* len might be 0 if we just came back for tail samples */ \
-		if (len == 0) \
-		{ \
-			return (pcmL - decodeCacheL) * 2; \
-		} \
-		if (len < ((blocks + (extra > 0)) * ((16 + 22) * 2))) \
-		{ \
-			blocks = len / ((16 + 22) * 2); \
-			extra = len % ((16 + 22) * 2); \
-		} \
-		/* Go to the spot in the WaveBank where our samples start */ \
-		wave->parentBank->io->seek( \
-			wave->parentBank->io->data, \
-			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
-				wave->position, \
-			0 \
-		); \
-		/* Read in each block directly to the decode cache */ \
-		for (b = 0; b < blocks; b += 1) \
-		{ \
-			FACT_INTERNAL_ReadStereoPreamble( \
-				wave->parentBank->io, \
-				&l_predictor, \
-				&r_predictor, \
-				&l_delta, \
-				&r_delta, \
-				&l_sample1, \
-				&r_sample1, \
-				&l_sample2, \
-				&r_sample2 \
-			); \
-			*pcmL++ = l_sample2; \
-			*pcmR++ = r_sample2; \
-			*pcmL++ = l_sample1; \
-			*pcmR++ = r_sample1; \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				nibbles, \
-				sizeof(nibbles), \
-				1 \
-			); \
-			for (i = 0; i < ((align + 15) * 2); i += 1) \
-			{ \
-				*pcmL++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] >> 4, \
-					l_predictor, \
-					&l_delta, \
-					&l_sample1, \
-					&l_sample2 \
-				); \
-				*pcmR++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] & 0x0F, \
-					r_predictor, \
-					&r_delta, \
-					&r_sample1, \
-					&r_sample2 \
-				); \
-			} \
-		} \
-		/* Have extra? Go to the MSADPCM cache */ \
-		if (extra > 0) \
-		{ \
-			FACT_INTERNAL_ReadStereoPreamble( \
-				wave->parentBank->io, \
-				&l_predictor, \
-				&r_predictor, \
-				&l_delta, \
-				&r_delta, \
-				&l_sample1, \
-				&r_sample1, \
-				&l_sample2, \
-				&r_sample2 \
-			); \
-			*pcmExtra++ = l_sample2; \
-			*pcmExtra++ = r_sample2; \
-			*pcmExtra++ = l_sample1; \
-			*pcmExtra++ = r_sample1; \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				nibbles, \
-				sizeof(nibbles), \
-				1 \
-			); \
-			for (i = 0; i < ((align + 15) * 2); i += 1) \
-			{ \
-				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] >> 4, \
-					l_predictor, \
-					&l_delta, \
-					&l_sample1, \
-					&l_sample2 \
-				); \
-				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] & 0x0F, \
-					r_predictor, \
-					&r_delta, \
-					&r_sample1, \
-					&r_sample2 \
-				); \
-			} \
-			wave->msadpcmExtra = bsize - extra; \
-			for (i = 0; i < extra; i += 2) \
-			{ \
-				*pcmL++ = wave->msadpcmCache[i]; \
-				*pcmR++ = wave->msadpcmCache[i + 1]; \
-			} \
-			FACT_memmove( \
-				wave->msadpcmCache, \
-				wave->msadpcmCache + extra, \
-				wave->msadpcmExtra * 2 \
-			); \
-		} \
-		wave->position += len; \
-		return (pcmL - decodeCacheL); \
-	}
-DECODE_FUNC( 32,   0)
-DECODE_FUNC( 64,  16)
-DECODE_FUNC(128,  48)
-DECODE_FUNC(256, 112)
-DECODE_FUNC(512, 240)
-#undef DECODE_FUNC
+	/* Temp storage for ADPCM blocks */
+	uint8_t predictor;
+	int16_t delta;
+	int16_t sample1;
+	int16_t sample2;
+	uint8_t nibbles[255]; /* Max align size */
 
-/* StereoToMono */
-#define DECODE_FUNC(bsize, align) \
-	uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM##bsize( \
-		FACTWave *wave, \
-		int16_t *decodeCacheL, \
-		int16_t *decodeCacheR, \
-		uint32_t samples \
-	) { \
-		/* Iterators */ \
-		uint8_t b, i; \
-		/* Temp storage for ADPCM blocks */ \
-		uint8_t l_predictor; \
-		uint8_t r_predictor; \
-		int16_t l_delta; \
-		int16_t r_delta; \
-		int16_t l_sample1; \
-		int16_t r_sample1; \
-		int16_t l_sample2; \
-		int16_t r_sample2; \
-		uint8_t nibbles[(align + 15) * 2]; \
-		/* Keep decodeCache as-is to calculate return value */ \
-		int16_t *pcm = decodeCacheL; \
-		int16_t *pcmExtra = wave->msadpcmCache; \
-		/* Have extra? Throw it in! */ \
-		if (wave->msadpcmExtra > 0) \
-		{ \
-			for (i = 0; i < wave->msadpcmExtra; i += 2) \
-			{ \
-				*pcm++ = (int16_t) (( \
-					(int32_t) wave->msadpcmCache[i] + \
-					(int32_t) wave->msadpcmCache[i + 1] \
-				) / 2); \
-			} \
-			samples -= wave->msadpcmExtra / 2; \
-			wave->msadpcmExtra = 0; \
-		} \
-		/* How many blocks do we need? */ \
-		uint32_t blocks = samples / bsize; \
-		uint16_t extra = samples % bsize; \
-		/* Don't go past the end of the wave data. TODO: Loop Points */ \
-		uint32_t len = FACT_min( \
-			wave->parentBank->entries[wave->index].PlayRegion.dwLength - \
-				wave->position, \
-			(blocks + (extra > 0)) * ((align + 22) * 2) \
-		); \
-		/* len might be 0 if we just came back for tail samples */ \
-		if (len == 0) \
-		{ \
-			return (pcm - decodeCacheL) * 2; \
-		} \
-		if (len < ((blocks + (extra > 0)) * ((16 + 22) * 2))) \
-		{ \
-			blocks = len / ((16 + 22) * 2); \
-			extra = len % ((16 + 22) * 2); \
-		} \
-		/* Go to the spot in the WaveBank where our samples start */ \
-		wave->parentBank->io->seek( \
-			wave->parentBank->io->data, \
-			wave->parentBank->entries[wave->index].PlayRegion.dwOffset + \
-				wave->position, \
-			0 \
-		); \
-		/* Read in each block directly to the decode cache */ \
-		for (b = 0; b < blocks; b += 1) \
-		{ \
-			FACT_INTERNAL_ReadStereoPreamble( \
-				wave->parentBank->io, \
-				&l_predictor, \
-				&r_predictor, \
-				&l_delta, \
-				&r_delta, \
-				&l_sample1, \
-				&r_sample1, \
-				&l_sample2, \
-				&r_sample2 \
-			); \
-			*pcm++ = (int16_t) (( \
-				(int32_t) l_sample2 + (int32_t) r_sample2 \
-			) / 2); \
-			*pcm++ = (int16_t) (( \
-				(int32_t) l_sample1 + (int32_t) r_sample1 \
-			) / 2); \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				nibbles, \
-				sizeof(nibbles), \
-				1 \
-			); \
-			for (i = 0; i < ((align + 15) * 2); i += 1) \
-			{ \
-				decodeCacheR[0] = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] >> 4, \
-					l_predictor, \
-					&l_delta, \
-					&l_sample1, \
-					&l_sample2 \
-				); \
-				decodeCacheR[1] = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] & 0x0F, \
-					r_predictor, \
-					&r_delta, \
-					&r_sample1, \
-					&r_sample2 \
-				); \
-				*pcm++ = (int16_t) (( \
-					(int32_t) decodeCacheR[0] + \
-					(int32_t) decodeCacheR[1] \
-				) / 2); \
-			} \
-		} \
-		/* Have extra? Go to the MSADPCM cache */ \
-		if (extra > 0) \
-		{ \
-			FACT_INTERNAL_ReadStereoPreamble( \
-				wave->parentBank->io, \
-				&l_predictor, \
-				&r_predictor, \
-				&l_delta, \
-				&r_delta, \
-				&l_sample1, \
-				&r_sample1, \
-				&l_sample2, \
-				&r_sample2 \
-			); \
-			*pcmExtra++ = l_sample2; \
-			*pcmExtra++ = r_sample2; \
-			*pcmExtra++ = l_sample1; \
-			*pcmExtra++ = r_sample1; \
-			wave->parentBank->io->read( \
-				wave->parentBank->io->data, \
-				nibbles, \
-				sizeof(nibbles), \
-				1 \
-			); \
-			for (i = 0; i < ((align + 15) * 2); i += 1) \
-			{ \
-				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] >> 4, \
-					l_predictor, \
-					&l_delta, \
-					&l_sample1, \
-					&l_sample2 \
-				); \
-				*pcmExtra++ = FACT_INTERNAL_ParseNibble( \
-					nibbles[i] & 0x0F, \
-					r_predictor, \
-					&r_delta, \
-					&r_sample1, \
-					&r_sample2 \
-				); \
-			} \
-			wave->msadpcmExtra = bsize - extra; \
-			for (i = 0; i < extra; i += 2) \
-			{ \
-				*pcm++ = (int16_t) (( \
-					(int32_t) wave->msadpcmCache[i] + \
-					(int32_t) wave->msadpcmCache[i + 1] \
-				) / 2); \
-			} \
-			FACT_memmove( \
-				wave->msadpcmCache, \
-				wave->msadpcmCache + extra, \
-				wave->msadpcmExtra * 2 \
-			); \
-		} \
-		wave->position += len; \
-		return (pcm - decodeCacheL); \
+	/* Keep decodeCache as-is to calculate return value */
+	int16_t *pcm = decodeCacheL;
+	int16_t *pcmExtra = wave->msadpcmCache;
+
+	/* Align, block size */
+	uint32_t align = wave->parentBank->entries[wave->index].Format.wBlockAlign;
+	uint32_t bsize = (align + 16) * 2;
+
+	/* Have extra? Throw it in! */
+	if (wave->msadpcmExtra > 0)
+	{
+		FACT_memcpy(pcm, wave->msadpcmCache, wave->msadpcmExtra * 2);
+		pcm += wave->msadpcmExtra;
+		samples -= wave->msadpcmExtra;
+		wave->msadpcmExtra = 0;
 	}
-DECODE_FUNC( 32,   0)
-DECODE_FUNC( 64,  16)
-DECODE_FUNC(128,  48)
-DECODE_FUNC(256, 112)
-DECODE_FUNC(512, 240)
-#undef DECODE_FUNC
+
+	/* How many blocks do we need? */
+	uint32_t blocks = samples / bsize;
+	uint16_t extra = samples % bsize;
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		(blocks + (extra > 0)) * ((align + 22))
+	);
+
+	/* len might be 0 if we just came back for tail samples */
+	if (len == 0)
+	{
+		return (pcm - decodeCacheL) * 2;
+	}
+
+	/* FIXME: I honestly forgot what this does... */
+	if (len < ((blocks + (extra > 0)) * ((align + 22))))
+	{
+		blocks = len / (align + 22);
+		extra = len % (align + 22);
+	}
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read in each block directly to the decode cache */
+	for (b = 0; b < blocks; b += 1)
+	{
+		FACT_INTERNAL_ReadMonoPreamble(
+			wave->parentBank->io,
+			&predictor,
+			&delta,
+			&sample1,
+			&sample2
+		);
+		*pcm++ = sample2;
+		*pcm++ = sample1;
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			nibbles,
+			align + 15,
+			1
+		);
+		for (i = 0; i < (align + 15); i += 1)
+		{
+			*pcm++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+			*pcm++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+		}
+	}
+
+	/* Have extra? Go to the MSADPCM cache */
+	if (extra > 0)
+	{
+		FACT_INTERNAL_ReadMonoPreamble(
+			wave->parentBank->io,
+			&predictor,
+			&delta,
+			&sample1,
+			&sample2
+		);
+		*pcmExtra++ = sample2;
+		*pcmExtra++ = sample1;
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			nibbles,
+			align + 15,
+			1
+		);
+		for (i = 0; i < (align + 15); i += 1)
+		{
+			*pcmExtra++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+			*pcmExtra++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+		}
+		wave->msadpcmExtra = bsize - extra;
+		FACT_memcpy(pcm, wave->msadpcmCache, extra * 2);
+		FACT_memmove(
+			wave->msadpcmCache,
+			wave->msadpcmCache + extra,
+			wave->msadpcmExtra * 2
+		);
+		pcm += extra;
+	}
+	wave->position += len;
+	return (pcm - decodeCacheL);
+}
+
+uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	/* Iterators */
+	uint8_t b, i;
+
+	/* Temp storage for ADPCM blocks */
+	uint8_t l_predictor;
+	uint8_t r_predictor;
+	int16_t l_delta;
+	int16_t r_delta;
+	int16_t l_sample1;
+	int16_t r_sample1;
+	int16_t l_sample2;
+	int16_t r_sample2;
+	uint8_t nibbles[510]; /* Max align size */
+
+	/* Keep decodeCache as-is to calculate return value */
+	int16_t *pcmL = decodeCacheL;
+	int16_t *pcmR = decodeCacheR;
+	int16_t *pcmExtra = wave->msadpcmCache;
+
+	/* Align, block size */
+	uint32_t align = wave->parentBank->entries[wave->index].Format.wBlockAlign;
+	uint32_t bsize = (align + 16) * 2;
+
+	/* Have extra? Throw it in! */
+	if (wave->msadpcmExtra > 0)
+	{
+		for (i = 0; i < wave->msadpcmExtra; i += 2)
+		{
+			*pcmL++ = wave->msadpcmCache[i];
+			*pcmR++ = wave->msadpcmCache[i + 1];
+		}
+		samples -= wave->msadpcmExtra;
+		wave->msadpcmExtra = 0;
+	}
+
+	/* How many blocks do we need? */
+	uint32_t blocks = samples / bsize;
+	uint16_t extra = samples % bsize;
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		(blocks + (extra > 0)) * ((align + 22) * 2)
+	);
+
+	/* len might be 0 if we just came back for tail samples */
+	if (len == 0)
+	{
+		return (pcmL - decodeCacheL) * 2;
+	}
+
+	/* FIXME: I honestly forgot what this does... */
+	if (len < ((blocks + (extra > 0)) * ((align + 22) * 2)))
+	{
+		blocks = len / ((align + 22) * 2);
+		extra = len % ((align + 22) * 2);
+	}
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read in each block directly to the decode cache */
+	for (b = 0; b < blocks; b += 1)
+	{
+		FACT_INTERNAL_ReadStereoPreamble(
+			wave->parentBank->io,
+			&l_predictor,
+			&r_predictor,
+			&l_delta,
+			&r_delta,
+			&l_sample1,
+			&r_sample1,
+			&l_sample2,
+			&r_sample2
+		);
+		*pcmL++ = l_sample2;
+		*pcmR++ = r_sample2;
+		*pcmL++ = l_sample1;
+		*pcmR++ = r_sample1;
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			nibbles,
+			(align + 15) * 2,
+			1
+		);
+		for (i = 0; i < ((align + 15) * 2); i += 1)
+		{
+			*pcmL++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				l_predictor,
+				&l_delta,
+				&l_sample1,
+				&l_sample2
+			);
+			*pcmR++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				r_predictor,
+				&r_delta,
+				&r_sample1,
+				&r_sample2
+			);
+		}
+	}
+	/* Have extra? Go to the MSADPCM cache */
+	if (extra > 0)
+	{
+		FACT_INTERNAL_ReadStereoPreamble(
+			wave->parentBank->io,
+			&l_predictor,
+			&r_predictor,
+			&l_delta,
+			&r_delta,
+			&l_sample1,
+			&r_sample1,
+			&l_sample2,
+			&r_sample2
+		);
+		*pcmExtra++ = l_sample2;
+		*pcmExtra++ = r_sample2;
+		*pcmExtra++ = l_sample1;
+		*pcmExtra++ = r_sample1;
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			nibbles,
+			(align + 15) * 2,
+			1
+		);
+		for (i = 0; i < ((align + 15) * 2); i += 1)
+		{
+			*pcmExtra++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				l_predictor,
+				&l_delta,
+				&l_sample1,
+				&l_sample2
+			);
+			*pcmExtra++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				r_predictor,
+				&r_delta,
+				&r_sample1,
+				&r_sample2
+			);
+		}
+		wave->msadpcmExtra = bsize - extra;
+		for (i = 0; i < extra; i += 2)
+		{
+			*pcmL++ = wave->msadpcmCache[i];
+			*pcmR++ = wave->msadpcmCache[i + 1];
+		}
+		FACT_memmove(
+			wave->msadpcmCache,
+			wave->msadpcmCache + extra,
+			wave->msadpcmExtra * 2
+		);
+	}
+	wave->position += len;
+	return (pcmL - decodeCacheL);
+}
+
+uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
+	FACTWave *wave,
+	int16_t *decodeCacheL,
+	int16_t *decodeCacheR,
+	uint32_t samples
+) {
+	/* Iterators */
+	uint8_t b, i;
+
+	/* Temp storage for ADPCM blocks */
+	uint8_t l_predictor;
+	uint8_t r_predictor;
+	int16_t l_delta;
+	int16_t r_delta;
+	int16_t l_sample1;
+	int16_t r_sample1;
+	int16_t l_sample2;
+	int16_t r_sample2;
+	uint8_t nibbles[510]; /* Max align size */
+
+	/* Keep decodeCache as-is to calculate return value */
+	int16_t *pcm = decodeCacheL;
+	int16_t *pcmExtra = wave->msadpcmCache;
+
+	/* Align, block size */
+	uint32_t align = wave->parentBank->entries[wave->index].Format.wBlockAlign;
+	uint32_t bsize = (align + 16) * 2;
+
+	/* Have extra? Throw it in! */
+	if (wave->msadpcmExtra > 0)
+	{
+		for (i = 0; i < wave->msadpcmExtra; i += 2)
+		{
+			*pcm++ = (int16_t) ((
+				(int32_t) wave->msadpcmCache[i] +
+				(int32_t) wave->msadpcmCache[i + 1]
+			) / 2);
+		}
+		samples -= wave->msadpcmExtra / 2;
+		wave->msadpcmExtra = 0;
+	}
+
+	/* How many blocks do we need? */
+	uint32_t blocks = samples / bsize;
+	uint16_t extra = samples % bsize;
+
+	/* Don't go past the end of the wave data. TODO: Loop Points */
+	uint32_t len = FACT_min(
+		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
+			wave->position,
+		(blocks + (extra > 0)) * ((align + 22) * 2)
+	);
+
+	/* len might be 0 if we just came back for tail samples */
+	if (len == 0)
+	{
+		return (pcm - decodeCacheL) * 2;
+	}
+
+	/* FIXME: I honestly forgot what this does... */
+	if (len < ((blocks + (extra > 0)) * ((align + 22) * 2)))
+	{
+		blocks = len / ((align + 22) * 2);
+		extra = len % ((align + 22) * 2);
+	}
+
+	/* Go to the spot in the WaveBank where our samples start */
+	wave->parentBank->io->seek(
+		wave->parentBank->io->data,
+		wave->parentBank->entries[wave->index].PlayRegion.dwOffset +
+			wave->position,
+		0
+	);
+
+	/* Read in each block directly to the decode cache */
+	for (b = 0; b < blocks; b += 1)
+	{
+		FACT_INTERNAL_ReadStereoPreamble(
+			wave->parentBank->io,
+			&l_predictor,
+			&r_predictor,
+			&l_delta,
+			&r_delta,
+			&l_sample1,
+			&r_sample1,
+			&l_sample2,
+			&r_sample2
+		);
+		*pcm++ = (int16_t) ((
+			(int32_t) l_sample2 + (int32_t) r_sample2
+		) / 2);
+		*pcm++ = (int16_t) ((
+			(int32_t) l_sample1 + (int32_t) r_sample1
+		) / 2);
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			nibbles,
+			(align + 15) * 2,
+			1
+		);
+		for (i = 0; i < ((align + 15) * 2); i += 1)
+		{
+			decodeCacheR[0] = FACT_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				l_predictor,
+				&l_delta,
+				&l_sample1,
+				&l_sample2
+			);
+			decodeCacheR[1] = FACT_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				r_predictor,
+				&r_delta,
+				&r_sample1,
+				&r_sample2
+			);
+			*pcm++ = (int16_t) ((
+				(int32_t) decodeCacheR[0] +
+				(int32_t) decodeCacheR[1]
+			) / 2);
+		}
+	}
+
+	/* Have extra? Go to the MSADPCM cache */
+	if (extra > 0)
+	{
+		FACT_INTERNAL_ReadStereoPreamble(
+			wave->parentBank->io,
+			&l_predictor,
+			&r_predictor,
+			&l_delta,
+			&r_delta,
+			&l_sample1,
+			&r_sample1,
+			&l_sample2,
+			&r_sample2
+		);
+		*pcmExtra++ = l_sample2;
+		*pcmExtra++ = r_sample2;
+		*pcmExtra++ = l_sample1;
+		*pcmExtra++ = r_sample1;
+		wave->parentBank->io->read(
+			wave->parentBank->io->data,
+			nibbles,
+			(align + 15) * 2,
+			1
+		);
+		for (i = 0; i < ((align + 15) * 2); i += 1)
+		{
+			*pcmExtra++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				l_predictor,
+				&l_delta,
+				&l_sample1,
+				&l_sample2
+			);
+			*pcmExtra++ = FACT_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				r_predictor,
+				&r_delta,
+				&r_sample1,
+				&r_sample2
+			);
+		}
+		wave->msadpcmExtra = bsize - extra;
+		for (i = 0; i < extra; i += 2)
+		{
+			*pcm++ = (int16_t) ((
+				(int32_t) wave->msadpcmCache[i] +
+				(int32_t) wave->msadpcmCache[i + 1]
+			) / 2);
+		}
+		FACT_memmove(
+			wave->msadpcmCache,
+			wave->msadpcmCache + extra,
+			wave->msadpcmExtra * 2
+		);
+	}
+	wave->position += len;
+	return (pcm - decodeCacheL);
+}
