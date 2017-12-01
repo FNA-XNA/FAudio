@@ -1035,7 +1035,7 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 		return (pcm - decodeCacheL) * 2;
 	}
 
-	/* FIXME: I honestly forgot what this does... */
+	/* Saturate len to be at least size of a full block */
 	if (len < ((blocks + (extra > 0)) * ((align + 22))))
 	{
 		blocks = len / (align + 22);
@@ -1193,7 +1193,7 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 		return (pcmL - decodeCacheL) * 2;
 	}
 
-	/* FIXME: I honestly forgot what this does... */
+	/* Saturate len to be at least size of a full block */
 	if (len < ((blocks + (extra > 0)) * ((align + 22) * 2)))
 	{
 		blocks = len / ((align + 22) * 2);
@@ -1366,7 +1366,7 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
 		return (pcm - decodeCacheL) * 2;
 	}
 
-	/* FIXME: I honestly forgot what this does... */
+	/* Saturate len to be at least size of a full block */
 	if (len < ((blocks + (extra > 0)) * ((align + 22) * 2)))
 	{
 		blocks = len / ((align + 22) * 2);
