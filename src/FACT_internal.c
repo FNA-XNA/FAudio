@@ -986,8 +986,8 @@ static inline void FACT_INTERNAL_ReadStereoPreamble(
 }
 
 /* Mono */
-#define DECODE_FUNC(type, align, bsize) \
-	uint32_t FACT_INTERNAL_Decode##type( \
+#define DECODE_FUNC(bsize, align) \
+	uint32_t FACT_INTERNAL_DecodeMonoMSADPCM##bsize( \
 		FACTWave *wave, \
 		int16_t *decodeCacheL, \
 		int16_t *decodeCacheR, \
@@ -1121,16 +1121,16 @@ static inline void FACT_INTERNAL_ReadStereoPreamble(
 		wave->position += len; \
 		return (pcm - decodeCacheL); \
 	}
-DECODE_FUNC(MonoMSADPCM32,	  0,  32)
-DECODE_FUNC(MonoMSADPCM64,	 16,  64)
-DECODE_FUNC(MonoMSADPCM128,	 48, 128)
-DECODE_FUNC(MonoMSADPCM256,	112, 256)
-DECODE_FUNC(MonoMSADPCM512,	240, 512)
+DECODE_FUNC( 32,   0)
+DECODE_FUNC( 64,  16)
+DECODE_FUNC(128,  48)
+DECODE_FUNC(256, 112)
+DECODE_FUNC(512, 240)
 #undef DECODE_FUNC
 
 /* Stereo */
-#define DECODE_FUNC(type, align, bsize) \
-	uint32_t FACT_INTERNAL_Decode##type( \
+#define DECODE_FUNC(bsize, align) \
+	uint32_t FACT_INTERNAL_DecodeStereoMSADPCM##bsize( \
 		FACTWave *wave, \
 		int16_t *decodeCacheL, \
 		int16_t *decodeCacheR, \
@@ -1287,16 +1287,16 @@ DECODE_FUNC(MonoMSADPCM512,	240, 512)
 		wave->position += len; \
 		return (pcmL - decodeCacheL); \
 	}
-DECODE_FUNC(StereoMSADPCM32,	  0,  32)
-DECODE_FUNC(StereoMSADPCM64,	 16,  64)
-DECODE_FUNC(StereoMSADPCM128,	 48, 128)
-DECODE_FUNC(StereoMSADPCM256,	112, 256)
-DECODE_FUNC(StereoMSADPCM512,	240, 512)
+DECODE_FUNC( 32,   0)
+DECODE_FUNC( 64,  16)
+DECODE_FUNC(128,  48)
+DECODE_FUNC(256, 112)
+DECODE_FUNC(512, 240)
 #undef DECODE_FUNC
 
 /* StereoToMono */
-#define DECODE_FUNC(type, align, bsize) \
-	uint32_t FACT_INTERNAL_Decode##type( \
+#define DECODE_FUNC(bsize, align) \
+	uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM##bsize( \
 		FACTWave *wave, \
 		int16_t *decodeCacheL, \
 		int16_t *decodeCacheR, \
@@ -1462,9 +1462,9 @@ DECODE_FUNC(StereoMSADPCM512,	240, 512)
 		wave->position += len; \
 		return (pcm - decodeCacheL); \
 	}
-DECODE_FUNC(StereoToMonoMSADPCM32,	  0,  32)
-DECODE_FUNC(StereoToMonoMSADPCM64,	 16,  64)
-DECODE_FUNC(StereoToMonoMSADPCM128,	 48, 128)
-DECODE_FUNC(StereoToMonoMSADPCM256,	112, 256)
-DECODE_FUNC(StereoToMonoMSADPCM512,	240, 512)
+DECODE_FUNC( 32,   0)
+DECODE_FUNC( 64,  16)
+DECODE_FUNC(128,  48)
+DECODE_FUNC(256, 112)
+DECODE_FUNC(512, 240)
 #undef DECODE_FUNC
