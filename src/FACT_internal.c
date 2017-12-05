@@ -1167,7 +1167,6 @@ end:
 	return len;
 }
 
-#include <stdio.h>
 uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 	FACTWave *wave,
 	int16_t *decodeCacheL,
