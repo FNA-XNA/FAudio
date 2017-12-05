@@ -994,6 +994,9 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 	/* Iterators */
 	uint8_t b, i;
 
+	/* Read sizes */
+	uint32_t blocks, extra, end, len;
+
 	/* Temp storage for ADPCM blocks */
 	uint8_t predictor;
 	int16_t delta;
@@ -1019,24 +1022,33 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 	}
 
 	/* How many blocks do we need? */
-	uint32_t blocks = samples / bsize;
-	uint16_t extra = samples % bsize;
+	blocks = samples / bsize;
+	extra = samples % bsize;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
-		(blocks + (extra > 0)) * ((align + 22))
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples;
+		end = end / bsize * (align + 22);
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(
+		end - wave->position,
+		(blocks + (extra > 0)) * (align + 22)
 	);
 
 	/* len might be 0 if we just came back for tail samples */
 	if (len == 0)
 	{
-		return (pcm - decodeCacheL) * 2;
+		goto end;
 	}
 
 	/* Saturate len to be at least the size of a full block */
-	if (len < ((blocks + (extra > 0)) * ((align + 22))))
+	if (len < ((blocks + (extra > 0)) * (align + 22)))
 	{
 		blocks = len / (align + 22);
 		extra = len % (align + 22);
@@ -1131,10 +1143,31 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 		);
 		pcm += extra;
 	}
+
+	/* Increment I/O offset */
 	wave->position += len;
-	return (pcm - decodeCacheL);
+
+end:
+	/* len now represents samples read */
+	len = (pcm - decodeCacheL);
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample;
+		wave->position = wave->position / bsize * (align + 22);
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeMonoMSADPCM(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
 
+#include <stdio.h>
 uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 	FACTWave *wave,
 	int16_t *decodeCacheL,
@@ -1143,6 +1176,9 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 ) {
 	/* Iterators */
 	uint8_t b, i;
+
+	/* Read sizes */
+	uint32_t blocks, extra, end, len;
 
 	/* Temp storage for ADPCM blocks */
 	uint8_t l_predictor;
@@ -1167,7 +1203,7 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 	/* Have extra? Throw it in! */
 	if (wave->msadpcmExtra > 0)
 	{
-		for (i = 0; i < wave->msadpcmExtra; i += 2)
+		for (i = 0; i < (wave->msadpcmExtra * 2); i += 2)
 		{
 			*pcmL++ = wave->msadpcmCache[i];
 			*pcmR++ = wave->msadpcmCache[i + 1];
@@ -1177,20 +1213,29 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 	}
 
 	/* How many blocks do we need? */
-	uint32_t blocks = samples / bsize;
-	uint16_t extra = samples % bsize;
+	blocks = samples / bsize;
+	extra = samples % bsize;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples;
+		end = end / bsize * ((align + 22) * 2);
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(
+		end - wave->position,
 		(blocks + (extra > 0)) * ((align + 22) * 2)
 	);
 
 	/* len might be 0 if we just came back for tail samples */
 	if (len == 0)
 	{
-		return (pcmL - decodeCacheL) * 2;
+		goto end;
 	}
 
 	/* Saturate len to be at least the size of a full block */
@@ -1250,6 +1295,7 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 			);
 		}
 	}
+
 	/* Have extra? Go to the MSADPCM cache */
 	if (extra > 0)
 	{
@@ -1292,19 +1338,39 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 			);
 		}
 		wave->msadpcmExtra = bsize - extra;
-		for (i = 0; i < extra; i += 2)
+		for (i = 0; i < (extra * 2); i += 2)
 		{
 			*pcmL++ = wave->msadpcmCache[i];
 			*pcmR++ = wave->msadpcmCache[i + 1];
 		}
 		FACT_memmove(
 			wave->msadpcmCache,
-			wave->msadpcmCache + extra,
+			wave->msadpcmCache + (extra * 2),
 			wave->msadpcmExtra * 2
 		);
 	}
+
+	/* Increment I/O offset */
 	wave->position += len;
-	return (pcmL - decodeCacheL);
+
+end:
+	/* len now represents samples read */
+	len = (pcmL - decodeCacheL);
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample;
+		wave->position = wave->position / bsize * ((align + 22) * 2);
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeStereoMSADPCM(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
 
 uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
@@ -1315,6 +1381,9 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
 ) {
 	/* Iterators */
 	uint8_t b, i;
+
+	/* Read sizes */
+	uint32_t blocks, extra, end, len;
 
 	/* Temp storage for ADPCM blocks */
 	uint8_t l_predictor;
@@ -1338,32 +1407,41 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
 	/* Have extra? Throw it in! */
 	if (wave->msadpcmExtra > 0)
 	{
-		for (i = 0; i < wave->msadpcmExtra; i += 2)
+		for (i = 0; i < (wave->msadpcmExtra * 2); i += 2)
 		{
 			*pcm++ = (int16_t) ((
 				(int32_t) wave->msadpcmCache[i] +
 				(int32_t) wave->msadpcmCache[i + 1]
 			) / 2);
 		}
-		samples -= wave->msadpcmExtra / 2;
+		samples -= wave->msadpcmExtra;
 		wave->msadpcmExtra = 0;
 	}
 
 	/* How many blocks do we need? */
-	uint32_t blocks = samples / bsize;
-	uint16_t extra = samples % bsize;
+	blocks = samples / bsize;
+	extra = samples % bsize;
 
-	/* Don't go past the end of the wave data. TODO: Loop Points */
-	uint32_t len = FACT_min(
-		wave->parentBank->entries[wave->index].PlayRegion.dwLength -
-			wave->position,
+	/* Don't go past the end of the wave data */
+	if (	wave->loopCount > 0 &&
+		wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples != 0	)
+	{
+		end = wave->parentBank->entries[wave->index].LoopRegion.dwTotalSamples;
+		end = end / bsize * ((align + 22) * 2);
+	}
+	else
+	{
+		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
+	}
+	len = FACT_min(
+		end - wave->position,
 		(blocks + (extra > 0)) * ((align + 22) * 2)
 	);
 
 	/* len might be 0 if we just came back for tail samples */
 	if (len == 0)
 	{
-		return (pcm - decodeCacheL) * 2;
+		goto end;
 	}
 
 	/* Saturate len to be at least the size of a full block */
@@ -1472,7 +1550,7 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
 			);
 		}
 		wave->msadpcmExtra = bsize - extra;
-		for (i = 0; i < extra; i += 2)
+		for (i = 0; i < (extra * 2); i += 2)
 		{
 			*pcm++ = (int16_t) ((
 				(int32_t) wave->msadpcmCache[i] +
@@ -1481,10 +1559,30 @@ uint32_t FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
 		}
 		FACT_memmove(
 			wave->msadpcmCache,
-			wave->msadpcmCache + extra,
+			wave->msadpcmCache + (extra * 2),
 			wave->msadpcmExtra * 2
 		);
 	}
+
+	/* Increment I/O offset */
 	wave->position += len;
-	return (pcm - decodeCacheL);
+
+end:
+	/* len now represents samples read */
+	len = (pcm - decodeCacheL);
+
+	/* Loop recursion. TODO: Notify Cue on loop! */
+	if (len < samples && wave->loopCount > 0)
+	{
+		wave->position = wave->parentBank->entries[wave->index].LoopRegion.dwStartSample;
+		wave->position = wave->position / bsize * (align + 22);
+		wave->loopCount -= 1;
+		return len + FACT_INTERNAL_DecodeStereoToMonoMSADPCM(
+			wave,
+			decodeCacheL + len,
+			decodeCacheR + len,
+			samples - len
+		);
+	}
+	return len;
 }
