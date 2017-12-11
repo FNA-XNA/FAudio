@@ -302,13 +302,20 @@ typedef struct FACTInstanceRPCData
 	float rpcFilterFreq;
 } FACTInstanceRPCData;
 
+typedef union FACTEventData
+{
+	FACTWave *wave;
+	float value;
+} FACTEventData;
+
 typedef struct FACTClipInstance
 {
 	/* Tracks which events have fired */
 	uint8_t eventCount;
-	uint16_t eventTimestamp;
+	uint16_t *eventTimestamp;
 	uint8_t *eventLoopsLeft;
 	uint8_t *eventFinished;
+	FACTEventData *eventData;
 
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;
