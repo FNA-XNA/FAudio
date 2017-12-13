@@ -201,8 +201,8 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	/* Trigger events for each track */
 	for (i = 0; i < cue->soundInstance.sound->clipCount; i += 1)
 	for (j = 0; i < cue->soundInstance.sound->clips[i].eventCount; j += 1)
-	if (	!cue->soundInstance.clips[i].eventFinished[j] &&
-		1 /* TODO: timer > cue->soundInstance.clips[i].eventTimestamp */	)
+	if (	!cue->soundInstance.clips[i].events[j].finished &&
+		1 /* TODO: timer > cue->soundInstance.clips[i].events[j].timestamp */	)
 	{
 		/* Activate the event */
 		switch (cue->soundInstance.sound->clips[i].events[j].type)
@@ -233,18 +233,18 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		}
 
 		/* Either loop or mark this event as complete */
-		if (cue->soundInstance.clips[i].eventLoopsLeft[j] > 0)
+		if (cue->soundInstance.clips[i].events[j].loopCount > 0)
 		{
-			if (cue->soundInstance.sound->clips[i].events[j].loopCount != 0xFF)
+			if (cue->soundInstance.clips[i].events[j].loopCount != 0xFF)
 			{
-				cue->soundInstance.clips[i].eventLoopsLeft[j] -= 1;
+				cue->soundInstance.clips[i].events[j].loopCount -= 1;
 			}
 
 			/* TODO: Push timestamp forward for "looping" */
 		}
 		else
 		{
-			cue->soundInstance.clips[i].eventFinished[j] = 1;
+			cue->soundInstance.clips[i].events[j].finished = 1;
 		}
 	}
 
