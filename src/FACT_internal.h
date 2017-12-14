@@ -553,6 +553,7 @@ void FACT_memmove(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
 int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
+float FACT_rng();
 
 #define FACT_min(val1, val2) \
 	(val1 < val2 ? val1 : val2)

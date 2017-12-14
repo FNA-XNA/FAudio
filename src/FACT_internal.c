@@ -183,8 +183,10 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
 	uint8_t i, j, k;
+	float svResult;
 	FACTSoundInstance *active;
 	FACTEvent *evt;
+	FACTEventInstance *evtInst;
 
 	/* If we're not running, save some instructions... */
 	if (cue->state & FACT_STATE_PAUSED)
@@ -211,6 +213,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	{
 		/* Activate the event */
 		evt = &active->sound->clips[i].events[j];
+		evtInst = &active->clips[i].events[j];
 		switch (evt->type)
 		{
 		case FACTEVENT_STOP:
@@ -241,11 +244,44 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			break;
 		case FACTEVENT_PITCH:
 		case FACTEVENT_PITCHREPEATING:
-			/* TODO: FACT_INTERNAL_SetPitch(evt->value*) */
-			break;
 		case FACTEVENT_VOLUME:
 		case FACTEVENT_VOLUMEREPEATING:
-			/* TODO: FACT_INTERNAL_SetVolume(evt->value*) */
+			if (evt->value.settings & 0x1) /* Ramp */
+			{
+				/* TODO: SetRampValueEventInstance */
+			}
+			else /* Equation */
+			{
+				if (evt->value.equation.flags & 0x04) /* Value */
+				{
+					svResult = evt->value.equation.value1;
+				}
+				else if (evt->value.equation.flags & 0x08) /* Random */
+				{
+					svResult = evt->value.equation.value1 + FACT_rng() * (
+						evt->value.equation.value2 -
+						evt->value.equation.value1
+					);
+				}
+
+				if (evt->value.equation.flags & 0x01) /* Add */
+				{
+					evtInst->data.value += svResult;
+				}
+				else /* Replace */
+				{
+					evtInst->data.value = svResult;
+				}
+			}
+			if (	evt->type == FACTEVENT_PITCH ||
+				evt->type == FACTEVENT_PITCHREPEATING	)
+			{
+				/* TODO: FACT_INTERNAL_SetPitch(evt->value*) */
+			}
+			else
+			{
+				/* TODO: FACT_INTERNAL_SetVolume(evt->value*) */
+			}
 			break;
 		case FACTEVENT_MARKER:
 		case FACTEVENT_MARKERREPEATING:

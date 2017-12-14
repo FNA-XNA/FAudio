@@ -442,6 +442,11 @@ void FACT_strlcpy(char *dst, const char *src, size_t len)
 	SDL_strlcpy(dst, src, len);
 }
 
+float FACT_rng()
+{
+	return 0.0f; /* TODO: Random number generator */
+}
+
 FACTIOStream* FACT_fopen(const char *path)
 {
 	FACTIOStream *io = (FACTIOStream*) SDL_malloc(
