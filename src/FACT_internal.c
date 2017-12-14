@@ -184,6 +184,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
 	uint8_t i, j, k;
 	FACTSoundInstance *active;
+	FACTEvent *evt;
 
 	/* If we're not running, save some instructions... */
 	if (cue->state & FACT_STATE_PAUSED)
@@ -209,7 +210,8 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		1 /* TODO: timer > sound->clips[i].events[j].timestamp */	)
 	{
 		/* Activate the event */
-		switch (active->sound->clips[i].events[j].type)
+		evt = &active->sound->clips[i].events[j];
+		switch (evt->type)
 		{
 		case FACTEVENT_STOP:
 			for (k = 0; k < active->sound->clips[i].eventCount; k += 1)
@@ -223,7 +225,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 				{
 					FACTWave_Stop(
 						active->clips[i].events[k].data.wave,
-						active->sound->clips[i].events[j].stop.flags
+						evt->stop.flags
 					);
 				}
 				break;
@@ -235,19 +237,19 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		case FACTEVENT_PLAYWAVETRACKVARIATION:
 		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
 		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-			/* TODO: FACT_INTERNAL_Play(PlayWave*) */
+			/* TODO: FACT_INTERNAL_Play(evt->wave*) */
 			break;
 		case FACTEVENT_PITCH:
 		case FACTEVENT_PITCHREPEATING:
-			/* TODO: FACT_INTERNAL_SetPitch(SetValue*) */
+			/* TODO: FACT_INTERNAL_SetPitch(evt->value*) */
 			break;
 		case FACTEVENT_VOLUME:
 		case FACTEVENT_VOLUMEREPEATING:
-			/* TODO: FACT_INTERNAL_SetVolume(SetValue*) */
+			/* TODO: FACT_INTERNAL_SetVolume(evt->value*) */
 			break;
 		case FACTEVENT_MARKER:
 		case FACTEVENT_MARKERREPEATING:
-			/* TODO: FACT_INTERNAL_Marker(Marker*) */
+			/* TODO: FACT_INTERNAL_Marker(evt->marker*) */
 			break;
 		default:
 			FACT_assert(0 && "Unrecognized clip event type!");
