@@ -219,7 +219,8 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		switch (evt->type)
 		{
 		case FACTEVENT_STOP:
-			if (evt->stop.flags & 0x02) /* Stop Cue */
+			/* Stop Cue */
+			if (evt->stop.flags & 0x02)
 			{
 				FACTCue_Stop(cue, evt->stop.flags & 0x01);
 				break;
@@ -255,7 +256,8 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		case FACTEVENT_PITCHREPEATING:
 		case FACTEVENT_VOLUME:
 		case FACTEVENT_VOLUMEREPEATING:
-			if (evt->value.settings & 0x01) /* Ramp */
+			/* Ramp/Equation */
+			if (evt->value.settings & 0x01)
 			{
 				/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
 				skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
@@ -273,13 +275,14 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 					1.0f
 				);
 			}
-			else /* Equation */
+			else
 			{
-				if (evt->value.equation.flags & 0x04) /* Value */
+				/* Value/Random */
+				if (evt->value.equation.flags & 0x04)
 				{
 					svResult = evt->value.equation.value1;
 				}
-				else if (evt->value.equation.flags & 0x08) /* Random */
+				else if (evt->value.equation.flags & 0x08)
 				{
 					svResult = evt->value.equation.value1 + FACT_rng() * (
 						evt->value.equation.value2 -
@@ -287,15 +290,18 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 					);
 				}
 
-				if (evt->value.equation.flags & 0x01) /* Add */
+				/* Add/Replace */
+				if (evt->value.equation.flags & 0x01)
 				{
 					evtInst->data.value += svResult;
 				}
-				else /* Replace */
+				else
 				{
 					evtInst->data.value = svResult;
 				}
 			}
+
+			/* Set the result, finally. */
 			if (	evt->type == FACTEVENT_PITCH ||
 				evt->type == FACTEVENT_PITCHREPEATING	)
 			{
