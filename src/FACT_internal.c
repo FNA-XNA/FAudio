@@ -226,6 +226,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 						active->sound->clips[i].events[j].stop.flags
 					);
 				}
+				break;
 			default:
 				break;
 			}
