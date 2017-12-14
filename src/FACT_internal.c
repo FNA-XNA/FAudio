@@ -217,6 +217,13 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		switch (evt->type)
 		{
 		case FACTEVENT_STOP:
+			if (evt->stop.flags & 0x02) /* Stop Cue */
+			{
+				FACTCue_Stop(cue, evt->stop.flags & 0x01);
+				break;
+			}
+
+			/* Stop track */
 			for (k = 0; k < active->sound->clips[i].eventCount; k += 1)
 			switch (active->sound->clips[i].events[k].type)
 			{
@@ -228,7 +235,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 				{
 					FACTWave_Stop(
 						active->clips[i].events[k].data.wave,
-						evt->stop.flags
+						evt->stop.flags & 0x01
 					);
 				}
 				break;
@@ -246,9 +253,25 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		case FACTEVENT_PITCHREPEATING:
 		case FACTEVENT_VOLUME:
 		case FACTEVENT_VOLUMEREPEATING:
-			if (evt->value.settings & 0x1) /* Ramp */
+			if (evt->value.settings & 0x01) /* Ramp */
 			{
-				/* TODO: SetRampValueEventInstance */
+				/* FIXME: Skip loopCount check for the duration of the ramp */
+				/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
+				#define ELAPSED 0.0f /* FIXME: */
+				svResult = (
+					evt->value.ramp.initialSlope *
+					evt->value.ramp.duration *
+					10 /* "Slices" */
+				) + evt->value.ramp.initialValue;
+				svResult = (
+					evt->value.ramp.initialValue +
+					(svResult - evt->value.ramp.initialValue)
+				) * FACT_clamp(
+					(ELAPSED - evtInst->timestamp / 1000.0f) / evt->value.ramp.duration,
+					0.0f,
+					1.0f
+				);
+				#undef ELAPSED
 			}
 			else /* Equation */
 			{
