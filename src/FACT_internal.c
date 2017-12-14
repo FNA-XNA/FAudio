@@ -329,7 +329,8 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 				active->clips[i].events[j].loopCount -= 1;
 			}
 
-			/* TODO: Push timestamp forward for "looping" */
+			active->clips[i].events[j].timestamp +=
+				active->sound->clips[i].events[j].timestamp;
 		}
 		else
 		{
