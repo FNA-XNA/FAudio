@@ -182,7 +182,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
-	uint8_t i, j;
+	uint8_t i, j, k;
 	FACTSoundInstance *active;
 
 	/* If we're not running, save some instructions... */
@@ -212,7 +212,23 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		switch (active->sound->clips[i].events[j].type)
 		{
 		case FACTEVENT_STOP:
-			/* TODO: FACT_INTERNAL_Stop(Stop*) */
+			for (k = 0; k < active->sound->clips[i].eventCount; k += 1)
+			switch (active->sound->clips[i].events[k].type)
+			{
+			case FACTEVENT_PLAYWAVE:
+			case FACTEVENT_PLAYWAVETRACKVARIATION:
+			case FACTEVENT_PLAYWAVEEFFECTVARIATION:
+			case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
+				if (active->clips[i].events[k].data.wave != NULL)
+				{
+					FACTWave_Stop(
+						active->clips[i].events[k].data.wave,
+						active->sound->clips[i].events[j].stop.flags
+					);
+				}
+			default:
+				break;
+			}
 			break;
 		case FACTEVENT_PLAYWAVE:
 		case FACTEVENT_PLAYWAVETRACKVARIATION:

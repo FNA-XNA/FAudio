@@ -317,7 +317,6 @@ typedef struct FACTEventInstance
 typedef struct FACTClipInstance
 {
 	/* Tracks which events have fired */
-	uint8_t eventCount;
 	FACTEventInstance *events;
 
 	/* RPC instance data */
