@@ -183,6 +183,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
 	uint8_t i, j;
+	FACTSoundInstance *active;
 
 	/* If we're not running, save some instructions... */
 	if (cue->state & FACT_STATE_PAUSED)
@@ -190,22 +191,25 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		return 0;
 	}
 
+	/* FIXME: Multiple sounds may exist for interactive Cues? */
+	active = &cue->soundInstance;
+
 	/* FIXME: I think this will always be true except for first play? */
-	if (!cue->soundInstance.exists)
+	if (!active->exists)
 	{
 		return 0;
 	}
 
-	/* TODO: Interactive Cues */
+	/* TODO: Interactive Cues, will set `active` based on variable */
 
 	/* Trigger events for each track */
-	for (i = 0; i < cue->soundInstance.sound->clipCount; i += 1)
-	for (j = 0; i < cue->soundInstance.sound->clips[i].eventCount; j += 1)
-	if (	!cue->soundInstance.clips[i].events[j].finished &&
-		1 /* TODO: timer > cue->soundInstance.clips[i].events[j].timestamp */	)
+	for (i = 0; i < active->sound->clipCount; i += 1)
+	for (j = 0; i < active->sound->clips[i].eventCount; j += 1)
+	if (	!active->clips[i].events[j].finished &&
+		1 /* TODO: timer > sound->clips[i].events[j].timestamp */	)
 	{
 		/* Activate the event */
-		switch (cue->soundInstance.sound->clips[i].events[j].type)
+		switch (active->sound->clips[i].events[j].type)
 		{
 		case FACTEVENT_STOP:
 			/* TODO: FACT_INTERNAL_Stop(Stop*) */
@@ -233,18 +237,18 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		}
 
 		/* Either loop or mark this event as complete */
-		if (cue->soundInstance.clips[i].events[j].loopCount > 0)
+		if (active->clips[i].events[j].loopCount > 0)
 		{
-			if (cue->soundInstance.clips[i].events[j].loopCount != 0xFF)
+			if (active->clips[i].events[j].loopCount != 0xFF)
 			{
-				cue->soundInstance.clips[i].events[j].loopCount -= 1;
+				active->clips[i].events[j].loopCount -= 1;
 			}
 
 			/* TODO: Push timestamp forward for "looping" */
 		}
 		else
 		{
-			cue->soundInstance.clips[i].events[j].finished = 1;
+			active->clips[i].events[j].finished = 1;
 		}
 	}
 
@@ -257,17 +261,17 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	/* RPC updates */
 	FACT_INTERNAL_UpdateRPCs(
 		cue,
-		cue->soundInstance.sound->rpcCodeCount,
-		cue->soundInstance.sound->rpcCodes,
-		&cue->soundInstance.rpcData
+		active->sound->rpcCodeCount,
+		active->sound->rpcCodes,
+		&active->rpcData
 	);
-	for (i = 0; i < cue->soundInstance.sound->clipCount; i += 1)
+	for (i = 0; i < active->sound->clipCount; i += 1)
 	{
 		FACT_INTERNAL_UpdateRPCs(
 			cue,
-			cue->soundInstance.sound->clips[i].rpcCodeCount,
-			cue->soundInstance.sound->clips[i].rpcCodes,
-			&cue->soundInstance.clips[i].rpcData
+			active->sound->clips[i].rpcCodeCount,
+			active->sound->clips[i].rpcCodes,
+			&active->clips[i].rpcData
 		);
 	}
 
