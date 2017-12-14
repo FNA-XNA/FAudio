@@ -258,7 +258,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			if (evt->value.settings & 0x01) /* Ramp */
 			{
 				/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
-				skipLoopCheck = elapsed <= (evtInst->timestamp / 1000.0f + evt->value.ramp.duration);
+				skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
 				svResult = (
 					evt->value.ramp.initialSlope *
 					evt->value.ramp.duration *
@@ -268,7 +268,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 					evt->value.ramp.initialValue +
 					(svResult - evt->value.ramp.initialValue)
 				) * FACT_clamp(
-					(elapsed - evtInst->timestamp / 1000.0f) / evt->value.ramp.duration,
+					(elapsed - evtInst->timestamp) / evt->value.ramp.duration,
 					0.0f,
 					1.0f
 				);
