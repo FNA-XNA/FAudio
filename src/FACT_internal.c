@@ -183,6 +183,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
 	uint8_t i, j, k;
+	uint8_t skipLoopCheck;
 	float svResult;
 	FACTSoundInstance *active;
 	FACTEvent *evt;
@@ -214,6 +215,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		/* Activate the event */
 		evt = &active->sound->clips[i].events[j];
 		evtInst = &active->clips[i].events[j];
+		skipLoopCheck = 0;
 		switch (evt->type)
 		{
 		case FACTEVENT_STOP:
@@ -255,9 +257,9 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		case FACTEVENT_VOLUMEREPEATING:
 			if (evt->value.settings & 0x01) /* Ramp */
 			{
-				/* FIXME: Skip loopCount check for the duration of the ramp */
 				/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
 				#define ELAPSED 0.0f /* FIXME: */
+				skipLoopCheck = ELAPSED <= (evtInst->timestamp / 1000.0f + evt->value.ramp.duration);
 				svResult = (
 					evt->value.ramp.initialSlope *
 					evt->value.ramp.duration *
@@ -315,6 +317,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 		}
 
 		/* Either loop or mark this event as complete */
+		if (skipLoopCheck) continue;
 		if (active->clips[i].events[j].loopCount > 0)
 		{
 			if (active->clips[i].events[j].loopCount != 0xFF)
