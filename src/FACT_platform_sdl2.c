@@ -78,7 +78,8 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 			cue = sb->cueList;
 			while (cue != NULL)
 			{
-				FACT_INTERNAL_UpdateCue(cue);
+				/* FIXME: GetPerformanceCounter...? */
+				FACT_INTERNAL_UpdateCue(cue, 0);
 				cue = cue->next;
 			}
 			sb = sb->next;

@@ -500,7 +500,7 @@ struct FACTCue
 /* Internal functions */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
-uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue);
+uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed);
 uint32_t FACT_INTERNAL_GetWave(
 	FACTWave *wave,
 	int16_t *decodeCacheL,

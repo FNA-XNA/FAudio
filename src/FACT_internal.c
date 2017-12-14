@@ -180,7 +180,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 	}
 }
 
-uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
+uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 {
 	uint8_t i, j, k;
 	uint8_t skipLoopCheck;
@@ -210,7 +210,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	for (i = 0; i < active->sound->clipCount; i += 1)
 	for (j = 0; i < active->sound->clips[i].eventCount; j += 1)
 	if (	!active->clips[i].events[j].finished &&
-		1 /* TODO: timer > sound->clips[i].events[j].timestamp */	)
+		elapsed > active->clips[i].events[j].timestamp	)
 	{
 		/* Activate the event */
 		evt = &active->sound->clips[i].events[j];
@@ -258,8 +258,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			if (evt->value.settings & 0x01) /* Ramp */
 			{
 				/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
-				#define ELAPSED 0.0f /* FIXME: */
-				skipLoopCheck = ELAPSED <= (evtInst->timestamp / 1000.0f + evt->value.ramp.duration);
+				skipLoopCheck = elapsed <= (evtInst->timestamp / 1000.0f + evt->value.ramp.duration);
 				svResult = (
 					evt->value.ramp.initialSlope *
 					evt->value.ramp.duration *
@@ -269,11 +268,10 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue)
 					evt->value.ramp.initialValue +
 					(svResult - evt->value.ramp.initialValue)
 				) * FACT_clamp(
-					(ELAPSED - evtInst->timestamp / 1000.0f) / evt->value.ramp.duration,
+					(elapsed - evtInst->timestamp / 1000.0f) / evt->value.ramp.duration,
 					0.0f,
 					1.0f
 				);
-				#undef ELAPSED
 			}
 			else /* Equation */
 			{
