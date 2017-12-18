@@ -90,13 +90,14 @@ typedef struct FACTResampleState
 
 typedef struct FACTAudioCategory
 {
-	uint8_t maxInstances;
+	uint8_t instanceLimit;
 	uint16_t fadeInMS;
 	uint16_t fadeOutMS;
-	uint8_t instanceBehavior;
+	uint8_t maxInstanceBehavior;
 	int16_t parentCategory;
 	uint8_t volume;
 	uint8_t visibility;
+	uint8_t instanceCount;
 } FACTAudioCategory;
 
 typedef struct FACTVariable

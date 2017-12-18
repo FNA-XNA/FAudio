@@ -141,13 +141,14 @@ uint32_t FACTAudioEngine_Initialize(
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		pEngine->categories[i].maxInstances = read_u8(&ptr);
+		pEngine->categories[i].instanceLimit = read_u8(&ptr);
 		pEngine->categories[i].fadeInMS = read_u16(&ptr);
 		pEngine->categories[i].fadeOutMS = read_u16(&ptr);
-		pEngine->categories[i].instanceBehavior = read_u8(&ptr);
+		pEngine->categories[i].maxInstanceBehavior = read_u8(&ptr);
 		pEngine->categories[i].parentCategory = read_u16(&ptr);
 		pEngine->categories[i].volume = read_u8(&ptr);
 		pEngine->categories[i].visibility = read_u8(&ptr);
+		pEngine->categories[i].instanceCount = 0;
 	}
 
 	/* Variable data */
