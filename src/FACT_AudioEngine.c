@@ -149,6 +149,7 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[i].volume = read_u8(&ptr);
 		pEngine->categories[i].visibility = read_u8(&ptr);
 		pEngine->categories[i].instanceCount = 0;
+		pEngine->categories[i].currentVolume = 1.0f;
 	}
 
 	/* Variable data */
@@ -383,7 +384,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	return 0;
 }
 
-void INTERNAL_FACTParseClipEvents(uint8_t **ptr, FACTClip *clip)
+void FACT_INTERNAL_ParseClipEvents(uint8_t **ptr, FACTClip *clip)
 {
 	uint32_t evtInfo;
 	uint8_t minWeight, maxWeight;
@@ -865,7 +866,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
 			{
 				FACT_assert((ptr - start) == sb->sounds[i].clips[j].code);
-				INTERNAL_FACTParseClipEvents(
+				FACT_INTERNAL_ParseClipEvents(
 					&ptr,
 					&sb->sounds[i].clips[j]
 				);
@@ -1339,7 +1340,7 @@ uint16_t FACTAudioEngine_GetCategory(
 	return 0;
 }
 
-uint8_t FACTIsInCategory(
+uint8_t FACT_INTERNAL_IsInCategory(
 	FACTAudioEngine *engine,
 	uint16_t target,
 	uint16_t category
@@ -1374,7 +1375,7 @@ uint8_t FACTIsInCategory(
 		while (cue != NULL) \
 		{ \
 			if (	cue->active.sound != NULL && \
-				FACTIsInCategory( \
+				FACT_INTERNAL_IsInCategory( \
 					cue->parentBank->parentEngine, \
 					nCategory, \
 					cue->active.sound->category \
@@ -1413,7 +1414,14 @@ uint32_t FACTAudioEngine_SetVolume(
 	uint16_t nCategory,
 	float volume
 ) {
-	ITERATE_CUES(FACT_INTERNAL_SetCategoryVolume(cue, volume))
+	uint16_t i;
+	for (i = 0; i < pEngine->categoryCount; i += 1)
+	{
+		if (FACT_INTERNAL_IsInCategory(pEngine, nCategory, i))
+		{
+			pEngine->categories[i].currentVolume = volume;
+		}
+	}
 	return 0;
 }
 

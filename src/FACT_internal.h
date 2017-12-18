@@ -98,6 +98,7 @@ typedef struct FACTAudioCategory
 	uint8_t volume;
 	uint8_t visibility;
 	uint8_t instanceCount;
+	float currentVolume;
 } FACTAudioCategory;
 
 typedef struct FACTVariable
@@ -505,7 +506,6 @@ struct FACTCue
 /* Internal functions */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
-void FACT_INTERNAL_SetCategoryVolume(FACTCue *cue, float volume);
 uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed);
 uint32_t FACT_INTERNAL_GetWave(
 	FACTWave *wave,
