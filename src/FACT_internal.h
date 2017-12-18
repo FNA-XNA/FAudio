@@ -495,6 +495,10 @@ struct FACTCue
 		FACTVariation *variation;
 	} active;
 	FACTSoundInstance soundInstance;
+
+	/* Timer */
+	uint32_t start;
+	uint32_t elapsed;
 };
 
 /* Internal functions */
@@ -554,6 +558,7 @@ size_t FACT_strlen(const char *ptr);
 int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
 float FACT_rng();
+uint32_t FACT_timems();
 
 #define FACT_min(val1, val2) \
 	(val1 < val2 ? val1 : val2)

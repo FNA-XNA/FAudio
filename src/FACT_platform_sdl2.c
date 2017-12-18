@@ -63,10 +63,19 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 	uint32_t samples;
 	int16_t decodeCache[2][DEVICE_BUFFERSIZE + RESAMPLE_PADDING];
 	float resampleCache[2][DEVICE_BUFFERSIZE];
+	uint32_t timestamp;
 	uint32_t i;
 	float *out = (float*) stream;
 
 	FACT_zero(stream, len);
+
+	/* We want the timestamp to be uniform across all Cues.
+	 * Oftentimes many Cues are played at once with the expectation
+	 * that they will sync, so give them all the same timestamp
+	 * so all the various actions will go together even if it takes
+	 * an extra millisecond to get through the whole Cue list.
+	 */
+	timestamp = FACT_timems();
 
 	while (engine != NULL)
 	{
@@ -78,8 +87,7 @@ void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
 			cue = sb->cueList;
 			while (cue != NULL)
 			{
-				/* FIXME: GetPerformanceCounter...? */
-				FACT_INTERNAL_UpdateCue(cue, 0);
+				FACT_INTERNAL_UpdateCue(cue, timestamp);
 				cue = cue->next;
 			}
 			sb = sb->next;
@@ -446,6 +454,11 @@ void FACT_strlcpy(char *dst, const char *src, size_t len)
 float FACT_rng()
 {
 	return 0.0f; /* TODO: Random number generator */
+}
+
+uint32_t FACT_timems()
+{
+	return SDL_GetTicks();
 }
 
 FACTIOStream* FACT_fopen(const char *path)

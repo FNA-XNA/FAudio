@@ -24,6 +24,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACT_STATE_PAUSED |
 		FACT_STATE_STOPPED
 	);
+	pCue->start = FACT_timems();
 	return 0;
 }
 
@@ -31,6 +32,8 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
 	if (dwFlags & FACT_FLAG_STOP_IMMEDIATE)
 	{
+		pCue->start = 0;
+		pCue->elapsed = 0;
 		pCue->state |= FACT_STATE_STOPPED;
 		pCue->state &= ~(
 			FACT_STATE_PLAYING |
@@ -116,6 +119,9 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	{
 		return 0;
 	}
+
+	/* Store elapsed time */
+	pCue->elapsed += FACT_timems() - pCue->start;
 
 	/* All we do is set the flag, the mixer handles the rest */
 	if (fPause)
