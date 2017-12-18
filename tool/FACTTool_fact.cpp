@@ -148,7 +148,7 @@ void FACTTool_Update()
 		{
 			ImGui::Text(
 				"Max Instances: %d",
-				engines[i]->categories[j].maxInstances
+				engines[i]->categories[j].instanceLimit
 			);
 			ImGui::Text(
 				"Fade-in (ms): %d",
@@ -160,7 +160,7 @@ void FACTTool_Update()
 			);
 			ImGui::Text(
 				"Instance Behavior: %X",
-				engines[i]->categories[j].instanceBehavior
+				engines[i]->categories[j].maxInstanceBehavior
 			);
 			ImGui::Text(
 				"Parent Category Index: %d",

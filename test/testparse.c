@@ -82,10 +82,10 @@ int main(int argc, char **argv)
 			"\t\tVisibility: %X\n",
 			i,
 			engine->categoryNames[i],
-			engine->categories[i].maxInstances,
+			engine->categories[i].instanceLimit,
 			engine->categories[i].fadeInMS,
 			engine->categories[i].fadeOutMS,
-			engine->categories[i].instanceBehavior,
+			engine->categories[i].maxInstanceBehavior,
 			engine->categories[i].parentCategory,
 			engine->categories[i].volume,
 			engine->categories[i].visibility
