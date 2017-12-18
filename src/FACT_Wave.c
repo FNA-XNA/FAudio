@@ -42,7 +42,6 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 
 uint32_t FACTWave_Play(FACTWave *pWave)
 {
-	/* TODO: Init playback state */
 	FACT_assert(!(pWave->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 	pWave->state |= FACT_STATE_PLAYING;
 	pWave->state &= ~(

@@ -190,7 +190,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	FACTEventInstance *evtInst;
 
 	/* If we're not running, save some instructions... */
-	if (cue->state & FACT_STATE_PAUSED)
+	if (cue->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
 	{
 		return 0;
 	}
@@ -390,6 +390,12 @@ uint32_t FACT_INTERNAL_GetWave(
 	fixed32 cur;
 	uint64_t sizeRequest;
 	uint32_t decodeLength, resampleLength = 0;
+
+	/* Nothing to see here... */
+	if (wave->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
+	{
+		return 0;
+	}
 
 	/* If the sample rates match, just decode and convert to float */
 	if (wave->resample.step == FIXED_ONE)
