@@ -18,8 +18,8 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 uint32_t FACTCue_Play(FACTCue *pCue)
 {
 	/* TODO: Init Sound state */
+	FACT_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 	pCue->state |= FACT_STATE_PLAYING;
-	/* FIXME: How do we deal with STOPPING? -flibit */
 	pCue->state &= ~(
 		FACT_STATE_PAUSED |
 		FACT_STATE_STOPPED
@@ -30,7 +30,12 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
-	if (dwFlags & FACT_FLAG_STOP_IMMEDIATE)
+	/* There are two ways that a Cue might be stopped immediately:
+	 * 1. The program explicitly asks for it
+	 * 2. The Cue is paused and therefore we can't do fade/release effects
+	 */
+	if (	dwFlags & FACT_FLAG_STOP_IMMEDIATE ||
+		pCue->state & FACT_STATE_PAUSED	)
 	{
 		pCue->start = 0;
 		pCue->elapsed = 0;
@@ -44,7 +49,6 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	}
 	else
 	{
-		/* FIXME: How do we deal with PAUSED? -flibit */
 		pCue->state |= FACT_STATE_STOPPING;
 	}
 	return 0;
@@ -108,7 +112,15 @@ uint32_t FACTCue_GetVariable(
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
 	FACT_assert(var->accessibility & 0x01);
 	FACT_assert(!(var->accessibility & 0x04));
-	*nValue = pCue->variableValues[nIndex];
+
+	if (nIndex == 0) /* NumCueInstances */
+	{
+		*nValue = pCue->parentBank->cues[pCue->index].instanceCount;
+	}
+	else
+	{
+		*nValue = pCue->variableValues[nIndex];
+	}
 	return 0;
 }
 

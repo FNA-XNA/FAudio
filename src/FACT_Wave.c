@@ -43,8 +43,8 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 uint32_t FACTWave_Play(FACTWave *pWave)
 {
 	/* TODO: Init playback state */
+	FACT_assert(!(pWave->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 	pWave->state |= FACT_STATE_PLAYING;
-	/* FIXME: How do we deal with STOPPING? -flibit */
 	pWave->state &= ~(
 		FACT_STATE_PAUSED |
 		FACT_STATE_STOPPED
@@ -54,7 +54,12 @@ uint32_t FACTWave_Play(FACTWave *pWave)
 
 uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 {
-	if (dwFlags & FACT_FLAG_STOP_IMMEDIATE)
+	/* There are two ways that a Wave might be stopped immediately:
+	 * 1. The program explicitly asks for it
+	 * 2. The Wave is paused and therefore we can't do fade/release effects
+	 */
+	if (	dwFlags & FACT_FLAG_STOP_IMMEDIATE ||
+		pWave->state & FACT_STATE_PAUSED	)
 	{
 		pWave->state |= FACT_STATE_STOPPED;
 		pWave->state &= ~(
@@ -66,7 +71,6 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 	}
 	else
 	{
-		/* FIXME: How do we deal with PAUSED? -flibit */
 		pWave->state |= FACT_STATE_STOPPING;
 	}
 	return 0;
