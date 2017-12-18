@@ -17,8 +17,101 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 
 uint32_t FACTCue_Play(FACTCue *pCue)
 {
-	/* TODO: Init Sound state */
+	union
+	{
+		float maxf;
+		uint8_t maxi;
+	} max;
+	FACTCue *tmp, *wnr;
+	uint16_t categoryIndex;
+	FACTAudioCategory *category;
+	FACTCueData *data = &pCue->parentBank->cues[pCue->index];
+
 	FACT_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
+
+	/* TODO: Init Sound state */
+	categoryIndex = pCue->soundInstance.sound->category;
+	category = &pCue->parentBank->parentEngine->categories[categoryIndex];
+
+	/* Instance Limits */
+	#define INSTANCE_BEHAVIOR(obj, match) \
+		if (obj->maxInstanceBehavior == 0) /* Fail */ \
+		{ \
+			return 1; \
+		} \
+		else if (obj->maxInstanceBehavior == 1) /* Queue */ \
+		{ \
+			FACT_assert(0 && "Queue behavior not implemented!"); \
+		} \
+		else if (obj->maxInstanceBehavior == 2) /* Replace Oldest */ \
+		{ \
+			tmp = pCue->parentBank->cueList; \
+			while (tmp != NULL) \
+			{ \
+				if (match) \
+				{ \
+					FACTCue_Stop(tmp, 0); \
+					break; \
+				} \
+				tmp = tmp->next; \
+			} \
+		} \
+		else if (obj->maxInstanceBehavior == 3) /* Replace Quietest */ \
+		{ \
+			max.maxf = FACTVOLUME_MAX; \
+			wnr = NULL; \
+			tmp = pCue->parentBank->cueList; \
+			while (tmp != NULL) \
+			{ \
+				if (	match /*&&*/ \
+					/*FIXME: tmp->soundInstance->volume < max.maxf*/) \
+				{ \
+					wnr = tmp; \
+					/* max.maxf = tmp->soundInstance->volume; */ \
+				} \
+				tmp = tmp->next; \
+			} \
+			if (wnr != NULL) \
+			{ \
+				FACTCue_Stop(wnr, 0); \
+			} \
+		} \
+		else if (obj->maxInstanceBehavior == 4) /* Replace Lowest Priority */ \
+		{ \
+			max.maxi = 0xFF; \
+			wnr = NULL; \
+			tmp = pCue->parentBank->cueList; \
+			while (tmp != NULL) \
+			{ \
+				if (	match && \
+					tmp->soundInstance.sound->priority < max.maxi	) \
+				{ \
+					wnr = tmp; \
+					max.maxi = tmp->soundInstance.sound->priority; \
+				} \
+				tmp = tmp->next; \
+			} \
+			if (wnr != NULL) \
+			{ \
+				FACTCue_Stop(wnr, 0); \
+			} \
+		}
+	if (data->instanceCount >= data->instanceLimit)
+	{
+		INSTANCE_BEHAVIOR(
+			data,
+			tmp->index == pCue->index
+		)
+	}
+	else if (category->instanceCount >= category->instanceLimit)
+	{
+		INSTANCE_BEHAVIOR(
+			category,
+			tmp->soundInstance.sound->category == categoryIndex
+		)
+	}
+	#undef INSTANCE_BEHAVIOR
+
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~(
 		FACT_STATE_PAUSED |
