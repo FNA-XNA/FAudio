@@ -152,6 +152,11 @@ void FACT_INTERNAL_SetDSPParameter(
 	);
 }
 
+void FACT_INTERNAL_SetCategoryVolume(FACTCue *cue, float volume)
+{
+	/* TODO: Category volume */
+}
+
 /* The functions below should be called by the platform mixer! */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)

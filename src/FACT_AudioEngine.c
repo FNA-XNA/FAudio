@@ -1413,7 +1413,7 @@ uint32_t FACTAudioEngine_SetVolume(
 	uint16_t nCategory,
 	float volume
 ) {
-	ITERATE_CUES(/* TODO: Category Volume */)
+	ITERATE_CUES(FACT_INTERNAL_SetCategoryVolume(cue, volume))
 	return 0;
 }
 
