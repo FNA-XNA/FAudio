@@ -272,12 +272,8 @@ uint32_t FACTCue_GetProperties(
 		}
 		else
 		{
-			/* TODO:
-			 * - index?
-			 * - weight is just the max - min?
-			 * - linger?
-			 */
-			varProps->index = 0;
+			varProps->index = 0; /* TODO: Index of what...? */
+			/* TODO: This is just max - min right? */
 			varProps->weight = (
 				pCue->active.variation->maxWeight -
 				pCue->active.variation->minWeight
@@ -294,7 +290,7 @@ uint32_t FACTCue_GetProperties(
 				varProps->iaVariableMin = 0;
 				varProps->iaVariableMax = 0;
 			}
-			varProps->linger = 0;
+			varProps->linger = pCue->active.variation->linger;
 
 			/* No Sound, no SoundProperties */
 			if (!pCue->active.variation->isComplex)
@@ -306,17 +302,13 @@ uint32_t FACTCue_GetProperties(
 			}
 			else
 			{
-				/* TODO:
-				 * - u8->float volume conversion crap
-				 * - "Track" vs. "Clip"?
-				 * - arrTrackProperties?
-				 */
+				/* TODO: u8->float volume conversion crap */
 				sndProps->category = pCue->active.sound->category;
 				sndProps->priority = pCue->active.sound->priority;
 				sndProps->pitch = pCue->active.sound->pitch;
 				sndProps->volume = pCue->active.sound->volume;
 				sndProps->numTracks = pCue->active.sound->clipCount;
-				/* arrTrackProperties[0] */
+				/* TODO: arrTrackProperties[0] */
 			}
 		}
 	}
@@ -338,17 +330,13 @@ uint32_t FACTCue_GetProperties(
 		}
 		else
 		{
-			/* TODO:
-			 * - u8->float volume conversion crap
-			 * - "Track" vs. "Clip"?
-			 * - arrTrackProperties?
-			 */
+			/* TODO: u8->float volume conversion crap */
 			sndProps->category = pCue->active.sound->category;
 			sndProps->priority = pCue->active.sound->priority;
 			sndProps->pitch = pCue->active.sound->pitch;
 			sndProps->volume = pCue->active.sound->volume;
 			sndProps->numTracks = pCue->active.sound->clipCount;
-			/* arrTrackProperties[0] */
+			/* TODO: arrTrackProperties[0] */
 		}
 	}
 
