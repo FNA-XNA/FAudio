@@ -842,11 +842,11 @@ void FACTTool_Update()
 						ImGui::Text("Simple Variation");
 						ImGui::Text(
 							"Track Index: %d",
-							soundBanks[i]->variations[j].entries[k].track
+							soundBanks[i]->variations[j].entries[k].simple.track
 						);
 						ImGui::Text(
 							"WaveBank Index: %d",
-							soundBanks[i]->variations[j].entries[k].wavebank
+							soundBanks[i]->variations[j].entries[k].simple.wavebank
 						);
 					}
 					ImGui::Text(

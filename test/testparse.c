@@ -441,8 +441,8 @@ int main(int argc, char **argv)
 					"\t\t\t\tTrack Index: %d\n"
 					"\t\t\t\tWaveBank Index: %d\n",
 					j,
-					sb->variations[i].entries[j].track,
-					sb->variations[i].entries[j].wavebank
+					sb->variations[i].entries[j].simple.track,
+					sb->variations[i].entries[j].simple.wavebank
 				);
 			}
 			printf(

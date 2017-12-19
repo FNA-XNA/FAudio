@@ -179,6 +179,12 @@ typedef enum
 	FACTEVENT_MARKERREPEATING =			18
 } FACTEventType;
 
+typedef struct FACTSimpleWave
+{
+	uint16_t track;
+	uint8_t wavebank;
+} FACTSimpleWave;
+
 typedef struct FACTEvent_PlayWave
 {
 	uint8_t flags;
@@ -189,11 +195,7 @@ typedef struct FACTEvent_PlayWave
 	uint8_t isComplex;
 	union
 	{
-		struct
-		{
-			uint16_t track;
-			uint8_t wavebank;
-		} simple;
+		FACTSimpleWave simple;
 		struct
 		{
 			uint16_t variation;
@@ -327,9 +329,6 @@ typedef struct FACTTrackInstance
 
 typedef struct FACTSoundInstance
 {
-	/* Who wants to malloc anyway? */
-	uint8_t exists;
-
 	/* Base Sound reference */
 	FACTSound *sound;
 
@@ -345,11 +344,7 @@ typedef struct FACTVariation
 	uint8_t isComplex;
 	union
 	{
-		struct
-		{
-			uint16_t track;
-			uint8_t wavebank;
-		};
+		FACTSimpleWave simple;
 		uint32_t soundCode;
 	};
 	float minWeight;
@@ -491,12 +486,13 @@ struct FACTCue
 
 	/* Playback */
 	uint32_t state;
+	uint8_t active; /* 0x01 for wave, 0x02 for sound */
 	union
 	{
-		FACTSound *sound;
-		FACTVariation *variation;
-	} active;
-	FACTSoundInstance soundInstance;
+		FACTWave *wave;
+		FACTSoundInstance sound;
+	} playing;
+	FACTVariation *playingVariation;
 
 	/* Timer */
 	uint32_t start;

@@ -219,14 +219,14 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	 */
 	elapsed -= cue->start - cue->elapsed;
 
-	/* FIXME: Multiple sounds may exist for interactive Cues? */
-	active = &cue->soundInstance;
-
-	/* FIXME: I think this will always be true except for first play? */
-	if (!active->exists)
+	/* There's only something to do if we're a Sound. Waves are simple! */
+	if (!(cue->active & 0x02))
 	{
 		return 0;
 	}
+
+	/* FIXME: Multiple sounds may exist for interactive Cues? */
+	active = &cue->playing.sound;
 
 	/* TODO: Interactive Cues, will set `active` based on variable */
 

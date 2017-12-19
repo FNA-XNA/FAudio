@@ -106,7 +106,6 @@ uint32_t FACTSoundBank_Prepare(
 				(*ppCue)->sound.variation = &pSoundBank->variations[i];
 			}
 		}
-		(*ppCue)->active.variation = NULL;
 	}
 	else
 	{
@@ -117,7 +116,6 @@ uint32_t FACTSoundBank_Prepare(
 				(*ppCue)->sound.sound = &pSoundBank->sounds[i];
 			}
 		}
-		(*ppCue)->active.sound = NULL;
 	}
 
 	/* Instance data */

@@ -71,10 +71,10 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			while (tmp != NULL) \
 			{ \
 				if (	match /*&&*/ \
-					/*FIXME: tmp->soundInstance->volume < max.maxf*/) \
+					/*FIXME: tmp->playing.sound.volume < max.maxf*/) \
 				{ \
 					wnr = tmp; \
-					/* max.maxf = tmp->soundInstance->volume; */ \
+					/* max.maxf = tmp->playing.sound.volume; */ \
 				} \
 				tmp = tmp->next; \
 			} \
@@ -85,10 +85,10 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			while (tmp != NULL) \
 			{ \
 				if (	match && \
-					tmp->soundInstance.sound->priority < max.maxi	) \
+					tmp->playing.sound.sound->priority < max.maxi	) \
 				{ \
 					wnr = tmp; \
-					max.maxi = tmp->soundInstance.sound->priority; \
+					max.maxi = tmp->playing.sound.sound->priority; \
 				} \
 				tmp = tmp->next; \
 			} \
@@ -115,15 +115,15 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			tmp->index == pCue->index
 		)
 	}
-	else if (pCue->soundInstance.exists)
+	else if (pCue->active & 0x02)
 	{
-		categoryIndex = pCue->soundInstance.sound->category;
+		categoryIndex = pCue->playing.sound.sound->category;
 		category = &pCue->parentBank->parentEngine->categories[categoryIndex];
 		if (category->instanceCount >= category->instanceLimit)
 		{
 			INSTANCE_BEHAVIOR(
 				category,
-				tmp->soundInstance.sound->category == categoryIndex
+				tmp->playing.sound.sound->category == categoryIndex
 			)
 		}
 	}
@@ -135,6 +135,14 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACT_STATE_STOPPED
 	);
 	pCue->start = FACT_timems();
+
+	/* If it's a simple wave, just play it! */
+	if (pCue->active & 0x01)
+	{
+		/* TODO: Apply3D */
+		FACTWave_Play(pCue->playing.wave);
+	}
+
 	return 0;
 }
 
@@ -157,8 +165,15 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		);
 
 		/* FIXME: Lock audio mixer before freeing this! */
-		pCue->soundInstance.exists = 0;
-		FACT_free(pCue->soundInstance.tracks);
+		if (pCue->active & 0x01)
+		{
+			FACTWave_Destroy(pCue->playing.wave);
+		}
+		else if (pCue->active & 0x02)
+		{
+			FACT_free(pCue->playing.sound.tracks);
+		}
+		pCue->active = 0;
 	}
 	else
 	{
@@ -256,6 +271,13 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	{
 		pCue->state &= ~FACT_STATE_PAUSED;
 	}
+
+	/* ... unless it's a plain Wave */
+	if (pCue->active & 0x01)
+	{
+		FACTWave_Pause(pCue->playing.wave, fPause);
+	}
+
 	return 0;
 }
 
@@ -275,61 +297,29 @@ uint32_t FACTCue_GetProperties(
 
 	varProps = &ppProperties->activeVariationProperties.variationProperties;
 	sndProps = &ppProperties->activeVariationProperties.soundProperties;
-	if (!(pCue->data->flags & 0x04))
+
+	/* Variation Properties */
+	if (pCue->playingVariation != NULL)
 	{
-		/* Nothing active? Zero, bail. */
-		if (pCue->active.variation == NULL)
+		varProps->index = 0; /* TODO: Index of what...? */
+		/* TODO: This is just max - min right? */
+		varProps->weight = (
+			pCue->playingVariation->maxWeight -
+			pCue->playingVariation->minWeight
+		);
+		if (pCue->sound.variation->flags == 3)
 		{
-			FACT_zero(
-				varProps,
-				sizeof(FACTVariationProperties)
-			);
-			FACT_zero(
-				sndProps,
-				sizeof(FACTSoundProperties)
-			);
+			varProps->iaVariableMin =
+				pCue->playingVariation->minWeight;
+			varProps->iaVariableMax =
+				pCue->playingVariation->maxWeight;
 		}
 		else
 		{
-			varProps->index = 0; /* TODO: Index of what...? */
-			/* TODO: This is just max - min right? */
-			varProps->weight = (
-				pCue->active.variation->maxWeight -
-				pCue->active.variation->minWeight
-			);
-			if (pCue->sound.variation->flags == 3)
-			{
-				varProps->iaVariableMin =
-					pCue->active.variation->minWeight;
-				varProps->iaVariableMax =
-					pCue->active.variation->maxWeight;
-			}
-			else
-			{
-				varProps->iaVariableMin = 0;
-				varProps->iaVariableMax = 0;
-			}
-			varProps->linger = pCue->active.variation->linger;
-
-			/* No Sound, no SoundProperties */
-			if (!pCue->active.variation->isComplex)
-			{
-				FACT_zero(
-					sndProps,
-					sizeof(FACTSoundProperties)
-				);
-			}
-			else
-			{
-				/* TODO: u8->float volume conversion crap */
-				sndProps->category = pCue->active.sound->category;
-				sndProps->priority = pCue->active.sound->priority;
-				sndProps->pitch = pCue->active.sound->pitch;
-				sndProps->volume = pCue->active.sound->volume;
-				sndProps->numTracks = pCue->active.sound->trackCount;
-				/* TODO: arrTrackProperties[0] */
-			}
+			varProps->iaVariableMin = 0;
+			varProps->iaVariableMax = 0;
 		}
+		varProps->linger = pCue->playingVariation->linger;
 	}
 	else
 	{
@@ -338,25 +328,26 @@ uint32_t FACTCue_GetProperties(
 			varProps,
 			sizeof(FACTVariationProperties)
 		);
+	}
 
-		/* Nothing active? Zero, bail. */
-		if (pCue->active.sound == NULL)
-		{
-			FACT_zero(
-				sndProps,
-				sizeof(FACTSoundProperties)
-			);
-		}
-		else
-		{
-			/* TODO: u8->float volume conversion crap */
-			sndProps->category = pCue->active.sound->category;
-			sndProps->priority = pCue->active.sound->priority;
-			sndProps->pitch = pCue->active.sound->pitch;
-			sndProps->volume = pCue->active.sound->volume;
-			sndProps->numTracks = pCue->active.sound->trackCount;
-			/* TODO: arrTrackProperties[0] */
-		}
+	/* Sound Properties */
+	if (pCue->active & 0x02)
+	{
+		/* TODO: u8->float volume conversion crap */
+		sndProps->category = pCue->playing.sound.sound->category;
+		sndProps->priority = pCue->playing.sound.sound->priority;
+		sndProps->pitch = pCue->playing.sound.sound->pitch;
+		sndProps->volume = pCue->playing.sound.sound->volume;
+		sndProps->numTracks = pCue->playing.sound.sound->trackCount;
+		/* TODO: arrTrackProperties[0] */
+	}
+	else
+	{
+		/* It's either a simple wave or nothing's playing */
+		FACT_zero(
+			sndProps,
+			sizeof(FACTSoundProperties)
+		);
 	}
 
 	return 0;
