@@ -34,6 +34,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	/* Instance Limits */
 	#define INSTANCE_BEHAVIOR(obj, match) \
+		wnr = NULL; \
+		tmp = pCue->parentBank->cueList; \
 		if (obj->maxInstanceBehavior == 0) /* Fail */ \
 		{ \
 			return 1; \
@@ -41,7 +43,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		else if (obj->maxInstanceBehavior == 1) /* Queue */ \
 		{ \
 			/* FIXME: How is this different from Replace Oldest? */ \
-			tmp = pCue->parentBank->cueList; \
 			while (tmp != NULL) \
 			{ \
 				if (match) \
@@ -54,7 +55,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		} \
 		else if (obj->maxInstanceBehavior == 2) /* Replace Oldest */ \
 		{ \
-			tmp = pCue->parentBank->cueList; \
 			while (tmp != NULL) \
 			{ \
 				if (match) \
@@ -68,8 +68,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		else if (obj->maxInstanceBehavior == 3) /* Replace Quietest */ \
 		{ \
 			max.maxf = FACTVOLUME_MAX; \
-			wnr = NULL; \
-			tmp = pCue->parentBank->cueList; \
 			while (tmp != NULL) \
 			{ \
 				if (	match /*&&*/ \
@@ -84,8 +82,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		else if (obj->maxInstanceBehavior == 4) /* Replace Lowest Priority */ \
 		{ \
 			max.maxi = 0xFF; \
-			wnr = NULL; \
-			tmp = pCue->parentBank->cueList; \
 			while (tmp != NULL) \
 			{ \
 				if (	match && \
