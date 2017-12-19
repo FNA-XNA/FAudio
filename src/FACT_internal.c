@@ -215,7 +215,13 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	}
 
 	/* There's only something to do if we're a Sound. Waves are simple! */
-	if (!(cue->active & 0x02))
+	if (cue->active & 0x01)
+	{
+		/* TODO: FadeIn/FadeOut? */
+		cue->state = cue->playing.wave->state;
+		return 0;
+	}
+	else if (!cue->active)
 	{
 		return 0;
 	}
