@@ -1379,7 +1379,7 @@ uint8_t FACT_INTERNAL_IsInCategory(
 					cue->playing.sound.sound->category \
 				)	) \
 			{ \
-				action; \
+				action \
 			} \
 			cue = cue->next; \
 		} \
@@ -1428,7 +1428,7 @@ uint32_t FACTAudioEngine_Pause(
 	uint16_t nCategory,
 	int32_t fPause
 ) {
-	ITERATE_CUES(FACTCue_Pause(cue, fPause))
+	ITERATE_CUES(FACTCue_Pause(cue, fPause);)
 	return 0;
 }
 
