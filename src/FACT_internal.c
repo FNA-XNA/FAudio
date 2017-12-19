@@ -152,6 +152,21 @@ void FACT_INTERNAL_SetDSPParameter(
 	);
 }
 
+void FACT_INTERNAL_SelectSound(FACTCue *cue)
+{
+	/* TODO */
+}
+
+void FACT_INTERNAL_BeginFadeIn(FACTCue *cue)
+{
+	/* TODO */
+}
+
+void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
+{
+	/* TODO */
+}
+
 /* The functions below should be called by the platform mixer! */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)

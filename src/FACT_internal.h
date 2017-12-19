@@ -516,6 +516,10 @@ uint32_t FACT_INTERNAL_GetWave(
 	uint32_t samples
 );
 
+void FACT_INTERNAL_SelectSound(FACTCue *cue);
+void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
+void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
+
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \

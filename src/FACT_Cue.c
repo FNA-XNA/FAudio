@@ -29,9 +29,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	FACT_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 
-	/* TODO: Init Sound state */
-	categoryIndex = pCue->soundInstance.sound->category;
-	category = &pCue->parentBank->parentEngine->categories[categoryIndex];
+	/* Need an initial sound to play */
+	FACT_INTERNAL_SelectSound(pCue);
 
 	/* Instance Limits */
 	#define INSTANCE_BEHAVIOR(obj, match) \
@@ -50,7 +49,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			{ \
 				if (match) \
 				{ \
-					FACTCue_Stop(tmp, 0); \
+					wnr = tmp; \
 					break; \
 				} \
 				tmp = tmp->next; \
@@ -71,10 +70,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				} \
 				tmp = tmp->next; \
 			} \
-			if (wnr != NULL) \
-			{ \
-				FACTCue_Stop(wnr, 0); \
-			} \
 		} \
 		else if (obj->maxInstanceBehavior == 4) /* Replace Lowest Priority */ \
 		{ \
@@ -91,7 +86,18 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				} \
 				tmp = tmp->next; \
 			} \
-			if (wnr != NULL) \
+		} \
+		if (wnr != NULL) \
+		{ \
+			if (obj->fadeInMS > 0) \
+			{ \
+				FACT_INTERNAL_BeginFadeIn(pCue); \
+			} \
+			if (obj->fadeOutMS > 0) \
+			{ \
+				FACT_INTERNAL_BeginFadeOut(wnr); \
+			} \
+			else \
 			{ \
 				FACTCue_Stop(wnr, 0); \
 			} \
@@ -103,12 +109,17 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			tmp->index == pCue->index
 		)
 	}
-	else if (category->instanceCount >= category->instanceLimit)
+	else if (pCue->soundInstance.exists)
 	{
-		INSTANCE_BEHAVIOR(
-			category,
-			tmp->soundInstance.sound->category == categoryIndex
-		)
+		categoryIndex = pCue->soundInstance.sound->category;
+		category = &pCue->parentBank->parentEngine->categories[categoryIndex];
+		if (category->instanceCount >= category->instanceLimit)
+		{
+			INSTANCE_BEHAVIOR(
+				category,
+				tmp->soundInstance.sound->category == categoryIndex
+			)
+		}
 	}
 	#undef INSTANCE_BEHAVIOR
 
@@ -138,7 +149,10 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 			FACT_STATE_STOPPING |
 			FACT_STATE_PAUSED
 		);
-		/* TODO: Reset Sound state */
+
+		/* FIXME: Lock audio mixer before freeing this! */
+		pCue->soundInstance.exists = 0;
+		FACT_free(pCue->soundInstance.tracks);
 	}
 	else
 	{
