@@ -40,7 +40,17 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		} \
 		else if (obj->maxInstanceBehavior == 1) /* Queue */ \
 		{ \
-			FACT_assert(0 && "Queue behavior not implemented!"); \
+			/* FIXME: How is this different from Replace Oldest? */ \
+			tmp = pCue->parentBank->cueList; \
+			while (tmp != NULL) \
+			{ \
+				if (match) \
+				{ \
+					wnr = tmp; \
+					break; \
+				} \
+				tmp = tmp->next; \
+			} \
 		} \
 		else if (obj->maxInstanceBehavior == 2) /* Replace Oldest */ \
 		{ \
