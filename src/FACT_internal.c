@@ -294,6 +294,11 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 						evt->value.equation.value1
 					);
 				}
+				else
+				{
+					svResult = 0.0f;
+					FACT_assert(0 && "Equation flags?");
+				}
 
 				/* Add/Replace */
 				if (evt->value.equation.flags & 0x01)
