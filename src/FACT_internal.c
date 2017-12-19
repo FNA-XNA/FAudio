@@ -342,7 +342,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			/* TODO: FACT_INTERNAL_Marker(evt->marker*) */
 			break;
 		default:
-			FACT_assert(0 && "Unrecognized track event type!");
+			FACT_assert(0 && "Unknown event type!");
 		}
 
 		/* Either loop or mark this event as complete */
