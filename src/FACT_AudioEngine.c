@@ -1335,9 +1335,7 @@ uint16_t FACTAudioEngine_GetCategory(
 			return i;
 		}
 	}
-
-	FACT_assert(0 && "Category name not found!");
-	return 0;
+	return FACTCATEGORY_INVALID;
 }
 
 uint8_t FACT_INTERNAL_IsInCategory(
@@ -1449,8 +1447,7 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 			return i;
 		}
 	}
-	FACT_assert(0 && "Variable name not found!");
-	return 0;
+	return FACTVARIABLEINDEX_INVALID;
 }
 
 uint32_t FACTAudioEngine_SetGlobalVariable(

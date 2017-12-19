@@ -190,8 +190,7 @@ uint16_t FACTCue_GetVariableIndex(
 			return i;
 		}
 	}
-	FACT_assert(0 && "Variable name not found!");
-	return 0;
+	return FACTVARIABLEINDEX_INVALID;
 }
 
 uint32_t FACTCue_SetVariable(

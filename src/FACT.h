@@ -298,6 +298,10 @@ static const uint16_t FACTPITCH_MAX_TOTAL =	 2400;
 static const float FACTVOLUME_MIN = 0.0f;
 static const float FACTVOLUME_MAX = 16777216.0f;
 
+static const uint16_t FACTINDEX_INVALID =		0xFFFF;
+static const uint16_t FACTVARIABLEINDEX_INVALID =	0xFFFF;
+static const uint16_t FACTCATEGORY_INVALID =		0xFFFF;
+
 /* AudioEngine Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */

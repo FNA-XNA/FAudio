@@ -19,9 +19,7 @@ uint16_t FACTSoundBank_GetCueIndex(
 			return i;
 		}
 	}
-
-	FACT_assert(0 && "Cue name not found!");
-	return 0;
+	return FACTINDEX_INVALID;
 }
 
 uint32_t FACTSoundBank_GetNumCues(
