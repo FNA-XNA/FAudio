@@ -384,212 +384,212 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	return 0;
 }
 
-void FACT_INTERNAL_ParseClipEvents(uint8_t **ptr, FACTClip *clip)
+void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 {
 	uint32_t evtInfo;
 	uint8_t minWeight, maxWeight;
 	int i, j;
 
-	clip->eventCount = read_u8(ptr);
-	clip->events = (FACTEvent*) FACT_malloc(
+	track->eventCount = read_u8(ptr);
+	track->events = (FACTEvent*) FACT_malloc(
 		sizeof(FACTEvent) *
-		clip->eventCount
+		track->eventCount
 	);
-	FACT_zero(clip->events, sizeof(FACTEvent) * clip->eventCount);
-	for (i = 0; i < clip->eventCount; i += 1)
+	FACT_zero(track->events, sizeof(FACTEvent) * track->eventCount);
+	for (i = 0; i < track->eventCount; i += 1)
 	{
 		evtInfo = read_u32(ptr);
-		clip->events[i].randomOffset = read_u16(ptr);
+		track->events[i].randomOffset = read_u16(ptr);
 
-		clip->events[i].type = evtInfo & 0x001F;
-		clip->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
+		track->events[i].type = evtInfo & 0x001F;
+		track->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
 
 		FACT_assert(read_u8(ptr) == 0xFF); /* Separator? */
 
-		#define CLIPTYPE(t) (clip->events[i].type == t)
-		if (CLIPTYPE(FACTEVENT_STOP))
+		#define EVTTYPE(t) (track->events[i].type == t)
+		if (EVTTYPE(FACTEVENT_STOP))
 		{
-			clip->events[i].stop.flags = read_u8(ptr);
+			track->events[i].stop.flags = read_u8(ptr);
 		}
-		else if (CLIPTYPE(FACTEVENT_PLAYWAVE))
+		else if (EVTTYPE(FACTEVENT_PLAYWAVE))
 		{
 			/* Basic Wave */
-			clip->events[i].wave.isComplex = 0;
-			clip->events[i].wave.flags = read_u8(ptr);
-			clip->events[i].wave.simple.track = read_u16(ptr);
-			clip->events[i].wave.simple.wavebank = read_u8(ptr);
-			clip->events[i].loopCount = read_u8(ptr);
-			clip->events[i].wave.position = read_u16(ptr);
-			clip->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.isComplex = 0;
+			track->events[i].wave.flags = read_u8(ptr);
+			track->events[i].wave.simple.track = read_u16(ptr);
+			track->events[i].wave.simple.wavebank = read_u8(ptr);
+			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.position = read_u16(ptr);
+			track->events[i].wave.angle = read_u16(ptr);
 
 			/* No Effect Variation */
-			clip->events[i].wave.variationFlags = 0;
+			track->events[i].wave.variationFlags = 0;
 		}
-		else if (CLIPTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
+		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
 		{
 			/* Complex Wave */
-			clip->events[i].wave.isComplex = 1;
-			clip->events[i].wave.flags = read_u8(ptr);
-			clip->events[i].loopCount = read_u8(ptr);
-			clip->events[i].wave.position = read_u16(ptr);
-			clip->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.isComplex = 1;
+			track->events[i].wave.flags = read_u8(ptr);
+			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.position = read_u16(ptr);
+			track->events[i].wave.angle = read_u16(ptr);
 
 			/* Track Variation */
-			clip->events[i].wave.complex.trackCount = read_u16(ptr);
-			clip->events[i].wave.complex.variation = read_u16(ptr);
+			track->events[i].wave.complex.trackCount = read_u16(ptr);
+			track->events[i].wave.complex.variation = read_u16(ptr);
 			*ptr += 4; /* Unknown values */
-			clip->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
+			track->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
 				sizeof(uint16_t) *
-				clip->events[i].wave.complex.trackCount
+				track->events[i].wave.complex.trackCount
 			);
-			clip->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
 				sizeof(uint8_t) *
-				clip->events[i].wave.complex.trackCount
+				track->events[i].wave.complex.trackCount
 			);
-			clip->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
 				sizeof(uint8_t) *
-				clip->events[i].wave.complex.trackCount
+				track->events[i].wave.complex.trackCount
 			);
-			for (j = 0; j < clip->events[i].wave.complex.trackCount; j += 1)
+			for (j = 0; j < track->events[i].wave.complex.trackCount; j += 1)
 			{
-				clip->events[i].wave.complex.tracks[j] = read_u16(ptr);
-				clip->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
+				track->events[i].wave.complex.tracks[j] = read_u16(ptr);
+				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
 				minWeight = read_u8(ptr);
 				maxWeight = read_u8(ptr);
-				clip->events[i].wave.complex.weights[j] = (
+				track->events[i].wave.complex.weights[j] = (
 					maxWeight - minWeight
 				);
 			}
 
 			/* No Effect Variation */
-			clip->events[i].wave.variationFlags = 0;
+			track->events[i].wave.variationFlags = 0;
 		}
-		else if (CLIPTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
+		else if (EVTTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
 		{
 			/* Basic Wave */
-			clip->events[i].wave.isComplex = 0;
-			clip->events[i].wave.flags = read_u8(ptr);
-			clip->events[i].wave.simple.track = read_u16(ptr);
-			clip->events[i].wave.simple.wavebank = read_u8(ptr);
-			clip->events[i].loopCount = read_u8(ptr);
-			clip->events[i].wave.position = read_u16(ptr);
-			clip->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.isComplex = 0;
+			track->events[i].wave.flags = read_u8(ptr);
+			track->events[i].wave.simple.track = read_u16(ptr);
+			track->events[i].wave.simple.wavebank = read_u8(ptr);
+			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.position = read_u16(ptr);
+			track->events[i].wave.angle = read_u16(ptr);
 
 			/* Effect Variation */
-			clip->events[i].wave.minPitch = read_s16(ptr);
-			clip->events[i].wave.maxPitch = read_s16(ptr);
-			clip->events[i].wave.minVolume = read_u8(ptr);
-			clip->events[i].wave.maxVolume = read_u8(ptr);
-			clip->events[i].wave.minFrequency = read_f32(ptr);
-			clip->events[i].wave.maxFrequency = read_f32(ptr);
-			clip->events[i].wave.minQFactor = read_f32(ptr);
-			clip->events[i].wave.maxQFactor = read_f32(ptr);
-			clip->events[i].wave.variationFlags = read_u16(ptr);
+			track->events[i].wave.minPitch = read_s16(ptr);
+			track->events[i].wave.maxPitch = read_s16(ptr);
+			track->events[i].wave.minVolume = read_u8(ptr);
+			track->events[i].wave.maxVolume = read_u8(ptr);
+			track->events[i].wave.minFrequency = read_f32(ptr);
+			track->events[i].wave.maxFrequency = read_f32(ptr);
+			track->events[i].wave.minQFactor = read_f32(ptr);
+			track->events[i].wave.maxQFactor = read_f32(ptr);
+			track->events[i].wave.variationFlags = read_u16(ptr);
 		}
-		else if (CLIPTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
+		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
 		{
 			/* Complex Wave */
-			clip->events[i].wave.isComplex = 1;
-			clip->events[i].wave.flags = read_u8(ptr);
-			clip->events[i].loopCount = read_u8(ptr);
-			clip->events[i].wave.position = read_u16(ptr);
-			clip->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.isComplex = 1;
+			track->events[i].wave.flags = read_u8(ptr);
+			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.position = read_u16(ptr);
+			track->events[i].wave.angle = read_u16(ptr);
 
 			/* Effect Variation */
-			clip->events[i].wave.minPitch = read_s16(ptr);
-			clip->events[i].wave.maxPitch = read_s16(ptr);
-			clip->events[i].wave.minVolume = read_u8(ptr);
-			clip->events[i].wave.maxVolume = read_u8(ptr);
-			clip->events[i].wave.minFrequency = read_f32(ptr);
-			clip->events[i].wave.maxFrequency = read_f32(ptr);
-			clip->events[i].wave.minQFactor = read_f32(ptr);
-			clip->events[i].wave.maxQFactor = read_f32(ptr);
-			clip->events[i].wave.variationFlags = read_u16(ptr);
+			track->events[i].wave.minPitch = read_s16(ptr);
+			track->events[i].wave.maxPitch = read_s16(ptr);
+			track->events[i].wave.minVolume = read_u8(ptr);
+			track->events[i].wave.maxVolume = read_u8(ptr);
+			track->events[i].wave.minFrequency = read_f32(ptr);
+			track->events[i].wave.maxFrequency = read_f32(ptr);
+			track->events[i].wave.minQFactor = read_f32(ptr);
+			track->events[i].wave.maxQFactor = read_f32(ptr);
+			track->events[i].wave.variationFlags = read_u16(ptr);
 
 			/* Track Variation */
-			clip->events[i].wave.complex.trackCount = read_u16(ptr);
-			clip->events[i].wave.complex.variation = read_u16(ptr);
+			track->events[i].wave.complex.trackCount = read_u16(ptr);
+			track->events[i].wave.complex.variation = read_u16(ptr);
 			*ptr += 4; /* Unknown values */
-			clip->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
+			track->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
 				sizeof(uint16_t) *
-				clip->events[i].wave.complex.trackCount
+				track->events[i].wave.complex.trackCount
 			);
-			clip->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
 				sizeof(uint8_t) *
-				clip->events[i].wave.complex.trackCount
+				track->events[i].wave.complex.trackCount
 			);
-			clip->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
 				sizeof(uint8_t) *
-				clip->events[i].wave.complex.trackCount
+				track->events[i].wave.complex.trackCount
 			);
-			for (j = 0; j < clip->events[i].wave.complex.trackCount; j += 1)
+			for (j = 0; j < track->events[i].wave.complex.trackCount; j += 1)
 			{
-				clip->events[i].wave.complex.tracks[j] = read_u16(ptr);
-				clip->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
+				track->events[i].wave.complex.tracks[j] = read_u16(ptr);
+				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
 				minWeight = read_u8(ptr);
 				maxWeight = read_u8(ptr);
-				clip->events[i].wave.complex.weights[j] = (
+				track->events[i].wave.complex.weights[j] = (
 					maxWeight - minWeight
 				);
 			}
 		}
-		else if (	CLIPTYPE(FACTEVENT_PITCH) ||
-				CLIPTYPE(FACTEVENT_VOLUME) ||
-				CLIPTYPE(FACTEVENT_PITCHREPEATING) ||
-				CLIPTYPE(FACTEVENT_VOLUMEREPEATING)	)
+		else if (	EVTTYPE(FACTEVENT_PITCH) ||
+				EVTTYPE(FACTEVENT_VOLUME) ||
+				EVTTYPE(FACTEVENT_PITCHREPEATING) ||
+				EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 		{
-			clip->events[i].value.settings = read_u8(ptr);
-			if (clip->events[i].value.settings & 1) /* Ramp */
+			track->events[i].value.settings = read_u8(ptr);
+			if (track->events[i].value.settings & 1) /* Ramp */
 			{
-				clip->events[i].loopCount = 0;
-				clip->events[i].value.ramp.initialValue = read_f32(ptr);
-				clip->events[i].value.ramp.initialSlope = read_f32(ptr);
-				clip->events[i].value.ramp.slopeDelta = read_f32(ptr);
-				clip->events[i].value.ramp.duration = read_u16(ptr);
+				track->events[i].loopCount = 0;
+				track->events[i].value.ramp.initialValue = read_f32(ptr);
+				track->events[i].value.ramp.initialSlope = read_f32(ptr);
+				track->events[i].value.ramp.slopeDelta = read_f32(ptr);
+				track->events[i].value.ramp.duration = read_u16(ptr);
 			}
 			else /* Equation */
 			{
-				clip->events[i].value.equation.flags = read_u8(ptr);
+				track->events[i].value.equation.flags = read_u8(ptr);
 
 				/* SetValue, SetRandomValue, anything else? */
-				FACT_assert(clip->events[i].value.equation.flags & 0x0C);
+				FACT_assert(track->events[i].value.equation.flags & 0x0C);
 
-				clip->events[i].value.equation.value1 = read_f32(ptr);
-				clip->events[i].value.equation.value2 = read_f32(ptr);
+				track->events[i].value.equation.value1 = read_f32(ptr);
+				track->events[i].value.equation.value2 = read_f32(ptr);
 
 				*ptr += 5; /* Unknown values */
 
-				if (	CLIPTYPE(FACTEVENT_PITCHREPEATING) ||
-					CLIPTYPE(FACTEVENT_VOLUMEREPEATING)	)
+				if (	EVTTYPE(FACTEVENT_PITCHREPEATING) ||
+					EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 				{
-					clip->events[i].loopCount = read_u16(ptr);
-					clip->events[i].frequency = read_u16(ptr);
+					track->events[i].loopCount = read_u16(ptr);
+					track->events[i].frequency = read_u16(ptr);
 				}
 				else
 				{
-					clip->events[i].loopCount = 0;
+					track->events[i].loopCount = 0;
 				}
 			}
 		}
-		else if (CLIPTYPE(FACTEVENT_MARKER))
+		else if (EVTTYPE(FACTEVENT_MARKER))
 		{
-			clip->events[i].marker.marker = read_u32(ptr);
-			clip->events[i].loopCount = read_u16(ptr);
-			clip->events[i].frequency = read_u16(ptr);
-			clip->events[i].marker.repeating = 0;
+			track->events[i].marker.marker = read_u32(ptr);
+			track->events[i].loopCount = read_u16(ptr);
+			track->events[i].frequency = read_u16(ptr);
+			track->events[i].marker.repeating = 0;
 		}
-		else if (CLIPTYPE(FACTEVENT_MARKERREPEATING))
+		else if (EVTTYPE(FACTEVENT_MARKERREPEATING))
 		{
-			clip->events[i].marker.marker = read_u32(ptr);
-			clip->events[i].loopCount = read_u16(ptr);
-			clip->events[i].frequency = read_u16(ptr);
-			clip->events[i].marker.repeating = 1;
+			track->events[i].marker.marker = read_u32(ptr);
+			track->events[i].loopCount = read_u16(ptr);
+			track->events[i].frequency = read_u16(ptr);
+			track->events[i].marker.repeating = 1;
 		}
 		else
 		{
 			FACT_assert(0 && "Unknown event type!");
 		}
-		#undef CLIPTYPE
+		#undef EVTTYPE
 	}
 }
 
@@ -731,35 +731,35 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		/* Length of sound entry, unused */
 		ptr += 2;
 
-		/* Simple/Complex Clip data */
+		/* Simple/Complex Track data */
 		if (sb->sounds[i].flags & 0x01)
 		{
-			sb->sounds[i].clipCount = read_u8(&ptr);
-			memsize = sizeof(FACTClip) * sb->sounds[i].clipCount;
-			sb->sounds[i].clips = (FACTClip*) FACT_malloc(memsize);
-			FACT_zero(sb->sounds[i].clips, memsize);
+			sb->sounds[i].trackCount = read_u8(&ptr);
+			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
+			sb->sounds[i].tracks = (FACTTrack*) FACT_malloc(memsize);
+			FACT_zero(sb->sounds[i].tracks, memsize);
 		}
 		else
 		{
-			sb->sounds[i].clipCount = 1;
-			memsize = sizeof(FACTClip) * sb->sounds[i].clipCount;
-			sb->sounds[i].clips = (FACTClip*) FACT_malloc(memsize);
-			FACT_zero(sb->sounds[i].clips, memsize);
-			sb->sounds[i].clips[0].volume = FACT_VOLUME_0;
-			sb->sounds[i].clips[0].filter = 0xFF;
-			sb->sounds[i].clips[0].eventCount = 1;
-			sb->sounds[i].clips[0].events = (FACTEvent*) FACT_malloc(
+			sb->sounds[i].trackCount = 1;
+			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
+			sb->sounds[i].tracks = (FACTTrack*) FACT_malloc(memsize);
+			FACT_zero(sb->sounds[i].tracks, memsize);
+			sb->sounds[i].tracks[0].volume = FACT_VOLUME_0;
+			sb->sounds[i].tracks[0].filter = 0xFF;
+			sb->sounds[i].tracks[0].eventCount = 1;
+			sb->sounds[i].tracks[0].events = (FACTEvent*) FACT_malloc(
 				sizeof(FACTEvent)
 			);
 			FACT_zero(
-				sb->sounds[i].clips[0].events,
+				sb->sounds[i].tracks[0].events,
 				sizeof(FACTEvent)
 			);
-			sb->sounds[i].clips[0].events[0].type = FACTEVENT_PLAYWAVE;
-			sb->sounds[i].clips[0].events[0].wave.position = 0; /* FIXME */
-			sb->sounds[i].clips[0].events[0].wave.angle = 0; /* FIXME */
-			sb->sounds[i].clips[0].events[0].wave.simple.track = read_u16(&ptr);
-			sb->sounds[i].clips[0].events[0].wave.simple.wavebank = read_u8(&ptr);
+			sb->sounds[i].tracks[0].events[0].type = FACTEVENT_PLAYWAVE;
+			sb->sounds[i].tracks[0].events[0].wave.position = 0; /* FIXME */
+			sb->sounds[i].tracks[0].events[0].wave.angle = 0; /* FIXME */
+			sb->sounds[i].tracks[0].events[0].wave.simple.track = read_u16(&ptr);
+			sb->sounds[i].tracks[0].events[0].wave.simple.wavebank = read_u8(&ptr);
 		}
 
 		/* RPC Code data */
@@ -786,20 +786,20 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 				sb->sounds[i].rpcCodes = NULL;
 			}
 
-			/* Clips have attached RPCs */
+			/* Tracks have attached RPCs */
 			if (sb->sounds[i].flags & 0x04)
 			{
-				for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+				for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 				{
-					COPYRPCBLOCK(sb->sounds[i].clips[j])
+					COPYRPCBLOCK(sb->sounds[i].tracks[j])
 				}
 			}
 			else
 			{
-				for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+				for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 				{
-					sb->sounds[i].clips[j].rpcCodeCount = 0;
-					sb->sounds[i].clips[j].rpcCodes = NULL;
+					sb->sounds[i].tracks[j].rpcCodeCount = 0;
+					sb->sounds[i].tracks[j].rpcCodes = NULL;
 				}
 			}
 
@@ -812,10 +812,10 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		{
 			sb->sounds[i].rpcCodeCount = 0;
 			sb->sounds[i].rpcCodes = NULL;
-			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				sb->sounds[i].clips[j].rpcCodeCount = 0;
-				sb->sounds[i].clips[j].rpcCodes = NULL;
+				sb->sounds[i].tracks[j].rpcCodeCount = 0;
+				sb->sounds[i].tracks[j].rpcCodes = NULL;
 			}
 		}
 
@@ -837,38 +837,38 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			sb->sounds[i].dspCodes = NULL;
 		}
 
-		/* Clip data */
+		/* Track data */
 		if (sb->sounds[i].flags & 0x01)
 		{
-			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				sb->sounds[i].clips[j].volume = read_u8(&ptr);
+				sb->sounds[i].tracks[j].volume = read_u8(&ptr);
 
-				sb->sounds[i].clips[j].code = read_u32(&ptr);
+				sb->sounds[i].tracks[j].code = read_u32(&ptr);
 
-				sb->sounds[i].clips[j].filter = read_u8(&ptr);
-				if (sb->sounds[i].clips[j].filter & 0x01)
+				sb->sounds[i].tracks[j].filter = read_u8(&ptr);
+				if (sb->sounds[i].tracks[j].filter & 0x01)
 				{
-					sb->sounds[i].clips[j].filter =
-						(sb->sounds[i].clips[j].filter >> 1) & 0x02;
+					sb->sounds[i].tracks[j].filter =
+						(sb->sounds[i].tracks[j].filter >> 1) & 0x02;
 				}
 				else
 				{
 					/* Huh...? */
-					sb->sounds[i].clips[j].filter = 0xFF;
+					sb->sounds[i].tracks[j].filter = 0xFF;
 				}
 
-				sb->sounds[i].clips[j].qfactor = read_u8(&ptr);
-				sb->sounds[i].clips[j].frequency = read_u16(&ptr);
+				sb->sounds[i].tracks[j].qfactor = read_u8(&ptr);
+				sb->sounds[i].tracks[j].frequency = read_u16(&ptr);
 			}
 
-			/* All Clip events are stored at the end of the block */
-			for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+			/* All Track events are stored at the end of the block */
+			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				FACT_assert((ptr - start) == sb->sounds[i].clips[j].code);
-				FACT_INTERNAL_ParseClipEvents(
+				FACT_assert((ptr - start) == sb->sounds[i].tracks[j].code);
+				FACT_INTERNAL_ParseTrackEvents(
 					&ptr,
-					&sb->sounds[i].clips[j]
+					&sb->sounds[i].tracks[j]
 				);
 			}
 		}

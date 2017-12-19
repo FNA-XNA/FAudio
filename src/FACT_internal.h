@@ -264,7 +264,7 @@ typedef struct FACTEvent
 	};
 } FACTEvent;
 
-typedef struct FACTClip
+typedef struct FACTTrack
 {
 	uint32_t code;
 
@@ -278,7 +278,7 @@ typedef struct FACTClip
 
 	uint8_t eventCount;
 	FACTEvent *events;
-} FACTClip;
+} FACTTrack;
 
 typedef struct FACTSound
 {
@@ -288,11 +288,11 @@ typedef struct FACTSound
 	int16_t pitch;
 	uint8_t priority;
 
-	uint8_t clipCount;
+	uint8_t trackCount;
 	uint8_t rpcCodeCount;
 	uint8_t dspCodeCount;
 
-	FACTClip *clips;
+	FACTTrack *tracks;
 	uint32_t *rpcCodes;
 	uint32_t *dspCodes;
 } FACTSound;
@@ -316,14 +316,14 @@ typedef struct FACTEventInstance
 	} data;
 } FACTEventInstance;
 
-typedef struct FACTClipInstance
+typedef struct FACTTrackInstance
 {
 	/* Tracks which events have fired */
 	FACTEventInstance *events;
 
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;
-} FACTClipInstance;
+} FACTTrackInstance;
 
 typedef struct FACTSoundInstance
 {
@@ -333,8 +333,8 @@ typedef struct FACTSoundInstance
 	/* Base Sound reference */
 	FACTSound *sound;
 
-	/* Per-instance clip information */
-	FACTClipInstance *clips;
+	/* Per-instance track information */
+	FACTTrackInstance *tracks;
 
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;

@@ -229,35 +229,35 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	/* Sound data */
 	for (i = 0; i < sb->soundCount; i += 1)
 	{
-		for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+		for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 		{
-			for (k = 0; k < sb->sounds[i].clips[j].eventCount; k += 1)
+			for (k = 0; k < sb->sounds[i].tracks[j].eventCount; k += 1)
 			{
 				#define MATCH(t) \
-					sb->sounds[i].clips[j].events[k].type == t
+					sb->sounds[i].tracks[j].events[k].type == t
 				if (	MATCH(FACTEVENT_PLAYWAVE) ||
 					MATCH(FACTEVENT_PLAYWAVETRACKVARIATION) ||
 					MATCH(FACTEVENT_PLAYWAVEEFFECTVARIATION) ||
 					MATCH(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION)	)
 				{
-					if (sb->sounds[i].clips[j].events[k].wave.isComplex)
+					if (sb->sounds[i].tracks[j].events[k].wave.isComplex)
 					{
 						FACT_free(
-							sb->sounds[i].clips[j].events[k].wave.complex.tracks
+							sb->sounds[i].tracks[j].events[k].wave.complex.tracks
 						);
 						FACT_free(
-							sb->sounds[i].clips[j].events[k].wave.complex.wavebanks
+							sb->sounds[i].tracks[j].events[k].wave.complex.wavebanks
 						);
 						FACT_free(
-							sb->sounds[i].clips[j].events[k].wave.complex.weights
+							sb->sounds[i].tracks[j].events[k].wave.complex.weights
 						);
 					}
 				}
 				#undef MATCH
 			}
-			FACT_free(sb->sounds[i].clips[j].events);
+			FACT_free(sb->sounds[i].tracks[j].events);
 		}
-		FACT_free(sb->sounds[i].clips);
+		FACT_free(sb->sounds[i].tracks);
 		FACT_free(sb->sounds[i].rpcCodes);
 		FACT_free(sb->sounds[i].dspCodes);
 	}

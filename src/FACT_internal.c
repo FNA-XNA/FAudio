@@ -212,14 +212,14 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	/* TODO: Interactive Cues, will set `active` based on variable */
 
 	/* Trigger events for each track */
-	for (i = 0; i < active->sound->clipCount; i += 1)
-	for (j = 0; i < active->sound->clips[i].eventCount; j += 1)
-	if (	!active->clips[i].events[j].finished &&
-		elapsed > active->clips[i].events[j].timestamp	)
+	for (i = 0; i < active->sound->trackCount; i += 1)
+	for (j = 0; i < active->sound->tracks[i].eventCount; j += 1)
+	if (	!active->tracks[i].events[j].finished &&
+		elapsed > active->tracks[i].events[j].timestamp	)
 	{
 		/* Activate the event */
-		evt = &active->sound->clips[i].events[j];
-		evtInst = &active->clips[i].events[j];
+		evt = &active->sound->tracks[i].events[j];
+		evtInst = &active->tracks[i].events[j];
 		skipLoopCheck = 0;
 		switch (evt->type)
 		{
@@ -232,17 +232,17 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			}
 
 			/* Stop track */
-			for (k = 0; k < active->sound->clips[i].eventCount; k += 1)
-			switch (active->sound->clips[i].events[k].type)
+			for (k = 0; k < active->sound->tracks[i].eventCount; k += 1)
+			switch (active->sound->tracks[i].events[k].type)
 			{
 			case FACTEVENT_PLAYWAVE:
 			case FACTEVENT_PLAYWAVETRACKVARIATION:
 			case FACTEVENT_PLAYWAVEEFFECTVARIATION:
 			case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-				if (active->clips[i].events[k].data.wave != NULL)
+				if (active->tracks[i].events[k].data.wave != NULL)
 				{
 					FACTWave_Stop(
-						active->clips[i].events[k].data.wave,
+						active->tracks[i].events[k].data.wave,
 						evt->stop.flags & 0x01
 					);
 				}
@@ -327,24 +327,24 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			/* TODO: FACT_INTERNAL_Marker(evt->marker*) */
 			break;
 		default:
-			FACT_assert(0 && "Unrecognized clip event type!");
+			FACT_assert(0 && "Unrecognized track event type!");
 		}
 
 		/* Either loop or mark this event as complete */
 		if (skipLoopCheck) continue;
-		if (active->clips[i].events[j].loopCount > 0)
+		if (active->tracks[i].events[j].loopCount > 0)
 		{
-			if (active->clips[i].events[j].loopCount != 0xFF)
+			if (active->tracks[i].events[j].loopCount != 0xFF)
 			{
-				active->clips[i].events[j].loopCount -= 1;
+				active->tracks[i].events[j].loopCount -= 1;
 			}
 
-			active->clips[i].events[j].timestamp +=
-				active->sound->clips[i].events[j].timestamp;
+			active->tracks[i].events[j].timestamp +=
+				active->sound->tracks[i].events[j].timestamp;
 		}
 		else
 		{
-			active->clips[i].events[j].finished = 1;
+			active->tracks[i].events[j].finished = 1;
 		}
 	}
 
@@ -361,13 +361,13 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		active->sound->rpcCodes,
 		&active->rpcData
 	);
-	for (i = 0; i < active->sound->clipCount; i += 1)
+	for (i = 0; i < active->sound->trackCount; i += 1)
 	{
 		FACT_INTERNAL_UpdateRPCs(
 			cue,
-			active->sound->clips[i].rpcCodeCount,
-			active->sound->clips[i].rpcCodes,
-			&active->clips[i].rpcData
+			active->sound->tracks[i].rpcCodeCount,
+			active->sound->tracks[i].rpcCodes,
+			&active->tracks[i].rpcData
 		);
 	}
 

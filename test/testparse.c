@@ -219,37 +219,37 @@ int main(int argc, char **argv)
 			printf(" %d", sb->sounds[i].dspCodes[j]);
 		}
 		printf("\n");
-		printf("\t\tClip Count: %d\n", sb->sounds[i].clipCount);
-		for (j = 0; j < sb->sounds[i].clipCount; j += 1)
+		printf("\t\tTrack Count: %d\n", sb->sounds[i].trackCount);
+		for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 		{
 			printf(
-				"\t\t\tClip %d:\n"
+				"\t\t\tTrack %d:\n"
 				"\t\t\t\tVolume: %d\n"
 				"\t\t\t\tFilter Type: %d\n"
 				"\t\t\t\tFilter Q-Factor: %d\n"
 				"\t\t\t\tFilter Frequency: %d\n",
-				sb->sounds[i].clips[j].code,
-				sb->sounds[i].clips[j].volume,
-				sb->sounds[i].clips[j].filter,
-				sb->sounds[i].clips[j].qfactor,
-				sb->sounds[i].clips[j].frequency
+				sb->sounds[i].tracks[j].code,
+				sb->sounds[i].tracks[j].volume,
+				sb->sounds[i].tracks[j].filter,
+				sb->sounds[i].tracks[j].qfactor,
+				sb->sounds[i].tracks[j].frequency
 			);
 			printf("\t\t\t\tRPC Codes:");
-			for (k = 0; k < sb->sounds[i].clips[j].rpcCodeCount; k += 1)
+			for (k = 0; k < sb->sounds[i].tracks[j].rpcCodeCount; k += 1)
 			{
 				printf(
 					" %d",
-					sb->sounds[i].clips[j].rpcCodes[k]
+					sb->sounds[i].tracks[j].rpcCodes[k]
 				);
 			}
 			printf("\n");
 			printf(
 				"\t\t\t\tEvent Count: %d\n",
-				sb->sounds[i].clips[j].eventCount
+				sb->sounds[i].tracks[j].eventCount
 			);
-			for (k = 0; k < sb->sounds[i].clips[j].eventCount; k += 1)
+			for (k = 0; k < sb->sounds[i].tracks[j].eventCount; k += 1)
 			{
-				const FACTEvent *evt = &sb->sounds[i].clips[j].events[k];
+				const FACTEvent *evt = &sb->sounds[i].tracks[j].events[k];
 				printf(
 					"\t\t\t\t\tEvent %d:\n"
 					"\t\t\t\t\t\tType: %d\n"

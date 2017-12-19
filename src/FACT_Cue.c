@@ -307,7 +307,7 @@ uint32_t FACTCue_GetProperties(
 				sndProps->priority = pCue->active.sound->priority;
 				sndProps->pitch = pCue->active.sound->pitch;
 				sndProps->volume = pCue->active.sound->volume;
-				sndProps->numTracks = pCue->active.sound->clipCount;
+				sndProps->numTracks = pCue->active.sound->trackCount;
 				/* TODO: arrTrackProperties[0] */
 			}
 		}
@@ -335,7 +335,7 @@ uint32_t FACTCue_GetProperties(
 			sndProps->priority = pCue->active.sound->priority;
 			sndProps->pitch = pCue->active.sound->pitch;
 			sndProps->volume = pCue->active.sound->volume;
-			sndProps->numTracks = pCue->active.sound->clipCount;
+			sndProps->numTracks = pCue->active.sound->trackCount;
 			/* TODO: arrTrackProperties[0] */
 		}
 	}

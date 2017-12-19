@@ -510,8 +510,8 @@ void FACTTool_Update()
 					soundBanks[i]->sounds[j].dspCodeCount
 				);
 				ImGui::Text(
-					"Clip Count: %d",
-					soundBanks[i]->sounds[j].clipCount
+					"Track Count: %d",
+					soundBanks[i]->sounds[j].trackCount
 				);
 				if (ImGui::TreeNode("RPC Codes"))
 				{
@@ -535,58 +535,58 @@ void FACTTool_Update()
 					}
 					ImGui::TreePop();
 				}
-				if (ImGui::TreeNode("Clips"))
+				if (ImGui::TreeNode("Tracks"))
 				{
-					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].clipCount; k += 1)
+					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].trackCount; k += 1)
 					if (ImGui::TreeNode(
 						(void*) (intptr_t) k,
-						"Clip Code %d",
-						soundBanks[i]->sounds[j].clips[k].code
+						"Track Code %d",
+						soundBanks[i]->sounds[j].tracks[k].code
 					)) {
 						ImGui::Text(
 							"Volume: %d",
-							soundBanks[i]->sounds[j].clips[k].volume
+							soundBanks[i]->sounds[j].tracks[k].volume
 						);
 						ImGui::Text(
 							"Filter Type: %d",
-							soundBanks[i]->sounds[j].clips[k].filter
+							soundBanks[i]->sounds[j].tracks[k].filter
 						);
 						ImGui::Text(
 							"Filter Q-Factor: %d",
-							soundBanks[i]->sounds[j].clips[k].qfactor
+							soundBanks[i]->sounds[j].tracks[k].qfactor
 						);
 						ImGui::Text(
 							"Filter Frequency: %d",
-							soundBanks[i]->sounds[j].clips[k].frequency
+							soundBanks[i]->sounds[j].tracks[k].frequency
 						);
 						ImGui::Text(
 							"RPC Code Count: %d",
-							soundBanks[i]->sounds[j].clips[k].rpcCodeCount
+							soundBanks[i]->sounds[j].tracks[k].rpcCodeCount
 						);
 						ImGui::Text(
 							"Event Count: %d",
-							soundBanks[i]->sounds[j].clips[k].eventCount
+							soundBanks[i]->sounds[j].tracks[k].eventCount
 						);
 						if (ImGui::TreeNode("RPC Codes"))
 						{
-							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].clips[k].rpcCodeCount; l += 1)
+							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].tracks[k].rpcCodeCount; l += 1)
 							{
 								ImGui::Text(
 									"%d",
-									soundBanks[i]->sounds[j].clips[k].rpcCodes[l]
+									soundBanks[i]->sounds[j].tracks[k].rpcCodes[l]
 								);
 							}
 							ImGui::TreePop();
 						}
 						if (ImGui::TreeNode("Events"))
 						{
-							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].clips[k].eventCount; l += 1)
+							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].tracks[k].eventCount; l += 1)
 							if (ImGui::TreeNode(
 								(void*) (intptr_t) l,
 								"Event #%d",
 								l
 							)) {
-								const FACTEvent *evt = &soundBanks[i]->sounds[j].clips[k].events[l];
+								const FACTEvent *evt = &soundBanks[i]->sounds[j].tracks[k].events[l];
 								ImGui::Text(
 									"Type: %d",
 									evt->type
