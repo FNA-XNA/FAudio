@@ -890,8 +890,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sb->cues[cur].sbCode = read_u32(&ptr);
 		sb->cues[cur].transitionOffset = 0;
 		sb->cues[cur].instanceLimit = 0xFF;
-		sb->cues[cur].fadeIn = 0;
-		sb->cues[cur].fadeOut = 0;
+		sb->cues[cur].fadeInMS = 0;
+		sb->cues[cur].fadeOutMS = 0;
 		sb->cues[cur].maxInstanceBehavior = 0;
 		sb->cues[cur].instanceCount = 0;
 	}
@@ -904,8 +904,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sb->cues[cur].sbCode = read_u32(&ptr);
 		sb->cues[cur].transitionOffset = read_u32(&ptr);
 		sb->cues[cur].instanceLimit = read_u8(&ptr);
-		sb->cues[cur].fadeIn = read_u16(&ptr);
-		sb->cues[cur].fadeOut = read_u16(&ptr);
+		sb->cues[cur].fadeInMS = read_u16(&ptr);
+		sb->cues[cur].fadeOutMS = read_u16(&ptr);
 		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr);
 		sb->cues[cur].instanceCount = 0;
 

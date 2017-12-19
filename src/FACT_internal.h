@@ -158,8 +158,8 @@ typedef struct FACTCueData
 	uint32_t sbCode;
 	uint32_t transitionOffset;
 	uint8_t instanceLimit;
-	uint16_t fadeIn;
-	uint16_t fadeOut;
+	uint16_t fadeInMS;
+	uint16_t fadeOutMS;
 	uint8_t maxInstanceBehavior;
 	uint8_t instanceCount;
 } FACTCueData;
