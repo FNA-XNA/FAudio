@@ -200,6 +200,10 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	uint8_t i, j, k;
 	uint8_t skipLoopCheck;
 	float svResult;
+	const char *wbName;
+	uint16_t wbTrack;
+	uint8_t wbIndex;
+	FACTWaveBank *wb;
 	FACTSoundInstance *active;
 	FACTEvent *evt;
 	FACTEventInstance *evtInst;
@@ -270,7 +274,46 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		case FACTEVENT_PLAYWAVETRACKVARIATION:
 		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
 		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-			/* TODO: FACT_INTERNAL_Play(evt->wave*) */
+			/* Track Variation */
+			if (evt->wave.isComplex)
+			{
+				/* TODO: Complex wave selection */
+				wbIndex = evt->wave.complex.wavebanks[0];
+				wbTrack = evt->wave.complex.tracks[0];
+			}
+			else
+			{
+				wbIndex = evt->wave.simple.wavebank;
+				wbTrack = evt->wave.simple.track;
+			}
+			wbName = cue->parentBank->wavebankNames[wbIndex];
+			wb = cue->parentBank->parentEngine->wbList;
+			while (wb != NULL)
+			{
+				if (FACT_strcmp(wbName, wb->name) == 0)
+				{
+					break;
+				}
+				wb = wb->next;
+			}
+			FACT_assert(wb != NULL);
+
+			/* Generate the wave... */
+			FACTWaveBank_Prepare(
+				wb,
+				wbTrack,
+				evt->wave.flags,
+				0,
+				0, /* FIXME: evtInst->loopCount? */
+				&evtInst->data.wave
+			);
+
+			/* TODO: Position/Angle */
+
+			/* TODO: Effect Variation */
+
+			/* Play, finally. */
+			FACTWave_Play(evtInst->data.wave);
 			break;
 		case FACTEVENT_PITCH:
 		case FACTEVENT_PITCHREPEATING:
