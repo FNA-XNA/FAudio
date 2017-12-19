@@ -194,7 +194,44 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	uint32_t uDstChannelCount,
 	float *pMatrixCoefficients
 ) {
-	/* TODO */
+	/* TODO: Internal storage...? */
+	FACTWave *wave;
+	uint8_t i, j;
+	if (pCue->active & 0x01)
+	{
+		FACTWave_SetMatrixCoefficients(
+			pCue->playing.wave,
+			uSrcChannelCount,
+			uDstChannelCount,
+			pMatrixCoefficients
+		);
+	}
+	else if (pCue->active & 0x02)
+	{
+		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
+		for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
+		{
+			switch (pCue->playing.sound.sound->tracks[i].events[j].type)
+			{
+			case FACTEVENT_PLAYWAVE:
+			case FACTEVENT_PLAYWAVETRACKVARIATION:
+			case FACTEVENT_PLAYWAVEEFFECTVARIATION:
+			case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
+				wave = pCue->playing.sound.tracks[i].events[j].data.wave;
+				if (wave != NULL)
+				{
+					FACTWave_SetMatrixCoefficients(
+						wave,
+						uSrcChannelCount,
+						uDstChannelCount,
+						pMatrixCoefficients
+					);
+				}
+			default:
+				break;
+			}
+		}
+	}
 	return 0;
 }
 
