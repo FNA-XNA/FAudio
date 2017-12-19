@@ -52,7 +52,7 @@ void FACT_INTERNAL_CalculateStep(FACTWave *wave)
 
 /* Mixer Thread */
 
-void FACT_MixCallback(void *userdata, Uint8 *stream, int len)
+void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
 	FACTAudioDevice *device = (FACTAudioDevice*) userdata;
 	FACTEngineEntry *engine = device->engineList;
@@ -221,7 +221,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
 		want.channels = DEVICE_CHANNELS;
 		want.silence = 0;
 		want.samples = DEVICE_BUFFERSIZE;
-		want.callback = FACT_MixCallback;
+		want.callback = FACT_INTERNAL_MixCallback;
 		want.userdata = device;
 
 		/* Open the device, finally */

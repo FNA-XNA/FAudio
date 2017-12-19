@@ -1046,7 +1046,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
  *
  * http://aluigi.altervista.org/papers.htm#xbox
  */
-uint32_t FACT_ParseWaveBank(
+uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTAudioEngine *pEngine,
 	FACTIOStream *io,
 	uint16_t isStreaming,
@@ -1240,7 +1240,7 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	uint32_t dwAllocAttributes,
 	FACTWaveBank **ppWaveBank
 ) {
-	return FACT_ParseWaveBank(
+	return FACT_INTERNAL_ParseWaveBank(
 		pEngine,
 		FACT_memopen((void*) pvBuffer, dwSize),
 		0,
@@ -1255,7 +1255,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 ) {
 	FACTIOStream *io = (FACTIOStream*) pParms->file;
 	io->seek(io, pParms->offset, 0);
-	return FACT_ParseWaveBank(
+	return FACT_INTERNAL_ParseWaveBank(
 		pEngine,
 		io,
 		1,
