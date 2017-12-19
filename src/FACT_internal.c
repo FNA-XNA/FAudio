@@ -214,16 +214,16 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		return 0;
 	}
 
-	/* To get the time on a single Cue, subtract from the global time
-	 * the latest start time minus the total time elapsed (minus pause time)
-	 */
-	elapsed -= cue->start - cue->elapsed;
-
 	/* There's only something to do if we're a Sound. Waves are simple! */
 	if (!(cue->active & 0x02))
 	{
 		return 0;
 	}
+
+	/* To get the time on a single Cue, subtract from the global time
+	 * the latest start time minus the total time elapsed (minus pause time)
+	 */
+	elapsed -= cue->start - cue->elapsed;
 
 	/* FIXME: Multiple sounds may exist for interactive Cues? */
 	active = &cue->playing.sound;
