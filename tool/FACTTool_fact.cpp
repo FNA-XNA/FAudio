@@ -459,11 +459,11 @@ void FACTTool_Update()
 			);
 			ImGui::Text(
 				"Fade-in (ms): %d",
-				soundBanks[i]->cues[j].fadeIn
+				soundBanks[i]->cues[j].fadeInMS
 			);
 			ImGui::Text(
 				"Fade-out (ms): %d",
-				soundBanks[i]->cues[j].fadeOut
+				soundBanks[i]->cues[j].fadeOutMS
 			);
 			ImGui::Text(
 				"Max Instance Behavior: %d",

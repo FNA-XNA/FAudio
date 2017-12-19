@@ -185,8 +185,8 @@ int main(int argc, char **argv)
 			sb->cues[i].sbCode,
 			sb->cues[i].transitionOffset,
 			sb->cues[i].instanceLimit,
-			sb->cues[i].fadeIn,
-			sb->cues[i].fadeOut,
+			sb->cues[i].fadeInMS,
+			sb->cues[i].fadeOutMS,
 			sb->cues[i].maxInstanceBehavior
 		);
 	}
