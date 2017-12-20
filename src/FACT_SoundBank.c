@@ -97,23 +97,23 @@ uint32_t FACTSoundBank_Prepare(
 
 	/* Sound data */
 	(*ppCue)->data = &pSoundBank->cues[nCueIndex];
-	if (!((*ppCue)->data->flags & 0x04))
-	{
-		for (i = 0; i < pSoundBank->variationCount; i += 1)
-		{
-			if ((*ppCue)->data->sbCode == pSoundBank->variationCodes[i])
-			{
-				(*ppCue)->sound.variation = &pSoundBank->variations[i];
-			}
-		}
-	}
-	else
+	if ((*ppCue)->data->flags & 0x04)
 	{
 		for (i = 0; i < pSoundBank->soundCount; i += 1)
 		{
 			if ((*ppCue)->data->sbCode == pSoundBank->soundCodes[i])
 			{
 				(*ppCue)->sound.sound = &pSoundBank->sounds[i];
+			}
+		}
+	}
+	else
+	{
+		for (i = 0; i < pSoundBank->variationCount; i += 1)
+		{
+			if ((*ppCue)->data->sbCode == pSoundBank->variationCodes[i])
+			{
+				(*ppCue)->sound.variation = &pSoundBank->variations[i];
 			}
 		}
 	}
