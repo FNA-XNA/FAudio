@@ -972,7 +972,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		else if (sb->variations[i].flags == 3)
 		{
-			/* Complex with float min/max */
+			/* Complex Interactive Variation with float min/max */
 			sb->variations[i].isComplex = 1;
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
