@@ -104,6 +104,7 @@ uint32_t FACTSoundBank_Prepare(
 			if ((*ppCue)->data->sbCode == pSoundBank->soundCodes[i])
 			{
 				(*ppCue)->sound.sound = &pSoundBank->sounds[i];
+				break;
 			}
 		}
 	}
@@ -114,6 +115,7 @@ uint32_t FACTSoundBank_Prepare(
 			if ((*ppCue)->data->sbCode == pSoundBank->variationCodes[i])
 			{
 				(*ppCue)->sound.variation = &pSoundBank->variations[i];
+				break;
 			}
 		}
 	}
