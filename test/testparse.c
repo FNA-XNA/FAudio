@@ -425,7 +425,7 @@ int main(int argc, char **argv)
 		);
 		for (j = 0; j < sb->variations[i].entryCount; j += 1)
 		{
-			if (sb->variations[i].entries[j].isComplex)
+			if (sb->variations[i].isComplex)
 			{
 				printf(
 					"\t\t\tVariation %d, Complex:\n"

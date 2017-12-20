@@ -829,7 +829,7 @@ void FACTTool_Update()
 					"Entry #%d",
 					k
 				)) {
-					if (soundBanks[i]->variations[j].entries[k].isComplex)
+					if (soundBanks[i]->variations[j].isComplex)
 					{
 						ImGui::Text("Complex Variation");
 						ImGui::Text(

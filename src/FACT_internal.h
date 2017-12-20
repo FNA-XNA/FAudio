@@ -341,7 +341,6 @@ typedef struct FACTSoundInstance
 
 typedef struct FACTVariation
 {
-	uint8_t isComplex;
 	union
 	{
 		FACTSimpleWave simple;
@@ -356,6 +355,7 @@ typedef struct FACTVariationTable
 {
 	uint8_t flags;
 	int16_t variable;
+	uint8_t isComplex;
 
 	uint16_t entryCount;
 	FACTVariation *entries;
