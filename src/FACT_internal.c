@@ -167,30 +167,70 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	}
 	else
 	{
-		/* TODO: Interactive Cue sound selection */
-		FACT_assert(cue->sound.variation->flags != 3);
-
 		/* Variation */
-		max = 0.0f;
-		for (i = 0; i < cue->sound.variation->entryCount; i += 1)
+		if (cue->sound.variation->flags == 3)
 		{
-			max += (
-				cue->sound.variation->entries[i].maxWeight -
-				cue->sound.variation->entries[i].minWeight
-			);
-		}
-		next = FACT_rng() * max;
-		for (i = cue->sound.variation->entryCount; i >= 0; i -= 1)
-		{
-			weight = (
-				cue->sound.variation->entries[i].maxWeight -
-				cue->sound.variation->entries[i].minWeight
-			);
-			if (next > (max - weight))
+			/* Interactive */
+			if (cue->parentBank->parentEngine->variables[cue->sound.variation->variable].accessibility & 0x04)
 			{
-				break;
+				FACTAudioEngine_GetGlobalVariable(
+					cue->parentBank->parentEngine,
+					cue->sound.variation->variable,
+					&next
+				);
 			}
-			max -= weight;
+			else
+			{
+				FACTCue_GetVariable(
+					cue,
+					cue->sound.variation->variable,
+					&next
+				);
+			}
+			for (i = 0; i < cue->sound.variation->entryCount; i += 1)
+			{
+				if (	next <= cue->sound.variation->entries[i].maxWeight &&
+					next >= cue->sound.variation->entries[i].minWeight	)
+				{
+					break;
+				}
+			}
+
+			/* This should only happen when the user control
+			 * variable is none of the sound probabilities, in
+			 * which case we are just silent. But, we should still
+			 * claim to be "playing" in the meantime.
+			 */
+			if (i == cue->sound.variation->entryCount)
+			{
+				cue->active = 0x00;
+				return;
+			}
+		}
+		else
+		{
+			/* Random */
+			max = 0.0f;
+			for (i = 0; i < cue->sound.variation->entryCount; i += 1)
+			{
+				max += (
+					cue->sound.variation->entries[i].maxWeight -
+					cue->sound.variation->entries[i].minWeight
+				);
+			}
+			next = FACT_rng() * max;
+			for (i = cue->sound.variation->entryCount; i >= 0; i -= 1)
+			{
+				weight = (
+					cue->sound.variation->entries[i].maxWeight -
+					cue->sound.variation->entries[i].minWeight
+				);
+				if (next > (max - weight))
+				{
+					break;
+				}
+				max -= weight;
+			}
 		}
 
 		if (cue->sound.variation->isComplex)
