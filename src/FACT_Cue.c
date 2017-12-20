@@ -148,6 +148,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
+	uint8_t i;
+
 	/* There are two ways that a Cue might be stopped immediately:
 	 * 1. The program explicitly asks for it
 	 * 2. The Cue is paused and therefore we can't do fade/release effects
@@ -171,6 +173,10 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		}
 		else if (pCue->active & 0x02)
 		{
+			for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
+			{
+				FACT_free(pCue->playing.sound.tracks[i].events);
+			}
 			FACT_free(pCue->playing.sound.tracks);
 		}
 		pCue->active = 0;
