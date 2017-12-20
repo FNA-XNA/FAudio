@@ -154,7 +154,118 @@ void FACT_INTERNAL_SetDSPParameter(
 
 void FACT_INTERNAL_SelectSound(FACTCue *cue)
 {
-	/* TODO */
+	uint16_t i, j;
+	float max, next, weight;
+	const char *wbName;
+	FACTWaveBank *wb;
+
+	if (cue->data->flags & 0x04)
+	{
+		/* Sound */
+		cue->playing.sound.sound = cue->sound.sound;
+		cue->active = 0x02;
+	}
+	else
+	{
+		/* TODO: Interactive Cue sound selection */
+		FACT_assert(cue->sound.variation->flags != 3);
+
+		/* Variation */
+		max = 0.0f;
+		for (i = 0; i < cue->sound.variation->entryCount; i += 1)
+		{
+			max += (
+				cue->sound.variation->entries[i].maxWeight -
+				cue->sound.variation->entries[i].minWeight
+			);
+		}
+		next = FACT_rng() * max;
+		for (i = cue->sound.variation->entryCount; i >= 0; i -= 1)
+		{
+			weight = (
+				cue->sound.variation->entries[i].maxWeight -
+				cue->sound.variation->entries[i].minWeight
+			);
+			if (next > (max - weight))
+			{
+				break;
+			}
+			max -= weight;
+		}
+
+		if (cue->sound.variation->isComplex)
+		{
+			/* Grab the Sound via the code. FIXME: Do this at load time? */
+			for (j = 0; j < cue->parentBank->soundCount; j += 1)
+			{
+				if (cue->sound.variation->entries[i].soundCode == cue->parentBank->soundCodes[j])
+				{
+					cue->playing.sound.sound = &cue->parentBank->sounds[j];
+					break;
+				}
+			}
+			cue->active = 0x02;
+		}
+		else
+		{
+			/* Pull in the WaveBank... */
+			wbName = cue->parentBank->wavebankNames[
+				cue->sound.variation->entries[i].simple.wavebank
+			];
+			wb = cue->parentBank->parentEngine->wbList;
+			while (wb != NULL)
+			{
+				if (FACT_strcmp(wbName, wb->name) == 0)
+				{
+					break;
+				}
+				wb = wb->next;
+			}
+			FACT_assert(wb != NULL);
+
+			/* Generate the wave... */
+			FACTWaveBank_Prepare(
+				wb,
+				cue->sound.variation->entries[i].simple.track,
+				0,
+				0,
+				0,
+				&cue->playing.wave
+			);
+			cue->active = 0x01;
+		}
+	}
+
+	/* Alloc SoundInstance variables */
+	if (cue->active & 0x02)
+	{
+		cue->playing.sound.tracks = (FACTTrackInstance*) FACT_malloc(
+			sizeof(FACTTrackInstance) * cue->playing.sound.sound->trackCount
+		);
+		for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+		{
+			cue->playing.sound.tracks[i].events = (FACTEventInstance*) FACT_malloc(
+				sizeof(FACTEventInstance) * cue->playing.sound.sound->tracks[i].eventCount
+			);
+			for (j = 0; j < cue->playing.sound.sound->tracks[i].eventCount; j += 1)
+			{
+				cue->playing.sound.tracks[i].events[j].timestamp =
+					cue->playing.sound.sound->tracks[i].events[j].timestamp;
+				cue->playing.sound.tracks[i].events[j].loopCount =
+					cue->playing.sound.sound->tracks[i].events[j].loopCount;
+				cue->playing.sound.tracks[i].events[j].finished = 0;
+
+				FACT_zero(
+					&cue->playing.sound.tracks[i].events[j].data,
+					sizeof(cue->playing.sound.tracks[i].events[j].data)
+				);
+			}
+
+			cue->playing.sound.tracks[i].rpcData.rpcVolume = 1.0f;
+			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
+			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = 0.0f; /* FIXME */
+		}
+	}
 }
 
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue)
