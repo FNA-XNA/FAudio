@@ -441,6 +441,18 @@ void FACTTool_Update()
 		for (uint16_t j = 0; j < soundBanks[i]->cueCount; j += 1)
 		if (ImGui::TreeNode(soundBanks[i]->cueNames[j]))
 		{
+			char playText[64];
+			SDL_snprintf(playText, 64, "Play %s", soundBanks[i]->cueNames[j]);
+			if (ImGui::Button(playText))
+			{
+				FACTSoundBank_Play(
+					soundBanks[i],
+					j,
+					0,
+					0,
+					NULL
+				);
+			}
 			ImGui::Text(
 				"Flags: %X",
 				soundBanks[i]->cues[j].flags
