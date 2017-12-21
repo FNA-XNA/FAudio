@@ -389,7 +389,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 
 	/* Trigger events for each track */
 	for (i = 0; i < active->sound->trackCount; i += 1)
-	for (j = 0; i < active->sound->tracks[i].eventCount; j += 1)
+	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
 	if (	!active->tracks[i].events[j].finished &&
 		elapsed > active->tracks[i].events[j].timestamp	)
 	{
