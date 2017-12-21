@@ -318,6 +318,34 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
 	/* TODO */
 }
 
+uint8_t FACT_INTERNAL_CueFinished(FACTSoundInstance *active)
+{
+	uint8_t i, j;
+	for (i = 0; i < active->sound->trackCount; i += 1)
+	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
+	{
+		if (!active->tracks[i].events[j].finished)
+		{
+			return 0;
+		}
+		switch (active->sound->tracks[i].events[j].type)
+		{
+		case FACTEVENT_PLAYWAVE:
+		case FACTEVENT_PLAYWAVETRACKVARIATION:
+		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
+		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
+			if (active->tracks[i].events[j].data.wave != NULL)
+			{
+				return 0;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	return 1;
+}
+
 /* The functions below should be called by the platform mixer! */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
@@ -346,11 +374,12 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 	}
 }
 
-uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
+void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 {
 	uint8_t i, j, k;
 	uint8_t skipLoopCheck;
 	float svResult;
+	uint32_t waveState;
 	const char *wbName;
 	uint16_t wbTrack;
 	uint8_t wbIndex;
@@ -362,7 +391,7 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	/* If we're not running, save some instructions... */
 	if (cue->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
 	{
-		return 0;
+		goto endcheck;
 	}
 
 	/* There's only something to do if we're a Sound. Waves are simple! */
@@ -370,11 +399,11 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	{
 		/* TODO: FadeIn/FadeOut? */
 		cue->state = cue->playing.wave->state;
-		return 0;
+		goto endcheck;
 	}
 	else if (!cue->active)
 	{
-		return 0;
+		goto endcheck;
 	}
 
 	/* To get the time on a single Cue, subtract from the global time
@@ -563,11 +592,50 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		}
 	}
 
-	/* TODO: Clear out Waves as they finish */
+	/* Clear out Waves as they finish */
+	for (i = 0; i < active->sound->trackCount; i += 1)
+	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
+	{
+		switch (active->sound->tracks[i].events[j].type)
+		{
+		case FACTEVENT_PLAYWAVE:
+		case FACTEVENT_PLAYWAVETRACKVARIATION:
+		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
+		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
+			if (active->tracks[i].events[j].data.wave == NULL)
+			{
+				break;
+			}
+			FACTWave_GetState(
+				active->tracks[i].events[j].data.wave,
+				&waveState
+			);
+			if (waveState & FACT_STATE_STOPPED)
+			{
+				FACTWave_Destroy(
+					active->tracks[i].events[j].data.wave
+				);
+				active->tracks[i].events[j].data.wave = NULL;
+			}
+			break;
+		default:
+			break;
+		}
+	}
 
 	/* TODO: Fade in/out */
 
-	/* TODO: If everything has been played and finished, set STOPPED */
+	/* If everything has been played and finished, set STOPPED */
+	if (FACT_INTERNAL_CueFinished(active))
+	{
+		cue->state |= FACT_STATE_STOPPED;
+		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
+		if (cue->managed)
+		{
+			FACTCue_Destroy(cue);
+		}
+		return;
+	}
 
 	/* RPC updates */
 	FACT_INTERNAL_UpdateRPCs(
@@ -594,8 +662,12 @@ uint8_t FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	 * - 3D
 	 */
 
-	/* Finally. */
-	return 0;
+endcheck:
+	/* Finally, destroy this Cue if it's done and not user-handled. */
+	if (cue->managed && (cue->state & FACT_STATE_STOPPED))
+	{
+		FACTCue_Destroy(cue);
+	}
 }
 
 uint32_t FACT_INTERNAL_GetWave(

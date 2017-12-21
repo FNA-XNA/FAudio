@@ -132,276 +132,279 @@ void FACTTool_Update()
 
 	/* AudioEngine windows */
 	for (size_t i = 0; i < engines.size(); i += 1)
-	if (engineShows[i])
 	{
-		/* Early out */
-		if (!ImGui::Begin(engineNames[i].c_str()))
+		FACTAudioEngine_DoWork(engines[i]);
+		if (engineShows[i])
 		{
+			/* Early out */
+			if (!ImGui::Begin(engineNames[i].c_str()))
+			{
+				ImGui::End();
+				continue;
+			}
+
+			/* Categories */
+			if (ImGui::CollapsingHeader("Categories"))
+			for (uint16_t j = 0; j < engines[i]->categoryCount; j += 1)
+			if (ImGui::TreeNode(engines[i]->categoryNames[j]))
+			{
+				ImGui::Text(
+					"Max Instances: %d",
+					engines[i]->categories[j].instanceLimit
+				);
+				ImGui::Text(
+					"Fade-in (ms): %d",
+					engines[i]->categories[j].fadeInMS
+				);
+				ImGui::Text(
+					"Fade-out (ms): %d",
+					engines[i]->categories[j].fadeOutMS
+				);
+				ImGui::Text(
+					"Instance Behavior: %X",
+					engines[i]->categories[j].maxInstanceBehavior
+				);
+				ImGui::Text(
+					"Parent Category Index: %d",
+					engines[i]->categories[j].parentCategory
+				);
+				ImGui::Text(
+					"Base Volume: %d",
+					engines[i]->categories[j].volume
+				);
+				ImGui::Text(
+					"Visibility: %X",
+					engines[i]->categories[j].visibility
+				);
+				ImGui::TreePop();
+			}
+
+			/* Variables */
+			if (ImGui::CollapsingHeader("Variables"))
+			for (uint16_t j = 0; j < engines[i]->variableCount; j += 1)
+			if (ImGui::TreeNode(engines[i]->variableNames[j]))
+			{
+				ImGui::Text(
+					"Accessibility: %X",
+					engines[i]->variables[j].accessibility
+				);
+				ImGui::Text(
+					"Initial Value: %f",
+					engines[i]->variables[j].initialValue
+				);
+				ImGui::Text(
+					"Min Value: %f",
+					engines[i]->variables[j].minValue
+				);
+				ImGui::Text(
+					"Max Value: %f",
+					engines[i]->variables[j].maxValue
+				);
+				ImGui::TreePop();
+			}
+
+			/* RPCs */
+			if (ImGui::CollapsingHeader("RPCs"))
+			for (uint16_t j = 0; j < engines[i]->rpcCount; j += 1)
+			if (ImGui::TreeNode(
+				(void*) (intptr_t) j,
+				"Code %d",
+				engines[i]->rpcCodes[j]
+			)) {
+				ImGui::Text(
+					"Variable Index: %d",
+					engines[i]->rpcs[j].variable
+				);
+				ImGui::Text(
+					"Parameter: %d",
+					engines[i]->rpcs[j].parameter
+				);
+				ImGui::Text(
+					"Point Count: %d",
+					engines[i]->rpcs[j].pointCount
+				);
+				if (ImGui::TreeNode("Points"))
+				{
+					for (uint8_t k = 0; k < engines[i]->rpcs[j].pointCount; k += 1)
+					if (ImGui::TreeNode(
+						(void*) (intptr_t) k,
+						"Point #%d",
+						k
+					)) {
+						ImGui::Text(
+							"Coordinate: (%f, %f)",
+							engines[i]->rpcs[j].points[k].x,
+							engines[i]->rpcs[j].points[k].y
+						);
+						ImGui::Text(
+							"Type: %d\n",
+							engines[i]->rpcs[j].points[k].type
+						);
+						ImGui::TreePop();
+					}
+					ImGui::TreePop();
+				}
+				ImGui::TreePop();
+			}
+
+			/* DSP Presets */
+			if (ImGui::CollapsingHeader("DSP Presets"))
+			for (uint16_t j = 0; j < engines[i]->dspPresetCount; j += 1)
+			if (ImGui::TreeNode(
+				(void*) (intptr_t) j,
+				"Code %d",
+				engines[i]->dspPresetCodes[j]
+			)) {
+				ImGui::Text(
+					"Accessibility: %X",
+					engines[i]->dspPresets[j].accessibility
+				);
+				ImGui::Text(
+					"Parameter Count: %d",
+					engines[i]->dspPresets[j].parameterCount
+				);
+				if (ImGui::TreeNode("Parameters"))
+				{
+					for (uint32_t k = 0; k < engines[i]->dspPresets[j].parameterCount; k += 1)
+					if (ImGui::TreeNode(
+						(void*) (intptr_t) k,
+						"Parameter #%d",
+						k
+					)) {
+						ImGui::Text(
+							"Initial Value: %f",
+							engines[i]->dspPresets[j].parameters[k].value
+						);
+						ImGui::Text(
+							"Min Value: %f",
+							engines[i]->dspPresets[j].parameters[k].minVal
+						);
+						ImGui::Text(
+							"Max Value: %f",
+							engines[i]->dspPresets[j].parameters[k].maxVal
+						);
+						ImGui::Text(
+							"Unknown u16: %d",
+							engines[i]->dspPresets[j].parameters[k].unknown
+						);
+						ImGui::TreePop();
+					}
+					ImGui::TreePop();
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::Separator();
+
+			/* Open SoundBank */
+			static char soundbankname[64] = "Sound Bank.xsb";
+			if (ImGui::InputText(
+				"Open SoundBank",
+				soundbankname, 64,
+				ImGuiInputTextFlags_EnterReturnsTrue
+			)) {
+				/* Load up file... */
+				OPENFILE(soundbankname)
+
+				/* Create SoundBank... */
+				FACTSoundBank *sb;
+				FACTAudioEngine_CreateSoundBank(
+					engines[i],
+					buf,
+					len,
+					0,
+					0,
+					&sb
+				);
+				SDL_free(buf);
+
+				/* Add to UI... */
+				soundBanks.push_back(sb);
+				soundbankNames.push_back(
+					"SoundBank: " + std::string(sb->name)
+				);
+				soundbankShows.push_back(true);
+			}
+
+			/* Open WaveBank */
+			static char wavebankname[64] = "Wave Bank.xwb";
+			if (ImGui::InputText(
+				"Open WaveBank",
+				wavebankname, 64,
+				ImGuiInputTextFlags_EnterReturnsTrue
+			)) {
+				/* Load up file... */
+				OPENFILE(wavebankname)
+
+				/* Create WaveBank... */
+				FACTWaveBank *wb;
+				FACTAudioEngine_CreateInMemoryWaveBank(
+					engines[i],
+					buf,
+					len,
+					0,
+					0,
+					&wb
+				);
+
+				/* Add to UI... */
+				waveBanks.push_back(wb);
+				wavebankNames.push_back(
+					"WaveBank: " + std::string(wb->name)
+				);
+				wavebankShows.push_back(true);
+			}
+
+			ImGui::Separator();
+
+			/* Close file */
+			if (ImGui::Button("Close AudioEngine"))
+			{
+				/* Destroy SoundBank windows... */
+				FACTSoundBank *sb = engines[i]->sbList;
+				while (sb != NULL)
+				{
+					for (size_t j = 0; j < soundBanks.size(); j += 1)
+					{
+						if (sb == soundBanks[j])
+						{
+							sb = sb->next;
+							soundBanks.erase(soundBanks.begin() + j);
+							soundbankNames.erase(soundbankNames.begin() + j);
+							soundbankShows.erase(soundbankShows.begin() + j);
+							break;
+						}
+					}
+				}
+
+				/* Destroy WaveBank windows... */
+				FACTWaveBank *wb = engines[i]->wbList;
+				while (wb != NULL)
+				{
+					for (size_t j = 0; j < waveBanks.size(); j += 1)
+					{
+						if (wb == waveBanks[j])
+						{
+							wb = wb->next;
+							waveBanks.erase(waveBanks.begin() + j);
+							wavebankNames.erase(wavebankNames.begin() + j);
+							wavebankShows.erase(wavebankShows.begin() + j);
+							break;
+						}
+					}
+				}
+
+				/* Close file, finally */
+				FACTAudioEngine_Shutdown(engines[i]);
+				engines.erase(engines.begin() + i);
+				engineNames.erase(engineNames.begin() + i);
+				engineShows.erase(engineShows.begin() + i);
+				i -= 1;
+			}
+
+			/* We out. */
 			ImGui::End();
-			continue;
 		}
-
-		/* Categories */
-		if (ImGui::CollapsingHeader("Categories"))
-		for (uint16_t j = 0; j < engines[i]->categoryCount; j += 1)
-		if (ImGui::TreeNode(engines[i]->categoryNames[j]))
-		{
-			ImGui::Text(
-				"Max Instances: %d",
-				engines[i]->categories[j].instanceLimit
-			);
-			ImGui::Text(
-				"Fade-in (ms): %d",
-				engines[i]->categories[j].fadeInMS
-			);
-			ImGui::Text(
-				"Fade-out (ms): %d",
-				engines[i]->categories[j].fadeOutMS
-			);
-			ImGui::Text(
-				"Instance Behavior: %X",
-				engines[i]->categories[j].maxInstanceBehavior
-			);
-			ImGui::Text(
-				"Parent Category Index: %d",
-				engines[i]->categories[j].parentCategory
-			);
-			ImGui::Text(
-				"Base Volume: %d",
-				engines[i]->categories[j].volume
-			);
-			ImGui::Text(
-				"Visibility: %X",
-				engines[i]->categories[j].visibility
-			);
-			ImGui::TreePop();
-		}
-
-		/* Variables */
-		if (ImGui::CollapsingHeader("Variables"))
-		for (uint16_t j = 0; j < engines[i]->variableCount; j += 1)
-		if (ImGui::TreeNode(engines[i]->variableNames[j]))
-		{
-			ImGui::Text(
-				"Accessibility: %X",
-				engines[i]->variables[j].accessibility
-			);
-			ImGui::Text(
-				"Initial Value: %f",
-				engines[i]->variables[j].initialValue
-			);
-			ImGui::Text(
-				"Min Value: %f",
-				engines[i]->variables[j].minValue
-			);
-			ImGui::Text(
-				"Max Value: %f",
-				engines[i]->variables[j].maxValue
-			);
-			ImGui::TreePop();
-		}
-
-		/* RPCs */
-		if (ImGui::CollapsingHeader("RPCs"))
-		for (uint16_t j = 0; j < engines[i]->rpcCount; j += 1)
-		if (ImGui::TreeNode(
-			(void*) (intptr_t) j,
-			"Code %d",
-			engines[i]->rpcCodes[j]
-		)) {
-			ImGui::Text(
-				"Variable Index: %d",
-				engines[i]->rpcs[j].variable
-			);
-			ImGui::Text(
-				"Parameter: %d",
-				engines[i]->rpcs[j].parameter
-			);
-			ImGui::Text(
-				"Point Count: %d",
-				engines[i]->rpcs[j].pointCount
-			);
-			if (ImGui::TreeNode("Points"))
-			{
-				for (uint8_t k = 0; k < engines[i]->rpcs[j].pointCount; k += 1)
-				if (ImGui::TreeNode(
-					(void*) (intptr_t) k,
-					"Point #%d",
-					k
-				)) {
-					ImGui::Text(
-						"Coordinate: (%f, %f)",
-						engines[i]->rpcs[j].points[k].x,
-						engines[i]->rpcs[j].points[k].y
-					);
-					ImGui::Text(
-						"Type: %d\n",
-						engines[i]->rpcs[j].points[k].type
-					);
-					ImGui::TreePop();
-				}
-				ImGui::TreePop();
-			}
-			ImGui::TreePop();
-		}
-
-		/* DSP Presets */
-		if (ImGui::CollapsingHeader("DSP Presets"))
-		for (uint16_t j = 0; j < engines[i]->dspPresetCount; j += 1)
-		if (ImGui::TreeNode(
-			(void*) (intptr_t) j,
-			"Code %d",
-			engines[i]->dspPresetCodes[j]
-		)) {
-			ImGui::Text(
-				"Accessibility: %X",
-				engines[i]->dspPresets[j].accessibility
-			);
-			ImGui::Text(
-				"Parameter Count: %d",
-				engines[i]->dspPresets[j].parameterCount
-			);
-			if (ImGui::TreeNode("Parameters"))
-			{
-				for (uint32_t k = 0; k < engines[i]->dspPresets[j].parameterCount; k += 1)
-				if (ImGui::TreeNode(
-					(void*) (intptr_t) k,
-					"Parameter #%d",
-					k
-				)) {
-					ImGui::Text(
-						"Initial Value: %f",
-						engines[i]->dspPresets[j].parameters[k].value
-					);
-					ImGui::Text(
-						"Min Value: %f",
-						engines[i]->dspPresets[j].parameters[k].minVal
-					);
-					ImGui::Text(
-						"Max Value: %f",
-						engines[i]->dspPresets[j].parameters[k].maxVal
-					);
-					ImGui::Text(
-						"Unknown u16: %d",
-						engines[i]->dspPresets[j].parameters[k].unknown
-					);
-					ImGui::TreePop();
-				}
-				ImGui::TreePop();
-			}
-			ImGui::TreePop();
-		}
-
-		ImGui::Separator();
-
-		/* Open SoundBank */
-		static char soundbankname[64] = "Sound Bank.xsb";
-		if (ImGui::InputText(
-			"Open SoundBank",
-			soundbankname, 64,
-			ImGuiInputTextFlags_EnterReturnsTrue
-		)) {
-			/* Load up file... */
-			OPENFILE(soundbankname)
-
-			/* Create SoundBank... */
-			FACTSoundBank *sb;
-			FACTAudioEngine_CreateSoundBank(
-				engines[i],
-				buf,
-				len,
-				0,
-				0,
-				&sb
-			);
-			SDL_free(buf);
-
-			/* Add to UI... */
-			soundBanks.push_back(sb);
-			soundbankNames.push_back(
-				"SoundBank: " + std::string(sb->name)
-			);
-			soundbankShows.push_back(true);
-		}
-
-		/* Open WaveBank */
-		static char wavebankname[64] = "Wave Bank.xwb";
-		if (ImGui::InputText(
-			"Open WaveBank",
-			wavebankname, 64,
-			ImGuiInputTextFlags_EnterReturnsTrue
-		)) {
-			/* Load up file... */
-			OPENFILE(wavebankname)
-
-			/* Create WaveBank... */
-			FACTWaveBank *wb;
-			FACTAudioEngine_CreateInMemoryWaveBank(
-				engines[i],
-				buf,
-				len,
-				0,
-				0,
-				&wb
-			);
-
-			/* Add to UI... */
-			waveBanks.push_back(wb);
-			wavebankNames.push_back(
-				"WaveBank: " + std::string(wb->name)
-			);
-			wavebankShows.push_back(true);
-		}
-
-		ImGui::Separator();
-
-		/* Close file */
-		if (ImGui::Button("Close AudioEngine"))
-		{
-			/* Destroy SoundBank windows... */
-			FACTSoundBank *sb = engines[i]->sbList;
-			while (sb != NULL)
-			{
-				for (size_t j = 0; j < soundBanks.size(); j += 1)
-				{
-					if (sb == soundBanks[j])
-					{
-						sb = sb->next;
-						soundBanks.erase(soundBanks.begin() + j);
-						soundbankNames.erase(soundbankNames.begin() + j);
-						soundbankShows.erase(soundbankShows.begin() + j);
-						break;
-					}
-				}
-			}
-
-			/* Destroy WaveBank windows... */
-			FACTWaveBank *wb = engines[i]->wbList;
-			while (wb != NULL)
-			{
-				for (size_t j = 0; j < waveBanks.size(); j += 1)
-				{
-					if (wb == waveBanks[j])
-					{
-						wb = wb->next;
-						waveBanks.erase(waveBanks.begin() + j);
-						wavebankNames.erase(wavebankNames.begin() + j);
-						wavebankShows.erase(wavebankShows.begin() + j);
-						break;
-					}
-				}
-			}
-
-			/* Close file, finally */
-			FACTAudioEngine_Shutdown(engines[i]);
-			engines.erase(engines.begin() + i);
-			engineNames.erase(engineNames.begin() + i);
-			engineShows.erase(engineShows.begin() + i);
-			i -= 1;
-		}
-
-		/* We out. */
-		ImGui::End();
 	}
 
 	/* SoundBank windows */
