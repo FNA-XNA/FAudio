@@ -416,6 +416,23 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 
 	/* TODO: Interactive Cues, will set `active` based on variable */
 
+	/* RPC updates */
+	FACT_INTERNAL_UpdateRPCs(
+		cue,
+		active->sound->rpcCodeCount,
+		active->sound->rpcCodes,
+		&active->rpcData
+	);
+	for (i = 0; i < active->sound->trackCount; i += 1)
+	{
+		FACT_INTERNAL_UpdateRPCs(
+			cue,
+			active->sound->tracks[i].rpcCodeCount,
+			active->sound->tracks[i].rpcCodes,
+			&active->tracks[i].rpcData
+		);
+	}
+
 	/* Trigger events for each track */
 	for (i = 0; i < active->sound->trackCount; i += 1)
 	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
@@ -592,7 +609,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		}
 	}
 
-	/* Clear out Waves as they finish */
+	/* Wave updates */
 	for (i = 0; i < active->sound->trackCount; i += 1)
 	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
 	{
@@ -606,6 +623,8 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			{
 				break;
 			}
+
+			/* Clear out Waves as they finish */
 			FACTWave_GetState(
 				active->tracks[i].events[j].data.wave,
 				&waveState
@@ -616,51 +635,29 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 					active->tracks[i].events[j].data.wave
 				);
 				active->tracks[i].events[j].data.wave = NULL;
+				break;
 			}
+
+			/* TODO: Wave updates:
+			 * - Volume
+			 * - Pitch
+			 * - Filter
+			 * - 3D
+			 * - Fade in/out
+			 */
+
 			break;
 		default:
 			break;
 		}
 	}
 
-	/* TODO: Fade in/out */
-
 	/* If everything has been played and finished, set STOPPED */
 	if (FACT_INTERNAL_CueFinished(active))
 	{
 		cue->state |= FACT_STATE_STOPPED;
 		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
-		if (cue->managed)
-		{
-			FACTCue_Destroy(cue);
-		}
-		return;
 	}
-
-	/* RPC updates */
-	FACT_INTERNAL_UpdateRPCs(
-		cue,
-		active->sound->rpcCodeCount,
-		active->sound->rpcCodes,
-		&active->rpcData
-	);
-	for (i = 0; i < active->sound->trackCount; i += 1)
-	{
-		FACT_INTERNAL_UpdateRPCs(
-			cue,
-			active->sound->tracks[i].rpcCodeCount,
-			active->sound->tracks[i].rpcCodes,
-			&active->tracks[i].rpcData
-		);
-	}
-
-	/* TODO: Wave updates:
-	 * - Volume
-	 * - Pitch
-	 * - Filter
-	 * - Reverb
-	 * - 3D
-	 */
 
 endcheck:
 	/* Finally, destroy this Cue if it's done and not user-handled. */
