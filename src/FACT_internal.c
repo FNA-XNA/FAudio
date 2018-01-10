@@ -318,32 +318,196 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
 	/* TODO */
 }
 
-uint8_t FACT_INTERNAL_CueFinished(FACTSoundInstance *active)
-{
-	uint8_t i, j;
-	for (i = 0; i < active->sound->trackCount; i += 1)
-	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
+void FACT_INTERNAL_ActivateEvent(
+	FACTCue *cue,
+	FACTTrack *track,
+	FACTTrackInstance *trackInst,
+	FACTEvent *evt,
+	FACTEventInstance *evtInst,
+	uint32_t elapsed
+) {
+	uint8_t i;
+	float svResult;
+	const char *wbName;
+	uint16_t wbTrack;
+	uint8_t wbIndex;
+	FACTWaveBank *wb;
+	uint8_t skipLoopCheck = 0;
+
+	/* STOP */
+	if (evt->type == FACTEVENT_STOP)
 	{
-		if (!active->tracks[i].events[j].finished)
+		/* Stop Cue */
+		if (evt->stop.flags & 0x02)
 		{
-			return 0;
+			FACTCue_Stop(cue, evt->stop.flags & 0x01);
 		}
-		switch (active->sound->tracks[i].events[j].type)
+
+		/* Stop track */
+		else for (i = 0; i < track->eventCount; i += 1)
+		if (	track->events[i].type == FACTEVENT_PLAYWAVE ||
+			track->events[i].type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+			track->events[i].type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+			track->events[i].type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 		{
-		case FACTEVENT_PLAYWAVE:
-		case FACTEVENT_PLAYWAVETRACKVARIATION:
-		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
-		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-			if (active->tracks[i].events[j].data.wave != NULL)
+			if (trackInst->events[i].data.wave != NULL)
 			{
-				return 0;
+				FACTWave_Stop(
+					trackInst->events[i].data.wave,
+					evt->stop.flags & 0x01
+				);
 			}
-			break;
-		default:
-			break;
 		}
 	}
-	return 1;
+
+	/* PLAYWAVE */
+	else if (	evt->type == FACTEVENT_PLAYWAVE ||
+			evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+			evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+			evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+	{
+		/* Track Variation */
+		if (evt->wave.isComplex)
+		{
+			/* TODO: Complex wave selection */
+			wbIndex = evt->wave.complex.wavebanks[0];
+			wbTrack = evt->wave.complex.tracks[0];
+		}
+		else
+		{
+			wbIndex = evt->wave.simple.wavebank;
+			wbTrack = evt->wave.simple.track;
+		}
+		wbName = cue->parentBank->wavebankNames[wbIndex];
+		wb = cue->parentBank->parentEngine->wbList;
+		while (wb != NULL)
+		{
+			if (FACT_strcmp(wbName, wb->name) == 0)
+			{
+				break;
+			}
+			wb = wb->next;
+		}
+		FACT_assert(wb != NULL);
+
+		/* Generate the wave... */
+		FACTWaveBank_Prepare(
+			wb,
+			wbTrack,
+			evt->wave.flags,
+			0,
+			0, /* FIXME: evtInst->loopCount? */
+			&evtInst->data.wave
+		);
+
+		/* TODO: Position/Angle */
+
+		/* TODO: Effect Variation */
+
+		/* Play, finally. */
+		FACTWave_Play(evtInst->data.wave);
+	}
+
+	/* SETVALUE */
+	else if (	evt->type == FACTEVENT_PITCH ||
+			evt->type == FACTEVENT_PITCHREPEATING ||
+			evt->type == FACTEVENT_VOLUME ||
+			evt->type == FACTEVENT_VOLUMEREPEATING	)
+	{
+		/* Ramp/Equation */
+		if (evt->value.settings & 0x01)
+		{
+			/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
+			skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
+			svResult = (
+				evt->value.ramp.initialSlope *
+				evt->value.ramp.duration *
+				10 /* "Slices" */
+			) + evt->value.ramp.initialValue;
+			svResult = (
+				evt->value.ramp.initialValue +
+				(svResult - evt->value.ramp.initialValue)
+			) * FACT_clamp(
+				(elapsed - evtInst->timestamp) / evt->value.ramp.duration,
+				0.0f,
+				1.0f
+			);
+		}
+		else
+		{
+			/* Value/Random */
+			if (evt->value.equation.flags & 0x04)
+			{
+				svResult = evt->value.equation.value1;
+			}
+			else if (evt->value.equation.flags & 0x08)
+			{
+				svResult = evt->value.equation.value1 + FACT_rng() * (
+					evt->value.equation.value2 -
+					evt->value.equation.value1
+				);
+			}
+			else
+			{
+				svResult = 0.0f;
+				FACT_assert(0 && "Equation flags?");
+			}
+
+			/* Add/Replace */
+			if (evt->value.equation.flags & 0x01)
+			{
+				evtInst->data.value += svResult;
+			}
+			else
+			{
+				evtInst->data.value = svResult;
+			}
+		}
+
+		/* Set the result, finally. */
+		if (	evt->type == FACTEVENT_PITCH ||
+			evt->type == FACTEVENT_PITCHREPEATING	)
+		{
+			/* TODO: FACT_INTERNAL_SetPitch(evt->value*) */
+		}
+		else
+		{
+			/* TODO: FACT_INTERNAL_SetVolume(evt->value*) */
+		}
+
+		if (skipLoopCheck)
+		{
+			return;
+		}
+	}
+
+	/* MARKER */
+	else if (	evt->type == FACTEVENT_MARKER ||
+			evt->type == FACTEVENT_MARKERREPEATING	)
+	{
+		/* TODO: FACT_INTERNAL_Marker(evt->marker*) */
+	}
+
+	/* ??? */
+	else
+	{
+		FACT_assert(0 && "Unknown event type!");
+	}
+
+	/* Either loop or mark this event as complete */
+	if (evtInst->loopCount > 0)
+	{
+		if (evtInst->loopCount != 0xFF)
+		{
+			evtInst->loopCount -= 1;
+		}
+
+		evtInst->timestamp += evt->timestamp;
+	}
+	else
+	{
+		evtInst->finished = 1;
+	}
 }
 
 /* The functions below should be called by the platform mixer! */
@@ -376,17 +540,12 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 
 void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 {
-	uint8_t i, j, k;
-	uint8_t skipLoopCheck;
-	float svResult;
+	uint8_t i, j;
 	uint32_t waveState;
-	const char *wbName;
-	uint16_t wbTrack;
-	uint8_t wbIndex;
-	FACTWaveBank *wb;
 	FACTSoundInstance *active;
 	FACTEvent *evt;
 	FACTEventInstance *evtInst;
+	uint8_t finished = 1;
 
 	/* If we're not running, save some instructions... */
 	if (cue->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
@@ -433,227 +592,71 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		);
 	}
 
-	/* Trigger events for each track */
+	/* Go through each event for each track */
 	for (i = 0; i < active->sound->trackCount; i += 1)
 	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
-	if (	!active->tracks[i].events[j].finished &&
-		elapsed > active->tracks[i].events[j].timestamp	)
 	{
-		/* Activate the event */
 		evt = &active->sound->tracks[i].events[j];
 		evtInst = &active->tracks[i].events[j];
-		skipLoopCheck = 0;
-		switch (evt->type)
+
+		if (!evtInst->finished)
 		{
-		case FACTEVENT_STOP:
-			/* Stop Cue */
-			if (evt->stop.flags & 0x02)
-			{
-				FACTCue_Stop(cue, evt->stop.flags & 0x01);
-				break;
-			}
+			/* Cue's not done yet...! */
+			finished = 0;
 
-			/* Stop track */
-			for (k = 0; k < active->sound->tracks[i].eventCount; k += 1)
-			switch (active->sound->tracks[i].events[k].type)
+			/* Trigger events at the right time */
+			if (elapsed > evtInst->timestamp)
 			{
-			case FACTEVENT_PLAYWAVE:
-			case FACTEVENT_PLAYWAVETRACKVARIATION:
-			case FACTEVENT_PLAYWAVEEFFECTVARIATION:
-			case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-				if (active->tracks[i].events[k].data.wave != NULL)
-				{
-					FACTWave_Stop(
-						active->tracks[i].events[k].data.wave,
-						evt->stop.flags & 0x01
-					);
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case FACTEVENT_PLAYWAVE:
-		case FACTEVENT_PLAYWAVETRACKVARIATION:
-		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
-		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-			/* Track Variation */
-			if (evt->wave.isComplex)
-			{
-				/* TODO: Complex wave selection */
-				wbIndex = evt->wave.complex.wavebanks[0];
-				wbTrack = evt->wave.complex.tracks[0];
-			}
-			else
-			{
-				wbIndex = evt->wave.simple.wavebank;
-				wbTrack = evt->wave.simple.track;
-			}
-			wbName = cue->parentBank->wavebankNames[wbIndex];
-			wb = cue->parentBank->parentEngine->wbList;
-			while (wb != NULL)
-			{
-				if (FACT_strcmp(wbName, wb->name) == 0)
-				{
-					break;
-				}
-				wb = wb->next;
-			}
-			FACT_assert(wb != NULL);
-
-			/* Generate the wave... */
-			FACTWaveBank_Prepare(
-				wb,
-				wbTrack,
-				evt->wave.flags,
-				0,
-				0, /* FIXME: evtInst->loopCount? */
-				&evtInst->data.wave
-			);
-
-			/* TODO: Position/Angle */
-
-			/* TODO: Effect Variation */
-
-			/* Play, finally. */
-			FACTWave_Play(evtInst->data.wave);
-			break;
-		case FACTEVENT_PITCH:
-		case FACTEVENT_PITCHREPEATING:
-		case FACTEVENT_VOLUME:
-		case FACTEVENT_VOLUMEREPEATING:
-			/* Ramp/Equation */
-			if (evt->value.settings & 0x01)
-			{
-				/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
-				skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
-				svResult = (
-					evt->value.ramp.initialSlope *
-					evt->value.ramp.duration *
-					10 /* "Slices" */
-				) + evt->value.ramp.initialValue;
-				svResult = (
-					evt->value.ramp.initialValue +
-					(svResult - evt->value.ramp.initialValue)
-				) * FACT_clamp(
-					(elapsed - evtInst->timestamp) / evt->value.ramp.duration,
-					0.0f,
-					1.0f
+				FACT_INTERNAL_ActivateEvent(
+					cue,
+					&active->sound->tracks[i],
+					&active->tracks[i],
+					evt,
+					evtInst,
+					elapsed
 				);
 			}
-			else
-			{
-				/* Value/Random */
-				if (evt->value.equation.flags & 0x04)
-				{
-					svResult = evt->value.equation.value1;
-				}
-				else if (evt->value.equation.flags & 0x08)
-				{
-					svResult = evt->value.equation.value1 + FACT_rng() * (
-						evt->value.equation.value2 -
-						evt->value.equation.value1
-					);
-				}
-				else
-				{
-					svResult = 0.0f;
-					FACT_assert(0 && "Equation flags?");
-				}
-
-				/* Add/Replace */
-				if (evt->value.equation.flags & 0x01)
-				{
-					evtInst->data.value += svResult;
-				}
-				else
-				{
-					evtInst->data.value = svResult;
-				}
-			}
-
-			/* Set the result, finally. */
-			if (	evt->type == FACTEVENT_PITCH ||
-				evt->type == FACTEVENT_PITCHREPEATING	)
-			{
-				/* TODO: FACT_INTERNAL_SetPitch(evt->value*) */
-			}
-			else
-			{
-				/* TODO: FACT_INTERNAL_SetVolume(evt->value*) */
-			}
-			break;
-		case FACTEVENT_MARKER:
-		case FACTEVENT_MARKERREPEATING:
-			/* TODO: FACT_INTERNAL_Marker(evt->marker*) */
-			break;
-		default:
-			FACT_assert(0 && "Unknown event type!");
 		}
 
-		/* Either loop or mark this event as complete */
-		if (skipLoopCheck) continue;
-		if (active->tracks[i].events[j].loopCount > 0)
+		/* Wave updates */
+		if (	evt->type == FACTEVENT_PLAYWAVE ||
+			evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+			evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+			evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 		{
-			if (active->tracks[i].events[j].loopCount != 0xFF)
+			if (evtInst->data.wave == NULL)
 			{
-				active->tracks[i].events[j].loopCount -= 1;
+				continue;
 			}
-
-			active->tracks[i].events[j].timestamp +=
-				active->sound->tracks[i].events[j].timestamp;
-		}
-		else
-		{
-			active->tracks[i].events[j].finished = 1;
-		}
-	}
-
-	/* Wave updates */
-	for (i = 0; i < active->sound->trackCount; i += 1)
-	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
-	{
-		switch (active->sound->tracks[i].events[j].type)
-		{
-		case FACTEVENT_PLAYWAVE:
-		case FACTEVENT_PLAYWAVETRACKVARIATION:
-		case FACTEVENT_PLAYWAVEEFFECTVARIATION:
-		case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
-			if (active->tracks[i].events[j].data.wave == NULL)
-			{
-				break;
-			}
+			finished = 0;
 
 			/* Clear out Waves as they finish */
 			FACTWave_GetState(
-				active->tracks[i].events[j].data.wave,
+				evtInst->data.wave,
 				&waveState
 			);
 			if (waveState & FACT_STATE_STOPPED)
 			{
 				FACTWave_Destroy(
-					active->tracks[i].events[j].data.wave
+					evtInst->data.wave
 				);
-				active->tracks[i].events[j].data.wave = NULL;
-				break;
+				evtInst->data.wave = NULL;
+				continue;
 			}
 
 			/* TODO: Wave updates:
 			 * - Volume
 			 * - Pitch
 			 * - Filter
+			 * - Reverb
 			 * - 3D
 			 * - Fade in/out
 			 */
-
-			break;
-		default:
-			break;
 		}
 	}
 
 	/* If everything has been played and finished, set STOPPED */
-	if (FACT_INTERNAL_CueFinished(active))
+	if (finished)
 	{
 		cue->state |= FACT_STATE_STOPPED;
 		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);

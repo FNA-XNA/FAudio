@@ -201,6 +201,7 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	float *pMatrixCoefficients
 ) {
 	/* TODO: Internal storage...? */
+	FACTEvent *evt;
 	FACTWave *wave;
 	uint8_t i, j;
 	if (pCue->active & 0x01)
@@ -217,12 +218,12 @@ uint32_t FACTCue_SetMatrixCoefficients(
 		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
 		for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
 		{
-			switch (pCue->playing.sound.sound->tracks[i].events[j].type)
+			evt = &pCue->playing.sound.sound->tracks[i].events[j];
+			if (	evt->type == FACTEVENT_PLAYWAVE ||
+				evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 			{
-			case FACTEVENT_PLAYWAVE:
-			case FACTEVENT_PLAYWAVETRACKVARIATION:
-			case FACTEVENT_PLAYWAVEEFFECTVARIATION:
-			case FACTEVENT_PLAYWAVETRACKEFFECTVARIATION:
 				wave = pCue->playing.sound.tracks[i].events[j].data.wave;
 				if (wave != NULL)
 				{
@@ -233,8 +234,6 @@ uint32_t FACTCue_SetMatrixCoefficients(
 						pMatrixCoefficients
 					);
 				}
-			default:
-				break;
 			}
 		}
 	}
