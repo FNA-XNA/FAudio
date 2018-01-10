@@ -290,10 +290,10 @@ static const uint32_t FACT_STATE_PAUSED =		0x00000040;
 static const uint32_t FACT_STATE_INUSE =		0x00000080;
 static const uint32_t FACT_STATE_PREPAREFAILED =	0x80000000;
 
-static const uint16_t FACTPITCH_MIN =		-1200;
-static const uint16_t FACTPITCH_MAX =		 1200;
-static const uint16_t FACTPITCH_MIN_TOTAL =	-2400;
-static const uint16_t FACTPITCH_MAX_TOTAL =	 2400;
+static const int16_t FACTPITCH_MIN =		-1200;
+static const int16_t FACTPITCH_MAX =		 1200;
+static const int16_t FACTPITCH_MIN_TOTAL =	-2400;
+static const int16_t FACTPITCH_MAX_TOTAL =	 2400;
 
 static const float FACTVOLUME_MIN = 0.0f;
 static const float FACTVOLUME_MAX = 16777216.0f;
