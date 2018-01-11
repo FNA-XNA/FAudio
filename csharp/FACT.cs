@@ -312,6 +312,8 @@ public static class FACT
 	public const ushort FACTVARIABLEINDEX_INVALID =	0xFFFF;
 	public const ushort FACTCATEGORY_INVALID =	0xFFFF;
 
+	public const uint FACT_ENGINE_LOOKAHEAD_DEFAULT = 250;
+
 	#endregion
 
 	#region AudioEngine Interface

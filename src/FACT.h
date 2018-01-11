@@ -302,6 +302,8 @@ static const uint16_t FACTINDEX_INVALID =		0xFFFF;
 static const uint16_t FACTVARIABLEINDEX_INVALID =	0xFFFF;
 static const uint16_t FACTCATEGORY_INVALID =		0xFFFF;
 
+#define FACT_ENGINE_LOOKAHEAD_DEFAULT 250
+
 /* AudioEngine Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
