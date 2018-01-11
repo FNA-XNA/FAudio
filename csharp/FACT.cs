@@ -874,11 +874,7 @@ public static class FACT
 
 	/* FIXME: Everything about this type blows */
 	public const int FACT3DAUDIO_HANDLE_BYTESIZE = 20;
-	[StructLayout(LayoutKind.Sequential)]
-	public unsafe struct FACT3DAUDIO_HANDLE
-	{
-		public fixed byte handle[FACT3DAUDIO_HANDLE_BYTESIZE];
-	}
+	// Alloc a byte[] of size FACT3DAUDIO_HANDLE_BYTESIZE!
 
 	[StructLayout(LayoutKind.Sequential)]
 	public struct FACT3DAUDIO_VECTOR
@@ -1015,12 +1011,12 @@ public static class FACT
 	public static extern void FACT3DAudioInitialize(
 		uint SpeakerChannelMask,
 		float SpeedOfSound,
-		FACT3DAUDIO_HANDLE Instance
+		byte[] Instance // FACT3DAUDIO_HANDLE
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void FACT3DAudioCalculate(
-		FACT3DAUDIO_HANDLE Instance,
+		byte[] Instance, // FACT3DAUDIO_HANDLE
 		ref FACT3DAUDIO_LISTENER pListener,
 		ref FACT3DAUDIO_EMITTER pEmitter,
 		uint Flags,
@@ -1030,12 +1026,12 @@ public static class FACT
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACT3DInitialize(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		FACT3DAUDIO_HANDLE F3DInstance
+		byte[] D3FInstance // FACT3DAUDIO_HANDLE
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACT3DCalculate(
-		FACT3DAUDIO_HANDLE F3DInstance,
+		byte[] F3DInstance, // FACT3DAUDIO_HANDLE
 		ref FACT3DAUDIO_LISTENER pListener,
 		ref FACT3DAUDIO_EMITTER pEmitter,
 		out FACT3DAUDIO_DSP_SETTINGS pDSPSettings
