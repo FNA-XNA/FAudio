@@ -179,6 +179,36 @@ uint32_t FACTSoundBank_Play(
 	return 0;
 }
 
+uint32_t FACTSoundBank_Play3D(
+	FACTSoundBank *pSoundBank,
+	uint16_t nCueIndex,
+	uint32_t dwFlags,
+	int32_t timeOffset,
+	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings,
+	FACTCue** ppCue /* Optional! */
+) {
+	FACTCue *result;
+	FACTSoundBank_Prepare(
+		pSoundBank,
+		nCueIndex,
+		dwFlags,
+		timeOffset,
+		&result
+	);
+	FACT3DApply(pDSPSettings, result);
+	FACTCue_Play(result);
+	if (ppCue != NULL)
+	{
+		*ppCue = result;
+	}
+	else
+	{
+		/* AKA we get to Destroy() this ourselves */
+		result->managed = 1;
+	}
+	return 0;
+}
+
 uint32_t FACTSoundBank_Stop(
 	FACTSoundBank *pSoundBank,
 	uint16_t nCueIndex,

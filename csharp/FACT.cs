@@ -537,6 +537,16 @@ public static class FACT
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FACTSoundBank_Play3D(
+		IntPtr pSoundBank, /* FACTSoundBank* */
+		ushort nCueIndex,
+		uint dwFlags,
+		int timeOffset,
+		ref FACT3DAUDIO_DSP_SETTINGS pDSPSettings,
+		IntPtr ppCue /* Pass IntPtr.Zero! */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTSoundBank_Stop(
 		IntPtr pSoundBank, /* FACTSoundBank* */
 		ushort nCueIndex,

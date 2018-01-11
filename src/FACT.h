@@ -482,6 +482,17 @@ FACTAPI uint32_t FACTSoundBank_Play(
 	FACTCue** ppCue /* Optional! */
 );
 
+typedef struct FACT3DAUDIO_DSP_SETTINGS FACT3DAUDIO_DSP_SETTINGS;
+
+FACTAPI uint32_t FACTSoundBank_Play3D(
+	FACTSoundBank *pSoundBank,
+	uint16_t nCueIndex,
+	uint32_t dwFlags,
+	int32_t timeOffset,
+	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings,
+	FACTCue** ppCue /* Optional! */
+);
+
 FACTAPI uint32_t FACTSoundBank_Stop(
 	FACTSoundBank *pSoundBank,
 	uint16_t nCueIndex,
@@ -794,7 +805,7 @@ typedef struct FACT3DAUDIO_EMITTER
 	float DopplerScaler;
 } FACT3DAUDIO_EMITTER;
 
-typedef struct FACT3DAUDIO_DSP_SETTINGS
+struct FACT3DAUDIO_DSP_SETTINGS
 {
 	float *pMatrixCoefficients;
 	float *pDelayTimes;
@@ -808,7 +819,7 @@ typedef struct FACT3DAUDIO_DSP_SETTINGS
 	float EmitterToListenerDistance;
 	float EmitterVelocityComponent;
 	float ListenerVelocityComponent;
-} FACT3DAUDIO_DSP_SETTINGS;
+};
 
 static const float aStereoLayout[] =
 {
