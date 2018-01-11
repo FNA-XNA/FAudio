@@ -90,13 +90,6 @@ void FACT_INTERNAL_UpdateRPCs(
 			);
 			if (engine->variables[rpc->variable].accessibility & 0x04)
 			{
-				rpcResult = FACT_INTERNAL_CalculateRPC(
-					rpc,
-					engine->globalVariableValues[rpc->variable]
-				);
-			}
-			else
-			{
 				if (FACT_strcmp(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
@@ -118,6 +111,13 @@ void FACT_INTERNAL_UpdateRPCs(
 						cue->variableValues[rpc->variable]
 					);
 				}
+			}
+			else
+			{
+				rpcResult = FACT_INTERNAL_CalculateRPC(
+					rpc,
+					engine->globalVariableValues[rpc->variable]
+				);
 			}
 			if (rpc->parameter == RPC_PARAMETER_VOLUME)
 			{
@@ -173,16 +173,16 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			/* Interactive */
 			if (cue->parentBank->parentEngine->variables[cue->sound.variation->variable].accessibility & 0x04)
 			{
-				FACTAudioEngine_GetGlobalVariable(
-					cue->parentBank->parentEngine,
+				FACTCue_GetVariable(
+					cue,
 					cue->sound.variation->variable,
 					&next
 				);
 			}
 			else
 			{
-				FACTCue_GetVariable(
-					cue,
+				FACTAudioEngine_GetGlobalVariable(
+					cue->parentBank->parentEngine,
 					cue->sound.variation->variable,
 					&next
 				);
@@ -219,7 +219,9 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 				);
 			}
 			next = FACT_rng() * max;
-			for (i = cue->sound.variation->entryCount; i >= 0; i -= 1)
+
+			/* Use > 0, not >= 0. If we hit 0, that's it! */
+			for (i = cue->sound.variation->entryCount; i > 0; i -= 1)
 			{
 				weight = (
 					cue->sound.variation->entries[i].maxWeight -
@@ -520,7 +522,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 		if (engine->rpcs[i].parameter >= RPC_PARAMETER_COUNT)
 		{
 			/* FIXME: Why did I make this global vars only...? */
-			if (engine->variables[engine->rpcs[i].variable].accessibility & 0x04)
+			if (!(engine->variables[engine->rpcs[i].variable].accessibility & 0x04))
 			{
 				for (j = 0; j < engine->dspPresetCount; j += 1)
 				{
