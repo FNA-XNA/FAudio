@@ -536,7 +536,7 @@ DECODE_FUNC(StereoToMonoMSADPCM)
 
 /* Platform Functions */
 
-void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id);
+void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
 void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
 
 void FACT_PlatformInitResampler(FACTWave *wave);

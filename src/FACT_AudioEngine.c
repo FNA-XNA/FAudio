@@ -1444,7 +1444,7 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
 		if (	FACT_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
-			pEngine->variables[i].accessibility & 0x04	)
+			!(pEngine->variables[i].accessibility & 0x04)	)
 		{
 			return i;
 		}
@@ -1459,8 +1459,8 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 ) {
 	FACTVariable *var = &pEngine->variables[nIndex];
 	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(var->accessibility & 0x04);
 	FACT_assert(!(var->accessibility & 0x02));
+	FACT_assert(!(var->accessibility & 0x04));
 	pEngine->globalVariableValues[nIndex] = FACT_clamp(
 		nValue,
 		var->minValue,
@@ -1476,7 +1476,7 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 ) {
 	FACTVariable *var = &pEngine->variables[nIndex];
 	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(var->accessibility & 0x04);
+	FACT_assert(!(var->accessibility & 0x04));
 	*pnValue = pEngine->globalVariableValues[nIndex];
 	return 0;
 }

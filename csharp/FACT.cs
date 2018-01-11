@@ -66,8 +66,8 @@ public static class FACT
 	[StructLayout(LayoutKind.Sequential)]
 	public unsafe struct FACTRendererDetails
 	{
-		public fixed char rendererID[0xFF];
-		public fixed char displayName[0xFF];
+		public fixed short rendererID[0xFF]; // Win32 wchar_t
+		public fixed short displayName[0xFF]; // Win32 wchar_t
 		public int defaultDevice;
 	}
 
@@ -150,7 +150,7 @@ public static class FACT
 		public uint globalSettingsAllocAttributes;
 		public FACTFileIOCallbacks fileIOCallbacks;
 		public IntPtr fnNotificationCallback; /* FACTNotificationCallback */
-		public IntPtr pRendererID; /* wchar_t* */
+		public IntPtr pRendererID; /* Win32 wchar_t* */
 		public IntPtr pXAudio2;
 		public IntPtr pMasteringVoice;
 	}

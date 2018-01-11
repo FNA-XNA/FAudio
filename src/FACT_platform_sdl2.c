@@ -159,7 +159,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 
 /* Platform Functions */
 
-void FACT_PlatformInitEngine(FACTAudioEngine *engine, wchar_t *id)
+void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 {
 	FACTEngineEntry *entry, *entryList;
 	FACTAudioDevice *device, *deviceList;

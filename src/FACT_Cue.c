@@ -248,7 +248,7 @@ uint16_t FACTCue_GetVariableIndex(
 	for (i = 0; i < pCue->parentBank->parentEngine->variableCount; i += 1)
 	{
 		if (	FACT_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
-			!(pCue->parentBank->parentEngine->variables[i].accessibility & 0x04)	)
+			pCue->parentBank->parentEngine->variables[i].accessibility & 0x04	)
 		{
 			return i;
 		}
@@ -264,7 +264,7 @@ uint32_t FACTCue_SetVariable(
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
 	FACT_assert(var->accessibility & 0x01);
 	FACT_assert(!(var->accessibility & 0x02));
-	FACT_assert(!(var->accessibility & 0x04));
+	FACT_assert(var->accessibility & 0x04);
 	pCue->variableValues[nIndex] = FACT_clamp(
 		nValue,
 		var->minValue,
@@ -280,7 +280,7 @@ uint32_t FACTCue_GetVariable(
 ) {
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
 	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(!(var->accessibility & 0x04));
+	FACT_assert(var->accessibility & 0x04);
 
 	if (nIndex == 0) /* NumCueInstances */
 	{

@@ -17,7 +17,7 @@
 #endif
 
 #include <stdint.h>
-#include <wchar.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,8 +33,8 @@ typedef struct FACTCue FACTCue;
 
 typedef struct FACTRendererDetails
 {
-	wchar_t rendererID[0xFF];
-	wchar_t displayName[0xFF];
+	int16_t rendererID[0xFF]; /* Win32 wchar_t */
+	int16_t displayName[0xFF]; /* Win32 wchar_t */
 	int32_t defaultDevice;
 } FACTRendererDetails;
 
@@ -147,7 +147,7 @@ typedef struct FACTRuntimeParameters
 	uint32_t globalSettingsAllocAttributes;
 	FACTFileIOCallbacks fileIOCallbacks;
 	FACTNotificationCallback fnNotificationCallback;
-	wchar_t *pRendererID;
+	int16_t *pRendererID; /* Win32 wchar_t* */
 	void *pXAudio2;
 	void *pMasteringVoice;
 } FACTRuntimeParameters;
