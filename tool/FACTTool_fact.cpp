@@ -169,7 +169,7 @@ void FACTTool_Update()
 					engines[i]->categories[j].parentCategory
 				);
 				ImGui::Text(
-					"Base Volume: %d",
+					"Base Volume: %f",
 					engines[i]->categories[j].volume
 				);
 				ImGui::Text(
@@ -505,7 +505,7 @@ void FACTTool_Update()
 					soundBanks[i]->sounds[j].category
 				);
 				ImGui::Text(
-					"Volume: %d",
+					"Volume: %f",
 					soundBanks[i]->sounds[j].volume
 				);
 				ImGui::Text(
@@ -559,7 +559,7 @@ void FACTTool_Update()
 						soundBanks[i]->sounds[j].tracks[k].code
 					)) {
 						ImGui::Text(
-							"Volume: %d",
+							"Volume: %f",
 							soundBanks[i]->sounds[j].tracks[k].volume
 						);
 						ImGui::Text(
@@ -714,11 +714,11 @@ void FACTTool_Update()
 										if (evt->wave.variationFlags & 0x2000)
 										{
 											ImGui::Text(
-												"Min Volume: %d",
+												"Min Volume: %f",
 												evt->wave.minVolume
 											);
 											ImGui::Text(
-												"Max Volume: %d",
+												"Max Volume: %f",
 												evt->wave.maxVolume
 											);
 										}

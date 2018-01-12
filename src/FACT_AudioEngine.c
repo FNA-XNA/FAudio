@@ -26,6 +26,19 @@ READ_FUNC(float, 4, f32)
 
 #undef READ_FUNC
 
+static inline float read_volbyte(uint8_t **ptr)
+{
+	/* FIXME: This magnificent beauty came from Mathematica!
+	 * The byte values for all possible input dB values from the .xap are here:
+	 * http://www.flibitijibibo.com/XACTVolume.txt
+	 * Yes, this is actually what the XACT builder really does.
+	 *
+	 * Thanks to Kenny for plotting all that data.
+	 * -flibit
+	 */
+	return (float) ((3969.0 * FACT_log10(read_u8(ptr) / 28240.0)) + 8715.0);
+}
+
 /* AudioEngine implementation */
 
 uint32_t FACTCreateEngine(
@@ -146,7 +159,9 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[i].fadeOutMS = read_u16(&ptr);
 		pEngine->categories[i].maxInstanceBehavior = read_u8(&ptr);
 		pEngine->categories[i].parentCategory = read_u16(&ptr);
-		pEngine->categories[i].volume = read_u8(&ptr);
+		pEngine->categories[i].volume = FACT_INTERNAL_CalculateAmplitudeRatio(
+			read_volbyte(&ptr)
+		);
 		pEngine->categories[i].visibility = read_u8(&ptr);
 		pEngine->categories[i].instanceCount = 0;
 		pEngine->categories[i].currentVolume = 1.0f;
@@ -478,8 +493,8 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			/* Effect Variation */
 			track->events[i].wave.minPitch = read_s16(ptr);
 			track->events[i].wave.maxPitch = read_s16(ptr);
-			track->events[i].wave.minVolume = read_u8(ptr);
-			track->events[i].wave.maxVolume = read_u8(ptr);
+			track->events[i].wave.minVolume = read_volbyte(ptr);
+			track->events[i].wave.maxVolume = read_volbyte(ptr);
 			track->events[i].wave.minFrequency = read_f32(ptr);
 			track->events[i].wave.maxFrequency = read_f32(ptr);
 			track->events[i].wave.minQFactor = read_f32(ptr);
@@ -498,8 +513,8 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			/* Effect Variation */
 			track->events[i].wave.minPitch = read_s16(ptr);
 			track->events[i].wave.maxPitch = read_s16(ptr);
-			track->events[i].wave.minVolume = read_u8(ptr);
-			track->events[i].wave.maxVolume = read_u8(ptr);
+			track->events[i].wave.minVolume = read_volbyte(ptr);
+			track->events[i].wave.maxVolume = read_volbyte(ptr);
 			track->events[i].wave.minFrequency = read_f32(ptr);
 			track->events[i].wave.maxFrequency = read_f32(ptr);
 			track->events[i].wave.minQFactor = read_f32(ptr);
@@ -724,7 +739,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		sb->soundCodes[i] = (uint32_t) (ptr - start);
 		sb->sounds[i].flags = read_u8(&ptr);
 		sb->sounds[i].category = read_u16(&ptr);
-		sb->sounds[i].volume = read_u8(&ptr);
+		sb->sounds[i].volume = read_volbyte(&ptr);
 		sb->sounds[i].pitch = read_s16(&ptr);
 		sb->sounds[i].priority = read_u8(&ptr);
 
@@ -842,7 +857,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		{
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				sb->sounds[i].tracks[j].volume = read_u8(&ptr);
+				sb->sounds[i].tracks[j].volume = read_volbyte(&ptr);
 
 				sb->sounds[i].tracks[j].code = read_u32(&ptr);
 
@@ -1415,11 +1430,19 @@ uint32_t FACTAudioEngine_SetVolume(
 	float volume
 ) {
 	uint16_t i;
+	pEngine->categories[nCategory].currentVolume = (
+		pEngine->categories[nCategory].volume *
+		volume
+	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		if (FACT_INTERNAL_IsInCategory(pEngine, nCategory, i))
+		if (pEngine->categories[i].parentCategory == nCategory)
 		{
-			pEngine->categories[i].currentVolume = volume;
+			FACTAudioEngine_SetVolume(
+				pEngine,
+				i,
+				pEngine->categories[i].currentVolume
+			);
 		}
 	}
 	return 0;

@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 			"\t\tFade-out (ms): %d\n"
 			"\t\tInstance Behavior: %X\n"
 			"\t\tParent Category Index: %d\n"
-			"\t\tBase Volume: %d\n"
+			"\t\tBase Volume: %f\n"
 			"\t\tVisibility: %X\n",
 			i,
 			engine->categoryNames[i],
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 			"\tSound %d, Code %d:\n"
 			"\t\tFlags: %X\n"
 			"\t\tCategory Index: %d\n"
-			"\t\tVolume: %d\n"
+			"\t\tVolume: %f\n"
 			"\t\tPitch: %d\n"
 			"\t\tPriority: %d\n",
 			i,
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 		{
 			printf(
 				"\t\t\tTrack %d:\n"
-				"\t\t\t\tVolume: %d\n"
+				"\t\t\t\tVolume: %f\n"
 				"\t\t\t\tFilter Type: %d\n"
 				"\t\t\t\tFilter Q-Factor: %d\n"
 				"\t\t\t\tFilter Frequency: %d\n",
@@ -335,8 +335,8 @@ int main(int argc, char **argv)
 						if (evt->wave.variationFlags & 0x2000)
 						{
 							printf(
-								"\t\t\t\t\t\tMin Volume: %d\n"
-								"\t\t\t\t\t\tMax Volume: %d\n",
+								"\t\t\t\t\t\tMin Volume: %f\n"
+								"\t\t\t\t\t\tMax Volume: %f\n",
 								evt->wave.minVolume,
 								evt->wave.maxVolume
 							);

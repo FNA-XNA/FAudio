@@ -40,6 +40,13 @@ FACTAudioDevice *devlist = NULL;
 
 /* Resampling */
 
+/* Based on...
+ * Max pitch: 2400, 2^2 = 4.0
+ * Max sample rate: 96000 FIXME: Assumption!
+ * Min device frequency: 22050 FIXME: Assumption!
+ */
+#define MAX_RESAMPLE_STEP 18
+
 void FACT_INTERNAL_CalculateStep(FACTWave *wave)
 {
 	double stepd = (
@@ -61,7 +68,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTCue *cue;
 	FACTWave *wave;
 	uint32_t samples;
-	int16_t decodeCache[2][DEVICE_BUFFERSIZE + RESAMPLE_PADDING];
+	int16_t decodeCache[2][DEVICE_BUFFERSIZE * MAX_RESAMPLE_STEP + RESAMPLE_PADDING];
 	float resampleCache[2][DEVICE_BUFFERSIZE];
 	uint32_t timestamp;
 	uint32_t i;
@@ -451,9 +458,27 @@ void FACT_strlcpy(char *dst, const char *src, size_t len)
 	SDL_strlcpy(dst, src, len);
 }
 
+double FACT_pow(double x, double y)
+{
+	return SDL_pow(x, y);
+}
+
+double FACT_log10(double x)
+{
+	return log10(x); /* TODO: SDL_log10! */
+}
+
 float FACT_rng()
 {
-	return 0.0f; /* TODO: Random number generator */
+	/* TODO: Random number generator */
+	static float butt = 0.0f;
+	float result = butt;
+	butt += 0.2;
+	if (butt > 1.0f)
+	{
+		butt = 0.0f;
+	}
+	return result;
 }
 
 uint32_t FACT_timems()

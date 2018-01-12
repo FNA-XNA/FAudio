@@ -224,7 +224,7 @@ uint32_t FACTCue_SetMatrixCoefficients(
 				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 			{
-				wave = pCue->playing.sound.tracks[i].events[j].data.wave;
+				wave = pCue->playing.sound.tracks[i].events[j].data.wave.wave;
 				if (wave != NULL)
 				{
 					FACTWave_SetMatrixCoefficients(

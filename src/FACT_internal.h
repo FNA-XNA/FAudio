@@ -95,7 +95,7 @@ typedef struct FACTAudioCategory
 	uint16_t fadeOutMS;
 	uint8_t maxInstanceBehavior;
 	int16_t parentCategory;
-	uint8_t volume;
+	float volume;
 	uint8_t visibility;
 	uint8_t instanceCount;
 	float currentVolume;
@@ -209,8 +209,8 @@ typedef struct FACTEvent_PlayWave
 	/* Effect Variation */
 	int16_t minPitch;
 	int16_t maxPitch;
-	uint8_t minVolume;
-	uint8_t maxVolume;
+	float minVolume;
+	float maxVolume;
 	float minFrequency;
 	float maxFrequency;
 	float minQFactor;
@@ -270,7 +270,7 @@ typedef struct FACTTrack
 {
 	uint32_t code;
 
-	uint8_t volume;
+	float volume;
 	uint8_t filter;
 	uint8_t qfactor;
 	uint16_t frequency;
@@ -286,7 +286,7 @@ typedef struct FACTSound
 {
 	uint8_t flags;
 	uint16_t category;
-	uint8_t volume;
+	float volume;
 	int16_t pitch;
 	uint8_t priority;
 
@@ -313,7 +313,14 @@ typedef struct FACTEventInstance
 	uint8_t finished;
 	union
 	{
-		FACTWave *wave;
+		struct
+		{
+			FACTWave *wave;
+			float baseVolume;
+			int16_t basePitch;
+			float baseQFactor;
+			float baseFrequency;
+		} wave;
 		float value;
 	} data;
 } FACTEventInstance;
@@ -512,6 +519,7 @@ uint32_t FACT_INTERNAL_GetWave(
 	uint32_t samples
 );
 
+float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel);
 void FACT_INTERNAL_SelectSound(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
@@ -559,6 +567,8 @@ void FACT_memmove(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
 int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
+double FACT_pow(double x, double y);
+double FACT_log10(double x);
 float FACT_rng();
 uint32_t FACT_timems();
 
