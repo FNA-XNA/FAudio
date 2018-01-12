@@ -65,7 +65,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTEngineEntry *engine = device->engineList;
 	FACTSoundBank *sb;
 	FACTWaveBank *wb;
-	FACTCue *cue;
+	FACTCue *cue, *backup;
 	FACTWave *wave;
 	uint32_t samples;
 	int16_t decodeCache[2][DEVICE_BUFFERSIZE * MAX_RESAMPLE_STEP + RESAMPLE_PADDING];
@@ -95,7 +95,18 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 			while (cue != NULL)
 			{
 				FACT_INTERNAL_UpdateCue(cue, timestamp);
-				cue = cue->next;
+
+				/* Destroy if it's done and not user-handled. */
+				if (cue->managed && (cue->state & FACT_STATE_STOPPED))
+				{
+					backup = cue->next;
+					FACTCue_Destroy(cue);
+					cue = backup;
+				}
+				else
+				{
+					cue = cue->next;
+				}
 			}
 			sb = sb->next;
 		}

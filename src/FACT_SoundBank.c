@@ -214,7 +214,7 @@ uint32_t FACTSoundBank_Stop(
 	uint16_t nCueIndex,
 	uint32_t dwFlags
 ) {
-	FACTCue *cue = pSoundBank->cueList;
+	FACTCue *backup, *cue = pSoundBank->cueList;
 	while (cue != NULL)
 	{
 		if (cue->index == nCueIndex)
@@ -223,15 +223,21 @@ uint32_t FACTSoundBank_Stop(
 				cue->managed	)
 			{
 				/* Just blow this up now */
+				backup = cue->next;
 				FACTCue_Destroy(cue);
+				cue = backup;
 			}
 			else
 			{
 				/* If managed, the mixer will destroy for us */
 				FACTCue_Stop(cue, dwFlags);
+				cue = cue->next;
 			}
 		}
-		cue = cue->next;
+		else
+		{
+			cue = cue->next;
+		}
 	}
 	return 0;
 }
@@ -240,6 +246,52 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 {
 	uint16_t i, j, k;
 	FACTSoundBank *prev, *sb = pSoundBank;
+	FACTCue *backup, *cue = pSoundBank->cueList;
+
+	/* Stop as many Cues as we can */
+	while (cue != NULL)
+	{
+		if (cue->managed)
+		{
+			backup = cue->next;
+			FACTCue_Destroy(cue);
+			cue = backup;
+		}
+		else
+		{
+			FACTCue_Stop(cue, FACT_FLAG_STOP_IMMEDIATE);
+
+			/* We use this to detect Cues deleted after the Bank */
+			cue->parentBank = NULL;
+
+			cue = cue->next;
+		}
+	}
+
+	if (pSoundBank->parentEngine != NULL)
+	{
+		/* Remove this SoundBank from the Engine list */
+		sb = pSoundBank->parentEngine->sbList;
+		prev = sb;
+		while (sb != NULL)
+		{
+			if (sb == pSoundBank)
+			{
+				if (sb == prev) /* First in list */
+				{
+					pSoundBank->parentEngine->sbList = sb->next;
+				}
+				else
+				{
+					prev->next = sb->next;
+				}
+				break;
+			}
+			prev = sb;
+			sb = sb->next;
+		}
+		FACT_assert(sb != NULL && "Could not find SoundBank reference!");
+	}
 
 	/* SoundBank Name */
 	FACT_free(sb->name);
@@ -306,28 +358,6 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		FACT_free(sb->cueNames[i]);
 	}
 	FACT_free(sb->cueNames);
-
-	/* Remove this SoundBank from the Engine list */
-	sb = pSoundBank->parentEngine->sbList;
-	prev = sb;
-	while (sb != NULL)
-	{
-		if (sb == pSoundBank)
-		{
-			if (sb == prev) /* First in list */
-			{
-				pSoundBank->parentEngine->sbList = sb->next;
-			}
-			else
-			{
-				prev->next = sb->next;
-			}
-			break;
-		}
-		prev = sb;
-		sb = sb->next;
-	}
-	FACT_assert(sb != NULL && "Could not find SoundBank reference!");
 
 	/* Finally. */
 	FACT_free(sb);

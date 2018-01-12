@@ -14,27 +14,30 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	/* Stop before we start deleting everything */
 	FACTWave_Stop(pWave, FACT_FLAG_STOP_IMMEDIATE);
 
-	/* Remove this Wave from the WaveBank list */
-	wave = pWave->parentBank->waveList;
-	prev = wave;
-	while (wave != NULL)
+	if (pWave->parentBank != NULL)
 	{
-		if (wave == pWave)
-		{
-			if (wave == prev) /* First in list */
-			{
-				pWave->parentBank->waveList = wave->next;
-			}
-			else
-			{
-				prev->next = wave->next;
-			}
-			break;
-		}
+		/* Remove this Wave from the WaveBank list */
+		wave = pWave->parentBank->waveList;
 		prev = wave;
-		wave = wave->next;
+		while (wave != NULL)
+		{
+			if (wave == pWave)
+			{
+				if (wave == prev) /* First in list */
+				{
+					pWave->parentBank->waveList = wave->next;
+				}
+				else
+				{
+					prev->next = wave->next;
+				}
+				break;
+			}
+			prev = wave;
+			wave = wave->next;
+		}
+		FACT_assert(wave != NULL && "Could not find Wave reference!");
 	}
-	FACT_assert(wave != NULL && "Could not find Wave reference!");
 
 	FACT_free(pWave);
 	return 0;

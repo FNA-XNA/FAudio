@@ -9,9 +9,38 @@
 
 uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
+	FACTCue *cue, *prev;
+
+	/* Stop before we start deleting everything */
 	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
+
+	if (pCue->parentBank != NULL)
+	{
+		/* Remove this Cue from the SoundBank list */
+		cue = pCue->parentBank->cueList;
+		prev = cue;
+		while (cue != NULL)
+		{
+			if (cue == pCue)
+			{
+				if (cue == prev) /* First in list */
+				{
+					pCue->parentBank->cueList = cue->next;
+				}
+				else
+				{
+					prev->next = cue->next;
+				}
+				break;
+			}
+			prev = cue;
+			cue = cue->next;
+		}
+		FACT_assert(cue != NULL && "Could not find Cue reference!");
+	}
+
 	FACT_free(pCue->variableValues);
-	pCue->state = 0; /* '0' is used to detect destroyed Cues */
+	FACT_free(pCue);
 	return 0;
 }
 

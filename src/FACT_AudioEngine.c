@@ -319,9 +319,25 @@ uint32_t FACTAudioEngine_Initialize(
 uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 {
 	int i;
+	FACTSoundBank *sb;
+	FACTWaveBank *wb;
 
 	/* Shutdown the platform stream before freeing stuff! */
 	FACT_PlatformCloseEngine(pEngine);
+
+	/* Unreference all the Banks */
+	sb = pEngine->sbList;
+	while (sb != NULL)
+	{
+		sb->parentEngine = NULL;
+		sb = sb->next;
+	}
+	wb = pEngine->wbList;
+	while (wb != NULL)
+	{
+		wb->parentEngine = NULL;
+		wb = wb->next;
+	}
 
 	/* Category data */
 	for (i = 0; i < pEngine->categoryCount; i += 1)
@@ -363,39 +379,6 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 
 uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 {
-	/* Go through each SoundBank and free any Destroy()'d Cues */
-	FACTCue *cue, *prev;
-	FACTSoundBank *bank = pEngine->sbList;
-	while (bank != NULL)
-	{
-		cue = bank->cueList;
-		prev = bank->cueList;
-		while (cue != NULL)
-		{
-			if (cue->state == 0) /* Set by Destroy() */
-			{
-				if (cue == prev) /* First in list */
-				{
-					bank->cueList = cue->next;
-					FACT_free(cue);
-					cue = bank->cueList;
-					prev = bank->cueList;
-				}
-				else
-				{
-					prev->next = cue->next;
-					FACT_free(cue);
-					cue = prev->next;
-				}
-			}
-			else
-			{
-				prev = cue;
-				cue = cue->next;
-			}
-		}
-		bank = bank->next;
-	}
 	return 0;
 }
 

@@ -10,29 +10,45 @@
 uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
 	FACTWaveBank *wb, *prev;
+	FACTWave *wave = pWaveBank->waveList;
 
-	/* Remove this WaveBank from the Engine list */
-	wb = pWaveBank->parentEngine->wbList;
-	prev = wb;
-	while (wb != NULL)
+	/* Stop as many Waves as we can */
+	while (wave != NULL)
 	{
-		if (wb == pWaveBank)
-		{
-			if (wb == prev) /* First in list */
-			{
-				pWaveBank->parentEngine->wbList = wb->next;
-			}
-			else
-			{
-				prev->next = wb->next;
-			}
-			break;
-		}
-		prev = wb;
-		wb = wb->next;
-	}
-	FACT_assert(wb != NULL && "Could not find WaveBank reference!");
+		FACTWave_Stop(wave, FACT_FLAG_STOP_IMMEDIATE);
 
+		/* We use this to detect Waves deleted after the Bank */
+		wave->parentBank = NULL;
+
+		wave = wave->next;
+	}
+
+	if (pWaveBank->parentEngine != NULL)
+	{
+		/* Remove this WaveBank from the Engine list */
+		wb = pWaveBank->parentEngine->wbList;
+		prev = wb;
+		while (wb != NULL)
+		{
+			if (wb == pWaveBank)
+			{
+				if (wb == prev) /* First in list */
+				{
+					pWaveBank->parentEngine->wbList = wb->next;
+				}
+				else
+				{
+					prev->next = wb->next;
+				}
+				break;
+			}
+			prev = wb;
+			wb = wb->next;
+		}
+		FACT_assert(wb != NULL && "Could not find WaveBank reference!");
+	}
+
+	/* Free everything, finally. */
 	FACT_free(pWaveBank->name);
 	FACT_free(pWaveBank->entries);
 	FACT_free(pWaveBank->entryRefs);

@@ -679,7 +679,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	/* If we're not running, save some instructions... */
 	if (cue->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
 	{
-		goto endcheck;
+		return;
 	}
 
 	/* There's only something to do if we're a Sound. Waves are simple! */
@@ -687,11 +687,11 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	{
 		/* TODO: FadeIn/FadeOut? */
 		cue->state = cue->playing.wave->state;
-		goto endcheck;
+		return;
 	}
 	else if (!cue->active)
 	{
-		goto endcheck;
+		return;
 	}
 
 	/* To get the time on a single Cue, subtract from the global time
@@ -805,13 +805,6 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	{
 		cue->state |= FACT_STATE_STOPPED;
 		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
-	}
-
-endcheck:
-	/* Finally, destroy this Cue if it's done and not user-handled. */
-	if (cue->managed && (cue->state & FACT_STATE_STOPPED))
-	{
-		FACTCue_Destroy(cue);
 	}
 }
 
