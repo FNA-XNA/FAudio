@@ -526,6 +526,13 @@ void FACT_INTERNAL_ActivateEvent(
 			evtInst->data.wave.baseFrequency = track->frequency;
 		}
 
+		/* For infinite loops with no variation, let Wave do the work */
+		if (evt->loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
+		{
+			evtInst->data.wave.wave->loopCount = 255;
+			evtInst->loopCount = 0;
+		}
+
 		/* Play, finally. */
 		FACTWave_Play(evtInst->data.wave.wave);
 	}
