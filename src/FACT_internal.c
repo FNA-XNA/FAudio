@@ -226,7 +226,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			next = FACT_rng() * max;
 
 			/* Use > 0, not >= 0. If we hit 0, that's it! */
-			for (i = cue->sound.variation->entryCount; i > 0; i -= 1)
+			for (i = cue->sound.variation->entryCount - 1; i > 0; i -= 1)
 			{
 				weight = (
 					cue->sound.variation->entries[i].maxWeight -
