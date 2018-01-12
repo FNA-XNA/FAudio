@@ -148,7 +148,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
-	uint8_t i;
+	FACTEvent *evt;
+	FACTWave *wave;
+	uint8_t i, j;
 
 	/* There are two ways that a Cue might be stopped immediately:
 	 * 1. The program explicitly asks for it
@@ -175,6 +177,21 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		{
 			for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
 			{
+				for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
+				{
+					evt = &pCue->playing.sound.sound->tracks[i].events[j];
+					if (	evt->type == FACTEVENT_PLAYWAVE ||
+						evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+						evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+						evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+					{
+						wave = pCue->playing.sound.tracks[i].events[j].data.wave.wave;
+						if (wave != NULL)
+						{
+							FACTWave_Destroy(wave);
+						}
+					}
+				}
 				FACT_free(pCue->playing.sound.tracks[i].events);
 			}
 			FACT_free(pCue->playing.sound.tracks);
@@ -295,6 +312,10 @@ uint32_t FACTCue_GetVariable(
 
 uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 {
+	FACTEvent *evt;
+	FACTWave *wave;
+	uint8_t i, j;
+
 	/* "A stopping or stopped cue cannot be paused." */
 	if (pCue->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))
 	{
@@ -304,7 +325,7 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	/* Store elapsed time */
 	pCue->elapsed += FACT_timems() - pCue->start;
 
-	/* All we do is set the flag, the mixer handles the rest */
+	/* All we do is set the flag, not much to see here */
 	if (fPause)
 	{
 		pCue->state |= FACT_STATE_PAUSED;
@@ -314,10 +335,32 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 		pCue->state &= ~FACT_STATE_PAUSED;
 	}
 
-	/* ... unless it's a plain Wave */
+	/* Pause the Waves */
 	if (pCue->active & 0x01)
 	{
 		FACTWave_Pause(pCue->playing.wave, fPause);
+	}
+	else if (pCue->active & 0x02)
+	{
+		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
+		for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
+		{
+			evt = &pCue->playing.sound.sound->tracks[i].events[j];
+			if (	evt->type == FACTEVENT_PLAYWAVE ||
+				evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+			{
+				wave = pCue->playing.sound.tracks[i].events[j].data.wave.wave;
+				if (wave != NULL)
+				{
+					FACTWave_Pause(
+						wave,
+						fPause
+					);
+				}
+			}
+		}
 	}
 
 	return 0;
