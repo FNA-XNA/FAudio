@@ -40,7 +40,11 @@ void FACT3DAudioCalculate(
 		(emitterToListener.z * emitterToListener.z)
 	);
 
-	/* DopplerPitchScalar */
+	/* DopplerPitchScalar
+	 * Adapted from algorithm published as a part of the webaudio specification:
+	 * https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-doppler-shift
+	 * -Chad
+	 */
 	pDSPSettings->DopplerFactor = 1.0f;
 	if (pEmitter->DopplerScaler > 0.0f)
 	{
