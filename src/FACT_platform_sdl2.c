@@ -444,7 +444,7 @@ void FACT_zero(void *ptr, size_t size)
 	SDL_memset(ptr, '\0', size);
 }
 
-void FACT_memcpy(void *dst, void *src, size_t size)
+void FACT_memcpy(void *dst, const void *src, size_t size)
 {
 	SDL_memcpy(dst, src, size);
 }

@@ -562,7 +562,7 @@ void FACT_PlatformGetFinalMixFormat(
 void* FACT_malloc(size_t size);
 void FACT_free(void *ptr);
 void FACT_zero(void *ptr, size_t size);
-void FACT_memcpy(void *dst, void *src, size_t size);
+void FACT_memcpy(void *dst, const void *src, size_t size);
 void FACT_memmove(void *dst, void *src, size_t size);
 size_t FACT_strlen(const char *ptr);
 int FACT_strcmp(const char *str1, const char *str2);

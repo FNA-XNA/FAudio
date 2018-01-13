@@ -13,6 +13,8 @@ void FACT3DAudioInitialize(
 	FACT3DAUDIO_HANDLE Instance
 ) {
 	/* TODO */
+	/* FIXME: What is even inside Instance, wtf -flibit */
+	FACT_memcpy(Instance, &SpeedOfSound, sizeof(SpeedOfSound));
 }
 
 void FACT3DAudioCalculate(
@@ -23,6 +25,8 @@ void FACT3DAudioCalculate(
 	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
 	FACT3DAUDIO_VECTOR emitterToListener;
+	float speedOfSound, scaledSpeedOfSound;
+	float projectedListenerVelocity, projectedEmitterVelocity;
 
 	/* TODO: A whole ton of stuff */
 
@@ -36,8 +40,48 @@ void FACT3DAudioCalculate(
 		(emitterToListener.z * emitterToListener.z)
 	);
 
-	/* TODO: DopplerPitchScalar, Cue::INTERNAL_calculateDoppler */
-	pDSPSettings->DopplerFactor = 0.0f;
+	/* DopplerPitchScalar */
+	pDSPSettings->DopplerFactor = 1.0f;
+	if (pEmitter->DopplerScaler > 0.0f)
+	{
+		/* FIXME: What is even inside Instance, wtf -flibit */
+		FACT_memcpy(&speedOfSound, Instance, sizeof(speedOfSound));
+		scaledSpeedOfSound = speedOfSound / pEmitter->DopplerScaler;
+
+		projectedListenerVelocity = (
+			(emitterToListener.x * pListener->Velocity.x) +
+			(emitterToListener.y * pListener->Velocity.y) +
+			(emitterToListener.z * pListener->Velocity.z)
+		) / pDSPSettings->EmitterToListenerDistance;
+		projectedEmitterVelocity = (
+			(emitterToListener.x * pEmitter->Velocity.x) +
+			(emitterToListener.y * pEmitter->Velocity.y) +
+			(emitterToListener.z * pEmitter->Velocity.z)
+		) / pDSPSettings->EmitterToListenerDistance;
+
+		projectedListenerVelocity = FACT_min(
+			projectedListenerVelocity,
+			scaledSpeedOfSound
+		);
+		projectedEmitterVelocity = FACT_min(
+			projectedEmitterVelocity,
+			scaledSpeedOfSound
+		);
+
+		pDSPSettings->DopplerFactor = (
+			speedOfSound - pEmitter->DopplerScaler * projectedListenerVelocity
+		) / (
+			speedOfSound - pEmitter->DopplerScaler * projectedEmitterVelocity
+		);
+		/* FIXME: Check isnan(DopplerFactor) */
+
+		/* Limit the pitch shifting to 2 octaves up and 1 octave down */
+		pDSPSettings->DopplerFactor = FACT_clamp(
+			pDSPSettings->DopplerFactor,
+			0.5f,
+			4.0f
+		);
+	}
 
 	/* OrientationAngle */
 	emitterToListener.x /= pDSPSettings->EmitterToListenerDistance;
