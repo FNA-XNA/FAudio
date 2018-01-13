@@ -569,6 +569,8 @@ int FACT_strcmp(const char *str1, const char *str2);
 void FACT_strlcpy(char *dst, const char *src, size_t len);
 double FACT_pow(double x, double y);
 double FACT_log10(double x);
+double FACT_sqrt(double x);
+double FACT_acos(double x);
 float FACT_rng();
 uint32_t FACT_timems();
 

@@ -479,6 +479,16 @@ double FACT_log10(double x)
 	return log10(x); /* TODO: SDL_log10! */
 }
 
+double FACT_sqrt(double x)
+{
+	return SDL_sqrt(x);
+}
+
+double FACT_acos(double x)
+{
+	return SDL_acos(x);
+}
+
 float FACT_rng()
 {
 	/* TODO: Random number generator */

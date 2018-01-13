@@ -22,7 +22,32 @@ void FACT3DAudioCalculate(
 	uint32_t Flags,
 	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
-	/* TODO */
+	FACT3DAUDIO_VECTOR emitterToListener;
+
+	/* TODO: A whole ton of stuff */
+
+	/* Distance */
+	emitterToListener.x = pListener->Position.x - pEmitter->Position.x;
+	emitterToListener.y = pListener->Position.y - pEmitter->Position.y;
+	emitterToListener.z = pListener->Position.z - pEmitter->Position.z;
+	pDSPSettings->EmitterToListenerDistance = (float) FACT_sqrt(
+		(emitterToListener.x * emitterToListener.x) +
+		(emitterToListener.y * emitterToListener.y) +
+		(emitterToListener.z * emitterToListener.z)
+	);
+
+	/* TODO: DopplerPitchScalar, Cue::INTERNAL_calculateDoppler */
+	pDSPSettings->DopplerFactor = 0.0f;
+
+	/* OrientationAngle */
+	emitterToListener.x /= pDSPSettings->EmitterToListenerDistance;
+	emitterToListener.y /= pDSPSettings->EmitterToListenerDistance;
+	emitterToListener.z /= pDSPSettings->EmitterToListenerDistance;
+	pDSPSettings->EmitterToListenerAngle = (float) FACT_acos(
+		(emitterToListener.x * pListener->OrientFront.x) +
+		(emitterToListener.y * pListener->OrientFront.y) +
+		(emitterToListener.z * pListener->OrientFront.z)
+	);
 }
 
 uint32_t FACT3DInitialize(
