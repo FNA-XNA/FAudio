@@ -7,14 +7,20 @@
 
 #include "FACT_internal.h"
 
+/* FIXME: What is even inside Instance, wtf -flibit */
+#define INSTANCE_SPEAKERMASK \
+	*((uint32_t*) &Instance[0])
+#define INSTANCE_SPEEDOFSOUND \
+	*((float*) &Instance[sizeof(uint32_t)])
+
 void FACT3DAudioInitialize(
 	uint32_t SpeakerChannelMask,
 	float SpeedOfSound,
 	FACT3DAUDIO_HANDLE Instance
 ) {
-	/* TODO */
 	/* FIXME: What is even inside Instance, wtf -flibit */
-	FACT_memcpy(Instance, &SpeedOfSound, sizeof(SpeedOfSound));
+	INSTANCE_SPEAKERMASK = SpeakerChannelMask;
+	INSTANCE_SPEEDOFSOUND = SpeedOfSound;
 }
 
 void FACT3DAudioCalculate(
@@ -25,10 +31,12 @@ void FACT3DAudioCalculate(
 	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
 	FACT3DAUDIO_VECTOR emitterToListener;
-	float speedOfSound, scaledSpeedOfSound;
+	float scaledSpeedOfSound;
 	float projectedListenerVelocity, projectedEmitterVelocity;
-
-	/* TODO: A whole ton of stuff */
+#if 0 /* TODO: FACT3DAUDIO_CALCULATE_MATRIX */
+	uint32_t i;
+	float *matrix = pDSPSettings->pMatrixCoefficients;
+#endif
 
 	/* Distance */
 	emitterToListener.x = pListener->Position.x - pEmitter->Position.x;
@@ -40,62 +48,132 @@ void FACT3DAudioCalculate(
 		(emitterToListener.z * emitterToListener.z)
 	);
 
+	/* MatrixCoefficients */
+	if (Flags & FACT3DAUDIO_CALCULATE_MATRIX)
+	{
+#if 0 /* TODO: Combine speaker azimuths with emitter/listener vector blah */
+		for (i = 0; i < pDSPSettings->SrcChannelCount; i += 1)
+		{
+			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_LEFT)
+			{
+				*matrix++ = FRONT_LEFT_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_RIGHT)
+			{
+				*matrix++ = FRONT_RIGHT_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_CENTER)
+			{
+				*matrix++ = FRONT_CENTER_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_LOW_FREQUENCY)
+			{
+				*matrix++ = LOW_FREQUENCY_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_BACK_LEFT)
+			{
+				*matrix++ = BACK_LEFT_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_BACK_RIGHT)
+			{
+				*matrix++ = BACK_RIGHT_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_LEFT_OF_CENTER)
+			{
+				*matrix++ = FRONT_LEFT_OF_CENTER_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_RIGHT_OF_CENTER)
+			{
+				*matrix++ = FRONT_RIGHT_OF_CENTER_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_BACK_CENTER)
+			{
+				*matrix++ = BACK_CENTER_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_SIDE_LEFT)
+			{
+				*matrix++ = LEFT_AZIMUTH;
+			}
+			if (INSTANCE_SPEAKERMASK & SPEAKER_SIDE_RIGHT)
+			{
+				*matrix++ = RIGHT_AZIMUTH;
+			}
+			/* TODO: SPEAKER_TOP_*, Atmos support...? */
+		}
+#endif
+	}
+
+	/* TODO: FACT3DAUDIO_CALCULATE_DELAY */
+	/* TODO: FACT3DAUDIO_CALCULATE_LPF_DIRECT */
+	/* TODO: FACT3DAUDIO_CALCULATE_LPF_REVERB */
+	/* TODO: FACT3DAUDIO_CALCULATE_REVERB */
+
 	/* DopplerPitchScalar
 	 * Adapted from algorithm published as a part of the webaudio specification:
 	 * https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-doppler-shift
 	 * -Chad
 	 */
-	pDSPSettings->DopplerFactor = 1.0f;
-	if (pEmitter->DopplerScaler > 0.0f)
+	if (Flags & FACT3DAUDIO_CALCULATE_DOPPLER)
 	{
-		/* FIXME: What is even inside Instance, wtf -flibit */
-		FACT_memcpy(&speedOfSound, Instance, sizeof(speedOfSound));
-		scaledSpeedOfSound = speedOfSound / pEmitter->DopplerScaler;
+		pDSPSettings->DopplerFactor = 1.0f;
+		if (pEmitter->DopplerScaler > 0.0f)
+		{
+			scaledSpeedOfSound = INSTANCE_SPEEDOFSOUND / pEmitter->DopplerScaler;
 
-		projectedListenerVelocity = (
-			(emitterToListener.x * pListener->Velocity.x) +
-			(emitterToListener.y * pListener->Velocity.y) +
-			(emitterToListener.z * pListener->Velocity.z)
-		) / pDSPSettings->EmitterToListenerDistance;
-		projectedEmitterVelocity = (
-			(emitterToListener.x * pEmitter->Velocity.x) +
-			(emitterToListener.y * pEmitter->Velocity.y) +
-			(emitterToListener.z * pEmitter->Velocity.z)
-		) / pDSPSettings->EmitterToListenerDistance;
+			projectedListenerVelocity = (
+				(emitterToListener.x * pListener->Velocity.x) +
+				(emitterToListener.y * pListener->Velocity.y) +
+				(emitterToListener.z * pListener->Velocity.z)
+			) / pDSPSettings->EmitterToListenerDistance;
+			projectedEmitterVelocity = (
+				(emitterToListener.x * pEmitter->Velocity.x) +
+				(emitterToListener.y * pEmitter->Velocity.y) +
+				(emitterToListener.z * pEmitter->Velocity.z)
+			) / pDSPSettings->EmitterToListenerDistance;
 
-		projectedListenerVelocity = FACT_min(
-			projectedListenerVelocity,
-			scaledSpeedOfSound
-		);
-		projectedEmitterVelocity = FACT_min(
-			projectedEmitterVelocity,
-			scaledSpeedOfSound
-		);
+			projectedListenerVelocity = FACT_min(
+				projectedListenerVelocity,
+				scaledSpeedOfSound
+			);
+			projectedEmitterVelocity = FACT_min(
+				projectedEmitterVelocity,
+				scaledSpeedOfSound
+			);
 
-		pDSPSettings->DopplerFactor = (
-			speedOfSound - pEmitter->DopplerScaler * projectedListenerVelocity
-		) / (
-			speedOfSound - pEmitter->DopplerScaler * projectedEmitterVelocity
-		);
-		/* FIXME: Check isnan(DopplerFactor) */
+			pDSPSettings->DopplerFactor = (
+				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * projectedListenerVelocity
+			) / (
+				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * projectedEmitterVelocity
+			);
+			/* FIXME: Check isnan(DopplerFactor) */
 
-		/* Limit the pitch shifting to 2 octaves up and 1 octave down */
-		pDSPSettings->DopplerFactor = FACT_clamp(
-			pDSPSettings->DopplerFactor,
-			0.5f,
-			4.0f
-		);
+			/* Limit the pitch shifting to 2 octaves up and 1 octave down */
+			pDSPSettings->DopplerFactor = FACT_clamp(
+				pDSPSettings->DopplerFactor,
+				0.5f,
+				4.0f
+			);
+		}
+
+		/* TODO: EmitterVelocityComponent */
+		/* TODO: ListenerVelocityComponent */
 	}
 
 	/* OrientationAngle */
-	emitterToListener.x /= pDSPSettings->EmitterToListenerDistance;
-	emitterToListener.y /= pDSPSettings->EmitterToListenerDistance;
-	emitterToListener.z /= pDSPSettings->EmitterToListenerDistance;
-	pDSPSettings->EmitterToListenerAngle = (float) FACT_acos(
-		(emitterToListener.x * pListener->OrientFront.x) +
-		(emitterToListener.y * pListener->OrientFront.y) +
-		(emitterToListener.z * pListener->OrientFront.z)
-	);
+	if (Flags & FACT3DAUDIO_CALCULATE_EMITTER_ANGLE)
+	{
+		emitterToListener.x /= pDSPSettings->EmitterToListenerDistance;
+		emitterToListener.y /= pDSPSettings->EmitterToListenerDistance;
+		emitterToListener.z /= pDSPSettings->EmitterToListenerDistance;
+		pDSPSettings->EmitterToListenerAngle = (float) FACT_acos(
+			(emitterToListener.x * pListener->OrientFront.x) +
+			(emitterToListener.y * pListener->OrientFront.y) +
+			(emitterToListener.z * pListener->OrientFront.z)
+		);
+	}
+
+	/* TODO: FACT3DAUDIO_CALCULATE_ZEROCENTER */
+	/* TODO: FACT3DAUDIO_CALCULATE_REDIRECT_TO_LFE */
 }
 
 uint32_t FACT3DInitialize(
