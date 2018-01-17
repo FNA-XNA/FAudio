@@ -1,6 +1,8 @@
 Building FACT for Windows
--------------------------------
+-------------------------
 FACT uses Visual Studio 2010 to build on Windows.
+
+TODO: REMOVE C RUNTIME DEPENDENCY!
 
 Dependencies
 ------------
