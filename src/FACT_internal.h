@@ -374,7 +374,7 @@ typedef struct FACTVariationTable
 
 /* Internal Wave Types */
 
-typedef uint32_t (*FACTDecodeCallback)(
+typedef uint32_t (FACTCALL * FACTDecodeCallback)(
 	FACTWave *wave,
 	int16_t *decodeCacheL,
 	int16_t *decodeCacheR,

@@ -10,7 +10,7 @@
 
 #ifdef _WIN32
 #define FACTAPI __declspec(dllexport)
-#define FACTCALL __stdcall
+#define FACTCALL __cdecl
 #else
 #define FACTAPI
 #define FACTCALL
