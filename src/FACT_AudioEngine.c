@@ -382,6 +382,232 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	return 0;
 }
 
+uint32_t FACTAudioEngine_PrepareWave(
+	FACTAudioEngine *pEngine,
+	uint32_t dwFlags,
+	const char *szWavePath,
+	uint32_t wStreamingPacketSize,
+	uint32_t dwAlignment,
+	uint32_t dwPlayOffset,
+	uint8_t nLoopCount,
+	FACTWave **ppWave
+) {
+	/* TODO: FACTWave */
+	return 0;
+}
+
+uint32_t FACTAudioEngine_PrepareInMemoryWave(
+	FACTAudioEngine *pEngine,
+	uint32_t dwFlags,
+	FACTWaveBankEntry entry,
+	uint32_t *pdwSeekTable, /* Optional! */
+	uint8_t *pbWaveData,
+	uint32_t dwPlayOffset,
+	uint8_t nLoopCount,
+	FACTWave **ppWave
+) {
+	/* TODO: FACTWave */
+	return 0;
+}
+
+uint32_t FACTAudioEngine_PrepareStreamingWave(
+	FACTAudioEngine *pEngine,
+	uint32_t dwFlags,
+	FACTWaveBankEntry entry,
+	FACTStreamingParameters streamingParams,
+	uint32_t dwAlignment,
+	uint32_t *pdwSeekTable, /* Optional! */
+	uint8_t *pbWaveData,
+	uint32_t dwPlayOffset,
+	uint8_t nLoopCount,
+	FACTWave **ppWave
+) {
+	/* TODO: FACTWave */
+	return 0;
+}
+
+uint32_t FACTAudioEngine_RegisterNotification(
+	FACTAudioEngine *pEngine,
+	const FACTNotificationDescription *pNotificationDescription
+) {
+	/* TODO: Notifications */
+	return 0;
+}
+
+uint32_t FACTAudioEngine_UnRegisterNotification(
+	FACTAudioEngine *pEngine,
+	const FACTNotificationDescription *pNotificationDescription
+) {
+	/* TODO: Notifications */
+	return 0;
+}
+
+uint16_t FACTAudioEngine_GetCategory(
+	FACTAudioEngine *pEngine,
+	const char *szFriendlyName
+) {
+	uint16_t i;
+	for (i = 0; i < pEngine->categoryCount; i += 1)
+	{
+		if (FACT_strcmp(szFriendlyName, pEngine->categoryNames[i]) == 0)
+		{
+			return i;
+		}
+	}
+	return FACTCATEGORY_INVALID;
+}
+
+uint8_t FACT_INTERNAL_IsInCategory(
+	FACTAudioEngine *engine,
+	uint16_t target,
+	uint16_t category
+) {
+	FACTAudioCategory *cat;
+
+	/* Same category, no need to go on a crazy hunt */
+	if (category == target)
+	{
+		return 1;
+	}
+
+	/* Right, on with the crazy hunt */
+	cat = &engine->categories[category];
+	while (cat->parentCategory != -1)
+	{
+		if (cat->parentCategory == target)
+		{
+			return 1;
+		}
+		cat = &engine->categories[cat->parentCategory];
+	}
+	return 0;
+}
+
+#define ITERATE_CUES(action) \
+	FACTCue *cue; \
+	FACTSoundBank *sb = pEngine->sbList; \
+	while (sb != NULL) \
+	{ \
+		cue = sb->cueList; \
+		while (cue != NULL) \
+		{ \
+			if (	cue->active & 0x02 && \
+				FACT_INTERNAL_IsInCategory( \
+					cue->parentBank->parentEngine, \
+					nCategory, \
+					cue->playing.sound.sound->category \
+				)	) \
+			{ \
+				action \
+			} \
+			cue = cue->next; \
+		} \
+		sb = sb->next; \
+	}
+
+uint32_t FACTAudioEngine_Stop(
+	FACTAudioEngine *pEngine,
+	uint16_t nCategory,
+	uint32_t dwFlags
+) {
+	ITERATE_CUES(
+		if (	dwFlags == FACT_FLAG_STOP_IMMEDIATE &&
+			cue->managed	)
+		{
+			/* Just blow this up now */
+			FACTCue_Destroy(cue);
+		}
+		else
+		{
+			/* If managed, the mixer will destroy for us */
+			FACTCue_Stop(cue, dwFlags);
+		}
+	)
+	return 0;
+}
+
+uint32_t FACTAudioEngine_SetVolume(
+	FACTAudioEngine *pEngine,
+	uint16_t nCategory,
+	float volume
+) {
+	uint16_t i;
+	pEngine->categories[nCategory].currentVolume = (
+		pEngine->categories[nCategory].volume *
+		volume
+	);
+	for (i = 0; i < pEngine->categoryCount; i += 1)
+	{
+		if (pEngine->categories[i].parentCategory == nCategory)
+		{
+			FACTAudioEngine_SetVolume(
+				pEngine,
+				i,
+				pEngine->categories[i].currentVolume
+			);
+		}
+	}
+	return 0;
+}
+
+uint32_t FACTAudioEngine_Pause(
+	FACTAudioEngine *pEngine,
+	uint16_t nCategory,
+	int32_t fPause
+) {
+	ITERATE_CUES(FACTCue_Pause(cue, fPause);)
+	return 0;
+}
+
+#undef ITERATE_CUES
+
+uint16_t FACTAudioEngine_GetGlobalVariableIndex(
+	FACTAudioEngine *pEngine,
+	const char *szFriendlyName
+) {
+	uint16_t i;
+	for (i = 0; i < pEngine->variableCount; i += 1)
+	{
+		if (	FACT_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
+			!(pEngine->variables[i].accessibility & 0x04)	)
+		{
+			return i;
+		}
+	}
+	return FACTVARIABLEINDEX_INVALID;
+}
+
+uint32_t FACTAudioEngine_SetGlobalVariable(
+	FACTAudioEngine *pEngine,
+	uint16_t nIndex,
+	float nValue
+) {
+	FACTVariable *var = &pEngine->variables[nIndex];
+	FACT_assert(var->accessibility & 0x01);
+	FACT_assert(!(var->accessibility & 0x02));
+	FACT_assert(!(var->accessibility & 0x04));
+	pEngine->globalVariableValues[nIndex] = FACT_clamp(
+		nValue,
+		var->minValue,
+		var->maxValue
+	);
+	return 0;
+}
+
+uint32_t FACTAudioEngine_GetGlobalVariable(
+	FACTAudioEngine *pEngine,
+	uint16_t nIndex,
+	float *pnValue
+) {
+	FACTVariable *var = &pEngine->variables[nIndex];
+	FACT_assert(var->accessibility & 0x01);
+	FACT_assert(!(var->accessibility & 0x04));
+	*pnValue = pEngine->globalVariableValues[nIndex];
+	return 0;
+}
+
+/* SoundBank Reading */
+
 void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 {
 	uint32_t evtInfo;
@@ -1033,6 +1259,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	return 0;
 }
 
+/* WaveBank Reading */
+
 /* The unxwb project, written by Luigi Auriemma, was released in 2006 under the
  * GNU General Public License, version 2.0:
  *
@@ -1261,228 +1489,4 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 		1,
 		ppWaveBank
 	);
-}
-
-uint32_t FACTAudioEngine_PrepareWave(
-	FACTAudioEngine *pEngine,
-	uint32_t dwFlags,
-	const char *szWavePath,
-	uint32_t wStreamingPacketSize,
-	uint32_t dwAlignment,
-	uint32_t dwPlayOffset,
-	uint8_t nLoopCount,
-	FACTWave **ppWave
-) {
-	/* TODO: FACTWave */
-	return 0;
-}
-
-uint32_t FACTAudioEngine_PrepareInMemoryWave(
-	FACTAudioEngine *pEngine,
-	uint32_t dwFlags,
-	FACTWaveBankEntry entry,
-	uint32_t *pdwSeekTable, /* Optional! */
-	uint8_t *pbWaveData,
-	uint32_t dwPlayOffset,
-	uint8_t nLoopCount,
-	FACTWave **ppWave
-) {
-	/* TODO: FACTWave */
-	return 0;
-}
-
-uint32_t FACTAudioEngine_PrepareStreamingWave(
-	FACTAudioEngine *pEngine,
-	uint32_t dwFlags,
-	FACTWaveBankEntry entry,
-	FACTStreamingParameters streamingParams,
-	uint32_t dwAlignment,
-	uint32_t *pdwSeekTable, /* Optional! */
-	uint8_t *pbWaveData,
-	uint32_t dwPlayOffset,
-	uint8_t nLoopCount,
-	FACTWave **ppWave
-) {
-	/* TODO: FACTWave */
-	return 0;
-}
-
-uint32_t FACTAudioEngine_RegisterNotification(
-	FACTAudioEngine *pEngine,
-	const FACTNotificationDescription *pNotificationDescription
-) {
-	/* TODO: Notifications */
-	return 0;
-}
-
-uint32_t FACTAudioEngine_UnRegisterNotification(
-	FACTAudioEngine *pEngine,
-	const FACTNotificationDescription *pNotificationDescription
-) {
-	/* TODO: Notifications */
-	return 0;
-}
-
-uint16_t FACTAudioEngine_GetCategory(
-	FACTAudioEngine *pEngine,
-	const char *szFriendlyName
-) {
-	uint16_t i;
-	for (i = 0; i < pEngine->categoryCount; i += 1)
-	{
-		if (FACT_strcmp(szFriendlyName, pEngine->categoryNames[i]) == 0)
-		{
-			return i;
-		}
-	}
-	return FACTCATEGORY_INVALID;
-}
-
-uint8_t FACT_INTERNAL_IsInCategory(
-	FACTAudioEngine *engine,
-	uint16_t target,
-	uint16_t category
-) {
-	FACTAudioCategory *cat;
-
-	/* Same category, no need to go on a crazy hunt */
-	if (category == target)
-	{
-		return 1;
-	}
-
-	/* Right, on with the crazy hunt */
-	cat = &engine->categories[category];
-	while (cat->parentCategory != -1)
-	{
-		if (cat->parentCategory == target)
-		{
-			return 1;
-		}
-		cat = &engine->categories[cat->parentCategory];
-	}
-	return 0;
-}
-
-#define ITERATE_CUES(action) \
-	FACTCue *cue; \
-	FACTSoundBank *sb = pEngine->sbList; \
-	while (sb != NULL) \
-	{ \
-		cue = sb->cueList; \
-		while (cue != NULL) \
-		{ \
-			if (	cue->active & 0x02 && \
-				FACT_INTERNAL_IsInCategory( \
-					cue->parentBank->parentEngine, \
-					nCategory, \
-					cue->playing.sound.sound->category \
-				)	) \
-			{ \
-				action \
-			} \
-			cue = cue->next; \
-		} \
-		sb = sb->next; \
-	}
-
-uint32_t FACTAudioEngine_Stop(
-	FACTAudioEngine *pEngine,
-	uint16_t nCategory,
-	uint32_t dwFlags
-) {
-	ITERATE_CUES(
-		if (	dwFlags == FACT_FLAG_STOP_IMMEDIATE &&
-			cue->managed	)
-		{
-			/* Just blow this up now */
-			FACTCue_Destroy(cue);
-		}
-		else
-		{
-			/* If managed, the mixer will destroy for us */
-			FACTCue_Stop(cue, dwFlags);
-		}
-	)
-	return 0;
-}
-
-uint32_t FACTAudioEngine_SetVolume(
-	FACTAudioEngine *pEngine,
-	uint16_t nCategory,
-	float volume
-) {
-	uint16_t i;
-	pEngine->categories[nCategory].currentVolume = (
-		pEngine->categories[nCategory].volume *
-		volume
-	);
-	for (i = 0; i < pEngine->categoryCount; i += 1)
-	{
-		if (pEngine->categories[i].parentCategory == nCategory)
-		{
-			FACTAudioEngine_SetVolume(
-				pEngine,
-				i,
-				pEngine->categories[i].currentVolume
-			);
-		}
-	}
-	return 0;
-}
-
-uint32_t FACTAudioEngine_Pause(
-	FACTAudioEngine *pEngine,
-	uint16_t nCategory,
-	int32_t fPause
-) {
-	ITERATE_CUES(FACTCue_Pause(cue, fPause);)
-	return 0;
-}
-
-#undef ITERATE_CUES
-
-uint16_t FACTAudioEngine_GetGlobalVariableIndex(
-	FACTAudioEngine *pEngine,
-	const char *szFriendlyName
-) {
-	uint16_t i;
-	for (i = 0; i < pEngine->variableCount; i += 1)
-	{
-		if (	FACT_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
-			!(pEngine->variables[i].accessibility & 0x04)	)
-		{
-			return i;
-		}
-	}
-	return FACTVARIABLEINDEX_INVALID;
-}
-
-uint32_t FACTAudioEngine_SetGlobalVariable(
-	FACTAudioEngine *pEngine,
-	uint16_t nIndex,
-	float nValue
-) {
-	FACTVariable *var = &pEngine->variables[nIndex];
-	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(!(var->accessibility & 0x02));
-	FACT_assert(!(var->accessibility & 0x04));
-	pEngine->globalVariableValues[nIndex] = FACT_clamp(
-		nValue,
-		var->minValue,
-		var->maxValue
-	);
-	return 0;
-}
-
-uint32_t FACTAudioEngine_GetGlobalVariable(
-	FACTAudioEngine *pEngine,
-	uint16_t nIndex,
-	float *pnValue
-) {
-	FACTVariable *var = &pEngine->variables[nIndex];
-	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(!(var->accessibility & 0x04));
-	*pnValue = pEngine->globalVariableValues[nIndex];
-	return 0;
 }
