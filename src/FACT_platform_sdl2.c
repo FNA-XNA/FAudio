@@ -474,6 +474,10 @@ double FACT_pow(double x, double y)
 	return SDL_pow(x, y);
 }
 
+#ifdef _WIN32 /* TODO: SDL_log10! */
+#include <math.h>
+#endif
+
 double FACT_log10(double x)
 {
 	return log10(x); /* TODO: SDL_log10! */

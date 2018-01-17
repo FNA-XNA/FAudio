@@ -15,6 +15,10 @@
 #define FACT_assert SDL_assert
 #endif
 
+#ifdef _WIN32
+#define inline __inline
+#endif
+
 /* Internal Constants */
 
 #define FACT_VOLUME_0 180
@@ -370,7 +374,7 @@ typedef struct FACTVariationTable
 
 /* Internal Wave Types */
 
-typedef uint32_t (FACTCALL * FACTDecodeCallback)(
+typedef uint32_t (*FACTDecodeCallback)(
 	FACTWave *wave,
 	int16_t *decodeCacheL,
 	int16_t *decodeCacheR,
