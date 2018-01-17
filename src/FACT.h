@@ -160,18 +160,27 @@ typedef struct FACTStreamingParameters
 	uint16_t packetSize;
 } FACTStreamingParameters;
 
-typedef union FACTWaveBankMiniWaveFormat
+#define FACT_WAVEBANK_TYPE_BUFFER		0x00000000
+#define FACT_WAVEBANK_TYPE_STREAMING		0x00000001
+#define FACT_WAVEBANK_TYPE_MASK			0x00000001
+
+#define FACT_WAVEBANK_FLAGS_ENTRYNAMES		0x00010000
+#define FACT_WAVEBANK_FLAGS_COMPACT		0x00020000
+#define FACT_WAVEBANK_FLAGS_SYNC_DISABLED	0x00040000
+#define FACT_WAVEBANK_FLAGS_SEEKTABLES		0x00080000
+#define FACT_WAVEBANK_FLAGS_MASK		0x000F0000
+
+typedef enum FACTWaveBankSegIdx
 {
-	struct
-	{
-		uint32_t wFormatTag : 2;
-		uint32_t nChannels : 3;
-		uint32_t nSamplesPerSec : 18;
-		uint32_t wBlockAlign : 8;
-		uint32_t wBitsPerSample : 1;
-	};
-	uint32_t dwValue;
-} FACTWaveBankMiniWaveFormat;
+	FACT_WAVEBANK_SEGIDX_BANKDATA = 0,
+	FACT_WAVEBANK_SEGIDX_ENTRYMETADATA,
+	FACT_WAVEBANK_SEGIDX_SEEKTABLES,
+	FACT_WAVEBANK_SEGIDX_ENTRYNAMES,
+	FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA,
+	FACT_WAVEBANK_SEGIDX_COUNT
+} FACTWaveBankSegIdx;
+
+#pragma pack(push, 1)
 
 typedef struct FACTWaveBankRegion
 {
@@ -184,6 +193,27 @@ typedef struct FACTWaveBankSampleRegion
 	uint32_t dwStartSample;
 	uint32_t dwTotalSamples;
 } FACTWaveBankSampleRegion;
+
+typedef struct FACTWaveBankHeader
+{
+	uint32_t dwSignature;
+	uint32_t dwVersion;
+	uint32_t dwHeaderVersion;
+	FACTWaveBankRegion Segments[FACT_WAVEBANK_SEGIDX_COUNT];
+} FACTWaveBankHeader;
+
+typedef union FACTWaveBankMiniWaveFormat
+{
+	struct
+	{
+		uint32_t wFormatTag : 2;
+		uint32_t nChannels : 3;
+		uint32_t nSamplesPerSec : 18;
+		uint32_t wBlockAlign : 8;
+		uint32_t wBitsPerSample : 1;
+	};
+	uint32_t dwValue;
+} FACTWaveBankMiniWaveFormat;
 
 typedef struct FACTWaveBankEntry
 {
@@ -200,6 +230,26 @@ typedef struct FACTWaveBankEntry
 	FACTWaveBankRegion PlayRegion;
 	FACTWaveBankSampleRegion LoopRegion;
 } FACTWaveBankEntry;
+
+typedef struct FACTWaveBankEntryCompact
+{
+	uint32_t dwOffset : 21;
+	uint32_t dwLengthDeviation : 11;
+} FACTWaveBankEntryCompact;
+
+typedef struct FACTWaveBankData
+{
+	uint32_t dwFlags;
+	uint32_t dwEntryCount;
+	char szBankName[64];
+	uint32_t dwEntryMetaDataElementSize;
+	uint32_t dwEntryNameElementSize;
+	uint32_t dwAlignment;
+	FACTWaveBankMiniWaveFormat CompactFormat;
+	uint64_t BuildTime;
+} FACTWaveBankData;
+
+#pragma pack(pop)
 
 typedef struct FACTWaveProperties
 {

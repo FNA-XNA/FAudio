@@ -1283,43 +1283,14 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTWaveBank *wb, *latest;
 	size_t memsize;
 	uint32_t i;
-	struct
-	{
-		uint32_t wbnd;
-		uint32_t contentversion;
-		uint32_t toolversion;
-	} header;
-	struct
-	{
-		uint32_t infoOffset;
-		uint32_t infoLength;
-		uint32_t entryTableOffset;
-		uint32_t entryTableLength;
-		uint32_t unknownOffset1;
-		uint32_t unknownLength1;
-		uint32_t unknownOffset2;
-		uint32_t unknownLength2;
-		uint32_t playRegionOffset;
-		uint32_t playRegionLength;
-	} wbtable;
-	struct
-	{
-		uint16_t streaming;
-		uint16_t flags;
-		uint32_t entryCount;
-		char name[64];
-		uint32_t metadataElementSize;
-		uint32_t nameElementSize;
-		uint32_t alignment;
-		uint32_t compactFormat;
-		uint64_t unknown;
-	} wbinfo;
+	FACTWaveBankHeader header;
+	FACTWaveBankData wbinfo;
 	uint32_t compactEntry;
 
 	io->read(io->data, &header, sizeof(header), 1);
-	if (	header.wbnd != 0x444E4257 ||
-		header.contentversion != FACT_CONTENT_VERSION ||
-		header.toolversion != 44	)
+	if (	header.dwSignature != 0x444E4257 ||
+		header.dwVersion != FACT_CONTENT_VERSION ||
+		header.dwHeaderVersion != 44	)
 	{
 		return -1; /* TODO: NOT XACT FILE */
 	}
@@ -1329,36 +1300,37 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->waveList = NULL;
 	wb->io = io;
 
-	/* Offset Table */
-	io->read(io->data, &wbtable, sizeof(wbtable), 1);
-
-	/* TODO: What are these...? */
-	FACT_assert(wbtable.unknownOffset1 == wbtable.playRegionOffset);
-	FACT_assert(wbtable.unknownLength1 == 0);
-	FACT_assert(wbtable.unknownOffset2 == 0);
-	FACT_assert(wbtable.unknownLength2 == 0);
-
-	/* WaveBank Info */
-	FACT_assert(io->seek(io->data, 0, 1) == wbtable.infoOffset);
+	/* WaveBank Data */
+	io->seek(
+		io->data,
+		header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset,
+		0
+	);
 	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
-	FACT_assert(wbinfo.streaming == isStreaming);
-	wb->streaming = wbinfo.streaming;
-	wb->entryCount = wbinfo.entryCount;
-	memsize = FACT_strlen(wbinfo.name) + 1;
+	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
+	wb->entryCount = wbinfo.dwEntryCount;
+	memsize = FACT_strlen(wbinfo.szBankName) + 1;
 	wb->name = (char*) FACT_malloc(memsize);
-	FACT_memcpy(wb->name, wbinfo.name, memsize);
-	memsize = sizeof(FACTWaveBankEntry) * wbinfo.entryCount;
+	FACT_memcpy(wb->name, wbinfo.szBankName, memsize);
+	memsize = sizeof(FACTWaveBankEntry) * wbinfo.dwEntryCount;
 	wb->entries = (FACTWaveBankEntry*) FACT_malloc(memsize);
 	FACT_zero(wb->entries, memsize);
-	memsize = sizeof(uint32_t) * wbinfo.entryCount;
+	memsize = sizeof(uint32_t) * wbinfo.dwEntryCount;
 	wb->entryRefs = (uint32_t*) FACT_malloc(memsize);
 	FACT_zero(wb->entryRefs, memsize);
 
-	/* WaveBank Entries */
-	FACT_assert(io->seek(io->data, 0, 1) == wbtable.entryTableOffset);
-	if (wbinfo.flags & 0x0002)
+	/* FIXME: How much do we care about this? */
+	FACT_assert(wb->streaming == isStreaming);
+
+	/* WaveBank Entry Metadata */
+	io->seek(
+		io->data,
+		header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYMETADATA].dwOffset,
+		0
+	);
+	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_COMPACT)
 	{
-		for (i = 0; i < wbinfo.entryCount - 1; i += 1)
+		for (i = 0; i < wbinfo.dwEntryCount - 1; i += 1)
 		{
 			io->read(
 				io->data,
@@ -1368,7 +1340,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			);
 			wb->entries[i].PlayRegion.dwOffset = (
 				(compactEntry & ((1 << 21) - 1)) *
-				wbinfo.alignment
+				wbinfo.dwAlignment
 			);
 			wb->entries[i].PlayRegion.dwLength = (
 				(compactEntry >> 21) & ((1 << 11) - 1)
@@ -1377,16 +1349,16 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			/* TODO: Deviation table */
 			io->seek(
 				io->data,
-				wbinfo.metadataElementSize,
+				wbinfo.dwEntryMetaDataElementSize,
 				1
 			);
 			wb->entries[i].PlayRegion.dwLength = (
 				(compactEntry & ((1 << 21) - 1)) *
-				wbinfo.alignment
+				wbinfo.dwAlignment
 			) - wb->entries[i].PlayRegion.dwOffset;
 
 			wb->entries[i].PlayRegion.dwOffset +=
-				wbtable.playRegionOffset;
+				header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwOffset;
 		}
 
 		io->read(
@@ -1397,47 +1369,52 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		);
 		wb->entries[i].PlayRegion.dwOffset = (
 			(compactEntry & ((1 << 21) - 1)) *
-			wbinfo.alignment
+			wbinfo.dwAlignment
 		);
 
 		/* TODO: Deviation table */
 		io->seek(
 			io->data,
-			wbinfo.metadataElementSize,
+			wbinfo.dwEntryMetaDataElementSize,
 			1
 		);
 		wb->entries[i].PlayRegion.dwLength = (
-			wbtable.playRegionLength -
+			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwLength -
 			wb->entries[i].PlayRegion.dwOffset
 		);
 
 		wb->entries[i].PlayRegion.dwOffset +=
-			wbtable.playRegionOffset;
+			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwOffset;
 	}
 	else
 	{
-		for (i = 0; i < wbinfo.entryCount; i += 1)
+		for (i = 0; i < wbinfo.dwEntryCount; i += 1)
 		{
 			io->read(
 				io->data,
 				&wb->entries[i],
-				wbinfo.metadataElementSize,
+				wbinfo.dwEntryMetaDataElementSize,
 				1
 			);
 			wb->entries[i].PlayRegion.dwOffset +=
-				wbtable.playRegionOffset;
+				header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwOffset;
 		}
 
 		/* FIXME: This is a bit hacky. */
-		if (wbinfo.metadataElementSize < 24)
+		if (wbinfo.dwEntryMetaDataElementSize < 24)
 		{
-			for (i = 0; i < wbinfo.entryCount; i += 1)
+			for (i = 0; i < wbinfo.dwEntryCount; i += 1)
 			{
 				wb->entries[i].PlayRegion.dwLength =
-					wbtable.playRegionLength;
+					header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwLength;
 			}
 		}
 	}
+
+	/* TODO:
+	FACT_WAVEBANK_SEGIDX_SEEKTABLES,
+	FACT_WAVEBANK_SEGIDX_ENTRYNAMES
+	*/
 
 	/* Add to the Engine WaveBank list */
 	if (pEngine->wbList == NULL)
