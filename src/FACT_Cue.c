@@ -237,7 +237,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 
 			pCue->parentBank->parentEngine->categories[
 				pCue->playing.sound.sound->category
-			].instanceCount += 1;
+			].instanceCount -= 1;
 		}
 		pCue->data->instanceCount -= 1;
 		pCue->active = 0;
