@@ -67,6 +67,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		tmp = pCue->parentBank->cueList; \
 		if (obj->maxInstanceBehavior == 0) /* Fail */ \
 		{ \
+			/* FIXME: May need to delete stuff from SelectSound */ \
 			return 1; \
 		} \
 		else if (obj->maxInstanceBehavior == 1) /* Queue */ \
