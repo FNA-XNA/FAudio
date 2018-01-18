@@ -76,6 +76,8 @@
     <ClCompile Include="..\src\FACT_Wave.c" />
     <ClCompile Include="..\src\FACT_WaveBank.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
+    <ClCompile Include="..\src\e_log.c" />
+    <ClCompile Include="..\src\e_log10.c" />
     <ClCompile Include="..\src\FACT_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>

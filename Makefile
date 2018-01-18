@@ -24,6 +24,8 @@ FACTSRC = \
 	src/FACT_Wave.c \
 	src/FACT_Cue.c \
 	src/FACT_internal.c \
+	src/e_log.c \
+	src/e_log10.c \
 	src/FACT_platform_sdl2.c
 
 # Object code lists

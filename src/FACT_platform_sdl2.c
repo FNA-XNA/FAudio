@@ -474,13 +474,11 @@ double FACT_pow(double x, double y)
 	return SDL_pow(x, y);
 }
 
-#ifdef _WIN32 /* TODO: SDL_log10! */
-#include <math.h>
-#endif
+extern double SDL_uclibc_log10(double x); /* TODO: SDL Bugzilla #4052 */
 
 double FACT_log10(double x)
 {
-	return log10(x); /* TODO: SDL_log10! */
+	return SDL_uclibc_log10(x); /* TODO: SDL_log10! */
 }
 
 double FACT_sqrt(double x)
