@@ -54,50 +54,27 @@ void FACT3DAudioCalculate(
 #if 0 /* TODO: Combine speaker azimuths with emitter/listener vector blah */
 		for (i = 0; i < pDSPSettings->SrcChannelCount; i += 1)
 		{
-			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_LEFT)
-			{
-				*matrix++ = FRONT_LEFT_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_RIGHT)
-			{
-				*matrix++ = FRONT_RIGHT_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_CENTER)
-			{
-				*matrix++ = FRONT_CENTER_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_LOW_FREQUENCY)
-			{
-				*matrix++ = LOW_FREQUENCY_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_BACK_LEFT)
-			{
-				*matrix++ = BACK_LEFT_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_BACK_RIGHT)
-			{
-				*matrix++ = BACK_RIGHT_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_LEFT_OF_CENTER)
-			{
-				*matrix++ = FRONT_LEFT_OF_CENTER_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_FRONT_RIGHT_OF_CENTER)
-			{
-				*matrix++ = FRONT_RIGHT_OF_CENTER_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_BACK_CENTER)
-			{
-				*matrix++ = BACK_CENTER_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_SIDE_LEFT)
-			{
-				*matrix++ = LEFT_AZIMUTH;
-			}
-			if (INSTANCE_SPEAKERMASK & SPEAKER_SIDE_RIGHT)
-			{
-				*matrix++ = RIGHT_AZIMUTH;
-			}
+			#define SPEAKER(pos) \
+				if (INSTANCE_SPEAKERMASK & SPEAKER_##pos) \
+				{ \
+					*matrix++ = pos##_AZIMUTH; \
+				}
+			#define SIDE_LEFT_AZIMUTH LEFT_AZIMUTH
+			#define SIDE_RIGHT_AZIMUTH RIGHT_AZIMUTH
+			SPEAKER(FRONT_LEFT)
+			SPEAKER(FRONT_RIGHT)
+			SPEAKER(FRONT_CENTER)
+			SPEAKER(LOW_FREQUENCY)
+			SPEAKER(BACK_LEFT)
+			SPEAKER(BACK_RIGHT)
+			SPEAKER(FRONT_LEFT_OF_CENTER)
+			SPEAKER(FRONT_RIGHT_OF_CENTER)
+			SPEAKER(BACK_CENTER)
+			SPEAKER(SIDE_LEFT)
+			SPEAKER(SIDE_RIGHT)
+			#undef SPEAKER
+			#undef SIDE_LEFT_AZIMUTH
+			#undef SIDE_RIGHT_AZIMUTH
 			/* TODO: SPEAKER_TOP_*, Atmos support...? */
 		}
 #endif
