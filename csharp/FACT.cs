@@ -164,41 +164,74 @@ public static class FACT
 		public ushort packetSize;
 	}
 
-	[StructLayout(LayoutKind.Sequential)] /* FIXME: union! */
-	public struct FACTWaveBankMiniWaveFormat
-	{
-		/*struct
-		{
-			uint wFormatTag : 2;
-			uint nChannels : 3;
-			uint nSamplesPerSec : 18;
-			uint wBlockAlign : 8;
-			uint wBitsPerSample : 1;
-		};*/
-		public uint dwValue;
-	}
-
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FACTWaveBankRegion
 	{
 		public uint dwOffset;
 		public uint dwLength;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FACTWaveBankSampleRegion
 	{
 		public uint dwStartSample;
 		public uint dwTotalSamples;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	/* TODO
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTWaveBankHeader
+	{
+		public uint dwSignature;
+		public uint dwVersion;
+		public uint dwHeaderVersion;
+		public fixed FACTWaveBankRegion Segments[FACT_WAVEBANK_SEGIDX_COUNT];
+	}
+	*/
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)] /* FIXME: union! */
+	public struct FACTWaveBankMiniWaveFormat
+	{
+		/*struct
+		{
+			public uint wFormatTag : 2;
+			public uint nChannels : 3;
+			public uint nSamplesPerSec : 18;
+			public uint wBlockAlign : 8;
+			public uint wBitsPerSample : 1;
+		};*/
+		public uint dwValue;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FACTWaveBankEntry
 	{
 		public uint dwFlagsAndDuration; /* FIXME: union! */
-		FACTWaveBankMiniWaveFormat Format;
-		FACTWaveBankRegion PlayRegion;
-		FACTWaveBankSampleRegion LoopRegion;
+		public FACTWaveBankMiniWaveFormat Format;
+		public FACTWaveBankRegion PlayRegion;
+		public FACTWaveBankSampleRegion LoopRegion;
+	}
+
+	/* TODO
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTWaveBankEntryCompact
+	{
+		public uint dwOffset : 21;
+		public uint dwLengthDeviation : 11;
+	}
+	*/
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public unsafe struct FACTWaveBankData
+	{
+		public uint dwFlags;
+		public uint dwEntryCount;
+		public fixed char szBankName[64];
+		public uint dwEntryMetaDataElementSize;
+		public uint dwEntryNameElementSize;
+		public uint dwAlignment;
+		public FACTWaveBankMiniWaveFormat CompactFormat;
+		public ulong BuildTime;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -277,6 +310,20 @@ public static class FACT
 
 	#endregion
 
+	#region Enums
+
+	public enum FACTWaveBankSegIdx
+	{
+		FACT_WAVEBANK_SEGIDX_BANKDATA = 0,
+		FACT_WAVEBANK_SEGIDX_ENTRYMETADATA,
+		FACT_WAVEBANK_SEGIDX_SEEKTABLES,
+		FACT_WAVEBANK_SEGIDX_ENTRYNAMES,
+		FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA,
+		FACT_WAVEBANK_SEGIDX_COUNT
+	}
+
+	#endregion
+
 	#region Constants
 
 	public const int FACT_CONTENT_VERSION = 46;
@@ -313,6 +360,16 @@ public static class FACT
 	public const ushort FACTCATEGORY_INVALID =	0xFFFF;
 
 	public const uint FACT_ENGINE_LOOKAHEAD_DEFAULT = 250;
+
+	public const uint FACT_WAVEBANK_TYPE_BUFFER =		0x00000000;
+	public const uint FACT_WAVEBANK_TYPE_STREAMING =	0x00000001;
+	public const uint FACT_WAVEBANK_TYPE_MASK =		0x00000001;
+
+	public const uint FACT_WAVEBANK_FLAGS_ENTRYNAMES =	0x00010000;
+	public const uint FACT_WAVEBANK_FLAGS_COMPACT =		0x00020000;
+	public const uint FACT_WAVEBANK_FLAGS_SYNC_DISABLED =	0x00040000;
+	public const uint FACT_WAVEBANK_FLAGS_SEEKTABLES =	0x00080000;
+	public const uint FACT_WAVEBANK_FLAGS_MASK =		0x000F0000;
 
 	#endregion
 
