@@ -155,6 +155,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				tmp->playing.sound.sound->category == categoryIndex
 			)
 		}
+		category->instanceCount += 1;
 	}
 	data->instanceCount += 1;
 	#undef INSTANCE_BEHAVIOR
@@ -233,6 +234,10 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 				FACT_free(pCue->playing.sound.tracks[i].events);
 			}
 			FACT_free(pCue->playing.sound.tracks);
+
+			pCue->parentBank->parentEngine->categories[
+				pCue->playing.sound.sound->category
+			].instanceCount += 1;
 		}
 		pCue->data->instanceCount -= 1;
 		pCue->active = 0;

@@ -817,6 +817,10 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	{
 		cue->state |= FACT_STATE_STOPPED;
 		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
+
+		cue->parentBank->parentEngine->categories[
+			active->sound->category
+		].instanceCount -= 1;
 		cue->data->instanceCount -= 1;
 	}
 }
