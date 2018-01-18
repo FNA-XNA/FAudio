@@ -156,6 +156,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			)
 		}
 	}
+	data->instanceCount += 1;
 	#undef INSTANCE_BEHAVIOR
 
 	pCue->state |= FACT_STATE_PLAYING;
@@ -233,6 +234,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 			}
 			FACT_free(pCue->playing.sound.tracks);
 		}
+		pCue->data->instanceCount -= 1;
 		pCue->active = 0;
 	}
 	else
