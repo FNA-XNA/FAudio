@@ -141,6 +141,25 @@ uint32_t FACTWave_SetMatrixCoefficients(
 		pMatrixCoefficients,
 		sizeof(float) * uSrcChannelCount * uDstChannelCount
 	);
+
+	/* Extra stuff to deal with StereoToMono */
+	if (pWave->stereo && uSrcChannelCount == 1)
+	{
+		pWave->stereo = 0;
+		if (pWave->decode == FACT_INTERNAL_DecodeStereoPCM8)
+		{
+			pWave->decode = FACT_INTERNAL_DecodeStereoToMonoPCM8;
+		}
+		else if (pWave->decode == FACT_INTERNAL_DecodeStereoPCM16)
+		{
+			pWave->decode = FACT_INTERNAL_DecodeStereoToMonoPCM16;
+		}
+		else if (pWave->decode == FACT_INTERNAL_DecodeStereoMSADPCM)
+		{
+			pWave->decode = FACT_INTERNAL_DecodeStereoToMonoMSADPCM;
+		}
+	}
+
 	return 0;
 }
 
