@@ -179,6 +179,22 @@ uint32_t FACTWaveBank_Prepare(
 	}
 	(*ppWave)->msadpcmExtra = 0;
 
+	/* 3D */
+	(*ppWave)->srcChannels = fmt->nChannels;
+	(*ppWave)->dstChannels = 2;
+	if (fmt->nChannels == 2)
+	{
+		(*ppWave)->matrixCoefficients[0] = 1.0f;
+		(*ppWave)->matrixCoefficients[1] = 0.0f;
+		(*ppWave)->matrixCoefficients[2] = 0.0f;
+		(*ppWave)->matrixCoefficients[3] = 1.0f;
+	}
+	else
+	{
+		(*ppWave)->matrixCoefficients[0] = 1.0f;
+		(*ppWave)->matrixCoefficients[1] = 1.0f;
+	}
+
 	/* Resampling */
 	FACT_zero(&(*ppWave)->resample, sizeof(FACTResampleState));
 	(*ppWave)->resample.pitch = (*ppWave)->pitch;

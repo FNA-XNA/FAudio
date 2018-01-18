@@ -168,7 +168,15 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	/* If it's a simple wave, just play it! */
 	if (pCue->active & 0x01)
 	{
-		/* TODO: Apply3D */
+		if (pCue->active3D)
+		{
+			FACTWave_SetMatrixCoefficients(
+				pCue->playing.wave,
+				pCue->srcChannels,
+				pCue->dstChannels,
+				pCue->matrixCoefficients
+			);
+		}
 		FACTWave_Play(pCue->playing.wave);
 	}
 
@@ -246,10 +254,25 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	uint32_t uDstChannelCount,
 	float *pMatrixCoefficients
 ) {
-	/* TODO: Internal storage...? */
 	FACTEvent *evt;
 	FACTWave *wave;
 	uint8_t i, j;
+
+	/* See FACTCue.matrixCoefficients declaration */
+	FACT_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
+	FACT_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
+
+	/* Local storage */
+	pCue->srcChannels = uSrcChannelCount;
+	pCue->dstChannels = uDstChannelCount;
+	FACT_memcpy(
+		pCue->matrixCoefficients,
+		pMatrixCoefficients,
+		sizeof(float) * uSrcChannelCount * uDstChannelCount
+	);
+	pCue->active3D = 1;
+
+	/* Apply to Waves if they exist */
 	if (pCue->active & 0x01)
 	{
 		FACTWave_SetMatrixCoefficients(

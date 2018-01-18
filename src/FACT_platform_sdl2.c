@@ -71,7 +71,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	int16_t decodeCache[2][DEVICE_BUFFERSIZE * MAX_RESAMPLE_STEP + RESAMPLE_PADDING];
 	float resampleCache[2][DEVICE_BUFFERSIZE];
 	uint32_t timestamp;
-	uint32_t i;
+	uint32_t i, j, k;
 	float *out = (float*) stream;
 
 	FACT_zero(stream, len);
@@ -146,14 +146,15 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 				if (samples > 0)
 				{
 					for (i = 0; i < samples; i += 1)
+					for (j = 0; j < wave->dstChannels; j += 1)
+					for (k = 0; k < wave->srcChannels; k += 1)
 					{
-						out[i * 2] = FACT_clamp(
-							out[i * 2] + (resampleCache[0][i] * wave->volume),
-							-FACTVOLUME_MAX,
-							FACTVOLUME_MAX
-						);
-						out[i * 2 + 1] = FACT_clamp(
-							out[i * 2 + 1] + (resampleCache[wave->stereo][i] * wave->volume),
+						out[i * device->format.Format.nChannels + j] = FACT_clamp(
+							out[i * device->format.Format.nChannels + j] + (
+								resampleCache[k][i] *
+								wave->volume *
+								wave->matrixCoefficients[j * wave->srcChannels + k]
+							),
 							-FACTVOLUME_MAX,
 							FACTVOLUME_MAX
 						);

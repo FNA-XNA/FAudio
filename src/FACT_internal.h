@@ -468,12 +468,17 @@ struct FACTWave
 	uint32_t initialPosition;
 	uint8_t loopCount;
 
+	/* 3D Data */
+	uint32_t srcChannels;
+	uint32_t dstChannels;
+	float matrixCoefficients[2 * 8]; /* Stereo input, 7.1 output */
+
 	/* Decoding */
 	FACTDecodeCallback decode;
 	FACTResampleState resample;
 	int16_t msadpcmCache[1024];
 	uint16_t msadpcmExtra;
-	uint8_t stereo; /* Forced to 0 on Apply3D */
+	uint8_t stereo;
 };
 
 struct FACTCue
@@ -504,6 +509,12 @@ struct FACTCue
 		FACTSoundInstance sound;
 	} playing;
 	FACTVariation *playingVariation;
+
+	/* 3D Data */
+	uint8_t active3D;
+	uint32_t srcChannels;
+	uint32_t dstChannels;
+	float matrixCoefficients[2 * 8]; /* Stereo input, 7.1 output */
 
 	/* Timer */
 	uint32_t start;
@@ -541,9 +552,6 @@ DECODE_FUNC(MonoMSADPCM)
 DECODE_FUNC(StereoPCM8)
 DECODE_FUNC(StereoPCM16)
 DECODE_FUNC(StereoMSADPCM)
-DECODE_FUNC(StereoToMonoPCM8)
-DECODE_FUNC(StereoToMonoPCM16)
-DECODE_FUNC(StereoToMonoMSADPCM)
 #undef DECODE_FUNC
 
 /* Platform Functions */

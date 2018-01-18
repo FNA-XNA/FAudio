@@ -130,7 +130,17 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	uint32_t uDstChannelCount,
 	float *pMatrixCoefficients
 ) {
-	/* TODO */
+	/* See FACTWave.matrixCoefficients declaration */
+	FACT_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
+	FACT_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
+
+	pWave->srcChannels = uSrcChannelCount;
+	pWave->dstChannels = uDstChannelCount;
+	FACT_memcpy(
+		pWave->matrixCoefficients,
+		pMatrixCoefficients,
+		sizeof(float) * uSrcChannelCount * uDstChannelCount
+	);
 	return 0;
 }
 
