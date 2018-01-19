@@ -318,7 +318,7 @@ uint32_t FACTAudioEngine_Initialize(
 
 uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 {
-	int i;
+	uint32_t i;
 	FACTSoundBank *sb;
 	FACTWaveBank *wb;
 
@@ -612,7 +612,8 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 {
 	uint32_t evtInfo;
 	uint8_t minWeight, maxWeight;
-	int i, j;
+	uint8_t i;
+	uint16_t j;
 
 	track->eventCount = read_u8(ptr);
 	track->events = (FACTEvent*) FACT_malloc(
