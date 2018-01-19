@@ -1102,6 +1102,213 @@ public static class FACT
 
 	#endregion
 
+	#region XNA Sound API
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_Init();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_Quit();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetMasterVolume();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetMasterVolume(float volume);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetDistanceScale();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetDistanceScale(float scale);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetDopplerScale();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetDopplerScale(float scale);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetSpeedOfSound();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetSpeedOfSound(float speedOfSound);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr FACT_XNA_GenBuffer(
+		byte[] buffer,
+		int offset,
+		int count,
+		int sampleRate,
+		int channels,
+		int loopStart,
+		int loopLength,
+		ushort format,
+		uint formatParameter
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_DisposeBuffer(IntPtr buffer);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int FACT_XNA_GetBufferDuration(IntPtr buffer);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FACT_XNA_PlayBuffer(
+		IntPtr buffer,
+		float volume,
+		float pitch,
+		float pan
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr FACT_XNA_GenSource(IntPtr buffer);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr FACT_XNA_GenDynamicSource(
+		int sampleRate,
+		int channels
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_DisposeSource(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int FACT_XNA_GetSourceState(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int FACT_XNA_GetSourceLooped(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetSourceLooped(
+		IntPtr source,
+		int looped
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetSourcePan(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetSourcePan(
+		IntPtr source,
+		float pan
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetSourcePitch(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetSourcePitch(
+		IntPtr source,
+		float pitch
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float FACT_XNA_GetSourceVolume(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetSourceVolume(
+		IntPtr source,
+		float volume
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ApplySource3D(
+		IntPtr source,
+		ref FACT3DAUDIO_LISTENER listener,
+		ref FACT3DAUDIO_EMITTER emitter
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_PlaySource(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_PauseSource(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ResumeSource(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_StopSource(
+		IntPtr source,
+		int immediate
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ApplySourceReverb(
+		IntPtr source,
+		float rvGain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ApplySourceLowPass(
+		IntPtr source,
+		float hfGain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ApplySourceHighPass(
+		IntPtr source,
+		float lfGain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ApplySourceBandPass(
+		IntPtr source,
+		float hfGain,
+		float lfGain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int FACT_XNA_GetSourceBufferCount(IntPtr source);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_QueueSourceBufferB(
+		IntPtr source,
+		byte[] buffer,
+		int offset,
+		int count
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_QueueSourceBufferF(
+		IntPtr source,
+		float[] buffer,
+		int offset,
+		int count
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr FACT_XNA_GenSong(
+		[MarshalAs(UnmanagedType.LPStr)] string name
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_DisposeSong(IntPtr song);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_PlaySong(IntPtr song);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_PauseSong(IntPtr song);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_ResumeSong(IntPtr song);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_StopSong(IntPtr song);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FACT_XNA_SetSongVolume(
+		IntPtr song,
+		float volume
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FACT_XNA_GetSongEnded(IntPtr song);
+
+	#endregion
+
 	#region FACT I/O API
 
 	/* IntPtr refers to an FACTIOStream* */
