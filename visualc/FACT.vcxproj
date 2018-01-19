@@ -75,6 +75,7 @@
     <ClCompile Include="..\src\FACT_SoundBank.c" />
     <ClCompile Include="..\src\FACT_Wave.c" />
     <ClCompile Include="..\src\FACT_WaveBank.c" />
+    <ClCompile Include="..\src\FACT_XNA.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
     <ClCompile Include="..\src\e_log.c" />
     <ClCompile Include="..\src\e_log10.c" />

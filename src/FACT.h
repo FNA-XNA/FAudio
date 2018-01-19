@@ -949,6 +949,175 @@ FACTAPI uint32_t FACT3DApply(
 	FACTCue *pCue
 );
 
+/* XNA Sound API */
+
+typedef struct FACTXNABuffer FACTXNABuffer;
+typedef struct FACTXNASource FACTXNASource;
+typedef struct FACTXNASong FACTXNASong;
+
+/* This is meant to duplicate the XNA SoundState enum */
+typedef enum FACTXNASoundState
+{
+	FACT_XNA_STATE_PLAYING,
+	FACT_XNA_STATE_PAUSED,
+	FACT_XNA_STATE_STOPPED
+} FACTXNASoundState;
+
+FACTAPI void FACT_XNA_Init();
+
+FACTAPI void FACT_XNA_Quit();
+
+FACTAPI float FACT_XNA_GetMasterVolume();
+
+FACTAPI void FACT_XNA_SetMasterVolume(float volume);
+
+FACTAPI float FACT_XNA_GetDistanceScale();
+
+FACTAPI void FACT_XNA_SetDistanceScale(float scale);
+
+FACTAPI float FACT_XNA_GetDopplerScale();
+
+FACTAPI void FACT_XNA_SetDopplerScale(float scale);
+
+FACTAPI float FACT_XNA_GetSpeedOfSound();
+
+FACTAPI void FACT_XNA_SetSpeedOfSound(float speedOfSound);
+
+FACTAPI FACTXNABuffer* FACT_XNA_GenBuffer(
+	uint8_t *buffer,
+	int32_t offset,
+	int32_t count,
+	int32_t sampleRate,
+	int32_t channels,
+	int32_t loopStart,
+	int32_t loopLength,
+	uint16_t format,
+	uint32_t formatParameter
+);
+
+FACTAPI void FACT_XNA_DisposeBuffer(FACTXNABuffer *buffer);
+
+FACTAPI int32_t FACT_XNA_GetBufferDuration(FACTXNABuffer *buffer);
+
+FACTAPI uint32_t FACT_XNA_PlayBuffer(
+	FACTXNABuffer *buffer,
+	float volume,
+	float pitch,
+	float pan
+);
+
+FACTAPI FACTXNASource* FACT_XNA_GenSource(FACTXNABuffer *buffer);
+
+FACTAPI FACTXNASource* FACT_XNA_GenDynamicSource(
+	int32_t sampleRate,
+	int32_t channels
+);
+
+FACTAPI void FACT_XNA_DisposeSource(FACTXNASource *source);
+
+FACTAPI int32_t FACT_XNA_GetSourceState(FACTXNASource *source);
+
+FACTAPI int32_t FACT_XNA_GetSourceLooped(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_SetSourceLooped(
+	FACTXNASource *source,
+	int32_t looped
+);
+
+FACTAPI float FACT_XNA_GetSourcePan(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_SetSourcePan(
+	FACTXNASource *source,
+	float pan
+);
+
+FACTAPI float FACT_XNA_GetSourcePitch(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_SetSourcePitch(
+	FACTXNASource *source,
+	float pitch
+);
+
+FACTAPI float FACT_XNA_GetSourceVolume(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_SetSourceVolume(
+	FACTXNASource *source,
+	float volume
+);
+
+FACTAPI void FACT_XNA_ApplySource3D(
+	FACTXNASource *source,
+	FACT3DAUDIO_LISTENER *listener,
+	FACT3DAUDIO_EMITTER *emitter
+);
+
+FACTAPI void FACT_XNA_PlaySource(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_PauseSource(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_ResumeSource(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_StopSource(
+	FACTXNASource *source,
+	int32_t immediate
+);
+
+FACTAPI void FACT_XNA_ApplySourceReverb(
+	FACTXNASource *source,
+	float rvGain
+);
+
+FACTAPI void FACT_XNA_ApplySourceLowPass(
+	FACTXNASource *source,
+	float hfGain
+);
+
+FACTAPI void FACT_XNA_ApplySourceHighPass(
+	FACTXNASource *source,
+	float lfGain
+);
+
+FACTAPI void FACT_XNA_ApplySourceBandPass(
+	FACTXNASource *source,
+	float hfGain,
+	float lfGain
+);
+
+FACTAPI int32_t FACT_XNA_GetSourceBufferCount(FACTXNASource *source);
+
+FACTAPI void FACT_XNA_QueueSourceBufferB(
+	FACTXNASource *source,
+	uint8_t *buffer,
+	int32_t offset,
+	int32_t count
+);
+
+FACTAPI void FACT_XNA_QueueSourceBufferF(
+	FACTXNASource *source,
+	float *buffer,
+	int32_t offset,
+	int32_t count
+);
+
+FACTAPI FACTXNASong* FACT_XNA_GenSong(const char* name);
+
+FACTAPI void FACT_XNA_DisposeSong(FACTXNASong *song);
+
+FACTAPI void FACT_XNA_PlaySong(FACTXNASong *song);
+
+FACTAPI void FACT_XNA_PauseSong(FACTXNASong *song);
+
+FACTAPI void FACT_XNA_ResumeSong(FACTXNASong *song);
+
+FACTAPI void FACT_XNA_StopSong(FACTXNASong *song);
+
+FACTAPI void FACT_XNA_SetSongVolume(
+	FACTXNASong *song,
+	float volume
+);
+
+FACTAPI uint32_t FACT_XNA_GetSongEnded(FACTXNASong *song);
+
 /* FACT I/O API */
 
 typedef struct FACTIOStream FACTIOStream;

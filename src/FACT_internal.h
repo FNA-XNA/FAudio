@@ -521,6 +521,23 @@ struct FACTCue
 	uint32_t elapsed;
 };
 
+/* Public XNA Types */
+
+struct FACTXNABuffer
+{
+	uint8_t TODO;
+};
+
+struct FACTXNASource
+{
+	uint8_t TODO;
+};
+
+struct FACTXNASong
+{
+	uint8_t TODO;
+};
+
 /* Internal functions */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
