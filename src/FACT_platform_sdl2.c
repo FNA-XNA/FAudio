@@ -38,25 +38,6 @@ struct FACTAudioDevice
 
 FACTAudioDevice *devlist = NULL;
 
-/* Resampling */
-
-/* Based on...
- * Max pitch: 2400, 2^2 = 4.0
- * Max sample rate: 96000 FIXME: Assumption!
- * Min device frequency: 22050 FIXME: Assumption!
- */
-#define MAX_RESAMPLE_STEP 18
-
-void FACT_INTERNAL_CalculateStep(FACTWave *wave)
-{
-	double stepd = (
-		SDL_pow(2.0, wave->pitch / 1200.0) *
-		(double) wave->parentBank->entries[wave->index].Format.nSamplesPerSec /
-		(double) DEVICE_FREQUENCY
-	);
-	wave->resample.step = DOUBLE_TO_FIXED(stepd);
-}
-
 /* Mixer Thread */
 
 void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
@@ -123,13 +104,6 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 				{
 					wave = wave->next;
 					continue;
-				}
-
-				/* Update stepping interval if needed */
-				if (wave->pitch != wave->resample.pitch)
-				{
-					wave->resample.pitch = wave->pitch;
-					FACT_INTERNAL_CalculateStep(wave);
 				}
 
 				/* Decode and resample wavedata */
@@ -271,6 +245,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		device->format.Samples.wValidBitsPerSample = DEVICE_FORMAT_SIZE * 8;
 		device->format.dwChannelMask = SPEAKER_STEREO; /* FIXME */
 		FACT_zero(&device->format.SubFormat, sizeof(FACTGUID)); /* ? */
+		engine->mixFormat = &device->format;
 
 		/* Add to the device list */
 		if (devlist == NULL)
@@ -292,6 +267,9 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	}
 	else /* Just add us to the existing device */
 	{
+		/* But copy the output format first! */
+		engine->mixFormat = &device->format;
+
 		entryList = device->engineList;
 		while (entryList->next != NULL)
 		{
@@ -368,11 +346,6 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 	{
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	}
-}
-
-void FACT_PlatformInitResampler(FACTWave *wave)
-{
-	FACT_INTERNAL_CalculateStep(wave);
 }
 
 uint16_t FACT_PlatformGetRendererCount()

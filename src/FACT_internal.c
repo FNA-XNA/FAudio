@@ -325,6 +325,12 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
 	/* TODO */
 }
 
+void FACT_INTERNAL_InitResampler(FACTWave *wave)
+{
+	FACT_zero(&wave->resample, sizeof(FACTResampleState));
+	wave->resample.pitch = 0xFFFF; /* Force update on first poll */
+}
+
 void FACT_INTERNAL_ActivateEvent(
 	FACTCue *cue,
 	FACTSound *sound,
@@ -842,6 +848,18 @@ uint32_t FACT_INTERNAL_GetWave(
 	if (wave->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
 	{
 		return 0;
+	}
+
+	/* Update stepping interval if needed */
+	if (wave->pitch != wave->resample.pitch)
+	{
+		double stepd = (
+			FACT_pow(2.0, wave->pitch / 1200.0) *
+			(double) wave->parentBank->entries[wave->index].Format.nSamplesPerSec /
+			(double) wave->parentBank->parentEngine->mixFormat->Format.nSamplesPerSec
+		);
+		wave->resample.step = DOUBLE_TO_FIXED(stepd);
+		wave->resample.pitch = wave->pitch;
 	}
 
 	/* If the sample rates match, just decode and convert to float */

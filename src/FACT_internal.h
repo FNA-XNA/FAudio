@@ -64,6 +64,13 @@ typedef uint32_t fixed32;
 /* FIXME: Arbitrary 1-pre 1-post */
 #define RESAMPLE_PADDING 1
 
+/* Based on...
+ * Max pitch: 2400, 2^2 = 4.0
+ * Max sample rate: 96000 FIXME: Assumption!
+ * Min device frequency: 22050 FIXME: Assumption!
+ */
+#define MAX_RESAMPLE_STEP 18
+
 typedef struct FACTResampleState
 {
 	/* Checked against wave->pitch for redundancy */
@@ -405,6 +412,9 @@ struct FACTAudioEngine
 	FACTSoundBank *sbList;
 	FACTWaveBank *wbList;
 	float *globalVariableValues;
+
+	/* Point this to your platform's device mix format */
+	FACTWaveFormatExtensible *mixFormat;
 };
 
 struct FACTSoundBank
@@ -440,10 +450,8 @@ struct FACTWaveBank
 	FACTWave *waveList;
 	FACTWaveBank *next;
 
-	/* Guess what this is? */
-	char *name;
-
 	/* Actual WaveBank information */
+	char *name;
 	uint32_t entryCount;
 	FACTWaveBankEntry *entries;
 	uint32_t *entryRefs;
@@ -555,6 +563,7 @@ float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel);
 void FACT_INTERNAL_SelectSound(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
+void FACT_INTERNAL_InitResampler(FACTWave *wave);
 
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
@@ -578,8 +587,6 @@ DECODE_FUNC(StereoToMonoMSADPCM)
 
 void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
 void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
-
-void FACT_PlatformInitResampler(FACTWave *wave);
 
 uint16_t FACT_PlatformGetRendererCount();
 void FACT_PlatformGetRendererDetails(

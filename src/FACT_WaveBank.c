@@ -196,9 +196,7 @@ uint32_t FACTWaveBank_Prepare(
 	}
 
 	/* Resampling */
-	FACT_zero(&(*ppWave)->resample, sizeof(FACTResampleState));
-	(*ppWave)->resample.pitch = (*ppWave)->pitch;
-	FACT_PlatformInitResampler(*ppWave);
+	FACT_INTERNAL_InitResampler(*ppWave);
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)
