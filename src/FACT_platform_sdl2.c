@@ -290,6 +290,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		);
 		device->resampleCache[0] = (float*) FACT_malloc(4 * have.samples);
 		device->resampleCache[1] = (float*) FACT_malloc(4 * have.samples);
+		device->bufferSize = have.samples;
 
 		/* Give the output format to the engine */
 		engine->mixFormat = &device->format;

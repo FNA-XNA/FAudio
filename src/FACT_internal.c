@@ -853,7 +853,7 @@ uint32_t FACT_INTERNAL_GetWave(
 	/* Update stepping interval if needed */
 	if (wave->pitch != wave->resample.pitch)
 	{
-		double stepd = (
+		const double stepd = (
 			FACT_pow(2.0, wave->pitch / 1200.0) *
 			(double) wave->parentBank->entries[wave->index].Format.nSamplesPerSec /
 			(double) wave->parentBank->parentEngine->mixFormat->Format.nSamplesPerSec
