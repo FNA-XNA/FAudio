@@ -9,12 +9,6 @@
 
 #include <SDL.h>
 
-#define DEVICE_FORMAT AUDIO_F32
-#define DEVICE_FORMAT_SIZE 4
-#define DEVICE_FREQUENCY 48000
-#define DEVICE_CHANNELS 2
-#define DEVICE_BUFFERSIZE 4096
-
 /* Internal Types */
 
 typedef struct FACTEngineEntry FACTEngineEntry;
@@ -32,6 +26,10 @@ struct FACTAudioDevice
 	FACTWaveFormatExtensible format;
 	FACTEngineEntry *engineList;
 	FACTAudioDevice *next;
+
+	int16_t* decodeCache[2];
+	float* resampleCache[2];
+	uint32_t bufferSize;
 };
 
 /* Globals */
@@ -49,8 +47,6 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	FACTCue *cue, *backup;
 	FACTWave *wave;
 	uint32_t samples;
-	int16_t decodeCache[2][DEVICE_BUFFERSIZE * MAX_RESAMPLE_STEP + RESAMPLE_PADDING];
-	float resampleCache[2][DEVICE_BUFFERSIZE];
 	uint32_t timestamp;
 	uint32_t i, j, k;
 	float *out = (float*) stream;
@@ -109,11 +105,11 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 				/* Decode and resample wavedata */
 				samples = FACT_INTERNAL_GetWave(
 					wave,
-					decodeCache[0],
-					decodeCache[1],
-					resampleCache[0],
-					resampleCache[1],
-					DEVICE_BUFFERSIZE
+					device->decodeCache[0],
+					device->decodeCache[1],
+					device->resampleCache[0],
+					device->resampleCache[1],
+					device->bufferSize
 				);
 
 				/* ... then mix, finally. */
@@ -125,7 +121,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 					{
 						out[i * device->format.Format.nChannels + j] = FACT_clamp(
 							out[i * device->format.Format.nChannels + j] + (
-								resampleCache[k][i] *
+								device->resampleCache[k][i] *
 								wave->volume *
 								wave->matrixCoefficients[j * wave->srcChannels + k]
 							),
@@ -208,12 +204,21 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		device->name = name;
 		device->engineList = entry;
 
-		/* Enforce a default device format */
-		want.freq = DEVICE_FREQUENCY;
-		want.format = DEVICE_FORMAT;
-		want.channels = DEVICE_CHANNELS;
+		/* Enforce a default device format.
+		 * FIXME: The way SDL picks device defaults is fucking stupid.
+		 * It's basically just a bunch of hardcoding and the values used
+		 * are just awful:
+		 *
+		 * https://hg.libsdl.org/SDL/file/c3446901fc1c/src/audio/SDL_audio.c#l1087
+		 *
+		 * We should step in and see if we can't pull this from the OS.
+		 * -flibit
+		 */
+		want.freq = 48000; /* FIXME: Make this 0 */
+		want.format = AUDIO_F32;
+		want.channels = 0;
 		want.silence = 0;
-		want.samples = DEVICE_BUFFERSIZE;
+		want.samples = 4096; /* FIXME: Make this 1024 */
 		want.callback = FACT_INTERNAL_MixCallback;
 		want.userdata = device;
 
@@ -223,7 +228,10 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 			0,
 			&want,
 			&have,
-			SDL_AUDIO_ALLOW_CHANNELS_CHANGE
+			(
+				SDL_AUDIO_ALLOW_CHANNELS_CHANGE |
+				SDL_AUDIO_ALLOW_FREQUENCY_CHANGE
+			)
 		);
 		if (device->device == 0)
 		{
@@ -238,13 +246,52 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		device->format.Format.wFormatTag = 1;
 		device->format.Format.nChannels = have.channels;
 		device->format.Format.nSamplesPerSec = have.freq;
-		device->format.Format.nAvgBytesPerSec = have.freq * DEVICE_FORMAT_SIZE;
+		device->format.Format.nAvgBytesPerSec = have.freq * 4;
 		device->format.Format.nBlockAlign = 0; /* ? */
-		device->format.Format.wBitsPerSample = DEVICE_FORMAT_SIZE * 8;
+		device->format.Format.wBitsPerSample = 32;
 		device->format.Format.cbSize = 0; /* ? */
-		device->format.Samples.wValidBitsPerSample = DEVICE_FORMAT_SIZE * 8;
-		device->format.dwChannelMask = SPEAKER_STEREO; /* FIXME */
+		device->format.Samples.wValidBitsPerSample = 32;
+		if (have.channels == 2)
+		{
+			device->format.dwChannelMask = SPEAKER_STEREO;
+		}
+		else if (have.channels == 3)
+		{
+			device->format.dwChannelMask = SPEAKER_2POINT1;
+		}
+		else if (have.channels == 4)
+		{
+			device->format.dwChannelMask = SPEAKER_QUAD;
+		}
+		else if (have.channels == 5)
+		{
+			device->format.dwChannelMask = SPEAKER_4POINT1;
+		}
+		else if (have.channels == 6)
+		{
+			device->format.dwChannelMask = SPEAKER_5POINT1;
+		}
+		else if (have.channels == 8)
+		{
+			device->format.dwChannelMask = SPEAKER_7POINT1;
+		}
+		else
+		{
+			FACT_assert(0 && "Unrecognized speaker layout!");
+		}
 		FACT_zero(&device->format.SubFormat, sizeof(FACTGUID)); /* ? */
+
+		/* Alloc decode/resample caches */
+		device->decodeCache[0] = (int16_t*) FACT_malloc(
+			2 * (have.samples * MAX_RESAMPLE_STEP + RESAMPLE_PADDING)
+		);
+		device->decodeCache[1] = (int16_t*) FACT_malloc(
+			2 * (have.samples * MAX_RESAMPLE_STEP + RESAMPLE_PADDING)
+		);
+		device->resampleCache[0] = (float*) FACT_malloc(4 * have.samples);
+		device->resampleCache[1] = (float*) FACT_malloc(4 * have.samples);
+
+		/* Give the output format to the engine */
 		engine->mixFormat = &device->format;
 
 		/* Add to the device list */
@@ -267,7 +314,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	}
 	else /* Just add us to the existing device */
 	{
-		/* But copy the output format first! */
+		/* But give us the output format first! */
 		engine->mixFormat = &device->format;
 
 		entryList = device->engineList;
@@ -330,6 +377,10 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 				{
 					prevDev = dev->next;
 				}
+				FACT_free(dev->decodeCache[0]);
+				FACT_free(dev->decodeCache[1]);
+				FACT_free(dev->resampleCache[0]);
+				FACT_free(dev->resampleCache[1]);
 				FACT_free(dev);
 			}
 			dev = NULL;
@@ -375,32 +426,6 @@ void FACT_PlatformGetRendererDetails(
 		details->displayName[i] = name[i];
 	}
 	details->defaultDevice = (index == 0);
-}
-
-void FACT_PlatformGetFinalMixFormat(
-	FACTAudioEngine *pEngine,
-	FACTWaveFormatExtensible *pFinalMixFormat
-) {
-	FACTEngineEntry *entry;
-	FACTAudioDevice *dev = devlist;
-	while (dev != NULL)
-	{
-		entry = dev->engineList;
-		while (entry != NULL)
-		{
-			if (entry->engine == pEngine)
-			{
-				FACT_memcpy(
-					pFinalMixFormat,
-					&dev->format,
-					sizeof(FACTWaveFormatExtensible)
-				);
-				return;
-			}
-			entry = entry->next;
-		}
-		dev = dev->next;
-	}
 }
 
 void* FACT_malloc(size_t size)
