@@ -151,25 +151,24 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->loopCount = nLoopCount;
 
 	/* Decoding */
-	(*ppWave)->stereo = fmt->nChannels == 2;
 	if (fmt->wFormatTag == 0x0) /* PCM */
 	{
 		if (fmt->wBitsPerSample == 1)
 		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
 				FACT_INTERNAL_DecodeStereoPCM16 :
 				FACT_INTERNAL_DecodeMonoPCM16;
 		}
 		else
 		{
-			(*ppWave)->decode = (*ppWave)->stereo ?
+			(*ppWave)->decode = (fmt->nChannels == 2) ?
 				FACT_INTERNAL_DecodeStereoPCM8 :
 				FACT_INTERNAL_DecodeMonoPCM8;
 		}
 	}
 	else if (fmt->wFormatTag == 0x2) /* ADPCM */
 	{
-		(*ppWave)->decode = (*ppWave)->stereo ?
+		(*ppWave)->decode = (fmt->nChannels == 2) ?
 			FACT_INTERNAL_DecodeStereoMSADPCM :
 			FACT_INTERNAL_DecodeMonoMSADPCM;
 	}

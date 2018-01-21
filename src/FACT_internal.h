@@ -486,7 +486,6 @@ struct FACTWave
 	FACTResampleState resample;
 	int16_t msadpcmCache[1024];
 	uint16_t msadpcmExtra;
-	uint8_t stereo;
 };
 
 struct FACTCue
@@ -578,9 +577,6 @@ DECODE_FUNC(MonoMSADPCM)
 DECODE_FUNC(StereoPCM8)
 DECODE_FUNC(StereoPCM16)
 DECODE_FUNC(StereoMSADPCM)
-DECODE_FUNC(StereoToMonoPCM8)
-DECODE_FUNC(StereoToMonoPCM16)
-DECODE_FUNC(StereoToMonoMSADPCM)
 #undef DECODE_FUNC
 
 /* Platform Functions */
