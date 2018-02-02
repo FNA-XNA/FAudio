@@ -8,6 +8,14 @@
 #ifndef FACT_H
 #define FACT_H
 
+#ifdef _WIN32
+#define FACTAPI __declspec(dllexport)
+#define FACTCALL __cdecl
+#else
+#define FACTAPI
+#define FACTCALL
+#endif
+
 #include "FAudio.h"
 
 #ifdef __cplusplus
@@ -28,42 +36,6 @@ typedef struct FACTRendererDetails
 	int16_t displayName[0xFF]; /* Win32 wchar_t */
 	int32_t defaultDevice;
 } FACTRendererDetails;
-
-typedef struct FACTGUID
-{
-	uint32_t Data1;
-	uint16_t Data2;
-	uint16_t Data3;
-	uint8_t Data4[8];
-} FACTGUID;
-
-#pragma pack(push, 1)
-typedef struct FACTWaveFormatEx
-{
-	uint16_t wFormatTag;
-	uint16_t nChannels;
-	uint32_t nSamplesPerSec;
-	uint32_t nAvgBytesPerSec;
-	uint16_t nBlockAlign;
-	uint16_t wBitsPerSample;
-	uint16_t cbSize;
-} FACTWaveFormatEx;
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-typedef struct FACTWaveFormatExtensible
-{
-	FACTWaveFormatEx Format;
-	union
-	{
-		uint16_t wValidBitsPerSample;
-		uint16_t wSamplesPerBlock;
-		uint16_t wReserved;
-	} Samples;
-	uint32_t dwChannelMask;
-	FACTGUID SubFormat;
-} FACTWaveFormatExtensible;
-#pragma pack(pop)
 
 typedef struct FACTOverlapped
 {
@@ -368,7 +340,7 @@ FACTAPI uint32_t FACTAudioEngine_GetRendererDetails(
 
 FACTAPI uint32_t FACTAudioEngine_GetFinalMixFormat(
 	FACTAudioEngine *pEngine,
-	FACTWaveFormatExtensible *pFinalMixFormat
+	FAudioWaveFormatExtensible *pFinalMixFormat
 );
 
 FACTAPI uint32_t FACTAudioEngine_Initialize(

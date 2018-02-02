@@ -415,7 +415,7 @@ struct FACTAudioEngine
 	float *globalVariableValues;
 
 	/* Point this to your platform's device mix format */
-	FACTWaveFormatExtensible *mixFormat;
+	FAudioWaveFormatExtensible *mixFormat;
 };
 
 struct FACTSoundBank

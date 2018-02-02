@@ -12,7 +12,7 @@ uint32_t FACT3DInitialize(
 	F3DAUDIO_HANDLE F3DInstance
 ) {
 	float nSpeedOfSound;
-	FACTWaveFormatExtensible wfxFinalMixFormat;
+	FAudioWaveFormatExtensible wfxFinalMixFormat;
 
 	if (pEngine == NULL)
 	{

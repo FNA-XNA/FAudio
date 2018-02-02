@@ -23,7 +23,7 @@ struct FACTAudioDevice
 {
 	const char *name;
 	SDL_AudioDeviceID device;
-	FACTWaveFormatExtensible format;
+	FAudioWaveFormatExtensible format;
 	FACTEngineEntry *engineList;
 	FACTAudioDevice *next;
 
@@ -279,7 +279,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		{
 			FACT_assert(0 && "Unrecognized speaker layout!");
 		}
-		FACT_zero(&device->format.SubFormat, sizeof(FACTGUID)); /* ? */
+		FACT_zero(&device->format.SubFormat, sizeof(FAudioGUID)); /* ? */
 
 		/* Alloc decode/resample caches */
 		device->decodeCache[0] = (int16_t*) FACT_malloc(
