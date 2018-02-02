@@ -210,4 +210,8 @@ F3DAUDIOAPI void F3DAudioCalculate(
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 );
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* F3DAUDIO_H */

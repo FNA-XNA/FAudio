@@ -11,6 +11,10 @@
 #include "F3DAudio.h"
 #include "FACT.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Constants */
 
 #define LEFT_AZIMUTH			(3.0f * F3DAUDIO_PI / 2.0f)
@@ -90,5 +94,9 @@ FACTAPI uint32_t FACT3DApply(
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings,
 	FACTCue *pCue
 );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* FACT3D_H */

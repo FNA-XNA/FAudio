@@ -23,4 +23,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* FAUDIO_H */
