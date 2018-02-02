@@ -8,15 +8,10 @@
 #ifndef FACT_H
 #define FACT_H
 
-#ifdef _WIN32
-#define FACTAPI __declspec(dllexport)
-#define FACTCALL __cdecl
-#else
-#define FACTAPI
-#define FACTCALL
-#endif
-
 #include "FAudio.h"
+
+#define FACTAPI FAUDIOAPI
+#define FACTCALL FAUDIOCALL
 
 #ifdef __cplusplus
 extern "C" {
