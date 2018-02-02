@@ -184,7 +184,7 @@ uint32_t FACTSoundBank_Play3D(
 	uint16_t nCueIndex,
 	uint32_t dwFlags,
 	int32_t timeOffset,
-	FACT3DAUDIO_DSP_SETTINGS *pDSPSettings,
+	F3DAUDIO_DSP_SETTINGS *pDSPSettings,
 	FACTCue** ppCue /* Optional! */
 ) {
 	FACTCue *result;

@@ -6,6 +6,7 @@
  */
 
 #include "FACT.h"
+#include "FACT3D.h"
 
 #ifdef FACT_UNKNOWN_PLATFORM
 #include <assert.h>
@@ -529,16 +530,6 @@ struct FACTCue
 };
 
 /* Public XNA Types */
-
-struct FACTXNABuffer
-{
-	uint8_t TODO;
-};
-
-struct FACTXNASource
-{
-	uint8_t TODO;
-};
 
 struct FACTXNASong
 {

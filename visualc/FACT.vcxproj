@@ -69,7 +69,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\FACT_3DAudio.c" />
+    <ClCompile Include="..\src\F3DAudio.c" />
+    <ClCompile Include="..\src\FACT3D.c" />
     <ClCompile Include="..\src\FACT_AudioEngine.c" />
     <ClCompile Include="..\src\FACT_Cue.c" />
     <ClCompile Include="..\src\FACT_SoundBank.c" />
@@ -82,7 +83,10 @@
     <ClCompile Include="..\src\FACT_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\FAudio.h" />
+    <ClInclude Include="..\src\F3DAudio.h" />
     <ClInclude Include="..\src\FACT.h" />
+    <ClInclude Include="..\src\FACT3D.h" />
     <ClInclude Include="..\src\FACT_internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

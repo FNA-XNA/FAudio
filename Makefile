@@ -17,7 +17,8 @@ CFLAGS += -g -Wall -pedantic -fpic -fPIC -shared
 
 # Source lists
 FACTSRC = \
-	src/FACT_3DAudio.c \
+	src/F3DAudio.c \
+	src/FACT3D.c \
 	src/FACT_AudioEngine.c \
 	src/FACT_SoundBank.c \
 	src/FACT_WaveBank.c \
