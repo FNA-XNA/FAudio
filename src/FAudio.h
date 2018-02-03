@@ -103,9 +103,16 @@ FAUDIOAPI uint32_t FAudioCreate(FAudio **ppFAudio);
 
 /* FAudioEngineCallback Interface */
 
-typedef void (FAUDIOCALL * OnCriticalErrorFunc)(uint32_t Error);
-typedef void (FAUDIOCALL * OnProcessingPassEndFunc)();
-typedef void (FAUDIOCALL * OnProcessingPassStartFunc)();
+typedef void (FAUDIOCALL * OnCriticalErrorFunc)(
+	FAudioEngineCallback *callback,
+	uint32_t Error
+);
+typedef void (FAUDIOCALL * OnProcessingPassEndFunc)(
+	FAudioEngineCallback *callback
+);
+typedef void (FAUDIOCALL * OnProcessingPassStartFunc)(
+	FAudioEngineCallback *callback
+);
 
 struct FAudioEngineCallback
 {
@@ -116,16 +123,31 @@ struct FAudioEngineCallback
 
 /* FAudioVoiceCallback Interface */
 
-typedef void (FAUDIOCALL * OnBufferEndFunc)(void *pBufferContext);
-typedef void (FAUDIOCALL * OnBufferStartFunc)(void *pBufferContext);
-typedef void (FAUDIOCALL * OnLoopEndFunc)(void *pBufferContext);
-typedef void (FAUDIOCALL * OnStreamEndFunc)();
+typedef void (FAUDIOCALL * OnBufferEndFunc)(
+	FAudioVoiceCallback *callback,
+	void *pBufferContext
+);
+typedef void (FAUDIOCALL * OnBufferStartFunc)(
+	FAudioVoiceCallback *callback,
+	void *pBufferContext
+);
+typedef void (FAUDIOCALL * OnLoopEndFunc)(
+	FAudioVoiceCallback *callback,
+	void *pBufferContext
+);
+typedef void (FAUDIOCALL * OnStreamEndFunc)(
+	FAudioVoiceCallback *callback
+);
 typedef void (FAUDIOCALL * OnVoiceErrorFunc)(
+	FAudioVoiceCallback *callback,
 	void *pBufferContext,
 	uint32_t Error
 );
-typedef void (FAUDIOCALL * OnVoiceProcessingPassEndFunc)();
+typedef void (FAUDIOCALL * OnVoiceProcessingPassEndFunc)(
+	FAudioVoiceCallback *callback
+);
 typedef void (FAUDIOCALL * OnVoiceProcessingPassStartFunc)(
+	FAudioVoiceCallback *callback,
 	uint32_t BytesRequired
 );
 
