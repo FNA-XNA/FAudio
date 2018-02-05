@@ -118,9 +118,9 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	*ppSourceVoice = FAudio_malloc(sizeof(FAudioVoice));
+	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
-	(*ppSourceVoice)->filter.Type = 0xFF;
+	(*ppSourceVoice)->filter.Type = (FAudioFilterType) 0xFF;
 
 	/* Default Levels */
 	(*ppSourceVoice)->volume = 1.0f;
@@ -167,9 +167,9 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	*ppSubmixVoice = FAudio_malloc(sizeof(FAudioVoice));
+	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
-	(*ppSubmixVoice)->filter.Type = 0xFF;
+	(*ppSubmixVoice)->filter.Type = (FAudioFilterType) 0xFF;
 
 	/* Default Levels */
 	(*ppSubmixVoice)->volume = 1.0f;
@@ -210,9 +210,9 @@ uint32_t FAudio_CreateMasteringVoice(
 	uint32_t DeviceIndex,
 	const FAudioEffectChain *pEffectChain
 ) {
-	*ppMasteringVoice = FAudio_malloc(sizeof(FAudioVoice));
+	*ppMasteringVoice = (FAudioMasteringVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
-	(*ppMasteringVoice)->filter.Type = 0xFF;
+	(*ppMasteringVoice)->filter.Type = (FAudioFilterType) 0xFF;
 
 	/* Default Levels */
 	(*ppMasteringVoice)->volume = 1.0f;
