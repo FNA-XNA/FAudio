@@ -106,7 +106,7 @@ typedef struct FACTRuntimeParameters
 	FACTFileIOCallbacks fileIOCallbacks;
 	FACTNotificationCallback fnNotificationCallback;
 	int16_t *pRendererID; /* Win32 wchar_t* */
-	void *pXAudio2;
+	FAudio *pXAudio2;
 	void *pMasteringVoice;
 } FACTRuntimeParameters;
 
@@ -634,16 +634,14 @@ FACTAPI uint32_t FACTCue_GetProperties(
 	FACTCueInstanceProperties *ppProperties
 );
 
-/* FIXME: Can we reproduce these two functions...? -flibit */
-
 FACTAPI uint32_t FACTCue_SetOutputVoices(
 	FACTCue *pCue,
-	const void *pSendList /* Optional XAUDIO2_VOICE_SENDS */
+	const FAudioVoiceSends *pSendList /* Optional! */
 );
 
 FACTAPI uint32_t FACTCue_SetOutputVoiceMatrix(
 	FACTCue *pCue,
-	const void *pDestinationVoice, /* Optional IXAudio2Voice */
+	const FAudioVoice *pDestinationVoice, /* Optional! */
 	uint32_t SourceChannels,
 	uint32_t DestinationChannels,
 	const float *pLevelMatrix /* SourceChannels * DestinationChannels */

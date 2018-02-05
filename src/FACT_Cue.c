@@ -500,7 +500,7 @@ uint32_t FACTCue_GetProperties(
 
 uint32_t FACTCue_SetOutputVoices(
 	FACTCue *pCue,
-	const void *pSendList /* Optional XAUDIO2_VOICE_SENDS */
+	const FAudioVoiceSends *pSendList /* Optional XAUDIO2_VOICE_SENDS */
 ) {
 	/* TODO */
 	return 0;
@@ -508,7 +508,7 @@ uint32_t FACTCue_SetOutputVoices(
 
 uint32_t FACTCue_SetOutputVoiceMatrix(
 	FACTCue *pCue,
-	const void *pDestinationVoice, /* Optional IXAudio2Voice */
+	const FAudioVoice *pDestinationVoice, /* Optional! */
 	uint32_t SourceChannels,
 	uint32_t DestinationChannels,
 	const float *pLevelMatrix /* SourceChannels * DestinationChannels */
