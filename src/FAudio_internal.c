@@ -9,6 +9,6 @@
 
 void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample)
 {
-	FAudio_zero(resample, sizeof(FACTResampleState));
+	FAudio_zero(resample, sizeof(FAudioResampleState));
 	resample->pitch = 0xFFFF; /* Force update on first poll */
 }

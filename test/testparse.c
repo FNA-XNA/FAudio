@@ -405,7 +405,7 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					FACT_assert(0 && "Unknown event type!");
+					FAudio_assert(0 && "Unknown event type!");
 				}
 			}
 		}

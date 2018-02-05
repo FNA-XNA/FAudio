@@ -802,7 +802,7 @@ void FACTTool_Update()
 								}
 								else
 								{
-									FACT_assert(0 && "Unknown event type!");
+									FAudio_assert(0 && "Unknown event type!");
 								}
 								ImGui::TreePop();
 							}
