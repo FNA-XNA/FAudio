@@ -120,6 +120,27 @@ uint32_t FAudio_CreateSourceVoice(
 ) {
 	*ppSourceVoice = FAudio_malloc(sizeof(FAudioVoice));
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
+	(*ppSourceVoice)->filter.Type = 0xFF;
+
+	/* Default Levels */
+	(*ppSourceVoice)->volume = 1.0f;
+	(*ppSourceVoice)->channelVolume[0] = 1.0f;
+	(*ppSourceVoice)->channelVolume[1] = 1.0f;
+	FAudio_assert(pSourceFormat->nChannels > 0 && pSourceFormat->nChannels < 3);
+	(*ppSourceVoice)->srcChannels = pSourceFormat->nChannels;
+	(*ppSourceVoice)->dstChannels = 2; /* FIXME: ??? */
+	if (pSourceFormat->nChannels == 2)
+	{
+		(*ppSourceVoice)->matrixCoefficients[0] = 1.0f;
+		(*ppSourceVoice)->matrixCoefficients[1] = 0.0f;
+		(*ppSourceVoice)->matrixCoefficients[2] = 0.0f;
+		(*ppSourceVoice)->matrixCoefficients[3] = 1.0f;
+	}
+	else
+	{
+		(*ppSourceVoice)->matrixCoefficients[0] = 1.0f;
+		(*ppSourceVoice)->matrixCoefficients[1] = 1.0f;
+	}
 
 	/* Sends/Effects */
 	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
@@ -148,6 +169,27 @@ uint32_t FAudio_CreateSubmixVoice(
 ) {
 	*ppSubmixVoice = FAudio_malloc(sizeof(FAudioVoice));
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
+	(*ppSubmixVoice)->filter.Type = 0xFF;
+
+	/* Default Levels */
+	(*ppSubmixVoice)->volume = 1.0f;
+	(*ppSubmixVoice)->channelVolume[0] = 1.0f;
+	(*ppSubmixVoice)->channelVolume[1] = 1.0f;
+	FAudio_assert(InputChannels > 0 && InputChannels < 3);
+	(*ppSubmixVoice)->srcChannels = InputChannels;
+	(*ppSubmixVoice)->dstChannels = 2; /* FIXME: ??? */
+	if (InputChannels == 2)
+	{
+		(*ppSubmixVoice)->matrixCoefficients[0] = 1.0f;
+		(*ppSubmixVoice)->matrixCoefficients[1] = 0.0f;
+		(*ppSubmixVoice)->matrixCoefficients[2] = 0.0f;
+		(*ppSubmixVoice)->matrixCoefficients[3] = 1.0f;
+	}
+	else
+	{
+		(*ppSubmixVoice)->matrixCoefficients[0] = 1.0f;
+		(*ppSubmixVoice)->matrixCoefficients[1] = 1.0f;
+	}
 
 	/* Sends/Effects */
 	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
@@ -170,6 +212,28 @@ uint32_t FAudio_CreateMasteringVoice(
 ) {
 	*ppMasteringVoice = FAudio_malloc(sizeof(FAudioVoice));
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
+	(*ppMasteringVoice)->filter.Type = 0xFF;
+
+	/* Default Levels */
+	(*ppMasteringVoice)->volume = 1.0f;
+	(*ppMasteringVoice)->channelVolume[0] = 1.0f;
+	(*ppMasteringVoice)->channelVolume[1] = 1.0f;
+	/* FIXME: Master matrix coefficients */
+	FAudio_assert(InputChannels > 0 && InputChannels < 3);
+	(*ppMasteringVoice)->srcChannels = InputChannels;
+	(*ppMasteringVoice)->dstChannels = 2;
+	if (InputChannels == 2)
+	{
+		(*ppMasteringVoice)->matrixCoefficients[0] = 1.0f;
+		(*ppMasteringVoice)->matrixCoefficients[1] = 0.0f;
+		(*ppMasteringVoice)->matrixCoefficients[2] = 0.0f;
+		(*ppMasteringVoice)->matrixCoefficients[3] = 1.0f;
+	}
+	else
+	{
+		(*ppMasteringVoice)->matrixCoefficients[0] = 1.0f;
+		(*ppMasteringVoice)->matrixCoefficients[1] = 1.0f;
+	}
 
 	/* Sends/Effects */
 	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
@@ -354,8 +418,12 @@ uint32_t FAudioVoice_SetFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	FAudio_memcpy(
+		&voice->filter,
+		pParameters,
+		sizeof(FAudioFilterParameters)
+	);
 	return 0;
 }
 
@@ -363,7 +431,11 @@ void FAudioVoice_GetFilterParameters(
 	FAudioVoice *voice,
 	FAudioFilterParameters *pParameters
 ) {
-	/* TODO */
+	FAudio_memcpy(
+		pParameters,
+		&voice->filter,
+		sizeof(FAudioFilterParameters)
+	);
 }
 
 uint32_t FAudioVoice_SetOutputFilterParameters(
@@ -372,8 +444,8 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	FAudio_assert(0 && "Output filters are not supported!");
 	return 0;
 }
 
@@ -382,7 +454,7 @@ void FAudioVoice_GetOutputFilterParameters(
 	FAudioVoice *pDestinationVoice,
 	FAudioFilterParameters *pParameters
 ) {
-	/* TODO */
+	FAudio_assert(0 && "Output filters are not supported!");
 }
 
 uint32_t FAudioVoice_SetVolume(
@@ -390,8 +462,8 @@ uint32_t FAudioVoice_SetVolume(
 	float Volume,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	voice->volume = Volume;
 	return 0;
 }
 
@@ -399,7 +471,7 @@ void FAudioVoice_GetVolume(
 	FAudioVoice *voice,
 	float *pVolume
 ) {
-	/* TODO */
+	*pVolume = voice->volume;
 }
 
 uint32_t FAudioVoice_SetChannelVolumes(
@@ -408,8 +480,13 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	const float *pVolumes,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	FAudio_assert(Channels > 0 && Channels < 3);
+	FAudio_memcpy(
+		voice->channelVolume,
+		pVolumes,
+		sizeof(float) * Channels
+	);
 	return 0;
 }
 
@@ -418,7 +495,12 @@ void FAudioVoice_GetChannelVolumes(
 	uint32_t Channels,
 	float *pVolumes
 ) {
-	/* TODO */
+	FAudio_assert(Channels > 0 && Channels < 3);
+	FAudio_memcpy(
+		pVolumes,
+		voice->channelVolume,
+		sizeof(float) * Channels
+	);
 }
 
 uint32_t FAudioVoice_SetOutputMatrix(
@@ -429,8 +511,16 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	const float *pLevelMatrix,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	FAudio_assert(SourceChannels > 0 && SourceChannels < 3);
+	FAudio_assert(DestinationChannels > 0 && DestinationChannels < 9);
+	voice->srcChannels = SourceChannels;
+	voice->dstChannels = DestinationChannels;
+	FAudio_memcpy(
+		voice->matrixCoefficients,
+		pLevelMatrix,
+		sizeof(float) * SourceChannels * DestinationChannels
+	);
 	return 0;
 }
 
@@ -441,7 +531,15 @@ void FAudioVoice_GetOutputMatrix(
 	uint32_t DestinationChannels,
 	float *pLevelMatrix
 ) {
-	/* TODO */
+	FAudio_assert(SourceChannels > 0 && SourceChannels < 3);
+	FAudio_assert(DestinationChannels > 0 && DestinationChannels < 9);
+	voice->srcChannels = SourceChannels;
+	voice->dstChannels = DestinationChannels;
+	FAudio_memcpy(
+		pLevelMatrix,
+		voice->matrixCoefficients,
+		sizeof(float) * SourceChannels * DestinationChannels
+	);
 }
 
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
