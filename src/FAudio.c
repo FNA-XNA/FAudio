@@ -122,38 +122,8 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
 
 	/* Sends/Effects */
-	if (pSendList == NULL)
-	{
-		FAudio_zero(&(*ppSourceVoice)->sends, sizeof(FAudioVoiceSends));
-	}
-	else
-	{
-		(*ppSourceVoice)->sends.SendCount = pSendList->SendCount;
-		(*ppSourceVoice)->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
-			pSendList->SendCount * sizeof(FAudioSendDescriptor)
-		);
-		FAudio_memcpy(
-			(*ppSourceVoice)->sends.pSends,
-			pSendList->pSends,
-			pSendList->SendCount * sizeof(FAudioSendDescriptor)
-		);
-	}
-	if (pEffectChain == NULL)
-	{
-		FAudio_zero(&(*ppSourceVoice)->effects, sizeof(FAudioEffectChain));
-	}
-	else
-	{
-		(*ppSourceVoice)->effects.EffectCount = pEffectChain->EffectCount;
-		(*ppSourceVoice)->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-		FAudio_memcpy(
-			(*ppSourceVoice)->effects.pEffectDescriptors,
-			pEffectChain->pEffectDescriptors,
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-	}
+	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
+	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
 
 	/* Source Properties */
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
@@ -180,38 +150,8 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
 
 	/* Sends/Effects */
-	if (pSendList == NULL)
-	{
-		FAudio_zero(&(*ppSubmixVoice)->sends, sizeof(FAudioVoiceSends));
-	}
-	else
-	{
-		(*ppSubmixVoice)->sends.SendCount = pSendList->SendCount;
-		(*ppSubmixVoice)->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
-			pSendList->SendCount * sizeof(FAudioSendDescriptor)
-		);
-		FAudio_memcpy(
-			(*ppSubmixVoice)->sends.pSends,
-			pSendList->pSends,
-			pSendList->SendCount * sizeof(FAudioSendDescriptor)
-		);
-	}
-	if (pEffectChain == NULL)
-	{
-		FAudio_zero(&(*ppSubmixVoice)->effects, sizeof(FAudioEffectChain));
-	}
-	else
-	{
-		(*ppSubmixVoice)->effects.EffectCount = pEffectChain->EffectCount;
-		(*ppSubmixVoice)->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-		FAudio_memcpy(
-			(*ppSubmixVoice)->effects.pEffectDescriptors,
-			pEffectChain->pEffectDescriptors,
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-	}
+	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
+	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 
 	/* Submix Properties */
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
@@ -233,22 +173,7 @@ uint32_t FAudio_CreateMasteringVoice(
 
 	/* Sends/Effects */
 	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
-	if (pEffectChain == NULL)
-	{
-		FAudio_zero(&(*ppMasteringVoice)->effects, sizeof(FAudioEffectChain));
-	}
-	else
-	{
-		(*ppMasteringVoice)->effects.EffectCount = pEffectChain->EffectCount;
-		(*ppMasteringVoice)->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-		FAudio_memcpy(
-			(*ppMasteringVoice)->effects.pEffectDescriptors,
-			pEffectChain->pEffectDescriptors,
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-	}
+	FAudioVoice_SetEffectChain(*ppMasteringVoice, pEffectChain);
 
 	/* Master Properties */
 	(*ppMasteringVoice)->master.inputChannels = InputChannels;
@@ -319,17 +244,59 @@ void FAudioVoice_GetVoiceDetails(
 
 uint32_t FAudioVoice_SetOutputVoices(
 	FAudioVoice *voice,
-	FAudioVoiceSends *pSendList
+	const FAudioVoiceSends *pSendList
 ) {
-	/* TODO */
+	/* FIXME: This is lazy... */
+	if (voice->sends.pSends != NULL)
+	{
+		FAudio_free(voice->sends.pSends);
+	}
+
+	if (pSendList == NULL)
+	{
+		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
+	}
+	else
+	{
+		voice->sends.SendCount = pSendList->SendCount;
+		voice->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
+			pSendList->SendCount * sizeof(FAudioSendDescriptor)
+		);
+		FAudio_memcpy(
+			voice->sends.pSends,
+			pSendList->pSends,
+			pSendList->SendCount * sizeof(FAudioSendDescriptor)
+		);
+	}
 	return 0;
 }
 
 uint32_t FAudioVoice_SetEffectChain(
 	FAudioVoice *voice,
-	FAudioEffectChain *pEffectChain
+	const FAudioEffectChain *pEffectChain
 ) {
-	/* TODO */
+	/* FIXME: This is lazy... */
+	if (voice->effects.pEffectDescriptors != NULL)
+	{
+		FAudio_free(voice->effects.pEffectDescriptors);
+	}
+
+	if (pEffectChain == NULL)
+	{
+		FAudio_zero(&voice->effects, sizeof(FAudioEffectChain));
+	}
+	else
+	{
+		voice->effects.EffectCount = pEffectChain->EffectCount;
+		voice->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+		FAudio_memcpy(
+			voice->effects.pEffectDescriptors,
+			pEffectChain->pEffectDescriptors,
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+	}
 	return 0;
 }
 

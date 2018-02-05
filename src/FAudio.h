@@ -295,12 +295,12 @@ FAUDIOAPI void FAudioVoice_GetVoiceDetails(
 
 FAUDIOAPI uint32_t FAudioVoice_SetOutputVoices(
 	FAudioVoice *voice,
-	FAudioVoiceSends *pSendList
+	const FAudioVoiceSends *pSendList
 );
 
 FAUDIOAPI uint32_t FAudioVoice_SetEffectChain(
 	FAudioVoice *voice,
-	FAudioEffectChain *pEffectChain
+	const FAudioEffectChain *pEffectChain
 );
 
 FAUDIOAPI uint32_t FAudioVoice_EnableEffect(
