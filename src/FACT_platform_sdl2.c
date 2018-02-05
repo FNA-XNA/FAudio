@@ -400,7 +400,7 @@ void FAudio_PlatformCloseEngine(FACTAudioEngine *engine)
 	}
 }
 
-uint32_t FAudio_PlatformGetRendererCount()
+uint32_t FAudio_PlatformGetDeviceCount()
 {
 	return SDL_GetNumAudioDevices(0);
 }
@@ -413,7 +413,7 @@ void FAudio_PlatformGetDeviceDetails(
 	size_t len, i;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
-	if (index > SDL_GetNumAudioDevices(0))
+	if (index > FAudio_PlatformGetDeviceCount())
 	{
 		return;
 	}
@@ -421,7 +421,7 @@ void FAudio_PlatformGetDeviceDetails(
 	/* FIXME: wchar_t is an asshole */
 	details->DeviceID[0] = L'0' + index;
 	name = SDL_GetAudioDeviceName(index, 0);
-	len = SDL_min(FAudio_strlen(name), 0xFF);
+	len = FAudio_min(FAudio_strlen(name), 0xFF);
 	for (i = 0; i < len; i += 1)
 	{
 		details->DisplayName[i] = name[i];
