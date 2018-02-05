@@ -35,7 +35,7 @@ typedef struct FAudioVoiceCallback FAudioVoiceCallback;
 
 /* Enumerations */
 
-typedef enum FAUDIO_DEVICE_ROLE
+typedef enum FAudioDeviceRole
 {
 	NotDefaultDevice =		0x0,
 	DefaultConsoleDevice =		0x1,
@@ -44,15 +44,19 @@ typedef enum FAUDIO_DEVICE_ROLE
 	DefaultGameDevice =		0x8,
 	GlobalDefaultDevice =		0xF,
 	InvalidDeviceRole = ~GlobalDefaultDevice
-} FAUDIO_DEVICE_ROLE;
+} FAudioDeviceRole;
 
-typedef enum FAUDIO_FILTER_TYPE
+typedef enum FAudioFilterType
 {
 	LowPassFilter,
 	BandPassFilter,
 	HighPassFilter,
 	NotchFilter
-} FAUDIO_FILTER_TYPE;
+} FAudioFilterType;
+
+/* FIXME: The original enum violates ISO C and is platform specific anyway... */
+typedef uint32_t FAudioProcessor;
+#define FAUDIO_DEFAULT_PROCESSOR 0xFFFFFFFF
 
 /* Structures */
 
@@ -90,16 +94,356 @@ typedef struct FAudioWaveFormatExtensible
 } FAudioWaveFormatExtensible;
 #pragma pack(pop)
 
+typedef struct FAudioDeviceDetails
+{
+	uint16_t DeviceID[256]; /* Win32 wchar_t */
+	uint16_t DisplayName[256]; /* Win32 wchar_t */
+	FAudioDeviceRole Role;
+	FAudioWaveFormatExtensible OutputFormat;
+} FAudioDeviceDetails;
+
+typedef struct FAudioVoiceDetails
+{
+	uint32_t CreationFlags;
+	uint32_t InputChannels;
+	uint32_t InputSampleRate;
+} FAudioVoiceDetails;
+
+typedef struct FAudioSendDescriptor
+{
+	uint32_t Flags;
+	FAudioVoice *pOutputVoice;
+} FAudioSendDescriptor;
+
+typedef struct FAudioVoiceSends
+{
+	uint32_t SendCount;
+	FAudioSendDescriptor *pSends;
+} FAudioVoiceSends;
+
+typedef struct FAudioEffectDescriptor
+{
+	void *pEffect;
+	uint8_t InitialState;
+	uint32_t OutputChannels;
+} FAudioEffectDescriptor;
+
+typedef struct FAudioEffectChain
+{
+	uint32_t EffectCount;
+	FAudioEffectDescriptor *pEffectDescriptors;
+} FAudioEffectChain;
+
+typedef struct FAudioFilterParameters
+{
+	FAudioFilterType Type;
+	float Frequency;
+	float OneOverQ;
+} FAudioFilterParameters;
+
+typedef struct FAudioBuffer
+{
+	uint32_t Flags;
+	uint32_t AudioBytes;
+	const uint8_t *pAudioData;
+	uint32_t PlayBegin;
+	uint32_t PlayLength;
+	uint32_t LoopBegin;
+	uint32_t LoopLength;
+	uint32_t LoopCount;
+	void *pContext;
+} FAudioBuffer;
+
+typedef struct FAudioBufferWMA
+{
+	const uint32_t *pDecodedPacketCumulativeBytes;
+	uint32_t PacketCount;
+} FAudioBufferWMA;
+
+typedef struct FAudioVoiceState
+{
+	void *pCurrentBufferContext;
+	uint32_t BuffersQueued;
+	uint64_t SamplesPlayed;
+} FAudioVoiceState;
+
+typedef struct FAudioPerformanceData
+{
+	uint64_t AudioCyclesSinceLastQuery;
+	uint64_t TotalCyclesSinceLastQuery;
+	uint32_t MinimumCyclesPerQuantum;
+	uint32_t MaximumCyclesPerQuantum;
+	uint32_t MemoryUsageInBytes;
+	uint32_t CurrentLatencyInSamples;
+	uint32_t GlitchesSinceEngineStarted;
+	uint32_t ActiveSourceVoiceCount;
+	uint32_t TotalSourceVoiceCount;
+	uint32_t ActiveSubmixVoiceCount;
+	uint32_t ActiveResamplerCount;
+	uint32_t ActiveMatrixMixCount;
+	uint32_t ActiveXmaSourceVoices;
+	uint32_t ActiveXmaStreams;
+} FAudioPerformanceData;
+
+typedef struct FAudioDebugConfiguration
+{
+	uint32_t TraceMask;
+	uint32_t BreakMask;
+	uint8_t LogThreadID;
+	uint8_t LogFileline;
+	uint8_t LogFunctionName;
+	uint8_t LogTiming;
+} FAudioDebugConfiguration;
+
 /* FAudio Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 FAUDIOAPI uint32_t FAudioCreate(FAudio **ppFAudio);
 
-/* FIXME: AddRef/Release? Or just ignore COM garbage... -flibit */
+FAUDIOAPI void FAudioDestroy(FAudio *audio); /* FIXME: NOT XAUDIO2 SPEC! */
+
+/* FIXME: AddRef/Release/Query? Or just ignore COM garbage... -flibit */
+
+FAUDIOAPI uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount);
+
+FAUDIOAPI uint32_t FAudio_GetDeviceDetails(
+	FAudio *audio,
+	uint32_t Index,
+	FAudioDeviceDetails *pDeviceDetails
+);
+
+FAUDIOAPI uint32_t FAudio_Initialize(
+	FAudio *audio,
+	uint32_t Flags,
+	FAudioProcessor XAudio2Processor
+);
+
+FAUDIOAPI uint32_t FAudio_RegisterForCallbacks(
+	FAudio *audio,
+	FAudioEngineCallback *pCallback
+);
+
+FAUDIOAPI void FAudio_UnregisterForCallbacks(
+	FAudio *audio,
+	FAudioEngineCallback *pCallback
+);
+
+FAUDIOAPI uint32_t FAudio_CreateSourceVoice(
+	FAudio *audio,
+	FAudioSourceVoice **ppSourceVoice,
+	const FAudioWaveFormatEx *pSourceFormat,
+	uint32_t Flags,
+	float MaxFrequencyRatio,
+	FAudioVoiceCallback *pCallback,
+	const FAudioVoiceSends *pSendList,
+	const FAudioEffectChain *pEffectChain
+);
+
+FAUDIOAPI uint32_t FAudio_CreateSubmixVoice(
+	FAudio *audio,
+	uint32_t InputChannels,
+	uint32_t InputSampleRate,
+	uint32_t Flags,
+	uint32_t ProcessingStage,
+	const FAudioVoiceSends *pSendList,
+	const FAudioEffectChain *pEffectChain
+);
+
+FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
+	FAudio *audio,
+	uint32_t InputChannels,
+	uint32_t InputSampleRate,
+	uint32_t Flags,
+	uint32_t DeviceIndex,
+	const FAudioEffectChain *pEffectChain
+);
+
+FAUDIOAPI uint32_t FAudio_StartEngine(FAudio *audio);
+
+FAUDIOAPI void FAudio_StopEngine(FAudio *audio);
+
+FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
+
+FAUDIOAPI void FAudio_GetPerformanceData(
+	FAudio *audio,
+	FAudioPerformanceData *pPerfData
+);
+
+FAUDIOAPI void FAudio_SetDebugConfiguration(
+	FAudio *audio,
+	FAudioDebugConfiguration *pDebugConfiguration,
+	void* pReserved
+);
 
 /* FAudioVoice Interface */
 
+FAUDIOAPI void FAudioVoice_GetVoiceDetails(
+	FAudioVoice *voice,
+	FAudioVoiceDetails *pVoiceDetails
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetOutputVoices(
+	FAudioVoice *voice,
+	FAudioVoiceSends *pSendList
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetEffectChain(
+	FAudioVoice *voice,
+	FAudioEffectChain *pEffectChain
+);
+
+FAUDIOAPI uint32_t FAudioVoice_EnableEffect(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI uint32_t FAudioVoice_DisableEffect(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioVoice_GetEffectState(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	uint8_t *pEnabled
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetEffectParameters(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	const void *pParameters,
+	uint32_t ParametersByteSize,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI uint32_t FAudioVoice_GetEffectParameters(
+	FAudioVoice *voice,
+	void *pParameters,
+	uint32_t ParametersByteSize
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetFilterParameters(
+	FAudioVoice *voice,
+	const FAudioFilterParameters *pParameters,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioVoice_GetFilterParameters(
+	FAudioVoice *voice,
+	FAudioFilterParameters *pParameters
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetOutputFilterParameters(
+	FAudioVoice *voice,
+	FAudioVoice *pDestinationVoice,
+	const FAudioFilterParameters *pParameters,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioVoice_GetOutputFilterParameters(
+	FAudioVoice *voice,
+	FAudioVoice *pDestinationVoice,
+	FAudioFilterParameters *pParameters
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetVolume(
+	FAudioVoice *voice,
+	float Volume,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioVoice_GetVolume(
+	FAudioVoice *voice,
+	float *pVolume
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetChannelVolumes(
+	FAudioVoice *voice,
+	uint32_t Channels,
+	const float *pVolumes,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioVoice_GetChannelVolumes(
+	FAudioVoice *voice,
+	uint32_t Channels,
+	float *pVolumes
+);
+
+FAUDIOAPI uint32_t FAudioVoice_SetOutputMatrix(
+	FAudioVoice *voice,
+	FAudioVoice *pDestinationVoice,
+	uint32_t SourceChannels,
+	uint32_t DestinationChannels,
+	const float *pLevelMatrix,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioVoice_GetOutputMatrix(
+	FAudioVoice *voice,
+	FAudioVoice *pDestinationVoice,
+	uint32_t SourceChannels,
+	uint32_t DestinationChannels,
+	float *pLevelMatrix
+);
+
+FAUDIOAPI void FAudioVoice_DestroyVoice(FAudioVoice *voice);
+
 /* FAudioSourceVoice Interface */
+
+FAUDIOAPI uint32_t FAudioSourceVoice_Start(
+	FAudioSourceVoice *voice,
+	uint32_t Flags,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_Stop(
+	FAudioSourceVoice *voice,
+	uint32_t Flags,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_SubmitSourceBuffer(
+	FAudioSourceVoice *voice,
+	const FAudioBuffer *pBuffer,
+	const FAudioBufferWMA *pBufferWMA
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_FlushSourceBuffers(
+	FAudioSourceVoice *voice
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_Discontinuity(
+	FAudioSourceVoice *voice
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_ExitLoop(
+	FAudioSourceVoice *voice,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioSourceVoice_GetState(
+	FAudioSourceVoice *voice,
+	FAudioVoiceState *pVoiceState
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_SetFrequencyRatio(
+	FAudioSourceVoice *voice,
+	float Ratio,
+	uint32_t OperationSet
+);
+
+FAUDIOAPI void FAudioSourceVoice_GetFrequencyRatio(
+	FAudioSourceVoice *voice,
+	float *pRatio
+);
+
+FAUDIOAPI uint32_t FAudioSourceVoice_SetSourceSampleRate(
+	FAudioSourceVoice *voice,
+	uint32_t NewSourceSampleRate
+);
 
 /* FAudioEngineCallback Interface */
 
