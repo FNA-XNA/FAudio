@@ -444,13 +444,6 @@ struct FACTCue
 	uint32_t elapsed;
 };
 
-/* Public XNA Types */
-
-struct FACTXNASong
-{
-	uint8_t TODO;
-};
-
 /* Internal functions */
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);

@@ -7,6 +7,11 @@
 
 #include "FACT_internal.h"
 
+struct FACTXNASong
+{
+	uint8_t TODO;
+};
+
 FACTXNASong* FACT_XNA_GenSong(const char* name)
 {
 	/* TODO */
