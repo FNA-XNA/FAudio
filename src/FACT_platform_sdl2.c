@@ -400,33 +400,35 @@ void FAudio_PlatformCloseEngine(FACTAudioEngine *engine)
 	}
 }
 
-uint16_t FAudio_PlatformGetRendererCount()
+uint32_t FAudio_PlatformGetRendererCount()
 {
 	return SDL_GetNumAudioDevices(0);
 }
 
-void FAudio_PlatformGetRendererDetails(
-	uint16_t index,
-	FACTRendererDetails *details
+void FAudio_PlatformGetDeviceDetails(
+	uint32_t index,
+	FAudioDeviceDetails *details
 ) {
 	const char *name;
 	size_t len, i;
 
-	FAudio_zero(details, sizeof(FACTRendererDetails));
+	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 	if (index > SDL_GetNumAudioDevices(0))
 	{
 		return;
 	}
 
 	/* FIXME: wchar_t is an asshole */
-	details->rendererID[0] = L'0' + index;
+	details->DeviceID[0] = L'0' + index;
 	name = SDL_GetAudioDeviceName(index, 0);
 	len = SDL_min(FAudio_strlen(name), 0xFF);
 	for (i = 0; i < len; i += 1)
 	{
-		details->displayName[i] = name[i];
+		details->DisplayName[i] = name[i];
 	}
-	details->defaultDevice = (index == 0);
+	details->Role = (index == 0) ?
+		GlobalDefaultDevice :
+		NotDefaultDevice;
 }
 
 void* FAudio_malloc(size_t size)
