@@ -102,13 +102,6 @@ struct FAudioEngineCallbackEntry
 	FAudioEngineCallbackEntry *next;
 };
 
-typedef struct FAudioVoiceCallbackEntry FAudioVoiceCallbackEntry;
-struct FAudioVoiceCallbackEntry
-{
-	FAudioVoiceCallback *callback;
-	FAudioVoiceCallbackEntry *next;
-};
-
 /* Public FAudio Types */
 
 struct FAudio
@@ -116,9 +109,39 @@ struct FAudio
 	FAudioEngineCallbackEntry *callbacks;
 };
 
+typedef enum FAudioVoiceType
+{
+	FAUDIO_VOICE_SOURCE,
+	FAUDIO_VOICE_SUBMIX,
+	FAUDIO_VOICE_MASTER
+} FAudioVoiceType;
+
 struct FAudioVoice
 {
-	FAudioVoiceCallbackEntry *callbacks;
+	FAudioVoiceType type;
+	FAudioVoiceSends sends;
+	FAudioEffectChain effects;
+	uint32_t flags;
+	union
+	{
+		struct
+		{
+			float maxFreqRatio;
+			FAudioWaveFormatEx format;
+			FAudioVoiceCallback *callback;
+		} src;
+		struct
+		{
+			uint32_t inputChannels;
+			uint32_t inputSampleRate;
+		} mix;
+		struct
+		{
+			uint32_t inputChannels;
+			uint32_t inputSampleRate;
+			uint32_t deviceIndex;
+		} master;
+	};
 };
 
 /* Internal Functions */

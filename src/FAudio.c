@@ -118,7 +118,51 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	/* TODO */
+	*ppSourceVoice = FAudio_malloc(sizeof(FAudioVoice));
+	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
+
+	/* Sends/Effects */
+	if (pSendList == NULL)
+	{
+		FAudio_zero(&(*ppSourceVoice)->sends, sizeof(FAudioVoiceSends));
+	}
+	else
+	{
+		(*ppSourceVoice)->sends.SendCount = pSendList->SendCount;
+		(*ppSourceVoice)->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
+			pSendList->SendCount * sizeof(FAudioSendDescriptor)
+		);
+		FAudio_memcpy(
+			(*ppSourceVoice)->sends.pSends,
+			pSendList->pSends,
+			pSendList->SendCount * sizeof(FAudioSendDescriptor)
+		);
+	}
+	if (pEffectChain == NULL)
+	{
+		FAudio_zero(&(*ppSourceVoice)->effects, sizeof(FAudioEffectChain));
+	}
+	else
+	{
+		(*ppSourceVoice)->effects.EffectCount = pEffectChain->EffectCount;
+		(*ppSourceVoice)->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+		FAudio_memcpy(
+			(*ppSourceVoice)->effects.pEffectDescriptors,
+			pEffectChain->pEffectDescriptors,
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+	}
+
+	/* Source Properties */
+	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
+	FAudio_memcpy(
+		&(*ppSourceVoice)->src.format,
+		pSourceFormat,
+		sizeof(FAudioWaveFormatEx)
+	);
+	(*ppSourceVoice)->src.callback = pCallback;
 	return 0;
 }
 
@@ -132,7 +176,46 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	/* TODO */
+	*ppSubmixVoice = FAudio_malloc(sizeof(FAudioVoice));
+	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
+
+	/* Sends/Effects */
+	if (pSendList == NULL)
+	{
+		FAudio_zero(&(*ppSubmixVoice)->sends, sizeof(FAudioVoiceSends));
+	}
+	else
+	{
+		(*ppSubmixVoice)->sends.SendCount = pSendList->SendCount;
+		(*ppSubmixVoice)->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
+			pSendList->SendCount * sizeof(FAudioSendDescriptor)
+		);
+		FAudio_memcpy(
+			(*ppSubmixVoice)->sends.pSends,
+			pSendList->pSends,
+			pSendList->SendCount * sizeof(FAudioSendDescriptor)
+		);
+	}
+	if (pEffectChain == NULL)
+	{
+		FAudio_zero(&(*ppSubmixVoice)->effects, sizeof(FAudioEffectChain));
+	}
+	else
+	{
+		(*ppSubmixVoice)->effects.EffectCount = pEffectChain->EffectCount;
+		(*ppSubmixVoice)->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+		FAudio_memcpy(
+			(*ppSubmixVoice)->effects.pEffectDescriptors,
+			pEffectChain->pEffectDescriptors,
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+	}
+
+	/* Submix Properties */
+	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
+	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
 	return 0;
 }
 
@@ -145,7 +228,32 @@ uint32_t FAudio_CreateMasteringVoice(
 	uint32_t DeviceIndex,
 	const FAudioEffectChain *pEffectChain
 ) {
-	/* TODO */
+	*ppMasteringVoice = FAudio_malloc(sizeof(FAudioVoice));
+	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
+
+	/* Sends/Effects */
+	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
+	if (pEffectChain == NULL)
+	{
+		FAudio_zero(&(*ppMasteringVoice)->effects, sizeof(FAudioEffectChain));
+	}
+	else
+	{
+		(*ppMasteringVoice)->effects.EffectCount = pEffectChain->EffectCount;
+		(*ppMasteringVoice)->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+		FAudio_memcpy(
+			(*ppMasteringVoice)->effects.pEffectDescriptors,
+			pEffectChain->pEffectDescriptors,
+			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
+		);
+	}
+
+	/* Master Properties */
+	(*ppMasteringVoice)->master.inputChannels = InputChannels;
+	(*ppMasteringVoice)->master.inputSampleRate = InputSampleRate;
+	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
 	return 0;
 }
 
@@ -344,7 +452,16 @@ void FAudioVoice_GetOutputMatrix(
 
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
-	/* TODO */
+	/* TODO: Lock, check for dependencies and fail if still in use */
+	if (voice->sends.pSends != NULL)
+	{
+		FAudio_free(voice->sends.pSends);
+	}
+	if (voice->effects.pEffectDescriptors != NULL)
+	{
+		FAudio_free(voice->effects.pEffectDescriptors);
+	}
+	FAudio_free(voice);
 }
 
 /* FAudioSourceVoice Interface */
