@@ -305,8 +305,8 @@ uint32_t FAudioVoice_EnableEffect(
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	voice->effects.pEffectDescriptors[EffectIndex].InitialState = 1;
 	return 0;
 }
 
@@ -315,8 +315,8 @@ uint32_t FAudioVoice_DisableEffect(
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 ) {
-	/* TODO */
 	FAudio_assert(OperationSet == 0);
+	voice->effects.pEffectDescriptors[EffectIndex].InitialState = 0;
 	return 0;
 }
 
@@ -325,7 +325,7 @@ void FAudioVoice_GetEffectState(
 	uint32_t EffectIndex,
 	uint8_t *pEnabled
 ) {
-	/* TODO */
+	*pEnabled = voice->effects.pEffectDescriptors[EffectIndex].InitialState;
 }
 
 uint32_t FAudioVoice_SetEffectParameters(
@@ -335,7 +335,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t ParametersByteSize,
 	uint32_t OperationSet
 ) {
-	/* TODO */
+	/* TODO: XAPO */
 	FAudio_assert(OperationSet == 0);
 	return 0;
 }
@@ -345,7 +345,7 @@ uint32_t FAudioVoice_GetEffectParameters(
 	void *pParameters,
 	uint32_t ParametersByteSize
 ) {
-	/* TODO */
+	/* TODO: XAPO */
 	return 0;
 }
 
