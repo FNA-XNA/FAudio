@@ -49,11 +49,11 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	}
 
 	/* Free everything, finally. */
-	FACT_free(pWaveBank->name);
-	FACT_free(pWaveBank->entries);
-	FACT_free(pWaveBank->entryRefs);
+	FAudio_free(pWaveBank->name);
+	FAudio_free(pWaveBank->entries);
+	FAudio_free(pWaveBank->entryRefs);
 	FACT_close(pWaveBank->io);
-	FACT_free(pWaveBank);
+	FAudio_free(pWaveBank);
 	return 0;
 }
 
@@ -97,7 +97,7 @@ uint32_t FACTWaveBank_GetWaveProperties(
 	FACTWaveBankEntry *entry = &pWaveBank->entries[nWaveIndex];
 
 	/* FIXME: Name tables! -flibit */
-	FACT_zero(
+	FAudio_zero(
 		pWaveProperties->friendlyName,
 		sizeof(pWaveProperties->friendlyName)
 	);
@@ -123,7 +123,7 @@ uint32_t FACTWaveBank_Prepare(
 	FACTWave *latest;
 	FACTWaveBankMiniWaveFormat *fmt = &pWaveBank->entries[nWaveIndex].Format;
 
-	*ppWave = (FACTWave*) FACT_malloc(sizeof(FACTWave));
+	*ppWave = (FACTWave*) FAudio_malloc(sizeof(FACTWave));
 	(*ppWave)->next = NULL;
 
 	/* Engine references */

@@ -90,14 +90,14 @@ void FACT_INTERNAL_UpdateRPCs(
 			);
 			if (engine->variables[rpc->variable].accessibility & 0x04)
 			{
-				if (FACT_strcmp(
+				if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
 				) == 0) {
 					/* TODO: AttackTime */
 					rpcResult = 0.0f;
 				}
-				else if (FACT_strcmp(
+				else if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
 					"ReleaseTime"
 				) == 0) {
@@ -145,7 +145,7 @@ void FACT_INTERNAL_SetDSPParameter(
 	float var
 ) {
 	uint16_t par = rpc->parameter - RPC_PARAMETER_COUNT;
-	dsp->parameters[par].value = FACT_clamp(
+	dsp->parameters[par].value = FAudio_clamp(
 		FACT_INTERNAL_CalculateRPC(rpc, var),
 		dsp->parameters[par].minVal,
 		dsp->parameters[par].maxVal
@@ -154,7 +154,7 @@ void FACT_INTERNAL_SetDSPParameter(
 
 float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
-	return FACT_pow(10.0, decibel / 2000.0);
+	return FAudio_pow(10.0, decibel / 2000.0);
 }
 
 void FACT_INTERNAL_SelectSound(FACTCue *cue)
@@ -223,7 +223,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 					cue->sound.variation->entries[i].minWeight
 				);
 			}
-			next = FACT_rng() * max;
+			next = FAudio_rng() * max;
 
 			/* Use > 0, not >= 0. If we hit 0, that's it! */
 			for (i = cue->sound.variation->entryCount - 1; i > 0; i -= 1)
@@ -262,7 +262,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			wb = cue->parentBank->parentEngine->wbList;
 			while (wb != NULL)
 			{
-				if (FACT_strcmp(wbName, wb->name) == 0)
+				if (FAudio_strcmp(wbName, wb->name) == 0)
 				{
 					break;
 				}
@@ -286,12 +286,12 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	/* Alloc SoundInstance variables */
 	if (cue->active & 0x02)
 	{
-		cue->playing.sound.tracks = (FACTTrackInstance*) FACT_malloc(
+		cue->playing.sound.tracks = (FACTTrackInstance*) FAudio_malloc(
 			sizeof(FACTTrackInstance) * cue->playing.sound.sound->trackCount
 		);
 		for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
 		{
-			cue->playing.sound.tracks[i].events = (FACTEventInstance*) FACT_malloc(
+			cue->playing.sound.tracks[i].events = (FACTEventInstance*) FAudio_malloc(
 				sizeof(FACTEventInstance) * cue->playing.sound.sound->tracks[i].eventCount
 			);
 			for (j = 0; j < cue->playing.sound.sound->tracks[i].eventCount; j += 1)
@@ -302,7 +302,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 					cue->playing.sound.sound->tracks[i].events[j].loopCount;
 				cue->playing.sound.tracks[i].events[j].finished = 0;
 
-				FACT_zero(
+				FAudio_zero(
 					&cue->playing.sound.tracks[i].events[j].data,
 					sizeof(cue->playing.sound.tracks[i].events[j].data)
 				);
@@ -327,7 +327,7 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
 
 void FACT_INTERNAL_InitResampler(FACTWave *wave)
 {
-	FACT_zero(&wave->resample, sizeof(FACTResampleState));
+	FAudio_zero(&wave->resample, sizeof(FACTResampleState));
 	wave->resample.pitch = 0xFFFF; /* Force update on first poll */
 }
 
@@ -396,7 +396,7 @@ void FACT_INTERNAL_ActivateEvent(
 		wb = cue->parentBank->parentEngine->wbList;
 		while (wb != NULL)
 		{
-			if (FACT_strcmp(wbName, wb->name) == 0)
+			if (FAudio_strcmp(wbName, wb->name) == 0)
 			{
 				break;
 			}
@@ -433,7 +433,7 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->wave.variationFlags & 0x1000)
 		{
 			const int16_t rngPitch = (int16_t) (
-				FACT_rng() *
+				FAudio_rng() *
 				(evt->wave.maxPitch - evt->wave.minPitch)
 			);
 			if (evtInst->loopCount < evt->loopCount)
@@ -467,7 +467,7 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->wave.variationFlags & 0x2000)
 		{
 			const float rngVolume = track->volume + (
-				FACT_rng() *
+				FAudio_rng() *
 				(evt->wave.maxVolume - evt->wave.minVolume)
 			);
 			if (evtInst->loopCount < evt->loopCount)
@@ -501,11 +501,11 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->wave.variationFlags & 0xC000)
 		{
 			const float rngQFactor = (
-				FACT_rng() *
+				FAudio_rng() *
 				(evt->wave.maxQFactor - evt->wave.minQFactor)
 			);
 			const float rngFrequency = (
-				FACT_rng() *
+				FAudio_rng() *
 				(evt->wave.maxFrequency - evt->wave.minFrequency)
 			);
 			if (evtInst->loopCount < evt->loopCount)
@@ -575,7 +575,7 @@ void FACT_INTERNAL_ActivateEvent(
 			svResult = (
 				evt->value.ramp.initialValue +
 				(svResult - evt->value.ramp.initialValue)
-			) * FACT_clamp(
+			) * FAudio_clamp(
 				(elapsed - evtInst->timestamp) / evt->value.ramp.duration,
 				0.0f,
 				1.0f
@@ -590,7 +590,7 @@ void FACT_INTERNAL_ActivateEvent(
 			}
 			else if (evt->value.equation.flags & 0x08)
 			{
-				svResult = evt->value.equation.value1 + FACT_rng() * (
+				svResult = evt->value.equation.value1 + FAudio_rng() * (
 					evt->value.equation.value2 -
 					evt->value.equation.value1
 				);
@@ -854,7 +854,7 @@ uint32_t FACT_INTERNAL_GetWave(
 	if (wave->pitch != wave->resample.pitch)
 	{
 		const double stepd = (
-			FACT_pow(2.0, wave->pitch / 1200.0) *
+			FAudio_pow(2.0, wave->pitch / 1200.0) *
 			(double) wave->parentBank->entries[wave->index].Format.nSamplesPerSec /
 			(double) wave->parentBank->parentEngine->mixFormat->Format.nSamplesPerSec
 		);
@@ -868,12 +868,12 @@ uint32_t FACT_INTERNAL_GetWave(
 		decodeLength = samples;
 		if (wave->resample.offset & FIXED_FRACTION_MASK)
 		{
-			FACT_memcpy(
+			FAudio_memcpy(
 				decodeCacheL,
 				wave->resample.padding[0],
 				RESAMPLE_PADDING * 2
 			);
-			FACT_memcpy(
+			FAudio_memcpy(
 				decodeCacheR,
 				wave->resample.padding[1],
 				RESAMPLE_PADDING * 2
@@ -900,7 +900,7 @@ uint32_t FACT_INTERNAL_GetWave(
 		resampleLength = decodeLength;
 		if (resampleLength > 0)
 		{
-			FACT_memcpy(
+			FAudio_memcpy(
 				wave->resample.padding[0],
 				(
 					decodeCacheL +
@@ -909,7 +909,7 @@ uint32_t FACT_INTERNAL_GetWave(
 				),
 				RESAMPLE_PADDING * 2
 			);
-			FACT_memcpy(
+			FAudio_memcpy(
 				wave->resample.padding[1],
 				(
 					decodeCacheR +
@@ -976,12 +976,12 @@ uint32_t FACT_INTERNAL_GetWave(
 	else
 	{
 		/* Copy the end to the start first! */
-		FACT_memcpy(
+		FAudio_memcpy(
 			decodeCacheL,
 			wave->resample.padding[0],
 			RESAMPLE_PADDING * 2
 		);
-		FACT_memcpy(
+		FAudio_memcpy(
 			decodeCacheR,
 			wave->resample.padding[1],
 			RESAMPLE_PADDING * 2
@@ -1000,7 +1000,7 @@ uint32_t FACT_INTERNAL_GetWave(
 	if (decodeLength > 0)
 	{
 		/* The end will be the start next time */
-		FACT_memcpy(
+		FAudio_memcpy(
 			wave->resample.padding[0],
 			(
 				decodeCacheL +
@@ -1009,7 +1009,7 @@ uint32_t FACT_INTERNAL_GetWave(
 			),
 			RESAMPLE_PADDING * 2
 		);
-		FACT_memcpy(
+		FAudio_memcpy(
 			wave->resample.padding[1],
 			(
 				decodeCacheR +
@@ -1117,7 +1117,7 @@ uint32_t FACT_INTERNAL_DecodeMonoPCM8(
 	{
 		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
 	}
-	len = FACT_min(end - wave->position, samples);
+	len = FAudio_min(end - wave->position, samples);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -1177,7 +1177,7 @@ uint32_t FACT_INTERNAL_DecodeStereoPCM8(
 	{
 		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
 	}
-	len = FACT_min(end - wave->position, samples * 2);
+	len = FAudio_min(end - wave->position, samples * 2);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -1252,7 +1252,7 @@ uint32_t FACT_INTERNAL_DecodeMonoPCM16(
 	{
 		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
 	}
-	len = FACT_min(end - wave->position, samples * 2);
+	len = FAudio_min(end - wave->position, samples * 2);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -1308,7 +1308,7 @@ uint32_t FACT_INTERNAL_DecodeStereoPCM16(
 	{
 		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
 	}
-	len = FACT_min(end - wave->position, samples * 4);
+	len = FAudio_min(end - wave->position, samples * 4);
 
 	/* Go to the spot in the WaveBank where our samples start */
 	wave->parentBank->io->seek(
@@ -1404,7 +1404,7 @@ static inline int16_t FACT_INTERNAL_ParseNibble(
 		(*sample2 * AdaptCoeff_2[predictor])
 	) / 256;
 	sampleInt += signedNibble * (*delta);
-	sample = FACT_clamp(sampleInt, -32768, 32767);
+	sample = FAudio_clamp(sampleInt, -32768, 32767);
 
 	*sample2 = *sample1;
 	*sample1 = sample;
@@ -1480,7 +1480,7 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 	/* Have extra? Throw it in! */
 	if (wave->msadpcmExtra > 0)
 	{
-		FACT_memcpy(pcm, wave->msadpcmCache, wave->msadpcmExtra * 2);
+		FAudio_memcpy(pcm, wave->msadpcmCache, wave->msadpcmExtra * 2);
 		pcm += wave->msadpcmExtra;
 		samples -= wave->msadpcmExtra;
 		wave->msadpcmExtra = 0;
@@ -1501,7 +1501,7 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 	{
 		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
 	}
-	len = FACT_min(
+	len = FAudio_min(
 		end - wave->position,
 		(blocks + (extra > 0)) * (align + 22)
 	);
@@ -1600,8 +1600,8 @@ uint32_t FACT_INTERNAL_DecodeMonoMSADPCM(
 			);
 		}
 		wave->msadpcmExtra = bsize - extra;
-		FACT_memcpy(pcm, wave->msadpcmCache, extra * 2);
-		FACT_memmove(
+		FAudio_memcpy(pcm, wave->msadpcmCache, extra * 2);
+		FAudio_memmove(
 			wave->msadpcmCache,
 			wave->msadpcmCache + extra,
 			wave->msadpcmExtra * 2
@@ -1691,7 +1691,7 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 	{
 		end = wave->parentBank->entries[wave->index].PlayRegion.dwLength;
 	}
-	len = FACT_min(
+	len = FAudio_min(
 		end - wave->position,
 		(blocks + (extra > 0)) * ((align + 22) * 2)
 	);
@@ -1807,7 +1807,7 @@ uint32_t FACT_INTERNAL_DecodeStereoMSADPCM(
 			*pcmL++ = wave->msadpcmCache[i];
 			*pcmR++ = wave->msadpcmCache[i + 1];
 		}
-		FACT_memmove(
+		FAudio_memmove(
 			wave->msadpcmCache,
 			wave->msadpcmCache + (extra * 2),
 			wave->msadpcmExtra * 2

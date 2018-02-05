@@ -14,7 +14,7 @@ uint16_t FACTSoundBank_GetCueIndex(
 	uint16_t i;
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
-		if (FACT_strcmp(szFriendlyName, pSoundBank->cueNames[i]) == 0)
+		if (FAudio_strcmp(szFriendlyName, pSoundBank->cueNames[i]) == 0)
 		{
 			return i;
 		}
@@ -36,7 +36,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 	FACTCueProperties *pProperties
 ) {
 	uint16_t i;
-	FACT_strlcpy(
+	FAudio_strlcpy(
 		pProperties->friendlyName,
 		pSoundBank->cueNames[nCueIndex],
 		0xFF
@@ -86,8 +86,8 @@ uint32_t FACTSoundBank_Prepare(
 	uint16_t i;
 	FACTCue *latest;
 
-	*ppCue = (FACTCue*) FACT_malloc(sizeof(FACTCue));
-	FACT_zero(*ppCue, sizeof(FACTCue));
+	*ppCue = (FACTCue*) FAudio_malloc(sizeof(FACTCue));
+	FAudio_zero(*ppCue, sizeof(FACTCue));
 
 	/* Engine references */
 	(*ppCue)->parentBank = pSoundBank;
@@ -121,7 +121,7 @@ uint32_t FACTSoundBank_Prepare(
 	}
 
 	/* Instance data */
-	(*ppCue)->variableValues = (float*) FACT_malloc(
+	(*ppCue)->variableValues = (float*) FAudio_malloc(
 		sizeof(float) * pSoundBank->parentEngine->variableCount
 	);
 	for (i = 0; i < pSoundBank->parentEngine->variableCount; i += 1)
@@ -294,17 +294,17 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	}
 
 	/* SoundBank Name */
-	FACT_free(sb->name);
+	FAudio_free(sb->name);
 
 	/* Cue data */
-	FACT_free(sb->cues);
+	FAudio_free(sb->cues);
 
 	/* WaveBank Name data */
 	for (i = 0; i < sb->wavebankCount; i += 1)
 	{
-		FACT_free(sb->wavebankNames[i]);
+		FAudio_free(sb->wavebankNames[i]);
 	}
-	FACT_free(sb->wavebankNames);
+	FAudio_free(sb->wavebankNames);
 
 	/* Sound data */
 	for (i = 0; i < sb->soundCount; i += 1)
@@ -322,45 +322,45 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 				{
 					if (sb->sounds[i].tracks[j].events[k].wave.isComplex)
 					{
-						FACT_free(
+						FAudio_free(
 							sb->sounds[i].tracks[j].events[k].wave.complex.tracks
 						);
-						FACT_free(
+						FAudio_free(
 							sb->sounds[i].tracks[j].events[k].wave.complex.wavebanks
 						);
-						FACT_free(
+						FAudio_free(
 							sb->sounds[i].tracks[j].events[k].wave.complex.weights
 						);
 					}
 				}
 				#undef MATCH
 			}
-			FACT_free(sb->sounds[i].tracks[j].events);
+			FAudio_free(sb->sounds[i].tracks[j].events);
 		}
-		FACT_free(sb->sounds[i].tracks);
-		FACT_free(sb->sounds[i].rpcCodes);
-		FACT_free(sb->sounds[i].dspCodes);
+		FAudio_free(sb->sounds[i].tracks);
+		FAudio_free(sb->sounds[i].rpcCodes);
+		FAudio_free(sb->sounds[i].dspCodes);
 	}
-	FACT_free(sb->sounds);
-	FACT_free(sb->soundCodes);
+	FAudio_free(sb->sounds);
+	FAudio_free(sb->soundCodes);
 
 	/* Variation data */
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
-		FACT_free(sb->variations[i].entries);
+		FAudio_free(sb->variations[i].entries);
 	}
-	FACT_free(sb->variations);
-	FACT_free(sb->variationCodes);
+	FAudio_free(sb->variations);
+	FAudio_free(sb->variationCodes);
 
 	/* Cue Name data */
 	for (i = 0; i < sb->cueCount; i += 1)
 	{
-		FACT_free(sb->cueNames[i]);
+		FAudio_free(sb->cueNames[i]);
 	}
-	FACT_free(sb->cueNames);
+	FAudio_free(sb->cueNames);
 
 	/* Finally. */
-	FACT_free(sb);
+	FAudio_free(sb);
 	return 0;
 }
 

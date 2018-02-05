@@ -7,6 +7,7 @@
 
 #include "FACT.h"
 #include "FACT3D.h"
+#include "FAudio_internal.h"
 
 #ifdef FACT_UNKNOWN_PLATFORM
 #include <assert.h>
@@ -569,39 +570,6 @@ DECODE_FUNC(StereoPCM8)
 DECODE_FUNC(StereoPCM16)
 DECODE_FUNC(StereoMSADPCM)
 #undef DECODE_FUNC
-
-/* Platform Functions */
-
-void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
-void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
-
-uint16_t FACT_PlatformGetRendererCount();
-void FACT_PlatformGetRendererDetails(
-	uint16_t index,
-	FACTRendererDetails *details
-);
-
-void* FACT_malloc(size_t size);
-void FACT_free(void *ptr);
-void FACT_zero(void *ptr, size_t size);
-void FACT_memcpy(void *dst, const void *src, size_t size);
-void FACT_memmove(void *dst, void *src, size_t size);
-size_t FACT_strlen(const char *ptr);
-int FACT_strcmp(const char *str1, const char *str2);
-void FACT_strlcpy(char *dst, const char *src, size_t len);
-double FACT_pow(double x, double y);
-double FACT_log10(double x);
-double FACT_sqrt(double x);
-double FACT_acos(double x);
-float FACT_rng();
-uint32_t FACT_timems();
-
-#define FACT_min(val1, val2) \
-	(val1 < val2 ? val1 : val2)
-#define FACT_max(val1, val2) \
-	(val1 > val2 ? val1 : val2)
-#define FACT_clamp(val, min, max) \
-	(val > max ? max : (val < min ? min : val))
 
 typedef size_t (FACTCALL * FACT_readfunc)(
 	void *data,

@@ -51,7 +51,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	uint32_t i, j, k;
 	float *out = (float*) stream;
 
-	FACT_zero(stream, len);
+	FAudio_zero(stream, len);
 
 	/* We want the timestamp to be uniform across all Cues.
 	 * Oftentimes many Cues are played at once with the expectation
@@ -59,7 +59,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	 * so all the various actions will go together even if it takes
 	 * an extra millisecond to get through the whole Cue list.
 	 */
-	timestamp = FACT_timems();
+	timestamp = FAudio_timems();
 
 	while (engine != NULL)
 	{
@@ -119,7 +119,7 @@ void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 					for (j = 0; j < wave->dstChannels; j += 1)
 					for (k = 0; k < wave->srcChannels; k += 1)
 					{
-						out[i * device->format.Format.nChannels + j] = FACT_clamp(
+						out[i * device->format.Format.nChannels + j] = FAudio_clamp(
 							out[i * device->format.Format.nChannels + j] + (
 								device->resampleCache[k][i] *
 								wave->volume *
@@ -162,7 +162,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	}
 
 	/* The entry to be added to the audio device */
-	entry = (FACTEngineEntry*) FACT_malloc(sizeof(FACTEngineEntry));
+	entry = (FACTEngineEntry*) FAudio_malloc(sizeof(FACTEngineEntry));
 	entry->engine = engine;
 	entry->next = NULL;
 
@@ -187,7 +187,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	device = devlist;
 	while (device != NULL)
 	{
-		if (FACT_strcmp(device->name, name) == 0)
+		if (FAudio_strcmp(device->name, name) == 0)
 		{
 			break;
 		}
@@ -198,7 +198,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	if (device == NULL)
 	{
 		/* Allocate a new device container*/
-		device = (FACTAudioDevice*) FACT_malloc(
+		device = (FACTAudioDevice*) FAudio_malloc(
 			sizeof(FACTAudioDevice)
 		);
 		device->name = name;
@@ -235,8 +235,8 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		);
 		if (device->device == 0)
 		{
-			FACT_free(device);
-			FACT_free(entry);
+			FAudio_free(device);
+			FAudio_free(entry);
 			SDL_Log("%s\n", SDL_GetError());
 			FACT_assert(0 && "Failed to open audio device!");
 			return;
@@ -279,17 +279,17 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		{
 			FACT_assert(0 && "Unrecognized speaker layout!");
 		}
-		FACT_zero(&device->format.SubFormat, sizeof(FAudioGUID)); /* ? */
+		FAudio_zero(&device->format.SubFormat, sizeof(FAudioGUID)); /* ? */
 
 		/* Alloc decode/resample caches */
-		device->decodeCache[0] = (int16_t*) FACT_malloc(
+		device->decodeCache[0] = (int16_t*) FAudio_malloc(
 			2 * (have.samples * MAX_RESAMPLE_STEP + RESAMPLE_PADDING)
 		);
-		device->decodeCache[1] = (int16_t*) FACT_malloc(
+		device->decodeCache[1] = (int16_t*) FAudio_malloc(
 			2 * (have.samples * MAX_RESAMPLE_STEP + RESAMPLE_PADDING)
 		);
-		device->resampleCache[0] = (float*) FACT_malloc(4 * have.samples);
-		device->resampleCache[1] = (float*) FACT_malloc(4 * have.samples);
+		device->resampleCache[0] = (float*) FAudio_malloc(4 * have.samples);
+		device->resampleCache[1] = (float*) FAudio_malloc(4 * have.samples);
 		device->bufferSize = have.samples;
 
 		/* Give the output format to the engine */
@@ -344,14 +344,14 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 				if (entry == prevEntry) /* First in list */
 				{
 					dev->engineList = entry->next;
-					FACT_free(entry);
+					FAudio_free(entry);
 					entry = dev->engineList;
 					prevEntry = dev->engineList;
 				}
 				else
 				{
 					prevEntry->next = entry->next;
-					FACT_free(entry);
+					FAudio_free(entry);
 					entry = prevEntry->next;
 				}
 				found = 1;
@@ -378,11 +378,11 @@ void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 				{
 					prevDev = dev->next;
 				}
-				FACT_free(dev->decodeCache[0]);
-				FACT_free(dev->decodeCache[1]);
-				FACT_free(dev->resampleCache[0]);
-				FACT_free(dev->resampleCache[1]);
-				FACT_free(dev);
+				FAudio_free(dev->decodeCache[0]);
+				FAudio_free(dev->decodeCache[1]);
+				FAudio_free(dev->resampleCache[0]);
+				FAudio_free(dev->resampleCache[1]);
+				FAudio_free(dev);
 			}
 			dev = NULL;
 		}
@@ -412,7 +412,7 @@ void FACT_PlatformGetRendererDetails(
 	const char *name;
 	size_t len, i;
 
-	FACT_zero(details, sizeof(FACTRendererDetails));
+	FAudio_zero(details, sizeof(FACTRendererDetails));
 	if (index > SDL_GetNumAudioDevices(0))
 	{
 		return;
@@ -421,7 +421,7 @@ void FACT_PlatformGetRendererDetails(
 	/* FIXME: wchar_t is an asshole */
 	details->rendererID[0] = L'0' + index;
 	name = SDL_GetAudioDeviceName(index, 0);
-	len = SDL_min(FACT_strlen(name), 0xFF);
+	len = SDL_min(FAudio_strlen(name), 0xFF);
 	for (i = 0; i < len; i += 1)
 	{
 		details->displayName[i] = name[i];
@@ -429,69 +429,69 @@ void FACT_PlatformGetRendererDetails(
 	details->defaultDevice = (index == 0);
 }
 
-void* FACT_malloc(size_t size)
+void* FAudio_malloc(size_t size)
 {
 	return SDL_malloc(size);
 }
 
-void FACT_free(void *ptr)
+void FAudio_free(void *ptr)
 {
 	SDL_free(ptr);
 }
 
-void FACT_zero(void *ptr, size_t size)
+void FAudio_zero(void *ptr, size_t size)
 {
 	SDL_memset(ptr, '\0', size);
 }
 
-void FACT_memcpy(void *dst, const void *src, size_t size)
+void FAudio_memcpy(void *dst, const void *src, size_t size)
 {
 	SDL_memcpy(dst, src, size);
 }
 
-void FACT_memmove(void *dst, void *src, size_t size)
+void FAudio_memmove(void *dst, void *src, size_t size)
 {
 	SDL_memmove(dst, src, size);
 }
 
-size_t FACT_strlen(const char *ptr)
+size_t FAudio_strlen(const char *ptr)
 {
 	return SDL_strlen(ptr);
 }
 
-int FACT_strcmp(const char *str1, const char *str2)
+int FAudio_strcmp(const char *str1, const char *str2)
 {
 	return SDL_strcmp(str1, str2);
 }
 
-void FACT_strlcpy(char *dst, const char *src, size_t len)
+void FAudio_strlcpy(char *dst, const char *src, size_t len)
 {
 	SDL_strlcpy(dst, src, len);
 }
 
-double FACT_pow(double x, double y)
+double FAudio_pow(double x, double y)
 {
 	return SDL_pow(x, y);
 }
 
 extern double SDL_uclibc_log10(double x); /* TODO: SDL Bugzilla #4052 */
 
-double FACT_log10(double x)
+double FAudio_log10(double x)
 {
 	return SDL_uclibc_log10(x); /* TODO: SDL_log10! */
 }
 
-double FACT_sqrt(double x)
+double FAudio_sqrt(double x)
 {
 	return SDL_sqrt(x);
 }
 
-double FACT_acos(double x)
+double FAudio_acos(double x)
 {
 	return SDL_acos(x);
 }
 
-float FACT_rng()
+float FAudio_rng()
 {
 	/* TODO: Random number generator */
 	static float butt = 0.0f;
@@ -504,7 +504,7 @@ float FACT_rng()
 	return result;
 }
 
-uint32_t FACT_timems()
+uint32_t FAudio_timems()
 {
 	return SDL_GetTicks();
 }

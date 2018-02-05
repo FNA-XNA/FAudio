@@ -36,7 +36,7 @@ static inline float read_volbyte(uint8_t **ptr)
 	 * Thanks to Kenny for plotting all that data.
 	 * -flibit
 	 */
-	return (float) ((3969.0 * FACT_log10(read_u8(ptr) / 28240.0)) + 8715.0);
+	return (float) ((3969.0 * FAudio_log10(read_u8(ptr) / 28240.0)) + 8715.0);
 }
 
 /* AudioEngine implementation */
@@ -45,12 +45,12 @@ uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
 ) {
-	*ppEngine = (FACTAudioEngine*) FACT_malloc(sizeof(FACTAudioEngine));
+	*ppEngine = (FACTAudioEngine*) FAudio_malloc(sizeof(FACTAudioEngine));
 	if (*ppEngine == NULL)
 	{
 		return -1; /* TODO: E_OUTOFMEMORY */
 	}
-	FACT_zero(*ppEngine, sizeof(FACTAudioEngine));
+	FAudio_zero(*ppEngine, sizeof(FACTAudioEngine));
 	return 0;
 }
 
@@ -58,7 +58,7 @@ uint32_t FACTAudioEngine_GetRendererCount(
 	FACTAudioEngine *pEngine,
 	uint16_t *pnRendererCount
 ) {
-	*pnRendererCount = FACT_PlatformGetRendererCount();
+	*pnRendererCount = FAudio_PlatformGetRendererCount();
 	return 0;
 }
 
@@ -67,7 +67,7 @@ uint32_t FACTAudioEngine_GetRendererDetails(
 	uint16_t nRendererIndex,
 	FACTRendererDetails *pRendererDetails
 ) {
-	FACT_PlatformGetRendererDetails(
+	FAudio_PlatformGetRendererDetails(
 		nRendererIndex,
 		pRendererDetails
 	);
@@ -78,7 +78,7 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 	FACTAudioEngine *pEngine,
 	FAudioWaveFormatExtensible *pFinalMixFormat
 ) {
-	FACT_memcpy(
+	FAudio_memcpy(
 		pFinalMixFormat,
 		pEngine->mixFormat,
 		sizeof(FAudioWaveFormatExtensible)
@@ -150,7 +150,7 @@ uint32_t FACTAudioEngine_Initialize(
 
 	/* Category data */
 	FACT_assert((ptr - start) == categoryOffset);
-	pEngine->categories = (FACTAudioCategory*) FACT_malloc(
+	pEngine->categories = (FACTAudioCategory*) FAudio_malloc(
 		sizeof(FACTAudioCategory) * pEngine->categoryCount
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
@@ -170,7 +170,7 @@ uint32_t FACTAudioEngine_Initialize(
 
 	/* Variable data */
 	FACT_assert((ptr - start) == variableOffset);
-	pEngine->variables = (FACTVariable*) FACT_malloc(
+	pEngine->variables = (FACTVariable*) FAudio_malloc(
 		sizeof(FACTVariable) * pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
@@ -182,7 +182,7 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Global variable storage. Some unused data for non-global vars */
-	pEngine->globalVariableValues = (float*) FACT_malloc(
+	pEngine->globalVariableValues = (float*) FAudio_malloc(
 		sizeof(float) * pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
@@ -194,11 +194,11 @@ uint32_t FACTAudioEngine_Initialize(
 	if (pEngine->rpcCount > 0)
 	{
 		FACT_assert((ptr - start) == rpcOffset);
-		pEngine->rpcs = (FACTRPC*) FACT_malloc(
+		pEngine->rpcs = (FACTRPC*) FAudio_malloc(
 			sizeof(FACTRPC) *
 			pEngine->rpcCount
 		);
-		pEngine->rpcCodes = (uint32_t*) FACT_malloc(
+		pEngine->rpcCodes = (uint32_t*) FAudio_malloc(
 			sizeof(uint32_t) *
 			pEngine->rpcCount
 		);
@@ -208,7 +208,7 @@ uint32_t FACTAudioEngine_Initialize(
 			pEngine->rpcs[i].variable = read_u16(&ptr);
 			pEngine->rpcs[i].pointCount = read_u8(&ptr);
 			pEngine->rpcs[i].parameter = read_u16(&ptr);
-			pEngine->rpcs[i].points = (FACTRPCPoint*) FACT_malloc(
+			pEngine->rpcs[i].points = (FACTRPCPoint*) FAudio_malloc(
 				sizeof(FACTRPCPoint) *
 				pEngine->rpcs[i].pointCount
 			);
@@ -225,11 +225,11 @@ uint32_t FACTAudioEngine_Initialize(
 	if (pEngine->dspPresetCount > 0)
 	{
 		FACT_assert((ptr - start) == dspPresetOffset);
-		pEngine->dspPresets = (FACTDSPPreset*) FACT_malloc(
+		pEngine->dspPresets = (FACTDSPPreset*) FAudio_malloc(
 			sizeof(FACTDSPPreset) *
 			pEngine->dspPresetCount
 		);
-		pEngine->dspPresetCodes = (uint32_t*) FACT_malloc(
+		pEngine->dspPresetCodes = (uint32_t*) FAudio_malloc(
 			sizeof(uint32_t) *
 			pEngine->dspPresetCount
 		);
@@ -238,7 +238,7 @@ uint32_t FACTAudioEngine_Initialize(
 			pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
 			pEngine->dspPresets[i].accessibility = read_u8(&ptr);
 			pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
-			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FACT_malloc(
+			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FAudio_malloc(
 				sizeof(FACTDSPParameter) *
 				pEngine->dspPresets[i].parameterCount
 			); /* This will be filled in just a moment... */
@@ -273,15 +273,15 @@ uint32_t FACTAudioEngine_Initialize(
 
 	/* Category Name data */
 	FACT_assert((ptr - start) == categoryNameOffset);
-	pEngine->categoryNames = (char**) FACT_malloc(
+	pEngine->categoryNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		pEngine->categoryCount
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		memsize = FACT_strlen((char*) ptr) + 1; /* Dastardly! */
-		pEngine->categoryNames[i] = (char*) FACT_malloc(memsize);
-		FACT_memcpy(pEngine->categoryNames[i], ptr, memsize);
+		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
+		pEngine->categoryNames[i] = (char*) FAudio_malloc(memsize);
+		FAudio_memcpy(pEngine->categoryNames[i], ptr, memsize);
 		ptr += memsize;
 	}
 
@@ -295,22 +295,22 @@ uint32_t FACTAudioEngine_Initialize(
 
 	/* Variable Name data */
 	FACT_assert((ptr - start) == variableNameOffset);
-	pEngine->variableNames = (char**) FACT_malloc(
+	pEngine->variableNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		memsize = FACT_strlen((char*) ptr) + 1; /* Dastardly! */
-		pEngine->variableNames[i] = (char*) FACT_malloc(memsize);
-		FACT_memcpy(pEngine->variableNames[i], ptr, memsize);
+		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
+		pEngine->variableNames[i] = (char*) FAudio_malloc(memsize);
+		FAudio_memcpy(pEngine->variableNames[i], ptr, memsize);
 		ptr += memsize;
 	}
 
 	/* Finally. */
 	FACT_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
-	FACT_PlatformInitEngine(
+	FAudio_PlatformInitEngine(
 		pEngine,
 		pParams->pRendererID
 	);
@@ -324,7 +324,7 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	FACTWaveBank *wb;
 
 	/* Shutdown the platform stream before freeing stuff! */
-	FACT_PlatformCloseEngine(pEngine);
+	FAudio_PlatformCloseEngine(pEngine);
 
 	/* Unreference all the Banks */
 	sb = pEngine->sbList;
@@ -343,38 +343,38 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	/* Category data */
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		FACT_free(pEngine->categoryNames[i]);
+		FAudio_free(pEngine->categoryNames[i]);
 	}
-	FACT_free(pEngine->categoryNames);
-	FACT_free(pEngine->categories);
+	FAudio_free(pEngine->categoryNames);
+	FAudio_free(pEngine->categories);
 
 	/* Variable data */
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		FACT_free(pEngine->variableNames[i]);
+		FAudio_free(pEngine->variableNames[i]);
 	}
-	FACT_free(pEngine->variableNames);
-	FACT_free(pEngine->variables);
-	FACT_free(pEngine->globalVariableValues);
+	FAudio_free(pEngine->variableNames);
+	FAudio_free(pEngine->variables);
+	FAudio_free(pEngine->globalVariableValues);
 
 	/* RPC data */
 	for (i = 0; i < pEngine->rpcCount; i += 1)
 	{
-		FACT_free(pEngine->rpcs[i].points);
+		FAudio_free(pEngine->rpcs[i].points);
 	}
-	FACT_free(pEngine->rpcs);
-	FACT_free(pEngine->rpcCodes);
+	FAudio_free(pEngine->rpcs);
+	FAudio_free(pEngine->rpcCodes);
 
 	/* DSP data */
 	for (i = 0; i < pEngine->dspPresetCount; i += 1)
 	{
-		FACT_free(pEngine->dspPresets[i].parameters);
+		FAudio_free(pEngine->dspPresets[i].parameters);
 	}
-	FACT_free(pEngine->dspPresets);
-	FACT_free(pEngine->dspPresetCodes);
+	FAudio_free(pEngine->dspPresets);
+	FAudio_free(pEngine->dspPresetCodes);
 
 	/* Finally. */
-	FACT_free(pEngine);
+	FAudio_free(pEngine);
 	return 0;
 }
 
@@ -450,7 +450,7 @@ uint16_t FACTAudioEngine_GetCategory(
 	uint16_t i;
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		if (FACT_strcmp(szFriendlyName, pEngine->categoryNames[i]) == 0)
+		if (FAudio_strcmp(szFriendlyName, pEngine->categoryNames[i]) == 0)
 		{
 			return i;
 		}
@@ -569,7 +569,7 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	uint16_t i;
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		if (	FACT_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
+		if (	FAudio_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
 			!(pEngine->variables[i].accessibility & 0x04)	)
 		{
 			return i;
@@ -587,7 +587,7 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 	FACT_assert(var->accessibility & 0x01);
 	FACT_assert(!(var->accessibility & 0x02));
 	FACT_assert(!(var->accessibility & 0x04));
-	pEngine->globalVariableValues[nIndex] = FACT_clamp(
+	pEngine->globalVariableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
 		var->maxValue
@@ -617,11 +617,11 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 	uint16_t j;
 
 	track->eventCount = read_u8(ptr);
-	track->events = (FACTEvent*) FACT_malloc(
+	track->events = (FACTEvent*) FAudio_malloc(
 		sizeof(FACTEvent) *
 		track->eventCount
 	);
-	FACT_zero(track->events, sizeof(FACTEvent) * track->eventCount);
+	FAudio_zero(track->events, sizeof(FACTEvent) * track->eventCount);
 	for (i = 0; i < track->eventCount; i += 1)
 	{
 		evtInfo = read_u32(ptr);
@@ -664,15 +664,15 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].wave.complex.trackCount = read_u16(ptr);
 			track->events[i].wave.complex.variation = read_u16(ptr);
 			*ptr += 4; /* Unknown values */
-			track->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
+			track->events[i].wave.complex.tracks = (uint16_t*) FAudio_malloc(
 				sizeof(uint16_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.wavebanks = (uint8_t*) FAudio_malloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.weights = (uint8_t*) FAudio_malloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
@@ -736,15 +736,15 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].wave.complex.trackCount = read_u16(ptr);
 			track->events[i].wave.complex.variation = read_u16(ptr);
 			*ptr += 4; /* Unknown values */
-			track->events[i].wave.complex.tracks = (uint16_t*) FACT_malloc(
+			track->events[i].wave.complex.tracks = (uint16_t*) FAudio_malloc(
 				sizeof(uint16_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.wavebanks = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.wavebanks = (uint8_t*) FAudio_malloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.weights = (uint8_t*) FACT_malloc(
+			track->events[i].wave.complex.weights = (uint8_t*) FAudio_malloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
@@ -867,7 +867,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		return -1; /* TODO: WRONG PLATFORM */
 	}
 
-	sb = (FACTSoundBank*) FACT_malloc(sizeof(FACTSoundBank));
+	sb = (FACTSoundBank*) FAudio_malloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
 
@@ -916,32 +916,32 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	soundOffset = read_s32(&ptr);
 
 	/* SoundBank Name */
-	memsize = FACT_strlen((char*) ptr) + 1; /* Dastardly! */
-	sb->name = (char*) FACT_malloc(memsize);
-	FACT_memcpy(sb->name, ptr, memsize);
+	memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
+	sb->name = (char*) FAudio_malloc(memsize);
+	FAudio_memcpy(sb->name, ptr, memsize);
 	ptr += 64;
 
 	/* WaveBank Name data */
 	FACT_assert((ptr - start) == wavebankNameOffset);
-	sb->wavebankNames = (char**) FACT_malloc(
+	sb->wavebankNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		sb->wavebankCount
 	);
 	for (i = 0; i < sb->wavebankCount; i += 1)
 	{
-		memsize = FACT_strlen((char*) ptr) + 1;
-		sb->wavebankNames[i] = (char*) FACT_malloc(memsize);
-		FACT_memcpy(sb->wavebankNames[i], ptr, memsize);
+		memsize = FAudio_strlen((char*) ptr) + 1;
+		sb->wavebankNames[i] = (char*) FAudio_malloc(memsize);
+		FAudio_memcpy(sb->wavebankNames[i], ptr, memsize);
 		ptr += 64;
 	}
 
 	/* Sound data */
 	FACT_assert((ptr - start) == soundOffset);
-	sb->sounds = (FACTSound*) FACT_malloc(
+	sb->sounds = (FACTSound*) FAudio_malloc(
 		sizeof(FACTSound) *
 		sb->soundCount
 	);
-	sb->soundCodes = (uint32_t*) FACT_malloc(
+	sb->soundCodes = (uint32_t*) FAudio_malloc(
 		sizeof(uint32_t) *
 		sb->soundCount
 	);
@@ -962,22 +962,22 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		{
 			sb->sounds[i].trackCount = read_u8(&ptr);
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
-			sb->sounds[i].tracks = (FACTTrack*) FACT_malloc(memsize);
-			FACT_zero(sb->sounds[i].tracks, memsize);
+			sb->sounds[i].tracks = (FACTTrack*) FAudio_malloc(memsize);
+			FAudio_zero(sb->sounds[i].tracks, memsize);
 		}
 		else
 		{
 			sb->sounds[i].trackCount = 1;
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
-			sb->sounds[i].tracks = (FACTTrack*) FACT_malloc(memsize);
-			FACT_zero(sb->sounds[i].tracks, memsize);
+			sb->sounds[i].tracks = (FACTTrack*) FAudio_malloc(memsize);
+			FAudio_zero(sb->sounds[i].tracks, memsize);
 			sb->sounds[i].tracks[0].volume = FACT_VOLUME_0;
 			sb->sounds[i].tracks[0].filter = 0xFF;
 			sb->sounds[i].tracks[0].eventCount = 1;
-			sb->sounds[i].tracks[0].events = (FACTEvent*) FACT_malloc(
+			sb->sounds[i].tracks[0].events = (FACTEvent*) FAudio_malloc(
 				sizeof(FACTEvent)
 			);
-			FACT_zero(
+			FAudio_zero(
 				sb->sounds[i].tracks[0].events,
 				sizeof(FACTEvent)
 			);
@@ -997,8 +997,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			#define COPYRPCBLOCK(loc) \
 				loc.rpcCodeCount = read_u8(&ptr); \
 				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
-				loc.rpcCodes = (uint32_t*) FACT_malloc(memsize); \
-				FACT_memcpy(loc.rpcCodes, ptr, memsize); \
+				loc.rpcCodes = (uint32_t*) FAudio_malloc(memsize); \
+				FAudio_memcpy(loc.rpcCodes, ptr, memsize); \
 				ptr += memsize;
 
 			/* Sound has attached RPCs */
@@ -1053,8 +1053,8 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 			sb->sounds[i].dspCodeCount = read_u8(&ptr);
 			memsize = sizeof(uint32_t) * sb->sounds[i].dspCodeCount;
-			sb->sounds[i].dspCodes = (uint32_t*) FACT_malloc(memsize);
-			FACT_memcpy(sb->sounds[i].dspCodes, ptr, memsize);
+			sb->sounds[i].dspCodes = (uint32_t*) FAudio_malloc(memsize);
+			FAudio_memcpy(sb->sounds[i].dspCodes, ptr, memsize);
 			ptr += memsize;
 		}
 		else
@@ -1102,7 +1102,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 	/* All Cue data */
 	sb->variationCount = 0;
-	sb->cues = (FACTCueData*) FACT_malloc(
+	sb->cues = (FACTCueData*) FAudio_malloc(
 		sizeof(FACTCueData) *
 		sb->cueCount
 	);
@@ -1146,11 +1146,11 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	if (sb->variationCount > 0)
 	{
 		FACT_assert((ptr - start) == variationOffset);
-		sb->variations = (FACTVariationTable*) FACT_malloc(
+		sb->variations = (FACTVariationTable*) FAudio_malloc(
 			sizeof(FACTVariationTable) *
 			sb->variationCount
 		);
-		sb->variationCodes = (uint32_t*) FACT_malloc(
+		sb->variationCodes = (uint32_t*) FAudio_malloc(
 			sizeof(uint32_t) *
 			sb->variationCount
 		);
@@ -1168,10 +1168,10 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		ptr += 2; /* Unknown value */
 		sb->variations[i].variable = read_s16(&ptr);
 		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
-		sb->variations[i].entries = (FACTVariation*) FACT_malloc(
+		sb->variations[i].entries = (FACTVariation*) FAudio_malloc(
 			memsize
 		);
-		FACT_zero(sb->variations[i].entries, memsize);
+		FAudio_zero(sb->variations[i].entries, memsize);
 
 		if (sb->variations[i].flags == 0)
 		{
@@ -1243,15 +1243,15 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 
 	/* Cue Name data */
 	FACT_assert((ptr - start) == cueNameOffset);
-	sb->cueNames = (char**) FACT_malloc(
+	sb->cueNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		sb->cueCount
 	);
 	for (i = 0; i < sb->cueCount; i += 1)
 	{
-		memsize = FACT_strlen((char*) ptr) + 1;
-		sb->cueNames[i] = (char*) FACT_malloc(memsize);
-		FACT_memcpy(sb->cueNames[i], ptr, memsize);
+		memsize = FAudio_strlen((char*) ptr) + 1;
+		sb->cueNames[i] = (char*) FAudio_malloc(memsize);
+		FAudio_memcpy(sb->cueNames[i], ptr, memsize);
 		ptr += memsize;
 	}
 
@@ -1297,7 +1297,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		return -1; /* TODO: NOT XACT FILE */
 	}
 
-	wb = (FACTWaveBank*) FACT_malloc(sizeof(FACTWaveBank));
+	wb = (FACTWaveBank*) FAudio_malloc(sizeof(FACTWaveBank));
 	wb->parentEngine = pEngine;
 	wb->waveList = NULL;
 	wb->io = io;
@@ -1311,15 +1311,15 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
 	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
 	wb->entryCount = wbinfo.dwEntryCount;
-	memsize = FACT_strlen(wbinfo.szBankName) + 1;
-	wb->name = (char*) FACT_malloc(memsize);
-	FACT_memcpy(wb->name, wbinfo.szBankName, memsize);
+	memsize = FAudio_strlen(wbinfo.szBankName) + 1;
+	wb->name = (char*) FAudio_malloc(memsize);
+	FAudio_memcpy(wb->name, wbinfo.szBankName, memsize);
 	memsize = sizeof(FACTWaveBankEntry) * wbinfo.dwEntryCount;
-	wb->entries = (FACTWaveBankEntry*) FACT_malloc(memsize);
-	FACT_zero(wb->entries, memsize);
+	wb->entries = (FACTWaveBankEntry*) FAudio_malloc(memsize);
+	FAudio_zero(wb->entries, memsize);
 	memsize = sizeof(uint32_t) * wbinfo.dwEntryCount;
-	wb->entryRefs = (uint32_t*) FACT_malloc(memsize);
-	FACT_zero(wb->entryRefs, memsize);
+	wb->entryRefs = (uint32_t*) FAudio_malloc(memsize);
+	FAudio_zero(wb->entryRefs, memsize);
 
 	/* FIXME: How much do we care about this? */
 	FACT_assert(wb->streaming == isStreaming);

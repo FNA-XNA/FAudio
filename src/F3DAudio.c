@@ -6,8 +6,7 @@
  */
 
 #include "F3DAudio.h"
-
-#include "FACT_internal.h" /* FIXME: REMOVE THIS INCLUDE! */
+#include "FAudio_internal.h"
 
 /* FIXME: What is even inside Instance, wtf -flibit */
 #define INSTANCE_SPEAKERMASK \
@@ -44,7 +43,7 @@ void F3DAudioCalculate(
 	emitterToListener.x = pListener->Position.x - pEmitter->Position.x;
 	emitterToListener.y = pListener->Position.y - pEmitter->Position.y;
 	emitterToListener.z = pListener->Position.z - pEmitter->Position.z;
-	pDSPSettings->EmitterToListenerDistance = (float) FACT_sqrt(
+	pDSPSettings->EmitterToListenerDistance = (float) FAudio_sqrt(
 		(emitterToListener.x * emitterToListener.x) +
 		(emitterToListener.y * emitterToListener.y) +
 		(emitterToListener.z * emitterToListener.z)
@@ -112,11 +111,11 @@ void F3DAudioCalculate(
 				(emitterToListener.z * pEmitter->Velocity.z)
 			) / pDSPSettings->EmitterToListenerDistance;
 
-			projectedListenerVelocity = FACT_min(
+			projectedListenerVelocity = FAudio_min(
 				projectedListenerVelocity,
 				scaledSpeedOfSound
 			);
-			projectedEmitterVelocity = FACT_min(
+			projectedEmitterVelocity = FAudio_min(
 				projectedEmitterVelocity,
 				scaledSpeedOfSound
 			);
@@ -129,7 +128,7 @@ void F3DAudioCalculate(
 			/* FIXME: Check isnan(DopplerFactor) */
 
 			/* Limit the pitch shifting to 2 octaves up and 1 octave down */
-			pDSPSettings->DopplerFactor = FACT_clamp(
+			pDSPSettings->DopplerFactor = FAudio_clamp(
 				pDSPSettings->DopplerFactor,
 				0.5f,
 				4.0f
@@ -146,7 +145,7 @@ void F3DAudioCalculate(
 		emitterToListener.x /= pDSPSettings->EmitterToListenerDistance;
 		emitterToListener.y /= pDSPSettings->EmitterToListenerDistance;
 		emitterToListener.z /= pDSPSettings->EmitterToListenerDistance;
-		pDSPSettings->EmitterToListenerAngle = (float) FACT_acos(
+		pDSPSettings->EmitterToListenerAngle = (float) FAudio_acos(
 			(emitterToListener.x * pListener->OrientFront.x) +
 			(emitterToListener.y * pListener->OrientFront.y) +
 			(emitterToListener.z * pListener->OrientFront.z)

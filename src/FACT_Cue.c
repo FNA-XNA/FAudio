@@ -39,8 +39,8 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 		FACT_assert(cue != NULL && "Could not find Cue reference!");
 	}
 
-	FACT_free(pCue->variableValues);
-	FACT_free(pCue);
+	FAudio_free(pCue->variableValues);
+	FAudio_free(pCue);
 	return 0;
 }
 
@@ -166,7 +166,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACT_STATE_PAUSED |
 		FACT_STATE_STOPPED
 	);
-	pCue->start = FACT_timems();
+	pCue->start = FAudio_timems();
 
 	/* If it's a simple wave, just play it! */
 	if (pCue->active & 0x01)
@@ -232,9 +232,9 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 						}
 					}
 				}
-				FACT_free(pCue->playing.sound.tracks[i].events);
+				FAudio_free(pCue->playing.sound.tracks[i].events);
 			}
-			FACT_free(pCue->playing.sound.tracks);
+			FAudio_free(pCue->playing.sound.tracks);
 
 			pCue->parentBank->parentEngine->categories[
 				pCue->playing.sound.sound->category
@@ -273,7 +273,7 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	/* Local storage */
 	pCue->srcChannels = uSrcChannelCount;
 	pCue->dstChannels = uDstChannelCount;
-	FACT_memcpy(
+	FAudio_memcpy(
 		pCue->matrixCoefficients,
 		pMatrixCoefficients,
 		sizeof(float) * uSrcChannelCount * uDstChannelCount
@@ -324,7 +324,7 @@ uint16_t FACTCue_GetVariableIndex(
 	uint16_t i;
 	for (i = 0; i < pCue->parentBank->parentEngine->variableCount; i += 1)
 	{
-		if (	FACT_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
+		if (	FAudio_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
 			pCue->parentBank->parentEngine->variables[i].accessibility & 0x04	)
 		{
 			return i;
@@ -342,7 +342,7 @@ uint32_t FACTCue_SetVariable(
 	FACT_assert(var->accessibility & 0x01);
 	FACT_assert(!(var->accessibility & 0x02));
 	FACT_assert(var->accessibility & 0x04);
-	pCue->variableValues[nIndex] = FACT_clamp(
+	pCue->variableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
 		var->maxValue
@@ -383,7 +383,7 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	}
 
 	/* Store elapsed time */
-	pCue->elapsed += FACT_timems() - pCue->start;
+	pCue->elapsed += FAudio_timems() - pCue->start;
 
 	/* All we do is set the flag, not much to see here */
 	if (fPause)
@@ -469,7 +469,7 @@ uint32_t FACTCue_GetProperties(
 	else
 	{
 		/* No variations here! */
-		FACT_zero(
+		FAudio_zero(
 			varProps,
 			sizeof(FACTVariationProperties)
 		);
@@ -489,7 +489,7 @@ uint32_t FACTCue_GetProperties(
 	else
 	{
 		/* It's either a simple wave or nothing's playing */
-		FACT_zero(
+		FAudio_zero(
 			sndProps,
 			sizeof(FACTSoundProperties)
 		);
