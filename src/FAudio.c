@@ -9,23 +9,22 @@
 
 /* FAudio Interface */
 
-/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 uint32_t FAudioCreate(FAudio **ppFAudio)
 {
-	/* TODO */
+	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
+	FAudio_zero(*ppFAudio, sizeof(FAudio));
 	return 0;
 }
 
 void FAudioDestroy(FAudio *audio)
 {
-	/* TODO */
+	FAudio_StopEngine(audio);
+	FAudio_free(audio);
 }
-
-/* FIXME: AddRef/Release/Query? Or just ignore COM garbage... -flibit */
 
 uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount)
 {
-	/* TODO */
+	*pCount = FAudio_PlatformGetDeviceCount();
 	return 0;
 }
 
@@ -34,7 +33,7 @@ uint32_t FAudio_GetDeviceDetails(
 	uint32_t Index,
 	FAudioDeviceDetails *pDeviceDetails
 ) {
-	/* TODO */
+	FAudio_PlatformGetDeviceDetails(Index, pDeviceDetails);
 	return 0;
 }
 

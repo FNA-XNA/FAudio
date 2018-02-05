@@ -111,13 +111,13 @@ void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
 
 /* FIXME: Re-do these for FAudio... */
 typedef struct FACTAudioEngine FACTAudioEngine;
-typedef struct FACTRendererDetails FACTRendererDetails;
 void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
 void FAudio_PlatformCloseEngine(FACTAudioEngine *engine);
-uint16_t FAudio_PlatformGetRendererCount();
-void FAudio_PlatformGetRendererDetails(
-	uint16_t index,
-	FACTRendererDetails *details
+
+uint32_t FAudio_PlatformGetDeviceCount();
+void FAudio_PlatformGetDeviceDetails(
+	uint32_t index,
+	FAudioDeviceDetails *details
 );
 
 void* FAudio_malloc(size_t size);

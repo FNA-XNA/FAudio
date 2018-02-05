@@ -58,7 +58,7 @@ uint32_t FACTAudioEngine_GetRendererCount(
 	FACTAudioEngine *pEngine,
 	uint16_t *pnRendererCount
 ) {
-	*pnRendererCount = FAudio_PlatformGetRendererCount();
+	*pnRendererCount = (uint16_t) FAudio_PlatformGetDeviceCount();
 	return 0;
 }
 
@@ -67,10 +67,26 @@ uint32_t FACTAudioEngine_GetRendererDetails(
 	uint16_t nRendererIndex,
 	FACTRendererDetails *pRendererDetails
 ) {
-	FAudio_PlatformGetRendererDetails(
+	FAudioDeviceDetails deviceDetails;
+	FAudio_PlatformGetDeviceDetails(
 		nRendererIndex,
-		pRendererDetails
+		&deviceDetails
 	);
+	FAudio_memcpy(
+		pRendererDetails->rendererID,
+		deviceDetails.DeviceID,
+		sizeof(int16_t) * 0xFF
+	);
+	FAudio_memcpy(
+		pRendererDetails->displayName,
+		deviceDetails.DisplayName,
+		sizeof(int16_t) * 0xFF
+	);
+	/* FIXME: Which defaults does it care about...? */
+	pRendererDetails->defaultDevice = (deviceDetails.Role & (
+		GlobalDefaultDevice |
+		DefaultGameDevice
+	)) != 0;
 	return 0;
 }
 

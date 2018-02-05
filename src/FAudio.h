@@ -96,8 +96,8 @@ typedef struct FAudioWaveFormatExtensible
 
 typedef struct FAudioDeviceDetails
 {
-	uint16_t DeviceID[256]; /* Win32 wchar_t */
-	uint16_t DisplayName[256]; /* Win32 wchar_t */
+	int16_t DeviceID[256]; /* Win32 wchar_t */
+	int16_t DisplayName[256]; /* Win32 wchar_t */
 	FAudioDeviceRole Role;
 	FAudioWaveFormatExtensible OutputFormat;
 } FAudioDeviceDetails;
