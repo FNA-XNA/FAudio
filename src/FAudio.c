@@ -295,7 +295,26 @@ void FAudioVoice_GetVoiceDetails(
 	FAudioVoice *voice,
 	FAudioVoiceDetails *pVoiceDetails
 ) {
-	/* TODO */
+	pVoiceDetails->CreationFlags = voice->flags;
+	if (voice->type == FAUDIO_VOICE_SOURCE)
+	{
+		pVoiceDetails->InputChannels = voice->src.format.nChannels;
+		pVoiceDetails->InputSampleRate = voice->src.format.nSamplesPerSec;
+	}
+	else if (voice->type == FAUDIO_VOICE_SUBMIX)
+	{
+		pVoiceDetails->InputChannels = voice->mix.inputChannels;
+		pVoiceDetails->InputSampleRate = voice->mix.inputSampleRate;
+	}
+	else if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		pVoiceDetails->InputChannels = voice->master.inputChannels;
+		pVoiceDetails->InputSampleRate = voice->master.inputSampleRate;
+	}
+	else
+	{
+		FAudio_assert(0 && "Unknown voice type!");
+	}
 }
 
 uint32_t FAudioVoice_SetOutputVoices(
