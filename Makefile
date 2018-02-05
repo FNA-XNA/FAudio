@@ -29,7 +29,7 @@ FACTSRC = \
 	src/FACT_internal.c \
 	src/e_log.c \
 	src/e_log10.c \
-	src/FACT_platform_sdl2.c
+	src/FAudio_platform_sdl2.c
 
 # Object code lists
 FACTOBJ = $(FACTSRC:%.c=%.o)

@@ -81,7 +81,7 @@
     <ClCompile Include="..\src\FACT_internal.c" />
     <ClCompile Include="..\src\e_log.c" />
     <ClCompile Include="..\src\e_log10.c" />
-    <ClCompile Include="..\src\FACT_platform_sdl2.c" />
+    <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\FAudio.h" />
