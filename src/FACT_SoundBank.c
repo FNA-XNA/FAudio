@@ -51,7 +51,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 			}
 		}
 
-		FACT_assert(i < pSoundBank->variationCount && "Variation table not found!");
+		FAudio_assert(i < pSoundBank->variationCount && "Variation table not found!");
 
 		if (pSoundBank->variations[i].flags == 3)
 		{
@@ -290,7 +290,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 			prev = sb;
 			sb = sb->next;
 		}
-		FACT_assert(sb != NULL && "Could not find SoundBank reference!");
+		FAudio_assert(sb != NULL && "Could not find SoundBank reference!");
 	}
 
 	/* SoundBank Name */

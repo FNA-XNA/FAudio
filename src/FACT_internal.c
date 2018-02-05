@@ -22,7 +22,7 @@ FACTRPC* FACT_INTERNAL_GetRPC(
 		}
 	}
 
-	FACT_assert(0 && "RPC code not found!");
+	FAudio_assert(0 && "RPC code not found!");
 	return NULL;
 }
 
@@ -133,7 +133,7 @@ void FACT_INTERNAL_UpdateRPCs(
 			}
 			else
 			{
-				FACT_assert(0 && "Unhandled RPC parameter type!");
+				FAudio_assert(0 && "Unhandled RPC parameter type!");
 			}
 		}
 	}
@@ -268,7 +268,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 				}
 				wb = wb->next;
 			}
-			FACT_assert(wb != NULL);
+			FAudio_assert(wb != NULL);
 
 			/* Generate the wave... */
 			FACTWaveBank_Prepare(
@@ -402,7 +402,7 @@ void FACT_INTERNAL_ActivateEvent(
 			}
 			wb = wb->next;
 		}
-		FACT_assert(wb != NULL);
+		FAudio_assert(wb != NULL);
 
 		/* Generate the wave... */
 		FACTWaveBank_Prepare(
@@ -598,7 +598,7 @@ void FACT_INTERNAL_ActivateEvent(
 			else
 			{
 				svResult = 0.0f;
-				FACT_assert(0 && "Equation flags?");
+				FAudio_assert(0 && "Equation flags?");
 			}
 
 			/* Add/Replace */
@@ -639,7 +639,7 @@ void FACT_INTERNAL_ActivateEvent(
 	/* ??? */
 	else
 	{
-		FACT_assert(0 && "Unknown event type!");
+		FAudio_assert(0 && "Unknown event type!");
 	}
 
 	/* Either loop or mark this event as complete */
@@ -961,7 +961,7 @@ uint32_t FACT_INTERNAL_GetWave(
 
 	/* FIXME: Can high sample rates ruin this? */
 	decodeLength = (uint32_t) sizeRequest;
-	FACT_assert(decodeLength == sizeRequest);
+	FAudio_assert(decodeLength == sizeRequest);
 
 	/* Decode... */
 	if (wave->resample.offset == 0)
@@ -1030,7 +1030,7 @@ uint32_t FACT_INTERNAL_GetWave(
 		sizeRequest /= wave->resample.step;
 
 		resampleLength = (uint32_t) sizeRequest;
-		FACT_assert(resampleLength == sizeRequest);
+		FAudio_assert(resampleLength == sizeRequest);
 
 		/* TODO: Something fancier than a linear resampler */
 		cur = wave->resample.offset & FIXED_FRACTION_MASK;

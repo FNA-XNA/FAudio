@@ -238,7 +238,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 			FAudio_free(device);
 			FAudio_free(entry);
 			SDL_Log("%s\n", SDL_GetError());
-			FACT_assert(0 && "Failed to open audio device!");
+			FAudio_assert(0 && "Failed to open audio device!");
 			return;
 		}
 
@@ -277,7 +277,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		}
 		else
 		{
-			FACT_assert(0 && "Unrecognized speaker layout!");
+			FAudio_assert(0 && "Unrecognized speaker layout!");
 		}
 		FAudio_zero(&device->format.SubFormat, sizeof(FAudioGUID)); /* ? */
 

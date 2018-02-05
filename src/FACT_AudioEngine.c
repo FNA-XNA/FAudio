@@ -149,7 +149,7 @@ uint32_t FACTAudioEngine_Initialize(
 	dspParameterOffset = read_u32(&ptr);
 
 	/* Category data */
-	FACT_assert((ptr - start) == categoryOffset);
+	FAudio_assert((ptr - start) == categoryOffset);
 	pEngine->categories = (FACTAudioCategory*) FAudio_malloc(
 		sizeof(FACTAudioCategory) * pEngine->categoryCount
 	);
@@ -169,7 +169,7 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Variable data */
-	FACT_assert((ptr - start) == variableOffset);
+	FAudio_assert((ptr - start) == variableOffset);
 	pEngine->variables = (FACTVariable*) FAudio_malloc(
 		sizeof(FACTVariable) * pEngine->variableCount
 	);
@@ -193,7 +193,7 @@ uint32_t FACTAudioEngine_Initialize(
 	/* RPC data */
 	if (pEngine->rpcCount > 0)
 	{
-		FACT_assert((ptr - start) == rpcOffset);
+		FAudio_assert((ptr - start) == rpcOffset);
 		pEngine->rpcs = (FACTRPC*) FAudio_malloc(
 			sizeof(FACTRPC) *
 			pEngine->rpcCount
@@ -224,7 +224,7 @@ uint32_t FACTAudioEngine_Initialize(
 	/* DSP Preset data */
 	if (pEngine->dspPresetCount > 0)
 	{
-		FACT_assert((ptr - start) == dspPresetOffset);
+		FAudio_assert((ptr - start) == dspPresetOffset);
 		pEngine->dspPresets = (FACTDSPPreset*) FAudio_malloc(
 			sizeof(FACTDSPPreset) *
 			pEngine->dspPresetCount
@@ -245,7 +245,7 @@ uint32_t FACTAudioEngine_Initialize(
 		}
 
 		/* DSP Parameter data */
-		FACT_assert((ptr - start) == dspParameterOffset);
+		FAudio_assert((ptr - start) == dspParameterOffset);
 		for (i = 0; i < pEngine->dspPresetCount; i += 1)
 		{
 			memsize = (
@@ -264,15 +264,15 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Blob #1, no idea what this is... */
-	FACT_assert((ptr - start) == blob1Offset);
+	FAudio_assert((ptr - start) == blob1Offset);
 	ptr += blob1Count * 2;
 
 	/* Category Name Index data */
-	FACT_assert((ptr - start) == categoryNameIndexOffset);
+	FAudio_assert((ptr - start) == categoryNameIndexOffset);
 	ptr += pEngine->categoryCount * 6; /* FIXME: index as assert value? */
 
 	/* Category Name data */
-	FACT_assert((ptr - start) == categoryNameOffset);
+	FAudio_assert((ptr - start) == categoryNameOffset);
 	pEngine->categoryNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		pEngine->categoryCount
@@ -286,15 +286,15 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Blob #2, no idea what this is... */
-	FACT_assert((ptr - start) == blob2Offset);
+	FAudio_assert((ptr - start) == blob2Offset);
 	ptr += blob2Count * 2;
 
 	/* Variable Name Index data */
-	FACT_assert((ptr - start) == variableNameIndexOffset);
+	FAudio_assert((ptr - start) == variableNameIndexOffset);
 	ptr += pEngine->variableCount * 6; /* FIXME: index as assert value? */
 
 	/* Variable Name data */
-	FACT_assert((ptr - start) == variableNameOffset);
+	FAudio_assert((ptr - start) == variableNameOffset);
 	pEngine->variableNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		pEngine->variableCount
@@ -308,7 +308,7 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 
 	/* Finally. */
-	FACT_assert((ptr - start) == pParams->globalSettingsBufferSize);
+	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
 	FAudio_PlatformInitEngine(
 		pEngine,
@@ -584,9 +584,9 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 	float nValue
 ) {
 	FACTVariable *var = &pEngine->variables[nIndex];
-	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(!(var->accessibility & 0x02));
-	FACT_assert(!(var->accessibility & 0x04));
+	FAudio_assert(var->accessibility & 0x01);
+	FAudio_assert(!(var->accessibility & 0x02));
+	FAudio_assert(!(var->accessibility & 0x04));
 	pEngine->globalVariableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
@@ -601,8 +601,8 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 	float *pnValue
 ) {
 	FACTVariable *var = &pEngine->variables[nIndex];
-	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(!(var->accessibility & 0x04));
+	FAudio_assert(var->accessibility & 0x01);
+	FAudio_assert(!(var->accessibility & 0x04));
 	*pnValue = pEngine->globalVariableValues[nIndex];
 	return 0;
 }
@@ -630,7 +630,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 		track->events[i].type = evtInfo & 0x001F;
 		track->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
 
-		FACT_assert(read_u8(ptr) == 0xFF); /* Separator? */
+		FAudio_assert(read_u8(ptr) == 0xFF); /* Separator? */
 
 		#define EVTTYPE(t) (track->events[i].type == t)
 		if (EVTTYPE(FACTEVENT_STOP))
@@ -778,7 +778,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 				track->events[i].value.equation.flags = read_u8(ptr);
 
 				/* SetValue, SetRandomValue, anything else? */
-				FACT_assert(track->events[i].value.equation.flags & 0x0C);
+				FAudio_assert(track->events[i].value.equation.flags & 0x0C);
 
 				track->events[i].value.equation.value1 = read_f32(ptr);
 				track->events[i].value.equation.value2 = read_f32(ptr);
@@ -813,7 +813,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 		}
 		else
 		{
-			FACT_assert(0 && "Unknown event type!");
+			FAudio_assert(0 && "Unknown event type!");
 		}
 		#undef EVTTYPE
 	}
@@ -922,7 +922,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	ptr += 64;
 
 	/* WaveBank Name data */
-	FACT_assert((ptr - start) == wavebankNameOffset);
+	FAudio_assert((ptr - start) == wavebankNameOffset);
 	sb->wavebankNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		sb->wavebankCount
@@ -936,7 +936,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	/* Sound data */
-	FACT_assert((ptr - start) == soundOffset);
+	FAudio_assert((ptr - start) == soundOffset);
 	sb->sounds = (FACTSound*) FAudio_malloc(
 		sizeof(FACTSound) *
 		sb->soundCount
@@ -1032,7 +1032,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			#undef COPYRPCBLOCK
 
 			/* FIXME: Does 0x08 mean something for RPCs...? */
-			FACT_assert((ptr - ptrBookmark) == rpcDataLength);
+			FAudio_assert((ptr - ptrBookmark) == rpcDataLength);
 		}
 		else
 		{
@@ -1091,7 +1091,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 			/* All Track events are stored at the end of the block */
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				FACT_assert((ptr - start) == sb->sounds[i].tracks[j].code);
+				FAudio_assert((ptr - start) == sb->sounds[i].tracks[j].code);
 				FACT_INTERNAL_ParseTrackEvents(
 					&ptr,
 					&sb->sounds[i].tracks[j]
@@ -1109,7 +1109,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	cur = 0;
 
 	/* Simple Cue data */
-	FACT_assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
+	FAudio_assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
 	for (i = 0; i < cueSimpleCount; i += 1, cur += 1)
 	{
 		sb->cues[cur].flags = read_u8(&ptr);
@@ -1123,7 +1123,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	/* Complex Cue data */
-	FACT_assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
+	FAudio_assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
 	for (i = 0; i < cueComplexCount; i += 1, cur += 1)
 	{
 		sb->cues[cur].flags = read_u8(&ptr);
@@ -1145,7 +1145,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	/* Variation data */
 	if (sb->variationCount > 0)
 	{
-		FACT_assert((ptr - start) == variationOffset);
+		FAudio_assert((ptr - start) == variationOffset);
 		sb->variations = (FACTVariationTable*) FAudio_malloc(
 			sizeof(FACTVariationTable) *
 			sb->variationCount
@@ -1222,27 +1222,27 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 		}
 		else
 		{
-			FACT_assert(0 && "Unknown variation type!");
+			FAudio_assert(0 && "Unknown variation type!");
 		}
 	}
 
 	/* FIXME: How is transition data structured? */
 	if (transitionOffset != -1)
 	{
-		FACT_assert((ptr - start) == transitionOffset);
+		FAudio_assert((ptr - start) == transitionOffset);
 		ptr = start + cueHashOffset;
 	}
 
 	/* Cue Hash data? No idea what this is... */
-	FACT_assert((ptr - start) == cueHashOffset);
+	FAudio_assert((ptr - start) == cueHashOffset);
 	ptr += 2 * cueTotalAlign;
 
 	/* Cue Name Index data */
-	FACT_assert((ptr - start) == cueNameIndexOffset);
+	FAudio_assert((ptr - start) == cueNameIndexOffset);
 	ptr += 6 * sb->cueCount; /* FIXME: index as assert value? */
 
 	/* Cue Name data */
-	FACT_assert((ptr - start) == cueNameOffset);
+	FAudio_assert((ptr - start) == cueNameOffset);
 	sb->cueNames = (char**) FAudio_malloc(
 		sizeof(char*) *
 		sb->cueCount
@@ -1256,7 +1256,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
 	}
 
 	/* Finally. */
-	FACT_assert((ptr - start) == dwSize);
+	FAudio_assert((ptr - start) == dwSize);
 	*ppSoundBank = sb;
 	return 0;
 }
@@ -1322,7 +1322,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FAudio_zero(wb->entryRefs, memsize);
 
 	/* FIXME: How much do we care about this? */
-	FACT_assert(wb->streaming == isStreaming);
+	FAudio_assert(wb->streaming == isStreaming);
 
 	/* WaveBank Entry Metadata */
 	io->seek(

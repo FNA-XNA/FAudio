@@ -36,7 +36,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 			prev = wave;
 			wave = wave->next;
 		}
-		FACT_assert(wave != NULL && "Could not find Wave reference!");
+		FAudio_assert(wave != NULL && "Could not find Wave reference!");
 	}
 
 	FAudio_free(pWave);
@@ -45,7 +45,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 
 uint32_t FACTWave_Play(FACTWave *pWave)
 {
-	FACT_assert(!(pWave->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
+	FAudio_assert(!(pWave->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 	pWave->state |= FACT_STATE_PLAYING;
 	pWave->state &= ~(
 		FACT_STATE_PAUSED |
@@ -131,8 +131,8 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	float *pMatrixCoefficients
 ) {
 	/* See FACTWave.matrixCoefficients declaration */
-	FACT_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
-	FACT_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
+	FAudio_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
+	FAudio_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
 
 	pWave->srcChannels = uSrcChannelCount;
 	pWave->dstChannels = uDstChannelCount;

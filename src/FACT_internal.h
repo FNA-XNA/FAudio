@@ -9,18 +9,6 @@
 #include "FACT3D.h"
 #include "FAudio_internal.h"
 
-#ifdef FACT_UNKNOWN_PLATFORM
-#include <assert.h>
-#define FACT_assert assert
-#else
-#include <SDL_assert.h>
-#define FACT_assert SDL_assert
-#endif
-
-#ifdef _WIN32
-#define inline __inline
-#endif
-
 /* Internal Constants */
 
 #define FACT_VOLUME_0 180

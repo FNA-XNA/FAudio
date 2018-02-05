@@ -7,6 +7,18 @@
 
 #include "FAudio.h"
 
+#ifdef FAUDIO_UNKNOWN_PLATFORM
+#include <assert.h>
+#define FAudio_assert assert
+#else
+#include <SDL_assert.h>
+#define FAudio_assert SDL_assert
+#endif
+
+#ifdef _WIN32
+#define inline __inline
+#endif
+
 struct FAudio
 {
 	uint8_t TODO;

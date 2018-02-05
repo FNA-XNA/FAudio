@@ -45,7 +45,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 			prev = wb;
 			wb = wb->next;
 		}
-		FACT_assert(wb != NULL && "Could not find WaveBank reference!");
+		FAudio_assert(wb != NULL && "Could not find WaveBank reference!");
 	}
 
 	/* Free everything, finally. */
@@ -85,7 +85,7 @@ uint16_t FACTWaveBank_GetWaveIndex(
 	FACTWaveBank *pWaveBank,
 	const char *szFriendlyName
 ) {
-	FACT_assert(0 && "WaveBank name tables are not supported!");
+	FAudio_assert(0 && "WaveBank name tables are not supported!");
 	return 0;
 }
 
@@ -174,7 +174,7 @@ uint32_t FACTWaveBank_Prepare(
 	}
 	else /* Includes 0x1 - XMA, 0x3 - WMA */
 	{
-		FACT_assert(0 && "Rebuild your WaveBanks with ADPCM!");
+		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
 	(*ppWave)->msadpcmExtra = 0;
 

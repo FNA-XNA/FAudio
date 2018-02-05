@@ -36,7 +36,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 			prev = cue;
 			cue = cue->next;
 		}
-		FACT_assert(cue != NULL && "Could not find Cue reference!");
+		FAudio_assert(cue != NULL && "Could not find Cue reference!");
 	}
 
 	FAudio_free(pCue->variableValues);
@@ -56,7 +56,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	FACTAudioCategory *category;
 	FACTCueData *data = &pCue->parentBank->cues[pCue->index];
 
-	FACT_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
+	FAudio_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 
 	/* Need an initial sound to play */
 	FACT_INTERNAL_SelectSound(pCue);
@@ -267,8 +267,8 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	uint8_t i, j;
 
 	/* See FACTCue.matrixCoefficients declaration */
-	FACT_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
-	FACT_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
+	FAudio_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
+	FAudio_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
 
 	/* Local storage */
 	pCue->srcChannels = uSrcChannelCount;
@@ -339,9 +339,9 @@ uint32_t FACTCue_SetVariable(
 	float nValue
 ) {
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
-	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(!(var->accessibility & 0x02));
-	FACT_assert(var->accessibility & 0x04);
+	FAudio_assert(var->accessibility & 0x01);
+	FAudio_assert(!(var->accessibility & 0x02));
+	FAudio_assert(var->accessibility & 0x04);
 	pCue->variableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
@@ -356,8 +356,8 @@ uint32_t FACTCue_GetVariable(
 	float *nValue
 ) {
 	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
-	FACT_assert(var->accessibility & 0x01);
-	FACT_assert(var->accessibility & 0x04);
+	FAudio_assert(var->accessibility & 0x01);
+	FAudio_assert(var->accessibility & 0x04);
 
 	if (nIndex == 0) /* NumCueInstances */
 	{
