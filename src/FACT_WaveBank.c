@@ -195,7 +195,7 @@ uint32_t FACTWaveBank_Prepare(
 	}
 
 	/* Resampling */
-	FACT_INTERNAL_InitResampler(*ppWave);
+	FAudio_INTERNAL_InitResampler(&(*ppWave)->resample);
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)

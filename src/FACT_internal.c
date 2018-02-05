@@ -325,12 +325,6 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
 	/* TODO */
 }
 
-void FACT_INTERNAL_InitResampler(FACTWave *wave)
-{
-	FAudio_zero(&wave->resample, sizeof(FACTResampleState));
-	wave->resample.pitch = 0xFFFF; /* Force update on first poll */
-}
-
 void FACT_INTERNAL_ActivateEvent(
 	FACTCue *cue,
 	FACTSound *sound,
