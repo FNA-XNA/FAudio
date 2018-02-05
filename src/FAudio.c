@@ -320,6 +320,7 @@ uint32_t FAudioVoice_EnableEffect(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -329,6 +330,7 @@ uint32_t FAudioVoice_DisableEffect(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -348,6 +350,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -366,6 +369,7 @@ uint32_t FAudioVoice_SetFilterParameters(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -383,6 +387,7 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -400,6 +405,7 @@ uint32_t FAudioVoice_SetVolume(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -417,6 +423,7 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -437,6 +444,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -472,6 +480,7 @@ uint32_t FAudioSourceVoice_Start(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -481,6 +490,7 @@ uint32_t FAudioSourceVoice_Stop(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -512,6 +522,7 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
@@ -528,6 +539,7 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 	uint32_t OperationSet
 ) {
 	/* TODO */
+	FAudio_assert(OperationSet == 0);
 	return 0;
 }
 
