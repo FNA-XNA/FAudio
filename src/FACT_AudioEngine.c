@@ -326,10 +326,55 @@ uint32_t FACTAudioEngine_Initialize(
 	/* Finally. */
 	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
+
+#if 0 /* TODO: FAudio */
+	pEngine->audio = pParams->pXAudio2;
+	if (pEngine->audio == NULL)
+	{
+		FAudioCreate(&pEngine->audio, 0, FAUDIO_DEFAULT_PROCESSOR);
+	}
+
+	/* We're being a bit dastardly and passing a struct that starts with
+	 * the type that FAudio expects, but with extras at the end so we can
+	 * do proper stuff with the engine
+	 */
+	pEngine->callback.callback.OnProcessingPassStart =
+		FACT_INTERNAL_OnProcessingPassStart;
+	pEngine->callback.engine = pEngine;
+	FAudio_RegisterForCallbacks(
+		pEngine->audio,
+		(FAudioEngineCallback*) &pEngine->callback
+	);
+
+	uint32_t deviceIndex;
+	if (pParams->pRendererID == NULL)
+	{
+		deviceIndex = 0;
+	}
+	else
+	{
+		/* FIXME: wchar_t is an asshole */
+		deviceIndex = pParams->pRendererID[0] - L'0';
+		if (	deviceIndex < 0 ||
+			deviceIndex > FAudio_PlatformGetDeviceCount()	)
+		{
+			deviceIndex = 0;
+		}
+	}
+	FAudio_CreateMasteringVoice(
+		pEngine->audio,
+		FAUDIO_DEFAULT_CHANNELS,
+		FAUDIO_DEFAULT_SAMPLERATE,
+		0,
+		deviceIndex,
+		NULL
+	);
+#else
 	FAudio_PlatformInitEngine(
 		pEngine,
 		pParams->pRendererID
 	);
+#endif
 	return 0;
 }
 

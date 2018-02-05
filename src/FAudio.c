@@ -9,10 +9,14 @@
 
 /* FAudio Interface */
 
-uint32_t FAudioCreate(FAudio **ppFAudio)
-{
+uint32_t FAudioCreate(
+	FAudio **ppFAudio,
+	uint32_t Flags,
+	FAudioProcessor XAudio2Processor
+) {
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
+	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
 	return 0;
 }
 
@@ -42,7 +46,9 @@ uint32_t FAudio_Initialize(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
-	/* TODO */
+	FAudio_assert(Flags == 0);
+	FAudio_assert(XAudio2Processor == FAUDIO_DEFAULT_PROCESSOR);
+	FAudio_StartEngine(audio);
 	return 0;
 }
 
@@ -50,7 +56,25 @@ uint32_t FAudio_RegisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 ) {
-	/* TODO */
+	FAudioEngineCallbackEntry *latest;
+	FAudioEngineCallbackEntry *entry = (FAudioEngineCallbackEntry*) FAudio_malloc(
+		sizeof(FAudioEngineCallbackEntry)
+	);
+	entry->callback = pCallback;
+	entry->next = NULL;
+	if (audio->callbacks == NULL)
+	{
+		audio->callbacks = entry;
+	}
+	else
+	{
+		latest = audio->callbacks;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = entry;
+	}
 	return 0;
 }
 
@@ -58,7 +82,30 @@ void FAudio_UnregisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 ) {
-	/* TODO */
+	FAudioEngineCallbackEntry *entry, *prev;
+	if (audio->callbacks == NULL)
+	{
+		return;
+	}
+	entry = audio->callbacks;
+	prev = audio->callbacks;
+	while (entry != NULL)
+	{
+		if (entry->callback == pCallback)
+		{
+			if (entry == prev) /* First in list */
+			{
+				audio->callbacks = entry->next;
+			}
+			else
+			{
+				prev->next = entry->next;
+			}
+			FAudio_free(entry);
+			return;
+		}
+		entry = entry->next;
+	}
 }
 
 uint32_t FAudio_CreateSourceVoice(
@@ -77,6 +124,7 @@ uint32_t FAudio_CreateSourceVoice(
 
 uint32_t FAudio_CreateSubmixVoice(
 	FAudio *audio,
+	FAudioSubmixVoice **ppSubmixVoice,
 	uint32_t InputChannels,
 	uint32_t InputSampleRate,
 	uint32_t Flags,
@@ -90,6 +138,7 @@ uint32_t FAudio_CreateSubmixVoice(
 
 uint32_t FAudio_CreateMasteringVoice(
 	FAudio *audio,
+	FAudioMasteringVoice **ppMasteringVoice,
 	uint32_t InputChannels,
 	uint32_t InputSampleRate,
 	uint32_t Flags,
@@ -113,7 +162,7 @@ void FAudio_StopEngine(FAudio *audio)
 
 uint32_t FAudio_CommitChanges(FAudio *audio)
 {
-	/* TODO */
+	FAudio_assert(0 && "Batching is not supported!");
 	return 0;
 }
 
@@ -121,7 +170,7 @@ void FAudio_GetPerformanceData(
 	FAudio *audio,
 	FAudioPerformanceData *pPerfData
 ) {
-	/* TODO */
+	FAudio_assert(0 && "TODO: Performance metrics!");
 }
 
 void FAudio_SetDebugConfiguration(
@@ -129,7 +178,7 @@ void FAudio_SetDebugConfiguration(
 	FAudioDebugConfiguration *pDebugConfiguration,
 	void* pReserved
 ) {
-	/* TODO */
+	FAudio_assert(0 && "TODO: Debug configuration!");
 }
 
 /* FAudioVoice Interface */

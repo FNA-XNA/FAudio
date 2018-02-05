@@ -652,8 +652,6 @@ void FACT_INTERNAL_ActivateEvent(
 	}
 }
 
-/* The functions below should be called by the platform mixer! */
-
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 {
 	uint16_t i, j;
@@ -824,6 +822,52 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		cue->data->instanceCount -= 1;
 	}
 }
+
+/* FAudio callback */
+
+void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
+{
+	FACTAudioEngineCallback *c = (FACTAudioEngineCallback*) callback;
+	FACTAudioEngine *engine = c->engine;
+	FACTSoundBank *sb;
+	FACTCue *cue, *backup;
+	uint32_t timestamp;
+
+	/* We want the timestamp to be uniform across all Cues.
+	 * Oftentimes many Cues are played at once with the expectation
+	 * that they will sync, so give them all the same timestamp
+	 * so all the various actions will go together even if it takes
+	 * an extra millisecond to get through the whole Cue list.
+	 */
+	timestamp = FAudio_timems();
+
+	FACT_INTERNAL_UpdateEngine(engine);
+
+	sb = engine->sbList;
+	while (sb != NULL)
+	{
+		cue = sb->cueList;
+		while (cue != NULL)
+		{
+			FACT_INTERNAL_UpdateCue(cue, timestamp);
+
+			/* Destroy if it's done and not user-handled. */
+			if (cue->managed && (cue->state & FACT_STATE_STOPPED))
+			{
+				backup = cue->next;
+				FACTCue_Destroy(cue);
+				cue = backup;
+			}
+			else
+			{
+				cue = cue->next;
+			}
+		}
+		sb = sb->next;
+	}
+}
+
+/* FIXME: Move this to FAudio */
 
 uint32_t FACT_INTERNAL_GetWave(
 	FACTWave *wave,

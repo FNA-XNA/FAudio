@@ -15,6 +15,12 @@
 
 /* Internal AudioEngine Types */
 
+typedef struct FACTAudioEngineCallback
+{
+	FAudioEngineCallback callback;
+	FACTAudioEngine *engine;
+} FACTAudioEngineCallback;
+
 typedef struct FACTAudioCategory
 {
 	uint8_t instanceLimit;
@@ -329,8 +335,15 @@ struct FACTAudioEngine
 	FACTWaveBank *wbList;
 	float *globalVariableValues;
 
+#if 0 /* TODO: FAudio */
+	/* FAudio references */
+	FAudio *audio;
+	FAudioMasteringVoice *master;
+	FACTAudioEngineCallback callback;
+#else
 	/* Point this to your platform's device mix format */
 	FAudioWaveFormatExtensible *mixFormat;
+#endif
 };
 
 struct FACTSoundBank
@@ -446,8 +459,13 @@ struct FACTCue
 
 /* Internal functions */
 
+void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback);
+
+/* TODO: Remove these from the header */
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
 void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed);
+
+/* TODO: Move this to FAudio */
 uint32_t FACT_INTERNAL_GetWave(
 	FACTWave *wave,
 	int16_t *decodeCacheL,
@@ -462,6 +480,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
 
+/* TODO: Move this to FAudio */
 #define DECODE_FUNC(type) \
 	extern uint32_t FACT_INTERNAL_Decode##type( \
 		FACTWave *wave, \

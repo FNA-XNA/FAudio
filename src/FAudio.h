@@ -195,10 +195,19 @@ typedef struct FAudioDebugConfiguration
 	uint8_t LogTiming;
 } FAudioDebugConfiguration;
 
+/* Constants */
+
+#define FAUDIO_DEFAULT_CHANNELS		0
+#define FAUDIO_DEFAULT_SAMPLERATE	0
+
 /* FAudio Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
-FAUDIOAPI uint32_t FAudioCreate(FAudio **ppFAudio);
+FAUDIOAPI uint32_t FAudioCreate(
+	FAudio **ppFAudio,
+	uint32_t Flags,
+	FAudioProcessor XAudio2Processor
+);
 
 FAUDIOAPI void FAudioDestroy(FAudio *audio); /* FIXME: NOT XAUDIO2 SPEC! */
 
@@ -241,6 +250,7 @@ FAUDIOAPI uint32_t FAudio_CreateSourceVoice(
 
 FAUDIOAPI uint32_t FAudio_CreateSubmixVoice(
 	FAudio *audio,
+	FAudioSubmixVoice **ppSubmixVoice,
 	uint32_t InputChannels,
 	uint32_t InputSampleRate,
 	uint32_t Flags,
@@ -251,6 +261,7 @@ FAUDIOAPI uint32_t FAudio_CreateSubmixVoice(
 
 FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
 	FAudio *audio,
+	FAudioMasteringVoice **ppMasteringVoice,
 	uint32_t InputChannels,
 	uint32_t InputSampleRate,
 	uint32_t Flags,

@@ -93,14 +93,32 @@ typedef struct FAudioResampleState
 	int16_t padding[2][RESAMPLE_PADDING];
 } FAudioResampleState;
 
+/* Internal FAudio Types */
+
+typedef struct FAudioEngineCallbackEntry FAudioEngineCallbackEntry;
+struct FAudioEngineCallbackEntry
+{
+	FAudioEngineCallback *callback;
+	FAudioEngineCallbackEntry *next;
+};
+
+typedef struct FAudioVoiceCallbackEntry FAudioVoiceCallbackEntry;
+struct FAudioVoiceCallbackEntry
+{
+	FAudioVoiceCallback *callback;
+	FAudioVoiceCallbackEntry *next;
+};
+
+/* Public FAudio Types */
+
 struct FAudio
 {
-	uint8_t TODO;
+	FAudioEngineCallbackEntry *callbacks;
 };
 
 struct FAudioVoice
 {
-	uint8_t TODO;
+	FAudioVoiceCallbackEntry *callbacks;
 };
 
 /* Internal Functions */
