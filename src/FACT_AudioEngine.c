@@ -370,7 +370,7 @@ uint32_t FACTAudioEngine_Initialize(
 		NULL
 	);
 #else
-	FAudio_PlatformInitEngine(
+	FACT_PlatformInitEngine(
 		pEngine,
 		pParams->pRendererID
 	);
@@ -385,7 +385,7 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	FACTWaveBank *wb;
 
 	/* Shutdown the platform stream before freeing stuff! */
-	FAudio_PlatformCloseEngine(pEngine);
+	FACT_PlatformCloseEngine(pEngine);
 
 	/* Unreference all the Banks */
 	sb = pEngine->sbList;

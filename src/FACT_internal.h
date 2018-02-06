@@ -461,6 +461,10 @@ struct FACTCue
 
 void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback);
 
+/* TODO: Remove these entirely */
+void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
+void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
+
 /* TODO: Remove these from the header */
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
 void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed);

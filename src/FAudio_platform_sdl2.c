@@ -18,14 +18,14 @@ struct FACTEngineEntry
 	FACTEngineEntry *next;
 };
 
-typedef struct FAudioPlatformDevice FAudioPlatformDevice;
-struct FAudioPlatformDevice
+typedef struct FACTPlatformDevice FACTPlatformDevice;
+struct FACTPlatformDevice
 {
 	const char *name;
 	SDL_AudioDeviceID device;
 	FAudioWaveFormatExtensible format;
 	FACTEngineEntry *engineList;
-	FAudioPlatformDevice *next;
+	FACTPlatformDevice *next;
 
 	int16_t* decodeCache[2];
 	float* resampleCache[2];
@@ -34,13 +34,13 @@ struct FAudioPlatformDevice
 
 /* Globals */
 
-FAudioPlatformDevice *devlist = NULL;
+FACTPlatformDevice *devlist = NULL;
 
 /* Mixer Thread */
 
-void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
+void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
-	FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata;
+	FACTPlatformDevice *device = (FACTPlatformDevice*) userdata;
 	FACTEngineEntry *engine = device->engineList;
 	FACTSoundBank *sb;
 	FACTWaveBank *wb;
@@ -148,10 +148,10 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 
 /* Platform Functions */
 
-void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
+void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 {
 	FACTEngineEntry *entry, *entryList;
-	FAudioPlatformDevice *device, *deviceList;
+	FACTPlatformDevice *device, *deviceList;
 	SDL_AudioSpec want, have;
 	const char *name;
 	int32_t renderer;
@@ -198,8 +198,8 @@ void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	if (device == NULL)
 	{
 		/* Allocate a new device container*/
-		device = (FAudioPlatformDevice*) FAudio_malloc(
-			sizeof(FAudioPlatformDevice)
+		device = (FACTPlatformDevice*) FAudio_malloc(
+			sizeof(FACTPlatformDevice)
 		);
 		device->name = name;
 		device->engineList = entry;
@@ -219,7 +219,7 @@ void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		want.channels = 0;
 		want.silence = 0;
 		want.samples = 4096; /* FIXME: Make this 1024 */
-		want.callback = FAudio_INTERNAL_MixCallback;
+		want.callback = FACT_INTERNAL_MixCallback;
 		want.userdata = device;
 
 		/* Open the device, finally */
@@ -327,11 +327,11 @@ void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 	}
 }
 
-void FAudio_PlatformCloseEngine(FACTAudioEngine *engine)
+void FACT_PlatformCloseEngine(FACTAudioEngine *engine)
 {
 	FACTEngineEntry *entry, *prevEntry;
-	FAudioPlatformDevice *dev = devlist;
-	FAudioPlatformDevice *prevDev = devlist;
+	FACTPlatformDevice *dev = devlist;
+	FACTPlatformDevice *prevDev = devlist;
 	uint8_t found = 0;
 	while (dev != NULL)
 	{

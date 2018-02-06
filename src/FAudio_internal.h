@@ -173,11 +173,6 @@ void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
 
 /* Platform Functions */
 
-/* FIXME: Re-do these for FAudio... */
-typedef struct FACTAudioEngine FACTAudioEngine;
-void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
-void FAudio_PlatformCloseEngine(FACTAudioEngine *engine);
-
 void FAudio_PlatformInit(FAudio *audio);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
