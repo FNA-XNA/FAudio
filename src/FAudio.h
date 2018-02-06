@@ -92,6 +92,31 @@ typedef struct FAudioWaveFormatExtensible
 	uint32_t dwChannelMask;
 	FAudioGUID SubFormat;
 } FAudioWaveFormatExtensible;
+
+typedef struct FAudioADPCMCoefSet
+{
+	int16_t iCoef1;
+	int16_t iCoef2;
+} FAudioADPCMCoefSet;
+
+typedef struct FAudioADPCMWaveFormat
+{
+	FAudioWaveFormatEx wfx;
+	uint16_t wSamplesPerBlock;
+	uint16_t wNumCoef;
+	FAudioADPCMCoefSet aCoef[];
+	/* MSADPCM has 7 coefficient pairs:
+	 * {
+	 *	{ 256,    0 },
+	 *	{ 512, -256 },
+	 *	{   0,    0 },
+	 *	{ 192,   64 },
+	 *	{ 240,    0 },
+	 *	{ 460, -208 },
+	 *	{ 392, -232 }
+	 * }
+	 */
+} FAudioADPCMWaveFormat;
 #pragma pack(pop)
 
 typedef struct FAudioDeviceDetails
