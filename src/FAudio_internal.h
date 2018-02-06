@@ -185,6 +185,8 @@ void FAudio_PlatformGetDeviceDetails(
 	FAudioDeviceDetails *details
 );
 
+/* stdlib Functions */
+
 void* FAudio_malloc(size_t size);
 void FAudio_free(void *ptr);
 void FAudio_zero(void *ptr, size_t size);

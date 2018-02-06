@@ -435,6 +435,8 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	FAudio_zero(stream, len);
 }
 
+/* Platform Functions */
+
 void FAudio_PlatformInit(FAudio *audio)
 {
 	FAudioEntry *entry, *entryList;
@@ -726,6 +728,8 @@ void FAudio_PlatformGetDeviceDetails(
 		NotDefaultDevice;
 }
 
+/* stdlib Functions */
+
 void* FAudio_malloc(size_t size)
 {
 	return SDL_malloc(size);
@@ -805,6 +809,8 @@ uint32_t FAudio_timems()
 {
 	return SDL_GetTicks();
 }
+
+/* FACT I/O */
 
 FACTIOStream* FACT_fopen(const char *path)
 {
