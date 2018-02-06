@@ -123,6 +123,7 @@ struct FAudio
 	uint8_t active;
 	FAudioMasteringVoice *master;
 	FAudioEngineCallbackEntry *callbacks;
+	FAudioWaveFormatExtensible *mixFormat;
 };
 
 struct FAudioVoice
