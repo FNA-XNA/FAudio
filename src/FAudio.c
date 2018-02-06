@@ -248,6 +248,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->master.inputChannels = InputChannels;
 	(*ppMasteringVoice)->master.inputSampleRate = InputSampleRate;
 	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
+
+	/* TODO: Platform device hookup */
 	return 0;
 }
 
