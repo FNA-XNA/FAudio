@@ -215,6 +215,9 @@ uint32_t FAudio_CreateMasteringVoice(
 	uint32_t DeviceIndex,
 	const FAudioEffectChain *pEffectChain
 ) {
+	/* For now we only support one allocated master voice at a time */
+	FAudio_assert(audio->master == NULL);
+
 	*ppMasteringVoice = (FAudioMasteringVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
 	(*ppMasteringVoice)->filter.Type = (FAudioFilterType) 0xFF;
@@ -248,20 +251,41 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->master.inputChannels = InputChannels;
 	(*ppMasteringVoice)->master.inputSampleRate = InputSampleRate;
 	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
+	(*ppMasteringVoice)->master.audio = audio;
 
-	/* TODO: Platform device hookup */
+	/* Platform Device */
+	audio->master = *ppMasteringVoice;
+	FAudio_PlatformInit(audio);
+	if (audio->active)
+	{
+		FAudio_PlatformStart(audio);
+	}
 	return 0;
 }
 
 uint32_t FAudio_StartEngine(FAudio *audio)
 {
-	/* TODO */
+	if (!audio->active)
+	{
+		audio->active = 1;
+		if (audio->master != NULL)
+		{
+			FAudio_PlatformStart(audio);
+		}
+	}
 	return 0;
 }
 
 void FAudio_StopEngine(FAudio *audio)
 {
-	/* TODO */
+	if (audio->active)
+	{
+		audio->active = 0;
+		if (audio->master != NULL)
+		{
+			FAudio_PlatformStop(audio);
+		}
+	}
 }
 
 uint32_t FAudio_CommitChanges(FAudio *audio)
@@ -559,6 +583,11 @@ void FAudioVoice_GetOutputMatrix(
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
 	/* TODO: Lock, check for dependencies and fail if still in use */
+	if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		FAudio_PlatformQuit(voice->master.audio);
+		voice->master.audio->master = NULL;
+	}
 	if (voice->sends.pSends != NULL)
 	{
 		FAudio_free(voice->sends.pSends);

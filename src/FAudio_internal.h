@@ -120,6 +120,8 @@ struct FAudioBufferEntry
 
 struct FAudio
 {
+	uint8_t active;
+	FAudioMasteringVoice *master;
 	FAudioEngineCallbackEntry *callbacks;
 };
 
@@ -160,6 +162,7 @@ struct FAudioVoice
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;
 			uint32_t deviceIndex;
+			FAudio *audio;
 		} master;
 	};
 };
@@ -174,6 +177,11 @@ void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
 typedef struct FACTAudioEngine FACTAudioEngine;
 void FAudio_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
 void FAudio_PlatformCloseEngine(FACTAudioEngine *engine);
+
+void FAudio_PlatformInit(FAudio *audio);
+void FAudio_PlatformQuit(FAudio *audio);
+void FAudio_PlatformStart(FAudio *audio);
+void FAudio_PlatformStop(FAudio *audio);
 
 uint32_t FAudio_PlatformGetDeviceCount();
 void FAudio_PlatformGetDeviceDetails(

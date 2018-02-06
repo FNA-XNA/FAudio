@@ -400,6 +400,26 @@ void FAudio_PlatformCloseEngine(FACTAudioEngine *engine)
 	}
 }
 
+void FAudio_PlatformInit(FAudio *audio)
+{
+	/* TODO */
+}
+
+void FAudio_PlatformQuit(FAudio *audio)
+{
+	/* TODO */
+}
+
+void FAudio_PlatformStart(FAudio *audio)
+{
+	/* TODO */
+}
+
+void FAudio_PlatformStop(FAudio *audio)
+{
+	/* TODO */
+}
+
 uint32_t FAudio_PlatformGetDeviceCount()
 {
 	return SDL_GetNumAudioDevices(0);
