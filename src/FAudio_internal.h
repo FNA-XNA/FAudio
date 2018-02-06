@@ -95,11 +95,25 @@ typedef struct FAudioResampleState
 
 /* Internal FAudio Types */
 
+typedef enum FAudioVoiceType
+{
+	FAUDIO_VOICE_SOURCE,
+	FAUDIO_VOICE_SUBMIX,
+	FAUDIO_VOICE_MASTER
+} FAudioVoiceType;
+
 typedef struct FAudioEngineCallbackEntry FAudioEngineCallbackEntry;
 struct FAudioEngineCallbackEntry
 {
 	FAudioEngineCallback *callback;
 	FAudioEngineCallbackEntry *next;
+};
+
+typedef struct FAudioBufferEntry FAudioBufferEntry;
+struct FAudioBufferEntry
+{
+	FAudioBuffer buffer;
+	FAudioBufferEntry *next;
 };
 
 /* Public FAudio Types */
@@ -108,13 +122,6 @@ struct FAudio
 {
 	FAudioEngineCallbackEntry *callbacks;
 };
-
-typedef enum FAudioVoiceType
-{
-	FAUDIO_VOICE_SOURCE,
-	FAUDIO_VOICE_SUBMIX,
-	FAUDIO_VOICE_MASTER
-} FAudioVoiceType;
 
 struct FAudioVoice
 {
@@ -137,6 +144,11 @@ struct FAudioVoice
 			float maxFreqRatio;
 			FAudioWaveFormatEx format;
 			FAudioVoiceCallback *callback;
+
+			uint8_t active;
+			float freqRatio;
+			uint64_t totalSamples;
+			FAudioBufferEntry *bufferList;
 		} src;
 		struct
 		{

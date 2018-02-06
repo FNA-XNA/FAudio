@@ -147,6 +147,7 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
 
 	/* Source Properties */
+	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
 	FAudio_memcpy(
 		&(*ppSourceVoice)->src.format,
@@ -154,6 +155,10 @@ uint32_t FAudio_CreateSourceVoice(
 		sizeof(FAudioWaveFormatEx)
 	);
 	(*ppSourceVoice)->src.callback = pCallback;
+	(*ppSourceVoice)->src.active = 0;
+	(*ppSourceVoice)->src.freqRatio = 1.0f;
+	(*ppSourceVoice)->src.totalSamples = 0;
+	(*ppSourceVoice)->src.bufferList = NULL;
 	return 0;
 }
 
@@ -369,7 +374,8 @@ uint32_t FAudioVoice_EnableEffect(
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
 	voice->effects.pEffectDescriptors[EffectIndex].InitialState = 1;
 	return 0;
 }
@@ -379,7 +385,8 @@ uint32_t FAudioVoice_DisableEffect(
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
 	voice->effects.pEffectDescriptors[EffectIndex].InitialState = 0;
 	return 0;
 }
@@ -400,7 +407,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t OperationSet
 ) {
 	/* TODO: XAPO */
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	return 0;
 }
 
@@ -418,7 +425,8 @@ uint32_t FAudioVoice_SetFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
 	FAudio_memcpy(
 		&voice->filter,
 		pParameters,
@@ -444,7 +452,7 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(0 && "Output filters are not supported!");
 	return 0;
 }
@@ -462,7 +470,9 @@ uint32_t FAudioVoice_SetVolume(
 	float Volume,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	FAudio_assert(Volume <= FAUDIO_MAX_VOLUME_LEVEL);
 	voice->volume = Volume;
 	return 0;
 }
@@ -480,7 +490,8 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	const float *pVolumes,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
 	FAudio_assert(Channels > 0 && Channels < 3);
 	FAudio_memcpy(
 		voice->channelVolume,
@@ -511,7 +522,8 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	const float *pLevelMatrix,
 	uint32_t OperationSet
 ) {
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
 	FAudio_assert(SourceChannels > 0 && SourceChannels < 3);
 	FAudio_assert(DestinationChannels > 0 && DestinationChannels < 9);
 	voice->srcChannels = SourceChannels;
@@ -563,8 +575,11 @@ uint32_t FAudioSourceVoice_Start(
 	uint32_t Flags,
 	uint32_t OperationSet
 ) {
-	/* TODO */
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	FAudio_assert(Flags == 0);
+	voice->src.active = 1;
 	return 0;
 }
 
@@ -573,8 +588,11 @@ uint32_t FAudioSourceVoice_Stop(
 	uint32_t Flags,
 	uint32_t OperationSet
 ) {
-	/* TODO */
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	FAudio_assert(!(Flags & FAUDIO_PLAY_TAILS)); /* FIXME: ??? */
+	voice->src.active = 0;
 	return 0;
 }
 
@@ -583,21 +601,69 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA
 ) {
-	/* TODO */
+	FAudioBufferEntry *entry, *list;
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+	FAudio_assert(pBufferWMA == NULL);
+
+	entry = (FAudioBufferEntry*) FAudio_malloc(sizeof(FAudioBufferEntry));
+	FAudio_memcpy(&entry->buffer, pBuffer, sizeof(FAudioBuffer));
+	entry->next = NULL;
+	if (voice->src.bufferList == NULL)
+	{
+		voice->src.bufferList = entry;
+	}
+	else
+	{
+		list = voice->src.bufferList;
+		while (list->next != NULL)
+		{
+			list = list->next;
+		}
+		list->next = entry;
+	}
 	return 0;
 }
 
 uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudioSourceVoice *voice
 ) {
-	/* TODO */
+	FAudioBufferEntry *entry, *next;
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	/* If the source is playing, don't flush the active buffer */
+	entry = voice->src.bufferList;
+	if (voice->src.active && entry != NULL)
+	{
+		entry = entry->next;
+	}
+
+	/* Go through each buffer, send an event for each one before deleting */
+	while (entry != NULL)
+	{
+		if (voice->src.callback->OnBufferEnd != NULL)
+		{
+			voice->src.callback->OnBufferEnd(
+				voice->src.callback,
+				entry->buffer.pContext
+			);
+		}
+		next = entry->next;
+		FAudio_free(entry);
+		entry = next;
+	}
 	return 0;
 }
 
 uint32_t FAudioSourceVoice_Discontinuity(
 	FAudioSourceVoice *voice
 ) {
-	/* TODO */
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	/* As far as I know this doesn't matter for us...?
+	 * This exists so the engine doesn't try to spit out random memory,
+	 * but like... can't we just not send samples with no buffers?
+	 * -flibit
+	 */
 	return 0;
 }
 
@@ -605,8 +671,13 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	FAudioSourceVoice *voice,
 	uint32_t OperationSet
 ) {
-	/* TODO */
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	if (voice->src.bufferList != NULL)
+	{
+		voice->src.bufferList->buffer.LoopCount = 0;
+	}
 	return 0;
 }
 
@@ -614,7 +685,25 @@ void FAudioSourceVoice_GetState(
 	FAudioSourceVoice *voice,
 	FAudioVoiceState *pVoiceState
 ) {
-	/* TODO */
+	FAudioBufferEntry *entry;
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	pVoiceState->BuffersQueued = 0;
+	pVoiceState->SamplesPlayed = voice->src.totalSamples;
+	if (voice->src.bufferList != NULL)
+	{
+		entry = voice->src.bufferList;
+		pVoiceState->pCurrentBufferContext = entry->buffer.pContext;
+		do
+		{
+			pVoiceState->BuffersQueued += 1;
+			entry = entry->next;
+		} while (entry != NULL);
+	}
+	else
+	{
+		pVoiceState->pCurrentBufferContext = NULL;
+	}
 }
 
 uint32_t FAudioSourceVoice_SetFrequencyRatio(
@@ -622,8 +711,12 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 	float Ratio,
 	uint32_t OperationSet
 ) {
-	/* TODO */
-	FAudio_assert(OperationSet == 0);
+	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	FAudio_assert(	Ratio >= FAUDIO_MIN_FREQ_RATIO &&
+			Ratio <= voice->src.maxFreqRatio	);
+	voice->src.freqRatio = Ratio;
 	return 0;
 }
 
@@ -631,13 +724,19 @@ void FAudioSourceVoice_GetFrequencyRatio(
 	FAudioSourceVoice *voice,
 	float *pRatio
 ) {
-	/* TODO */
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	*pRatio = voice->src.freqRatio;
 }
 
 uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	FAudioSourceVoice *voice,
 	uint32_t NewSourceSampleRate
 ) {
-	/* TODO */
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	FAudio_assert(	NewSourceSampleRate >= FAUDIO_MIN_SAMPLE_RATE &&
+			NewSourceSampleRate <= FAUDIO_MAX_SAMPLE_RATE	);
+	voice->src.format.nSamplesPerSec = NewSourceSampleRate;
 	return 0;
 }
