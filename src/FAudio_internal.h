@@ -109,6 +109,20 @@ struct FAudioEngineCallbackEntry
 	FAudioEngineCallbackEntry *next;
 };
 
+typedef struct FAudioSubmixVoiceEntry FAudioSubmixVoiceEntry;
+struct FAudioSubmixVoiceEntry
+{
+	FAudioSubmixVoice *voice;
+	FAudioSubmixVoiceEntry *next;
+};
+
+typedef struct FAudioSourceVoiceEntry FAudioSourceVoiceEntry;
+struct FAudioSourceVoiceEntry
+{
+	FAudioSourceVoice *voice;
+	FAudioSourceVoiceEntry *next;
+};
+
 typedef struct FAudioBufferEntry FAudioBufferEntry;
 struct FAudioBufferEntry
 {
@@ -121,7 +135,10 @@ struct FAudioBufferEntry
 struct FAudio
 {
 	uint8_t active;
+	uint32_t submixStages;
 	FAudioMasteringVoice *master;
+	FAudioSubmixVoiceEntry *submixes;
+	FAudioSourceVoiceEntry *sources;
 	FAudioEngineCallbackEntry *callbacks;
 	FAudioWaveFormatExtensible *mixFormat;
 };
@@ -157,6 +174,7 @@ struct FAudioVoice
 		{
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;
+			uint32_t processingStage;
 		} mix;
 		struct
 		{

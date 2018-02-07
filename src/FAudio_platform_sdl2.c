@@ -430,9 +430,44 @@ FAudioPlatformDevice *devlist = NULL;
 
 void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
-	/* FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata; */
+	FAudioEntry *audio;
+	FAudioSourceVoiceEntry *source;
+	FAudioSubmixVoiceEntry *submix;
+	FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata;
+	uint32_t i;
 
 	FAudio_zero(stream, len);
+	while (device != NULL)
+	{
+		audio = device->engineList;
+		while (audio != NULL)
+		{
+			if (audio->audio->active)
+			{
+				source = audio->audio->sources;
+				while (source != NULL)
+				{
+					/* TODO: Mix sources */
+					source = source->next;
+				}
+				for (i = 0; i < audio->audio->submixStages; i += 1)
+				{
+					submix = audio->audio->submixes;
+					while (submix != NULL)
+					{
+						if (submix->voice->mix.processingStage == i)
+						{
+							/* TODO: Mix submixes */
+						}
+						submix = submix->next;
+					}
+				}
+				/* TODO: Mix mastering voice */
+			}
+			audio = audio->next;
+		}
+		device = device->next;
+	}
 }
 
 /* Platform Functions */
