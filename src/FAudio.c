@@ -120,6 +120,7 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	(*ppSourceVoice)->audio = audio;
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
 	(*ppSourceVoice)->filter.Type = (FAudioFilterType) 0xFF;
 
@@ -174,6 +175,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	(*ppSubmixVoice)->audio = audio;
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
 	(*ppSubmixVoice)->filter.Type = (FAudioFilterType) 0xFF;
 
@@ -205,6 +207,10 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
 	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
 	(*ppSubmixVoice)->mix.processingStage = ProcessingStage;
+	audio->submixStages = FAudio_max(
+		audio->submixStages,
+		ProcessingStage
+	);
 	return 0;
 }
 
@@ -221,6 +227,7 @@ uint32_t FAudio_CreateMasteringVoice(
 	FAudio_assert(audio->master == NULL);
 
 	*ppMasteringVoice = (FAudioMasteringVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	(*ppMasteringVoice)->audio = audio;
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
 	(*ppMasteringVoice)->filter.Type = (FAudioFilterType) 0xFF;
 
@@ -253,7 +260,6 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->master.inputChannels = InputChannels;
 	(*ppMasteringVoice)->master.inputSampleRate = InputSampleRate;
 	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
-	(*ppMasteringVoice)->master.audio = audio;
 
 	/* Platform Device */
 	audio->master = *ppMasteringVoice;
@@ -584,11 +590,63 @@ void FAudioVoice_GetOutputMatrix(
 
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
+	FAudioSourceVoiceEntry *source, *srcPrev;
+	FAudioSubmixVoiceEntry *submix, *mixPrev;
 	/* TODO: Lock, check for dependencies and fail if still in use */
-	if (voice->type == FAUDIO_VOICE_MASTER)
+	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
-		FAudio_PlatformQuit(voice->master.audio);
-		voice->master.audio->master = NULL;
+		source = srcPrev = voice->audio->sources;
+		while (source != NULL)
+		{
+			if (source->voice == voice)
+			{
+				if (source == srcPrev)
+				{
+					voice->audio->sources = source->next;
+				}
+				else
+				{
+					srcPrev->next = source->next;
+				}
+				FAudio_free(source);
+				break;
+			}
+		}
+	}
+	else if (voice->type == FAUDIO_VOICE_SUBMIX)
+	{
+		submix = mixPrev = voice->audio->submixes;
+		while (submix != NULL)
+		{
+			if (submix->voice == voice)
+			{
+				if (submix == mixPrev)
+				{
+					voice->audio->submixes = submix->next;
+				}
+				else
+				{
+					mixPrev->next = submix->next;
+				}
+				FAudio_free(submix);
+				break;
+			}
+		}
+		voice->audio->submixStages = 0;
+		submix = voice->audio->submixes;
+		while (submix != NULL)
+		{
+			voice->audio->submixStages = FAudio_max(
+				voice->audio->submixStages,
+				submix->voice->mix.processingStage
+			);
+			submix = submix->next;
+		}
+	}
+	else if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		FAudio_PlatformQuit(voice->audio);
+		voice->audio->master = NULL;
 	}
 	if (voice->sends.pSends != NULL)
 	{

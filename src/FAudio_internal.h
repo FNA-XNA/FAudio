@@ -145,6 +145,7 @@ struct FAudio
 
 struct FAudioVoice
 {
+	FAudio *audio;
 	FAudioVoiceType type;
 	FAudioVoiceSends sends;
 	FAudioEffectChain effects;
@@ -181,7 +182,6 @@ struct FAudioVoice
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;
 			uint32_t deviceIndex;
-			FAudio *audio;
 		} master;
 	};
 };
