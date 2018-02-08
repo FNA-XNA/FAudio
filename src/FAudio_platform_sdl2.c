@@ -430,12 +430,8 @@ FAudioPlatformDevice *devlist = NULL;
 
 void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
-	FAudioEntry *audio;
-	FAudioSourceVoiceEntry *source;
-	FAudioSubmixVoiceEntry *submix;
-	FAudioEngineCallbackEntry *callback;
 	FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata;
-	uint32_t i;
+	FAudioEntry *audio;
 
 	FAudio_zero(stream, len);
 	while (device != NULL)
@@ -443,59 +439,10 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 		audio = device->engineList;
 		while (audio != NULL)
 		{
-			if (audio->audio->active)
-			{
-				/* ProcessingPassStart callbacks */
-				callback = audio->audio->callbacks;
-				while (callback != NULL)
-				{
-					if (callback->callback->OnProcessingPassStart != NULL)
-					{
-						callback->callback->OnProcessingPassStart(
-							callback->callback
-						);
-					}
-					callback = callback->next;
-				}
-
-				/* Writes to master will directly write to output */
-				audio->audio->master->master.output = (float*) stream;
-
-				/* Mix sources */
-				source = audio->audio->sources;
-				while (source != NULL)
-				{
-					FAudio_INTERNAL_MixSource(source->voice);
-					source = source->next;
-				}
-
-				/* Mix submixes, ordered by processing stage */
-				for (i = 0; i < audio->audio->submixStages; i += 1)
-				{
-					submix = audio->audio->submixes;
-					while (submix != NULL)
-					{
-						if (submix->voice->mix.processingStage == i)
-						{
-							FAudio_INTERNAL_MixSubmix(submix->voice);
-						}
-						submix = submix->next;
-					}
-				}
-
-				/* OnProcessingPassEnd callbacks */
-				callback = audio->audio->callbacks;
-				while (callback != NULL)
-				{
-					if (callback->callback->OnProcessingPassEnd != NULL)
-					{
-						callback->callback->OnProcessingPassEnd(
-							callback->callback
-						);
-					}
-					callback = callback->next;
-				}
-			}
+			FAudio_INTERNAL_UpdateEngine(
+				audio->audio,
+				(float*) stream
+			);
 			audio = audio->next;
 		}
 		device = device->next;

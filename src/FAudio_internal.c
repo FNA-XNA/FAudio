@@ -217,6 +217,69 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	);
 }
 
+void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
+{
+	uint32_t i;
+	FAudioSourceVoiceEntry *source;
+	FAudioSubmixVoiceEntry *submix;
+	FAudioEngineCallbackEntry *callback;
+
+	if (!audio->active)
+	{
+		return;
+	}
+
+	/* ProcessingPassStart callbacks */
+	callback = audio->callbacks;
+	while (callback != NULL)
+	{
+		if (callback->callback->OnProcessingPassStart != NULL)
+		{
+			callback->callback->OnProcessingPassStart(
+				callback->callback
+			);
+		}
+		callback = callback->next;
+	}
+
+	/* Writes to master will directly write to output */
+	audio->master->master.output = output;
+
+	/* Mix sources */
+	source = audio->sources;
+	while (source != NULL)
+	{
+		FAudio_INTERNAL_MixSource(source->voice);
+		source = source->next;
+	}
+
+	/* Mix submixes, ordered by processing stage */
+	for (i = 0; i < audio->submixStages; i += 1)
+	{
+		submix = audio->submixes;
+		while (submix != NULL)
+		{
+			if (submix->voice->mix.processingStage == i)
+			{
+				FAudio_INTERNAL_MixSubmix(submix->voice);
+			}
+			submix = submix->next;
+		}
+	}
+
+	/* OnProcessingPassEnd callbacks */
+	callback = audio->callbacks;
+	while (callback != NULL)
+	{
+		if (callback->callback->OnProcessingPassEnd != NULL)
+		{
+			callback->callback->OnProcessingPassEnd(
+				callback->callback
+			);
+		}
+		callback = callback->next;
+	}
+}
 #if 0
 	/* TODO: For decode callbacks.... */
 	if (voice->src.callback != NULL)
