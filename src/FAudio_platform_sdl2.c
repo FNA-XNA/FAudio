@@ -444,6 +444,7 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 		{
 			if (audio->audio->active)
 			{
+				audio->audio->master->master.output = (float*) stream;
 				source = audio->audio->sources;
 				while (source != NULL)
 				{
@@ -462,7 +463,6 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 						submix = submix->next;
 					}
 				}
-				/* TODO: Mix mastering voice */
 			}
 			audio = audio->next;
 		}
@@ -592,6 +592,7 @@ void FAudio_PlatformInit(FAudio *audio)
 		device->bufferSize = have.samples;
 
 		/* Give the output format to the engine */
+		audio->updateSize = device->bufferSize;
 		audio->mixFormat = &device->format;
 
 		/* Add to the device list */
@@ -612,6 +613,7 @@ void FAudio_PlatformInit(FAudio *audio)
 	else /* Just add us to the existing device */
 	{
 		/* But give us the output format first! */
+		audio->updateSize = device->bufferSize;
 		audio->mixFormat = &device->format;
 
 		entryList = device->engineList;
@@ -831,6 +833,11 @@ double FAudio_sqrt(double x)
 double FAudio_acos(double x)
 {
 	return SDL_acos(x);
+}
+
+double FAudio_ceil(double x)
+{
+	return SDL_ceil(x);
 }
 
 float FAudio_rng()

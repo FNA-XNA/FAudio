@@ -144,10 +144,6 @@ uint32_t FAudio_CreateSourceVoice(
 		(*ppSourceVoice)->matrixCoefficients[1] = 1.0f;
 	}
 
-	/* Sends/Effects */
-	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
-	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
-
 	/* Source Properties */
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
@@ -161,6 +157,21 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
+
+	/* Sends/Effects */
+	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
+	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
+
+	/* Sample Storage */
+	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
+		sizeof(int16_t) * audio->updateSize * pSourceFormat->nChannels *
+		(uint32_t) FAudio_ceil(
+			(double) pSourceFormat->nSamplesPerSec /
+			(double) audio->master->master.inputSampleRate
+		) * (uint32_t) FAudio_ceil(
+			MaxFrequencyRatio
+		)
+	);
 	return 0;
 }
 
@@ -199,10 +210,6 @@ uint32_t FAudio_CreateSubmixVoice(
 		(*ppSubmixVoice)->matrixCoefficients[1] = 1.0f;
 	}
 
-	/* Sends/Effects */
-	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
-	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
-
 	/* Submix Properties */
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
 	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
@@ -210,6 +217,19 @@ uint32_t FAudio_CreateSubmixVoice(
 	audio->submixStages = FAudio_max(
 		audio->submixStages,
 		ProcessingStage
+	);
+
+	/* Sends/Effects */
+	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
+	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
+
+	/* Sample Storage */
+	(*ppSubmixVoice)->mix.inputSamples = (float*) FAudio_malloc(
+		sizeof(float) * audio->updateSize * InputChannels *
+		(uint32_t) FAudio_ceil(
+			(double) InputSampleRate /
+			(double) audio->master->master.inputSampleRate
+		)
 	);
 	return 0;
 }
@@ -349,31 +369,64 @@ uint32_t FAudioVoice_SetOutputVoices(
 	FAudioVoice *voice,
 	const FAudioVoiceSends *pSendList
 ) {
+	float **sampleCache;
+	uint32_t inChannels, inSampleRate, outSampleRate;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 
+	if (voice->type == FAUDIO_VOICE_SOURCE)
+	{
+		sampleCache = &voice->src.outputResampleCache;
+		inChannels = voice->src.format.nChannels;
+		inSampleRate = voice->src.format.nSamplesPerSec;
+	}
+	else
+	{
+		sampleCache = &voice->mix.outputResampleCache;
+		inChannels = voice->mix.inputChannels;
+		inSampleRate = voice->mix.inputSampleRate;
+	}
+
 	/* FIXME: This is lazy... */
+	if (*sampleCache != NULL)
+	{
+		FAudio_free(*sampleCache);
+		*sampleCache = NULL;
+	}
 	if (voice->sends.pSends != NULL)
 	{
 		FAudio_free(voice->sends.pSends);
 	}
 
+	/* No sends? Nothing to do... */
 	if (pSendList == NULL)
 	{
 		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
+		return;
 	}
-	else
-	{
-		voice->sends.SendCount = pSendList->SendCount;
-		voice->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
-			pSendList->SendCount * sizeof(FAudioSendDescriptor)
-		);
-		FAudio_memcpy(
-			voice->sends.pSends,
-			pSendList->pSends,
-			pSendList->SendCount * sizeof(FAudioSendDescriptor)
-		);
-		/* TODO: Default output matrix */
-	}
+
+	/* Copy send list */
+	voice->sends.SendCount = pSendList->SendCount;
+	voice->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
+		pSendList->SendCount * sizeof(FAudioSendDescriptor)
+	);
+	FAudio_memcpy(
+		voice->sends.pSends,
+		pSendList->pSends,
+		pSendList->SendCount * sizeof(FAudioSendDescriptor)
+	);
+
+	/* TODO: Default output matrix */
+
+	/* Allocate resample cache */
+	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
+		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
+		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
+	*sampleCache = (float*) FAudio_malloc(
+		sizeof(float) * voice->audio->updateSize * inChannels *
+		(uint32_t) FAudio_ceil(
+			(double) inSampleRate / (double) outSampleRate
+		)
+	);
 	return 0;
 }
 
@@ -615,6 +668,11 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 				break;
 			}
 		}
+		FAudio_free(voice->src.decodeCache);
+		if (voice->src.outputResampleCache != NULL)
+		{
+			FAudio_free(voice->src.outputResampleCache);
+		}
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -644,6 +702,11 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 				submix->voice->mix.processingStage
 			);
 			submix = submix->next;
+		}
+		FAudio_free(voice->mix.inputSamples);
+		if (voice->mix.outputResampleCache != NULL)
+		{
+			FAudio_free(voice->mix.outputResampleCache);
 		}
 	}
 	else if (voice->type == FAUDIO_VOICE_MASTER)

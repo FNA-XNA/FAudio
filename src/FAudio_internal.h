@@ -135,6 +135,7 @@ struct FAudioBufferEntry
 struct FAudio
 {
 	uint8_t active;
+	uint32_t updateSize;
 	uint32_t submixStages;
 	FAudioMasteringVoice *master;
 	FAudioSubmixVoiceEntry *submixes;
@@ -162,10 +163,16 @@ struct FAudioVoice
 	{
 		struct
 		{
+			/* Sample storage */
+			int16_t *decodeCache;
+			float *outputResampleCache;
+
+			/* Read-only */
 			float maxFreqRatio;
 			FAudioWaveFormatEx format;
 			FAudioVoiceCallback *callback;
 
+			/* Dynamic */
 			uint8_t active;
 			float freqRatio;
 			uint64_t totalSamples;
@@ -173,12 +180,21 @@ struct FAudioVoice
 		} src;
 		struct
 		{
+			/* Sample storage */
+			float *inputSamples;
+			float *outputResampleCache;
+
+			/* Read-only */
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;
 			uint32_t processingStage;
 		} mix;
 		struct
 		{
+			/* Output stream, allocated by Platform */
+			float *output;
+
+			/* Read-only */
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;
 			uint32_t deviceIndex;
@@ -217,6 +233,7 @@ double FAudio_pow(double x, double y);
 double FAudio_log10(double x);
 double FAudio_sqrt(double x);
 double FAudio_acos(double x);
+double FAudio_ceil(double x);
 float FAudio_rng();
 uint32_t FAudio_timems();
 
