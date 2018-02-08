@@ -422,7 +422,19 @@ uint32_t FAudioVoice_SetOutputVoices(
 		pSendList->SendCount * sizeof(FAudioSendDescriptor)
 	);
 
-	/* TODO: Default output matrix */
+	/* Reset to default output matrix */
+	if (inChannels == 2)
+	{
+		voice->matrixCoefficients[0] = 1.0f;
+		voice->matrixCoefficients[1] = 0.0f;
+		voice->matrixCoefficients[2] = 0.0f;
+		voice->matrixCoefficients[3] = 1.0f;
+	}
+	else
+	{
+		voice->matrixCoefficients[0] = 1.0f;
+		voice->matrixCoefficients[1] = 1.0f;
+	}
 
 	/* Allocate resample cache */
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
