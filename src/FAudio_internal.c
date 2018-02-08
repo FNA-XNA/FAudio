@@ -47,20 +47,28 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.decodeCache[0] = voice->src.pad[0];
 		if (voice->src.format.nChannels == 2)
 		{
-			voice->src.decodeCache[toDecode] = voice->src.pad[1];
+			voice->src.decodeCache[toDecode / 2] = voice->src.pad[1];
 		}
 		decoded += 1;
 	}
 	while (decoded < toDecode && voice->src.bufferList != NULL)
 	{
-		decoded = toDecode;/*TODO: += voice->src.bufferList->decode(
+#if 0 /* TODO */
+		decoded += voice->src.bufferList->decode(
 			toDecode - decoded,
-			voice->src.bufferList,
 			voice->src.decodeCache + decoded,
 			voice->src.decodeCache + toDecode + decoded,
-			voice->src.callback,
-			&voice->src.format
-		);*/
+			&voice->src.bufferList,
+			&voice->src.format,
+			voice->src.callback
+		);
+#else
+		FACT_zero(
+			voice->src.decodeCache,
+			sizeof(int16_t) * toDecode
+		);
+		decoded = toDecode;
+#endif
 	}
 	if (decoded == 0)
 	{
@@ -70,7 +78,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Convert to float, resampling if necessary */
 	if (voice->sends.SendCount > 0)
 	{
-		if (toDecode == (voice->src.outputSamples / voice->src.format.nChannels))
+		if (toDecode == voice->src.outputSamples)
 		{
 			/* Just convert to float... */
 			for (i = 0; i < voice->src.outputSamples; i += 1)
@@ -86,11 +94,14 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Assign padding */
-	voice->src.pad[0] = voice->src.decodeCache[toDecode - 1];
 	if (voice->src.format.nChannels == 2)
 	{
-		voice->src.pad[1] =
-			voice->src.decodeCache[toDecode * 2 - 1];
+		voice->src.pad[0] = voice->src.decodeCache[toDecode / 2 - 1];
+		voice->src.pad[1] = voice->src.decodeCache[toDecode - 1];
+	}
+	else
+	{
+		voice->src.pad[0] = voice->src.decodeCache[toDecode - 1];
 	}
 	voice->src.hasPad = 1;
 
@@ -160,11 +171,17 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Assign padding */
-	voice->mix.pad[0] = voice->mix.inputCache[voice->mix.inputSamples - 1];
 	if (voice->mix.inputChannels == 2)
 	{
+		voice->mix.pad[0] =
+			voice->mix.inputCache[voice->mix.inputSamples / 2 - 1];
 		voice->mix.pad[1] =
-			voice->mix.inputCache[voice->mix.inputSamples * 2 - 1];
+			voice->mix.inputCache[voice->mix.inputSamples - 1];
+	}
+	else
+	{
+		voice->mix.pad[0] =
+			voice->mix.inputCache[voice->mix.inputSamples - 1];
 	}
 	voice->mix.hasPad = 1;
 
