@@ -83,14 +83,16 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		{
 			/* TODO: Resample! */
 		}
-		voice->src.pad[0] = voice->src.decodeCache[toDecode - 1];
-		if (voice->src.format.nChannels == 2)
-		{
-			voice->src.pad[1] =
-				voice->src.decodeCache[toDecode * 2 - 1];
-		}
-		voice->src.hasPad = 1;
 	}
+
+	/* Assign padding */
+	voice->src.pad[0] = voice->src.decodeCache[toDecode - 1];
+	if (voice->src.format.nChannels == 2)
+	{
+		voice->src.pad[1] =
+			voice->src.decodeCache[toDecode * 2 - 1];
+	}
+	voice->src.hasPad = 1;
 
 	/* TODO: Effects, filters */
 
