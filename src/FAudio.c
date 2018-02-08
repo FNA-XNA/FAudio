@@ -163,14 +163,17 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
 
 	/* Sample Storage */
-	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
-		sizeof(int16_t) * audio->updateSize * pSourceFormat->nChannels *
+	(*ppSourceVoice)->src.decodeSamples = (
+		audio->updateSize * pSourceFormat->nChannels *
 		(uint32_t) FAudio_ceil(
 			(double) pSourceFormat->nSamplesPerSec /
 			(double) audio->master->master.inputSampleRate
-		) * (uint32_t) FAudio_ceil(
-			MaxFrequencyRatio
 		)
+	);
+	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
+		sizeof(int16_t) *
+		(*ppSourceVoice)->src.decodeSamples *
+		(uint32_t) FAudio_ceil(MaxFrequencyRatio)
 	);
 	return 0;
 }
@@ -224,19 +227,19 @@ uint32_t FAudio_CreateSubmixVoice(
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 
 	/* Sample Storage */
-	(*ppSubmixVoice)->mix.inputBufferSize = (
-		sizeof(float) * audio->updateSize * InputChannels *
+	(*ppSubmixVoice)->mix.inputSamples = (
+		audio->updateSize * InputChannels *
 		(uint32_t) FAudio_ceil(
 			(double) InputSampleRate /
 			(double) audio->master->master.inputSampleRate
 		)
 	);
-	(*ppSubmixVoice)->mix.inputSamples = (float*) FAudio_malloc(
-		(*ppSubmixVoice)->mix.inputBufferSize
+	(*ppSubmixVoice)->mix.inputCache = (float*) FAudio_malloc(
+		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
 	);
 	FAudio_zero( /* Zero this now, for the first update */
-		(*ppSubmixVoice)->mix.inputSamples,
-		(*ppSubmixVoice)->mix.inputBufferSize
+		(*ppSubmixVoice)->mix.inputCache,
+		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
 	);
 	return 0;
 }
@@ -722,7 +725,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 			);
 			submix = submix->next;
 		}
-		FAudio_free(voice->mix.inputSamples);
+		FAudio_free(voice->mix.inputCache);
 		if (voice->mix.outputResampleCache != NULL)
 		{
 			FAudio_free(voice->mix.outputResampleCache);

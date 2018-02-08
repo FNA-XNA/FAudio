@@ -15,13 +15,19 @@ void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample)
 
 void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
+#if 0
+	uint32_t toDecode = (uint32_t) (
+		voice->src.decodeSamples *
+		voice->src.freqRatio /* FIXME: Imprecise! */
+	);
+#endif
 }
 
 void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 {
 	/* Zero this at the end, for the next update */
 	FAudio_zero(
-		(*ppSubmixVoice)->mix.inputSamples,
-		(*ppSubmixVoice)->mix.inputBufferSize
+		voice->mix.inputCache,
+		sizeof(float) * voice->mix.inputSamples
 	);
 }

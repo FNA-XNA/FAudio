@@ -164,7 +164,9 @@ struct FAudioVoice
 		struct
 		{
 			/* Sample storage */
+			uint32_t decodeSamples;
 			int16_t *decodeCache;
+			uint32_t outputSamples;
 			float *outputResampleCache;
 
 			/* Read-only */
@@ -181,8 +183,9 @@ struct FAudioVoice
 		struct
 		{
 			/* Sample storage */
-			size_t inputBufferSize;
-			float *inputSamples;
+			uint32_t inputSamples;
+			float *inputCache;
+			uint32_t outputSamples;
 			float *outputResampleCache;
 
 			/* Read-only */
