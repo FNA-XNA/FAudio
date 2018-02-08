@@ -25,11 +25,13 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		return;
 	}
 
+	/* Decode length depends on pitch */
 	toDecode = (uint32_t) (
 		voice->src.decodeSamples *
 		voice->src.freqRatio /* FIXME: Imprecise! */
 	);
 
+	/* Last call for buffer data! */
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassStart != NULL)
 	{
@@ -39,6 +41,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		);
 	}
 
+	/* Decode... */
 	if (voice->src.hasPad)
 	{
 		voice->src.decodeCache[0] = voice->src.pad[0];
