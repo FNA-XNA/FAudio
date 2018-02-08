@@ -29,6 +29,16 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.decodeSamples *
 		voice->src.freqRatio /* FIXME: Imprecise! */
 	);
+
+	if (	voice->src.callback != NULL &&
+		voice->src.callback->OnVoiceProcessingPassStart != NULL)
+	{
+		voice->src.callback->OnVoiceProcessingPassStart(
+			voice->src.callback,
+			toDecode * sizeof(int16_t)
+		);
+	}
+
 	if (voice->src.hasPad)
 	{
 		voice->src.decodeCache[0] = voice->src.pad[0];
@@ -36,20 +46,26 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		{
 			voice->src.decodeCache[toDecode] = voice->src.pad[1];
 		}
+		decoded += 1;
 	}
-	decoded = 0;/*TODO: voice->src.bufferList[0].decode(
-		voice,
-		toDecode - voice->sec.hasPad,
-		voice->src.decodeCache + voice->src.hasPad,
-		voice->src.decodeCache + toDecode
-	);*/
-	if (decoded < (toDecode - voice->src.hasPad))
+	while (decoded < toDecode && voice->src.bufferList != NULL)
 	{
-		/* TODO: OnBufferEnd, possible OnStreamEnd */
+		decoded = toDecode;/*TODO: += voice->src.bufferList->decode(
+			toDecode - decoded,
+			voice->src.bufferList,
+			voice->src.decodeCache + decoded,
+			voice->src.decodeCache + toDecode + decoded,
+			voice->src.callback,
+			&voice->src.format
+		);*/
+	}
+	if (decoded == 0)
+	{
+		goto end;
 	}
 
 	/* Convert to float, resampling if necessary */
-	if (decoded > 0 && voice->sends.SendCount > 0)
+	if (voice->sends.SendCount > 0)
 	{
 		if (toDecode == (voice->src.outputSamples / voice->src.format.nChannels))
 		{
@@ -96,6 +112,16 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 					voice->src.outputResampleCache[j];
 			}
 		}
+	}
+
+	/* Done, finally. */
+end:
+	if (	voice->src.callback != NULL &&
+		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+	{
+		voice->src.callback->OnVoiceProcessingPassEnd(
+			voice->src.callback
+		);
 	}
 }
 
@@ -167,3 +193,24 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		sizeof(float) * voice->mix.inputSamples
 	);
 }
+
+#if 0
+	/* TODO: For decode callbacks.... */
+	if (voice->src.callback != NULL)
+	{
+		if (voice->src.callback->OnBufferEnd != NULL)
+		{
+			voice->src.callback->OnBufferEnd(
+				voice->src.callback,
+				voice->src.bufferList->buffer.pContext
+			);
+		}
+		if (	voice->src.bufferList->buffer.Flags & FAUDIO_END_OF_STREAM &&
+			voice->src.callback->OnStreamEnd != NULL	)
+		{
+			voice->src.callback->OnStreamEnd(
+				voice->src.callback
+			);
+		}
+	}
+#endif
