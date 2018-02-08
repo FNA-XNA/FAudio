@@ -810,11 +810,17 @@ double FAudio_pow(double x, double y)
 	return SDL_pow(x, y);
 }
 
-extern double SDL_uclibc_log10(double x); /* TODO: SDL Bugzilla #4052 */
+#if !SDL_VERSION_ATLEAST(2, 0, 8) /* FIXME: REMOVE ME! */
+extern double SDL_uclibc_log10(double x);
+#endif
 
 double FAudio_log10(double x)
 {
-	return SDL_uclibc_log10(x); /* TODO: SDL_log10! */
+#if SDL_VERSION_ATLEAST(2, 0, 8)
+	return SDL_log10(x);
+#else
+	return SDL_uclibc_log10(x); /* FIXME: REMOVE ME! */
+#endif
 }
 
 double FAudio_sqrt(double x)
