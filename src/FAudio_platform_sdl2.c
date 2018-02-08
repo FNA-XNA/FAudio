@@ -455,6 +455,7 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 							callback->callback
 						);
 					}
+					callback = callback->next;
 				}
 
 				/* Writes to master will directly write to output */
@@ -492,6 +493,7 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 							callback->callback
 						);
 					}
+					callback = callback->next;
 				}
 			}
 			audio = audio->next;
