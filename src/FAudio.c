@@ -234,7 +234,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->mix.inputSamples = (float*) FAudio_malloc(
 		(*ppSubmixVoice)->mix.inputBufferSize
 	);
-	FAudio_zero(
+	FAudio_zero( /* Zero this now, for the first update */
 		(*ppSubmixVoice)->mix.inputSamples,
 		(*ppSubmixVoice)->mix.inputBufferSize
 	);
