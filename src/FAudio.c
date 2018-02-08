@@ -349,6 +349,8 @@ uint32_t FAudioVoice_SetOutputVoices(
 	FAudioVoice *voice,
 	const FAudioVoiceSends *pSendList
 ) {
+	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
+
 	/* FIXME: This is lazy... */
 	if (voice->sends.pSends != NULL)
 	{
@@ -370,6 +372,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 			pSendList->pSends,
 			pSendList->SendCount * sizeof(FAudioSendDescriptor)
 		);
+		/* TODO: Default output matrix */
 	}
 	return 0;
 }
