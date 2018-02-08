@@ -157,15 +157,16 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		{
 			/* TODO: Resample! */
 		}
-		voice->mix.pad[0] =
-			voice->mix.inputCache[voice->mix.inputSamples - 1];
-		if (voice->mix.inputChannels == 2)
-		{
-			voice->mix.pad[1] =
-				voice->mix.inputCache[voice->mix.inputSamples * 2 - 1];
-		}
-		voice->mix.hasPad = 1;
 	}
+
+	/* Assign padding */
+	voice->mix.pad[0] = voice->mix.inputCache[voice->mix.inputSamples - 1];
+	if (voice->mix.inputChannels == 2)
+	{
+		voice->mix.pad[1] =
+			voice->mix.inputCache[voice->mix.inputSamples * 2 - 1];
+	}
+	voice->mix.hasPad = 1;
 
 	/* TODO: Effects, filters */
 
