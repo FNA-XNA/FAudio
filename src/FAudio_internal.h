@@ -168,6 +168,8 @@ struct FAudioVoice
 			int16_t *decodeCache;
 			uint32_t outputSamples;
 			float *outputResampleCache;
+			uint8_t hasPad;
+			int16_t pad[2]; /* Assuming stereo input */
 
 			/* Read-only */
 			float maxFreqRatio;
@@ -187,6 +189,8 @@ struct FAudioVoice
 			float *inputCache;
 			uint32_t outputSamples;
 			float *outputResampleCache;
+			uint8_t hasPad;
+			float pad[2]; /* Assuming stereo input */
 
 			/* Read-only */
 			uint32_t inputChannels;

@@ -380,18 +380,21 @@ uint32_t FAudioVoice_SetOutputVoices(
 	const FAudioVoiceSends *pSendList
 ) {
 	float **sampleCache;
+	uint32_t *outputSamples;
 	uint32_t inChannels, inSampleRate, outSampleRate;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
 		sampleCache = &voice->src.outputResampleCache;
+		outputSamples = &voice->src.outputSamples;
 		inChannels = voice->src.format.nChannels;
 		inSampleRate = voice->src.format.nSamplesPerSec;
 	}
 	else
 	{
 		sampleCache = &voice->mix.outputResampleCache;
+		outputSamples = &voice->mix.outputSamples;
 		inChannels = voice->mix.inputChannels;
 		inSampleRate = voice->mix.inputSampleRate;
 	}
@@ -443,12 +446,13 @@ uint32_t FAudioVoice_SetOutputVoices(
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
-	*sampleCache = (float*) FAudio_malloc(
-		sizeof(float) * voice->audio->updateSize * inChannels *
+	*outputSamples = (
+		voice->audio->updateSize * inChannels *
 		(uint32_t) FAudio_ceil(
 			(double) inSampleRate / (double) outSampleRate
 		)
 	);
+	*sampleCache = (float*) FAudio_malloc(sizeof(float) * (*outputSamples));
 	return 0;
 }
 
@@ -952,12 +956,14 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
-	voice->src.outputResampleCache = (float*) FAudio_malloc(
-		sizeof(float) * voice->audio->updateSize *
-		voice->src.format.nChannels *
+	voice->src.outputSamples = (
+		voice->audio->updateSize * voice->src.format.nChannels *
 		(uint32_t) FAudio_ceil(
 			(double) NewSourceSampleRate / (double) outSampleRate
 		)
+	);
+	voice->src.outputResampleCache = (float*) FAudio_malloc(
+		sizeof(float) * voice->src.outputSamples
 	);
 	return 0;
 }
