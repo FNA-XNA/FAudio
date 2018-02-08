@@ -262,10 +262,10 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->volume = 1.0f;
 	(*ppMasteringVoice)->channelVolume[0] = 1.0f;
 	(*ppMasteringVoice)->channelVolume[1] = 1.0f;
-	/* FIXME: Master matrix coefficients */
-	FAudio_assert(InputChannels > 0 && InputChannels < 3);
+
+	 /* FIXME: Get all this from the device! */
 	(*ppMasteringVoice)->srcChannels = InputChannels;
-	(*ppMasteringVoice)->dstChannels = 2;
+	(*ppMasteringVoice)->dstChannels = InputChannels;
 	if (InputChannels == 2)
 	{
 		(*ppMasteringVoice)->matrixCoefficients[0] = 1.0f;
