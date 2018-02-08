@@ -584,8 +584,10 @@ uint32_t FAudioVoice_SetVolume(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_assert(Volume <= FAUDIO_MAX_VOLUME_LEVEL);
-	voice->volume = Volume;
+	voice->volume = FAudio_min(
+		Volume,
+		FAUDIO_MAX_VOLUME_LEVEL
+	);
 	return 0;
 }
 
@@ -893,9 +895,11 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
-	FAudio_assert(	Ratio >= FAUDIO_MIN_FREQ_RATIO &&
-			Ratio <= voice->src.maxFreqRatio	);
-	voice->src.freqRatio = Ratio;
+	voice->src.freqRatio = FAudio_clamp(
+		Ratio,
+		FAUDIO_MIN_FREQ_RATIO,
+		voice->src.maxFreqRatio
+	);
 	return 0;
 }
 
