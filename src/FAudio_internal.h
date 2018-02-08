@@ -181,6 +181,7 @@ struct FAudioVoice
 		struct
 		{
 			/* Sample storage */
+			size_t inputBufferSize;
 			float *inputSamples;
 			float *outputResampleCache;
 
@@ -205,6 +206,8 @@ struct FAudioVoice
 /* Internal Functions */
 
 void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
+void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice);
+void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice);
 
 /* Platform Functions */
 

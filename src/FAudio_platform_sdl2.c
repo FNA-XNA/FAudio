@@ -444,13 +444,18 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 		{
 			if (audio->audio->active)
 			{
+				/* Writes to master will directly write to output */
 				audio->audio->master->master.output = (float*) stream;
+
+				/* Mix sources */
 				source = audio->audio->sources;
 				while (source != NULL)
 				{
-					/* TODO: Mix sources */
+					FAudio_INTERNAL_MixSource(source->voice);
 					source = source->next;
 				}
+
+				/* Mix submixes, ordered by processing stage */
 				for (i = 0; i < audio->audio->submixStages; i += 1)
 				{
 					submix = audio->audio->submixes;
@@ -458,7 +463,7 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 					{
 						if (submix->voice->mix.processingStage == i)
 						{
-							/* TODO: Mix submixes */
+							FAudio_INTERNAL_MixSubmix(submix->voice);
 						}
 						submix = submix->next;
 					}

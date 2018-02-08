@@ -224,12 +224,19 @@ uint32_t FAudio_CreateSubmixVoice(
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 
 	/* Sample Storage */
-	(*ppSubmixVoice)->mix.inputSamples = (float*) FAudio_malloc(
+	(*ppSubmixVoice)->mix.inputBufferSize = (
 		sizeof(float) * audio->updateSize * InputChannels *
 		(uint32_t) FAudio_ceil(
 			(double) InputSampleRate /
 			(double) audio->master->master.inputSampleRate
 		)
+	);
+	(*ppSubmixVoice)->mix.inputSamples = (float*) FAudio_malloc(
+		(*ppSubmixVoice)->mix.inputBufferSize
+	);
+	FAudio_zero(
+		(*ppSubmixVoice)->mix.inputSamples,
+		(*ppSubmixVoice)->mix.inputBufferSize
 	);
 	return 0;
 }
@@ -401,7 +408,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	if (pSendList == NULL)
 	{
 		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
-		return;
+		return 0;
 	}
 
 	/* Copy send list */

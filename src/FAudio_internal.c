@@ -12,3 +12,16 @@ void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample)
 	FAudio_zero(resample, sizeof(FAudioResampleState));
 	resample->pitch = 0xFFFF; /* Force update on first poll */
 }
+
+void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
+{
+}
+
+void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
+{
+	/* Zero this at the end, for the next update */
+	FAudio_zero(
+		(*ppSubmixVoice)->mix.inputSamples,
+		(*ppSubmixVoice)->mix.inputBufferSize
+	);
+}
