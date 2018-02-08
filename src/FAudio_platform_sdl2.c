@@ -433,6 +433,7 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	FAudioEntry *audio;
 	FAudioSourceVoiceEntry *source;
 	FAudioSubmixVoiceEntry *submix;
+	FAudioEngineCallbackEntry *callback;
 	FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata;
 	uint32_t i;
 
@@ -444,6 +445,18 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 		{
 			if (audio->audio->active)
 			{
+				/* ProcessingPassStart callbacks */
+				callback = audio->audio->callbacks;
+				while (callback != NULL)
+				{
+					if (callback->callback->OnProcessingPassStart != NULL)
+					{
+						callback->callback->OnProcessingPassStart(
+							callback->callback
+						);
+					}
+				}
+
 				/* Writes to master will directly write to output */
 				audio->audio->master->master.output = (float*) stream;
 
@@ -466,6 +479,18 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 							FAudio_INTERNAL_MixSubmix(submix->voice);
 						}
 						submix = submix->next;
+					}
+				}
+
+				/* OnProcessingPassEnd callbacks */
+				callback = audio->audio->callbacks;
+				while (callback != NULL)
+				{
+					if (callback->callback->OnProcessingPassEnd != NULL)
+					{
+						callback->callback->OnProcessingPassEnd(
+							callback->callback
+						);
 					}
 				}
 			}
