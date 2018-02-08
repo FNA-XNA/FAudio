@@ -63,7 +63,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->src.callback
 		);
 #else
-		FACT_zero(
+		FAudio_zero(
 			voice->src.decodeCache,
 			sizeof(int16_t) * toDecode
 		);
