@@ -57,17 +57,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 	while (decoded < toDecode && voice->src.bufferList != NULL)
 	{
-		samples = toDecode - decoded;
-		end = (buffer->LoopCount > 0) ?
-			FAudio_min(
-				buffer->LoopLength,
-				buffer->PlayLength
-			) : buffer->PlayLength;
-		endRead = FAudio_min(
-			end - voice->src.curBufferOffset,
-			samples
-		);
-
+		/* Start-of-buffer behavior */
 		buffer = &voice->src.bufferList->buffer;
 		if (	voice->src.curBufferOffset == 0 &&
 			voice->src.callback != NULL &&
@@ -79,6 +69,17 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			);
 		}
 
+		/* Oh look it's the actual dang decoding part */
+		samples = toDecode - decoded;
+		end = (buffer->LoopCount > 0) ?
+			FAudio_min(
+				buffer->LoopLength,
+				buffer->PlayLength
+			) : buffer->PlayLength;
+		endRead = FAudio_min(
+			end - voice->src.curBufferOffset,
+			samples
+		);
 		voice->src.decode(
 			buffer,
 			voice->src.curBufferOffset,
