@@ -105,9 +105,12 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		FIXED_FRACTION_MASK
 	);
 	toDecode >>= FIXED_PRECISION;
+
 	/* Add padding for resampler */
-	toDecode += voice->src.format.nChannels;
-	decoded = 0;
+	if (voice->src.resampleStep != FIXED_ONE)
+	{
+		toDecode += voice->src.format.nChannels;
+	}
 
 	/* Last call for buffer data! */
 	if (	voice->src.callback != NULL &&
@@ -120,6 +123,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Decode... */
+	decoded = 0;
 	if (voice->src.resampleOffset & FIXED_FRACTION_MASK)
 	{
 		voice->src.decodeCache[0] = voice->src.pad[0];
