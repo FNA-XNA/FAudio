@@ -120,6 +120,7 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
 	(*ppSourceVoice)->filter.Type = (FAudioFilterType) 0xFF;
@@ -215,6 +216,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
 	(*ppSubmixVoice)->audio = audio;
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
 	(*ppSubmixVoice)->filter.Type = (FAudioFilterType) 0xFF;
@@ -283,6 +285,7 @@ uint32_t FAudio_CreateMasteringVoice(
 	FAudio_assert(audio->master == NULL);
 
 	*ppMasteringVoice = (FAudioMasteringVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	FAudio_zero(*ppMasteringVoice, sizeof(FAudioMasteringVoice));
 	(*ppMasteringVoice)->audio = audio;
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
 	(*ppMasteringVoice)->filter.Type = (FAudioFilterType) 0xFF;
