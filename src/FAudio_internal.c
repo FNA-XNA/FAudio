@@ -108,7 +108,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (voice->src.format.nChannels == 2)
 	{
 		/* Stereo size MUST be a multiple of two! */
-		toDecode = toDecode + 1 & ~1;
+		toDecode = (toDecode + 1) & ~1;
 	}
 
 	/* Add padding for resampler */
