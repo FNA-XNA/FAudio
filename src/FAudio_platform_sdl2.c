@@ -571,6 +571,16 @@ void FAudio_PlatformInit(FAudio *audio)
 		audio->updateSize = device->bufferSize;
 		audio->mixFormat = &device->format;
 
+		/* Maybe also give it to the master voice */
+		if (audio->master->master.inputChannels == 0)
+		{
+			audio->master->master.inputChannels = have.channels;
+		}
+		if (audio->master->master.inputSampleRate == 0)
+		{
+			audio->master->master.inputSampleRate = have.freq;
+		}
+
 		/* Add to the device list */
 		if (devlist == NULL)
 		{
