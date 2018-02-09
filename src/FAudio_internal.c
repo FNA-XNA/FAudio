@@ -47,28 +47,19 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.decodeCache[0] = voice->src.pad[0];
 		if (voice->src.format.nChannels == 2)
 		{
-			voice->src.decodeCache[toDecode / 2] = voice->src.pad[1];
+			voice->src.decodeCache[1] = voice->src.pad[1];
+			decoded += 1;
 		}
 		decoded += 1;
 	}
 	while (decoded < toDecode && voice->src.bufferList != NULL)
 	{
-#if 0 /* TODO */
-		decoded += voice->src.bufferList->decode(
-			toDecode - decoded,
+		decoded += voice->src.decode(
+			voice->src.bufferList,
+			voice,
 			voice->src.decodeCache + decoded,
-			voice->src.decodeCache + toDecode + decoded,
-			&voice->src.bufferList,
-			&voice->src.format,
-			voice->src.callback
+			toDecode - decoded
 		);
-#else
-		FAudio_zero(
-			voice->src.decodeCache,
-			sizeof(int16_t) * toDecode
-		);
-		decoded = toDecode;
-#endif
 	}
 	if (decoded == 0)
 	{
@@ -81,7 +72,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		if (toDecode == voice->src.outputSamples)
 		{
 			/* Just convert to float... */
-			for (i = 0; i < voice->src.outputSamples; i += 1)
+			for (i = 0; i < decoded; i += 1)
 			{
 				voice->src.outputResampleCache[i] =
 					(float) voice->src.decodeCache[i] / 32768.0f;
@@ -96,12 +87,12 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Assign padding */
 	if (voice->src.format.nChannels == 2)
 	{
-		voice->src.pad[0] = voice->src.decodeCache[toDecode / 2 - 1];
-		voice->src.pad[1] = voice->src.decodeCache[toDecode - 1];
+		voice->src.pad[0] = voice->src.decodeCache[decoded - 2];
+		voice->src.pad[1] = voice->src.decodeCache[decoded - 1];
 	}
 	else
 	{
-		voice->src.pad[0] = voice->src.decodeCache[toDecode - 1];
+		voice->src.pad[0] = voice->src.decodeCache[decoded - 1];
 	}
 	voice->src.hasPad = 1;
 
@@ -114,7 +105,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		out = voice->sends.pSends[i].pOutputVoice;
 		if (out->type == FAUDIO_VOICE_MASTER)
 		{
-			for (j = 0; j < voice->src.outputSamples; j += 1)
+			for (j = 0; j < decoded; j += 1)
 			{
 				out->master.output[j] *=
 					voice->src.outputResampleCache[j];
@@ -122,7 +113,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		}
 		else
 		{
-			for (j = 0; j < voice->src.outputSamples; j += 1)
+			for (j = 0; j < decoded; j += 1)
 			{
 				out->mix.inputCache[j] *=
 					voice->src.outputResampleCache[j];
@@ -277,3 +268,57 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		}
 	}
 #endif
+
+uint32_t FAudio_INTERNAL_DecodeMonoPCM8(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	return 0;
+}
+
+uint32_t FAudio_INTERNAL_DecodeStereoPCM8(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	return 0;
+}
+
+uint32_t FAudio_INTERNAL_DecodeMonoPCM16(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	return 0;
+}
+
+uint32_t FAudio_INTERNAL_DecodeStereoPCM16(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	return 0;
+}
+
+uint32_t FAudio_INTERNAL_DecodeMonoMSADPCM(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	return 0;
+}
+
+uint32_t FAudio_INTERNAL_DecodeStereoMSADPCM(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	return 0;
+}

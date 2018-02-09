@@ -157,6 +157,32 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
+	if (pSourceFormat->wFormatTag == 1)
+	{
+		if (pSourceFormat->nChannels == 2)
+		{
+			(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
+				FAudio_INTERNAL_DecodeStereoPCM16 :
+				FAudio_INTERNAL_DecodeStereoPCM8;
+		}
+		else
+		{
+			(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
+				FAudio_INTERNAL_DecodeMonoPCM16 :
+				FAudio_INTERNAL_DecodeMonoPCM8;
+		}
+	}
+	else if (pSourceFormat->wFormatTag == 2)
+	{
+		(*ppSourceVoice)->src.decode = (pSourceFormat->nChannels == 2) ?
+			FAudio_INTERNAL_DecodeStereoMSADPCM :
+			FAudio_INTERNAL_DecodeMonoMSADPCM;
+	}
+	else
+	{
+		FAudio_assert(0 && "Unsupported wFormatTag!");
+	}
+	(*ppSourceVoice)->src.curBufferOffset = 0;
 
 	/* Sends/Effects */
 	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
@@ -841,6 +867,10 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	if (voice->src.active && entry != NULL)
 	{
 		entry = entry->next;
+	}
+	else
+	{
+		voice->src.curBufferOffset = 0;
 	}
 
 	/* Go through each buffer, send an event for each one before deleting */

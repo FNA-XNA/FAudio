@@ -130,6 +130,13 @@ struct FAudioBufferEntry
 	FAudioBufferEntry *next;
 };
 
+typedef uint32_t (FAUDIOCALL * FAudioDecodeCallback)(
+	FAudioBufferEntry *buffer,
+	FAudioSourceVoice *voice,
+	int16_t *decodeCache,
+	uint32_t samples
+);
+
 typedef void* FAudioPlatformFixedRateSRC;
 
 /* Public FAudio Types */
@@ -176,6 +183,7 @@ struct FAudioVoice
 			/* Read-only */
 			float maxFreqRatio;
 			FAudioWaveFormatEx format;
+			FAudioDecodeCallback decode;
 			FAudioVoiceCallback *callback;
 
 			/* Dynamic */
@@ -183,6 +191,7 @@ struct FAudioVoice
 			float freqRatio;
 			uint64_t totalSamples;
 			FAudioBufferEntry *bufferList;
+			uint32_t curBufferOffset;
 		} src;
 		struct
 		{
@@ -215,6 +224,21 @@ struct FAudioVoice
 
 void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
+
+#define DECODE_FUNC(type) \
+	extern uint32_t FAudio_INTERNAL_Decode##type( \
+		FAudioBufferEntry *buffer, \
+		FAudioSourceVoice *voice, \
+		int16_t *decodeCache, \
+		uint32_t samples \
+	);
+DECODE_FUNC(MonoPCM8)
+DECODE_FUNC(MonoPCM16)
+DECODE_FUNC(MonoMSADPCM)
+DECODE_FUNC(StereoPCM8)
+DECODE_FUNC(StereoPCM16)
+DECODE_FUNC(StereoMSADPCM)
+#undef DECODE_FUNC
 
 /* Platform Functions */
 
