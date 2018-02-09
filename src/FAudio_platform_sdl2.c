@@ -222,7 +222,7 @@ void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id)
 		want.format = AUDIO_F32;
 		want.channels = 0;
 		want.silence = 0;
-		want.samples = 1024;
+		want.samples = 4096; /* FIXME: Make this 1024 */
 		want.callback = FACT_INTERNAL_MixCallback;
 		want.userdata = device;
 
@@ -506,7 +506,7 @@ void FAudio_PlatformInit(FAudio *audio)
 		want.format = AUDIO_F32;
 		want.channels = audio->master->master.inputChannels;
 		want.silence = 0;
-		want.samples = 4096; /* FIXME: Make this 1024 */
+		want.samples = 1024;
 		want.callback = FAudio_INTERNAL_MixCallback;
 		want.userdata = device;
 

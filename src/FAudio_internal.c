@@ -105,6 +105,11 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		FIXED_FRACTION_MASK
 	);
 	toDecode >>= FIXED_PRECISION;
+	if (voice->src.format.nChannels == 2)
+	{
+		/* Stereo size MUST be a multiple of two! */
+		toDecode = toDecode + 1 & ~1;
+	}
 
 	/* Add padding for resampler */
 	if (voice->src.resampleStep != FIXED_ONE)
