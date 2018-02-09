@@ -9,6 +9,19 @@
 
 /* Various internal math functions */
 
+float FACT_INTERNAL_rng()
+{
+	/* TODO: Random number generator */
+	static float butt = 0.0f;
+	float result = butt;
+	butt += 0.2;
+	if (butt > 1.0f)
+	{
+		butt = 0.0f;
+	}
+	return result;
+}
+
 FACTRPC* FACT_INTERNAL_GetRPC(
 	FACTAudioEngine *engine,
 	uint32_t code
@@ -223,7 +236,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 					cue->sound.variation->entries[i].minWeight
 				);
 			}
-			next = FAudio_rng() * max;
+			next = FACT_INTERNAL_rng() * max;
 
 			/* Use > 0, not >= 0. If we hit 0, that's it! */
 			for (i = cue->sound.variation->entryCount - 1; i > 0; i -= 1)
@@ -427,7 +440,7 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->wave.variationFlags & 0x1000)
 		{
 			const int16_t rngPitch = (int16_t) (
-				FAudio_rng() *
+				FACT_INTERNAL_rng() *
 				(evt->wave.maxPitch - evt->wave.minPitch)
 			);
 			if (evtInst->loopCount < evt->loopCount)
@@ -461,7 +474,7 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->wave.variationFlags & 0x2000)
 		{
 			const float rngVolume = track->volume + (
-				FAudio_rng() *
+				FACT_INTERNAL_rng() *
 				(evt->wave.maxVolume - evt->wave.minVolume)
 			);
 			if (evtInst->loopCount < evt->loopCount)
@@ -495,11 +508,11 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->wave.variationFlags & 0xC000)
 		{
 			const float rngQFactor = (
-				FAudio_rng() *
+				FACT_INTERNAL_rng() *
 				(evt->wave.maxQFactor - evt->wave.minQFactor)
 			);
 			const float rngFrequency = (
-				FAudio_rng() *
+				FACT_INTERNAL_rng() *
 				(evt->wave.maxFrequency - evt->wave.minFrequency)
 			);
 			if (evtInst->loopCount < evt->loopCount)
@@ -584,7 +597,7 @@ void FACT_INTERNAL_ActivateEvent(
 			}
 			else if (evt->value.equation.flags & 0x08)
 			{
-				svResult = evt->value.equation.value1 + FAudio_rng() * (
+				svResult = evt->value.equation.value1 + FACT_INTERNAL_rng() * (
 					evt->value.equation.value2 -
 					evt->value.equation.value1
 				);

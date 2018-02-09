@@ -862,19 +862,6 @@ double FAudio_ceil(double x)
 	return SDL_ceil(x);
 }
 
-float FAudio_rng()
-{
-	/* TODO: Random number generator */
-	static float butt = 0.0f;
-	float result = butt;
-	butt += 0.2;
-	if (butt > 1.0f)
-	{
-		butt = 0.0f;
-	}
-	return result;
-}
-
 uint32_t FAudio_timems()
 {
 	return SDL_GetTicks();

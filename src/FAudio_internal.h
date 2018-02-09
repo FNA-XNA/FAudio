@@ -282,7 +282,6 @@ double FAudio_log10(double x);
 double FAudio_sqrt(double x);
 double FAudio_acos(double x);
 double FAudio_ceil(double x);
-float FAudio_rng();
 uint32_t FAudio_timems();
 
 #define FAudio_min(val1, val2) \
