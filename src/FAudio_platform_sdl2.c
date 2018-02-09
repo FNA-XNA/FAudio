@@ -434,18 +434,14 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	FAudioEntry *audio;
 
 	FAudio_zero(stream, len);
-	while (device != NULL)
+	audio = device->engineList;
+	while (audio != NULL)
 	{
-		audio = device->engineList;
-		while (audio != NULL)
-		{
-			FAudio_INTERNAL_UpdateEngine(
-				audio->audio,
-				(float*) stream
-			);
-			audio = audio->next;
-		}
-		device = device->next;
+		FAudio_INTERNAL_UpdateEngine(
+			audio->audio,
+			(float*) stream
+		);
+		audio = audio->next;
 	}
 }
 
