@@ -9,6 +9,21 @@
 #include "FACT3D.h"
 #include "FAudio_internal.h"
 
+/* TODO: Remove this entirely */
+typedef uint32_t fixed32;
+typedef struct FAudioResampleState
+{
+	/* Checked against wave->pitch for redundancy */
+	uint16_t pitch;
+
+	fixed32 step;
+	fixed32 offset;
+
+	/* Padding used for smooth resampling from block to block */
+	int16_t padding[2][1];
+} FAudioResampleState;
+void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
+
 /* Internal Constants */
 
 #define FACT_VOLUME_0 180

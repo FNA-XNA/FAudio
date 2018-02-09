@@ -37,6 +37,9 @@ struct FACTPlatformDevice
 #define devlist FACTdevlist /* Doing this to reduce diffs */
 FACTPlatformDevice *devlist = NULL;
 
+#define RESAMPLE_PADDING 1
+#define MAX_RESAMPLE_STEP 18
+
 /* Mixer Thread */
 
 void FACT_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)

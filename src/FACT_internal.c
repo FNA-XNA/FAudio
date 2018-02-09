@@ -7,6 +7,24 @@
 
 #include "FACT_internal.h"
 
+/* TODO: Remove this entirely */
+#define FIXED_PRECISION		12
+#define FIXED_ONE		(1 << FIXED_PRECISION)
+#define FIXED_FRACTION_MASK	(FIXED_ONE - 1)
+#define FIXED_INTEGER_MASK	~RESAMPLE_FRACTION_MASK
+#define DOUBLE_TO_FIXED(dbl) \
+	((fixed32) (dbl * FIXED_ONE + 0.5)) /* FIXME: Just round, or ceil? */
+#define FIXED_TO_DOUBLE(fxd) ( \
+	(double) (fxd >> FIXED_PRECISION) + /* Integer part */ \
+	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
+)
+#define RESAMPLE_PADDING 1
+void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample)
+{
+	FAudio_zero(resample, sizeof(FAudioResampleState));
+	resample->pitch = 0xFFFF; /* Force update on first poll */
+}
+
 /* Various internal math functions */
 
 float FACT_INTERNAL_rng()
