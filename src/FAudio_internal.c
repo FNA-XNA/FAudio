@@ -312,7 +312,10 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	source = audio->sources;
 	while (source != NULL)
 	{
-		FAudio_INTERNAL_MixSource(source->voice);
+		if (source->voice->src.active)
+		{
+			FAudio_INTERNAL_MixSource(source->voice);
+		}
 		source = source->next;
 	}
 
