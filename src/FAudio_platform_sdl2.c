@@ -744,6 +744,38 @@ void FAudio_PlatformGetDeviceDetails(
 		NotDefaultDevice;
 }
 
+FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(
+	uint32_t channels,
+	uint32_t inputRate,
+	uint32_t outputRate
+) {
+	return (FAudioPlatformFixedRateSRC) SDL_NewAudioStream(
+		AUDIO_F32,
+		channels,
+		inputRate,
+		AUDIO_F32,
+		channels,
+		outputRate
+	);
+}
+
+void FAudio_PlatformCloseFixedRateSRC(FAudioPlatformFixedRateSRC resampler)
+{
+	SDL_FreeAudioStream((SDL_AudioStream*) resampler);
+}
+
+uint32_t FAudio_PlatformResample(
+	FAudioPlatformFixedRateSRC resampler,
+	float *input,
+	uint32_t inLen,
+	float *output,
+	uint32_t outLen
+) {
+	SDL_AudioStream *stream = (SDL_AudioStream*) resampler;
+	SDL_AudioStreamPut(stream, input, inLen);
+	return SDL_AudioStreamGet(stream, output, outLen) / sizeof(float);
+}
+
 /* stdlib Functions */
 
 void* FAudio_malloc(size_t size)

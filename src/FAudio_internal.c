@@ -143,47 +143,23 @@ end:
 
 void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 {
-	uint32_t i, j;
 	FAudioVoice *out;
+	uint32_t resampled, i, j;
 
 	/* Nothing to do? */
 	if (voice->sends.SendCount == 0)
 	{
-		return;
+		goto end;
 	}
 
-	/* Convert to float, resampling if necessary */
-	if (voice->sends.SendCount > 0)
-	{
-		if (voice->mix.inputSamples == voice->mix.outputSamples)
-		{
-			/* Just copy it... */
-			FAudio_memcpy(
-				voice->mix.outputResampleCache,
-				voice->mix.inputCache,
-				sizeof(float) * voice->mix.outputSamples
-			);
-		}
-		else
-		{
-			/* TODO: Resample! */
-		}
-	}
-
-	/* Assign padding */
-	if (voice->mix.inputChannels == 2)
-	{
-		voice->mix.pad[0] =
-			voice->mix.inputCache[voice->mix.inputSamples / 2 - 1];
-		voice->mix.pad[1] =
-			voice->mix.inputCache[voice->mix.inputSamples - 1];
-	}
-	else
-	{
-		voice->mix.pad[0] =
-			voice->mix.inputCache[voice->mix.inputSamples - 1];
-	}
-	voice->mix.hasPad = 1;
+	/* Resample (if necessary) */
+	resampled = FAudio_PlatformResample(
+		voice->mix.resampler,
+		voice->mix.inputCache,
+		voice->mix.inputSamples * sizeof(float),
+		voice->mix.outputResampleCache,
+		voice->mix.outputSamples * sizeof(float)
+	);
 
 	/* TODO: Effects, filters */
 
@@ -194,7 +170,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		out = voice->sends.pSends[i].pOutputVoice;
 		if (out->type == FAUDIO_VOICE_MASTER)
 		{
-			for (j = 0; j < voice->mix.outputSamples; j += 1)
+			for (j = 0; j < resampled; j += 1)
 			{
 				out->master.output[j] *=
 					voice->mix.outputResampleCache[j];
@@ -202,7 +178,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		}
 		else
 		{
-			for (j = 0; j < voice->mix.outputSamples; j += 1)
+			for (j = 0; j < resampled; j += 1)
 			{
 				out->mix.inputCache[j] *=
 					voice->mix.outputResampleCache[j];
@@ -211,6 +187,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Zero this at the end, for the next update */
+end:
 	FAudio_zero(
 		voice->mix.inputCache,
 		sizeof(float) * voice->mix.inputSamples

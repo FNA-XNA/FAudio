@@ -397,6 +397,13 @@ uint32_t FAudioVoice_SetOutputVoices(
 		outputSamples = &voice->mix.outputSamples;
 		inChannels = voice->mix.inputChannels;
 		inSampleRate = voice->mix.inputSampleRate;
+
+		/* FIXME: This is lazy... */
+		if (voice->mix.resampler != NULL)
+		{
+			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
+			voice->mix.resampler = NULL;
+		}
 	}
 
 	/* FIXME: This is lazy... */
@@ -453,6 +460,16 @@ uint32_t FAudioVoice_SetOutputVoices(
 		)
 	);
 	*sampleCache = (float*) FAudio_malloc(sizeof(float) * (*outputSamples));
+
+	/* Init fixed-rate SRC if applicable */
+	if (voice->type == FAUDIO_VOICE_SUBMIX)
+	{
+		voice->mix.resampler = FAudio_PlatformInitFixedRateSRC(
+			voice->mix.inputChannels,
+			voice->mix.inputSampleRate,
+			outSampleRate
+		);
+	}
 	return 0;
 }
 
@@ -735,6 +752,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		if (voice->mix.outputResampleCache != NULL)
 		{
 			FAudio_free(voice->mix.outputResampleCache);
+		}
+		if (voice->mix.resampler != NULL)
+		{
+			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
 		}
 	}
 	else if (voice->type == FAUDIO_VOICE_MASTER)

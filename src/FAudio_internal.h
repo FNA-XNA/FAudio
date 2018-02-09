@@ -130,6 +130,8 @@ struct FAudioBufferEntry
 	FAudioBufferEntry *next;
 };
 
+typedef void* FAudioPlatformFixedRateSRC;
+
 /* Public FAudio Types */
 
 struct FAudio
@@ -189,8 +191,7 @@ struct FAudioVoice
 			float *inputCache;
 			uint32_t outputSamples;
 			float *outputResampleCache;
-			uint8_t hasPad;
-			float pad[2]; /* Assuming stereo input */
+			FAudioPlatformFixedRateSRC resampler;
 
 			/* Read-only */
 			uint32_t inputChannels;
@@ -226,6 +227,20 @@ uint32_t FAudio_PlatformGetDeviceCount();
 void FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
+);
+
+FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(
+	uint32_t channels,
+	uint32_t inputRate,
+	uint32_t outputRate
+);
+void FAudio_PlatformCloseFixedRateSRC(FAudioPlatformFixedRateSRC resampler);
+uint32_t FAudio_PlatformResample(
+	FAudioPlatformFixedRateSRC resampler,
+	float *input,
+	uint32_t inLen,
+	float *output,
+	uint32_t outLen
 );
 
 /* stdlib Functions */
