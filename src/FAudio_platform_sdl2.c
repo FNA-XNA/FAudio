@@ -772,8 +772,12 @@ uint32_t FAudio_PlatformResample(
 	uint32_t outLen
 ) {
 	SDL_AudioStream *stream = (SDL_AudioStream*) resampler;
-	SDL_AudioStreamPut(stream, input, inLen);
-	return SDL_AudioStreamGet(stream, output, outLen) / sizeof(float);
+	SDL_AudioStreamPut(stream, input, inLen * sizeof(float));
+	return SDL_AudioStreamGet(
+		stream,
+		output,
+		outLen * sizeof(float)
+	) / sizeof(float);
 }
 
 /* stdlib Functions */

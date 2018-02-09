@@ -156,9 +156,9 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	resampled = FAudio_PlatformResample(
 		voice->mix.resampler,
 		voice->mix.inputCache,
-		voice->mix.inputSamples * sizeof(float),
+		voice->mix.inputSamples,
 		voice->mix.outputResampleCache,
-		voice->mix.outputSamples * sizeof(float)
+		voice->mix.outputSamples
 	);
 
 	/* TODO: Effects, filters */
