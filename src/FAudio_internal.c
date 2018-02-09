@@ -70,7 +70,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		}
 
 		/* Oh look it's the actual dang decoding part */
-		samples = toDecode - decoded;
+		samples = (toDecode - decoded) / voice->src.format.nChannels;
 		end = (buffer->LoopCount > 0) ?
 			FAudio_min(
 				buffer->LoopLength,
