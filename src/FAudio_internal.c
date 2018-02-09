@@ -105,6 +105,8 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		FIXED_FRACTION_MASK
 	);
 	toDecode >>= FIXED_PRECISION;
+	/* Add padding for resampler */
+	toDecode += voice->src.format.nChannels;
 	decoded = 0;
 
 	/* Last call for buffer data! */
@@ -240,8 +242,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 	else
 	{
+		/* Remove padding size */
+		resampled = decoded - voice->src.format.nChannels;
 		/* uint32_t to fixed32 */
-		resampled = decoded << FIXED_PRECISION;
+		resampled <<= FIXED_PRECISION;
 		/* Division also turns fixed32 into uint32_t */
 		resampled /= voice->src.resampleStep;
 
