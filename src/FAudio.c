@@ -361,7 +361,7 @@ uint32_t FAudio_CreateMasteringVoice(
 
 	/* Master Properties */
 	(*ppMasteringVoice)->master.inputChannels = InputChannels;
-	(*ppMasteringVoice)->master.inputSampleRate = 48000; /* FIXME: InputSampleRate; */
+	(*ppMasteringVoice)->master.inputSampleRate = InputSampleRate;
 	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
 
 	/* Platform Device */

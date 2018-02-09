@@ -499,9 +499,9 @@ void FAudio_PlatformInit(FAudio *audio)
 		 * We should step in and see if we can't pull this from the OS.
 		 * -flibit
 		 */
-		want.freq = 48000; /* FIXME: Make this 0 */
+		want.freq = audio->master->master.inputSampleRate;
 		want.format = AUDIO_F32;
-		want.channels = 0;
+		want.channels = audio->master->master.inputChannels;
 		want.silence = 0;
 		want.samples = 4096; /* FIXME: Make this 1024 */
 		want.callback = FAudio_INTERNAL_MixCallback;
