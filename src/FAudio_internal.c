@@ -86,7 +86,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->src.decodeCache + decoded,
 			endRead
 		);
-		decoded += endRead;
+		decoded += endRead * voice->src.format.nChannels;
 		voice->src.curBufferOffset += endRead;
 
 		/* End-of-buffer behavior */
