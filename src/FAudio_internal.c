@@ -17,7 +17,9 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	uint32_t i, j;
 	FAudioVoice *out;
-	uint32_t toDecode, decoded = 0;
+	FAudioBuffer *buffer;
+	uint32_t toDecode, decoded;
+	uint32_t samples, end, endRead;
 
 	/* Nothing to do? */
 	if (voice->src.bufferList == 0)
@@ -30,6 +32,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.decodeSamples *
 		voice->src.freqRatio /* FIXME: Imprecise! */
 	);
+	decoded = 0;
 
 	/* Last call for buffer data! */
 	if (	voice->src.callback != NULL &&
@@ -54,12 +57,79 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 	while (decoded < toDecode && voice->src.bufferList != NULL)
 	{
-		decoded += voice->src.decode(
-			voice->src.bufferList,
-			voice,
-			voice->src.decodeCache + decoded,
-			toDecode - decoded
+		samples = toDecode - decoded;
+		end = (buffer->LoopCount > 0) ?
+			FAudio_min(
+				buffer->LoopLength,
+				buffer->PlayLength
+			) : buffer->PlayLength;
+		endRead = FAudio_min(
+			end - voice->src.curBufferOffset,
+			samples
 		);
+
+		buffer = &voice->src.bufferList->buffer;
+		if (	voice->src.curBufferOffset == 0 &&
+			voice->src.callback != NULL &&
+			voice->src.callback->OnBufferStart != NULL	)
+		{
+			voice->src.callback->OnBufferStart(
+				voice->src.callback,
+				buffer->pContext
+			);
+		}
+
+		voice->src.decode(
+			buffer,
+			voice->src.curBufferOffset,
+			voice->src.decodeCache + decoded,
+			endRead
+		);
+		decoded += endRead;
+		voice->src.curBufferOffset += endRead;
+
+		/* End-of-buffer behavior */
+		if (endRead < samples || voice->src.curBufferOffset == end)
+		{
+			if (buffer->LoopCount > 0)
+			{
+				voice->src.curBufferOffset = buffer->LoopBegin;
+				if (buffer->LoopCount < 0xFF)
+				{
+					buffer->LoopCount -= 1;
+				}
+				if (	voice->src.callback != NULL &&
+					voice->src.callback->OnLoopEnd != NULL	)
+				{
+					voice->src.callback->OnLoopEnd(
+						voice->src.callback,
+						buffer->pContext
+					);
+				}
+			}
+			else
+			{
+				if (voice->src.callback != NULL)
+				{
+					if (voice->src.callback->OnBufferEnd != NULL)
+					{
+						voice->src.callback->OnBufferEnd(
+							voice->src.callback,
+							buffer->pContext
+						);
+					}
+					if (	buffer->Flags & FAUDIO_END_OF_STREAM &&
+						voice->src.callback->OnStreamEnd != NULL	)
+					{
+						voice->src.callback->OnStreamEnd(
+							voice->src.callback
+						);
+					}
+				}
+				voice->src.bufferList = voice->src.bufferList->next;
+				FAudio_free(buffer);
+			}
+		}
 	}
 	if (decoded == 0)
 	{
@@ -248,77 +318,85 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		callback = callback->next;
 	}
 }
-#if 0
-	/* TODO: For decode callbacks.... */
-	if (voice->src.callback != NULL)
+
+void FAudio_INTERNAL_DecodeMonoPCM8(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
+	int16_t *decodeCache,
+	uint32_t samples
+) {
+	uint32_t i;
+	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
+		buffer->PlayBegin + curOffset
+	);
+	for (i = 0; i < samples; i += 1)
 	{
-		if (voice->src.callback->OnBufferEnd != NULL)
-		{
-			voice->src.callback->OnBufferEnd(
-				voice->src.callback,
-				voice->src.bufferList->buffer.pContext
-			);
-		}
-		if (	voice->src.bufferList->buffer.Flags & FAUDIO_END_OF_STREAM &&
-			voice->src.callback->OnStreamEnd != NULL	)
-		{
-			voice->src.callback->OnStreamEnd(
-				voice->src.callback
-			);
-		}
+		*decodeCache++ = ((int16_t) *buf++) << 8;
 	}
-#endif
-
-uint32_t FAudio_INTERNAL_DecodeMonoPCM8(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
-	int16_t *decodeCache,
-	uint32_t samples
-) {
-	return 0;
 }
 
-uint32_t FAudio_INTERNAL_DecodeStereoPCM8(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
+void FAudio_INTERNAL_DecodeStereoPCM8(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples
 ) {
-	return 0;
+	uint32_t i;
+	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
+		(buffer->PlayBegin + curOffset) * 2
+	);
+	for (i = 0; i < samples; i += 1)
+	{
+		*decodeCache++ = ((int16_t) *buf++) << 8;
+	}
 }
 
-uint32_t FAudio_INTERNAL_DecodeMonoPCM16(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
+void FAudio_INTERNAL_DecodeMonoPCM16(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples
 ) {
-	return 0;
+	FAudio_memcpy(
+		decodeCache,
+		((int16_t*) buffer->pAudioData) + (
+			buffer->PlayBegin + curOffset
+		),
+		samples * 2
+	);
 }
 
-uint32_t FAudio_INTERNAL_DecodeStereoPCM16(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
+void FAudio_INTERNAL_DecodeStereoPCM16(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples
 ) {
-	return 0;
+	FAudio_memcpy(
+		decodeCache,
+		((int16_t*) buffer->pAudioData) + (
+			buffer->PlayBegin + curOffset
+		),
+		samples * 4
+	);
 }
 
-uint32_t FAudio_INTERNAL_DecodeMonoMSADPCM(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
+void FAudio_INTERNAL_DecodeMonoMSADPCM(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples
 ) {
-	return 0;
+	/* TODO */
+	FAudio_zero(decodeCache, samples * 2);
 }
 
-uint32_t FAudio_INTERNAL_DecodeStereoMSADPCM(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
+void FAudio_INTERNAL_DecodeStereoMSADPCM(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples
 ) {
-	return 0;
+	/* TODO */
+	FAudio_zero(decodeCache, samples * 2);
 }

@@ -130,9 +130,9 @@ struct FAudioBufferEntry
 	FAudioBufferEntry *next;
 };
 
-typedef uint32_t (FAUDIOCALL * FAudioDecodeCallback)(
-	FAudioBufferEntry *buffer,
-	FAudioSourceVoice *voice,
+typedef void (FAUDIOCALL * FAudioDecodeCallback)(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples
 );
@@ -226,9 +226,9 @@ void FAudio_INTERNAL_InitResampler(FAudioResampleState *resample);
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 
 #define DECODE_FUNC(type) \
-	extern uint32_t FAudio_INTERNAL_Decode##type( \
-		FAudioBufferEntry *buffer, \
-		FAudioSourceVoice *voice, \
+	extern void FAudio_INTERNAL_Decode##type( \
+		FAudioBuffer *buffer, \
+		uint32_t curOffset, \
 		int16_t *decodeCache, \
 		uint32_t samples \
 	);
