@@ -18,7 +18,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	uint32_t i, j;
 	FAudioVoice *out;
 	FAudioBuffer *buffer;
-	uint32_t toDecode, decoded;
+	uint32_t toDecode, decoded, resampled;
 	uint32_t samples, end, endRead;
 
 	/* Nothing to do? */
@@ -71,11 +71,9 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 		/* Oh look it's the actual dang decoding part */
 		samples = (toDecode - decoded) / voice->src.format.nChannels;
-		end = (buffer->LoopCount > 0) ?
-			FAudio_min(
-				buffer->LoopLength,
-				buffer->PlayLength
-			) : buffer->PlayLength;
+		end = (buffer->LoopCount > 0 && buffer->LoopLength > 0) ?
+			buffer->LoopLength :
+			buffer->PlayLength;
 		endRead = FAudio_min(
 			end - voice->src.curBufferOffset,
 			samples
@@ -137,25 +135,39 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		goto end;
 	}
 
-	/* Convert to float, resampling if necessary */
-	if (voice->sends.SendCount > 0)
+	if (voice->sends.SendCount == 0)
 	{
-		if (toDecode == voice->src.outputSamples)
+		/* TODO: Assign padding? */
+		if (voice->src.format.nChannels == 2)
 		{
-			/* Just convert to float... */
-			for (i = 0; i < decoded; i += 1)
-			{
-				voice->src.outputResampleCache[i] =
-					(float) voice->src.decodeCache[i] / 32768.0f;
-			}
+			voice->src.pad[0] = voice->src.decodeCache[decoded - 2];
+			voice->src.pad[1] = voice->src.decodeCache[decoded - 1];
 		}
 		else
 		{
-			/* TODO: Resample! */
+			voice->src.pad[0] = voice->src.decodeCache[decoded - 1];
 		}
+		voice->src.hasPad = 1;
+		goto end;
 	}
 
-	/* Assign padding */
+	/* Convert to float, resampling if necessary */
+	if (1 /* FIXME: Proper check for resample step != 1 */)
+	{
+		/* Just convert to float... */
+		for (i = 0; i < decoded; i += 1)
+		{
+			voice->src.outputResampleCache[i] =
+				(float) voice->src.decodeCache[i] / 32768.0f;
+		}
+		resampled = decoded;
+	}
+	else
+	{
+		FAudio_assert(0 && "TODO: Resample!");
+	}
+
+	/* TODO: Assign padding? */
 	if (voice->src.format.nChannels == 2)
 	{
 		voice->src.pad[0] = voice->src.decodeCache[decoded - 2];
@@ -176,18 +188,24 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		out = voice->sends.pSends[i].pOutputVoice;
 		if (out->type == FAUDIO_VOICE_MASTER)
 		{
-			for (j = 0; j < decoded; j += 1)
+			for (j = 0; j < resampled; j += 1)
 			{
-				out->master.output[j] *=
-					voice->src.outputResampleCache[j];
+				out->master.output[j] = FAudio_clamp(
+					out->master.output[j] + voice->mix.outputResampleCache[j],
+					-FAUDIO_MAX_VOLUME_LEVEL,
+					FAUDIO_MAX_VOLUME_LEVEL
+				);
 			}
 		}
 		else
 		{
-			for (j = 0; j < decoded; j += 1)
+			for (j = 0; j < resampled; j += 1)
 			{
-				out->mix.inputCache[j] *=
-					voice->src.outputResampleCache[j];
+				out->mix.inputCache[j] = FAudio_clamp(
+					out->mix.inputCache[j] + voice->mix.outputResampleCache[j],
+					-FAUDIO_MAX_VOLUME_LEVEL,
+					FAUDIO_MAX_VOLUME_LEVEL
+				);
 			}
 		}
 	}
@@ -234,16 +252,22 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		{
 			for (j = 0; j < resampled; j += 1)
 			{
-				out->master.output[j] *=
-					voice->mix.outputResampleCache[j];
+				out->master.output[j] = FAudio_clamp(
+					out->master.output[j] + voice->mix.outputResampleCache[j],
+					-FAUDIO_MAX_VOLUME_LEVEL,
+					FAUDIO_MAX_VOLUME_LEVEL
+				);
 			}
 		}
 		else
 		{
 			for (j = 0; j < resampled; j += 1)
 			{
-				out->mix.inputCache[j] *=
-					voice->mix.outputResampleCache[j];
+				out->mix.inputCache[j] = FAudio_clamp(
+					out->mix.inputCache[j] + voice->mix.outputResampleCache[j],
+					-FAUDIO_MAX_VOLUME_LEVEL,
+					FAUDIO_MAX_VOLUME_LEVEL
+				);
 			}
 		}
 	}
@@ -376,7 +400,7 @@ void FAudio_INTERNAL_DecodeStereoPCM16(
 	FAudio_memcpy(
 		decodeCache,
 		((int16_t*) buffer->pAudioData) + (
-			buffer->PlayBegin + curOffset
+			(buffer->PlayBegin + curOffset) * 2
 		),
 		samples * 4
 	);

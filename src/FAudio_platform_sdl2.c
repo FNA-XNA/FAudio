@@ -487,6 +487,7 @@ void FAudio_PlatformInit(FAudio *audio)
 		);
 		device->name = name;
 		device->engineList = entry;
+		device->next = NULL;
 
 		/* Enforce a default device format.
 		 * FIXME: The way SDL picks device defaults is fucking stupid.

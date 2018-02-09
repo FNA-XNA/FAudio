@@ -119,6 +119,8 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
+	FAudioSourceVoiceEntry *entry, *latest;
+
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
@@ -202,6 +204,26 @@ uint32_t FAudio_CreateSourceVoice(
 		(*ppSourceVoice)->src.decodeSamples *
 		(uint32_t) FAudio_ceil(MaxFrequencyRatio)
 	);
+
+	/* Add to list, finally. */
+	entry = (FAudioSourceVoiceEntry*) FAudio_malloc(
+		sizeof(FAudioSourceVoiceEntry)
+	);
+	entry->voice = *ppSourceVoice;
+	entry->next = NULL;
+	if (audio->sources == NULL)
+	{
+		audio->sources = entry;
+	}
+	else
+	{
+		latest = audio->sources;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = entry;
+	}
 	return 0;
 }
 
@@ -215,6 +237,8 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
+	FAudioSubmixVoiceEntry *entry, *latest;
+
 	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
 	(*ppSubmixVoice)->audio = audio;
@@ -269,6 +293,26 @@ uint32_t FAudio_CreateSubmixVoice(
 		(*ppSubmixVoice)->mix.inputCache,
 		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
 	);
+
+	/* Add to list, finally. */
+	entry = (FAudioSubmixVoiceEntry*) FAudio_malloc(
+		sizeof(FAudioSubmixVoiceEntry)
+	);
+	entry->voice = *ppSubmixVoice;
+	entry->next = NULL;
+	if (audio->submixes == NULL)
+	{
+		audio->submixes = entry;
+	}
+	else
+	{
+		latest = audio->submixes;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = entry;
+	}
 	return 0;
 }
 
