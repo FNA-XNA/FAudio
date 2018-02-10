@@ -545,6 +545,7 @@ void FAudio_INTERNAL_DecodeStereoPCM8(
 	for (i = 0; i < samples; i += 1)
 	{
 		*decodeCache++ = ((int16_t) *buf++) << 8;
+		*decodeCache++ = ((int16_t) *buf++) << 8;
 	}
 }
 
