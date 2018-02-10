@@ -166,7 +166,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			buffer,
 			voice->src.curBufferOffset,
 			voice->src.decodeCache + decoded,
-			endRead
+			endRead,
+			&voice->src.format,
+			voice->src.msadpcmCache,
+			&voice->src.msadpcmExtra
 		);
 		decoded += endRead * voice->src.format.nChannels;
 		voice->src.curBufferOffset += endRead;
@@ -505,11 +508,16 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	}
 }
 
+/* 8-bit PCM Decoding */
+
 void FAudio_INTERNAL_DecodeMonoPCM8(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	int16_t *decodeCache,
-	uint32_t samples
+	uint32_t samples,
+	FAudioWaveFormatEx *UNUSED1,
+	int16_t *UNUSED2,
+	uint16_t *UNUSED3
 ) {
 	uint32_t i;
 	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
@@ -525,7 +533,10 @@ void FAudio_INTERNAL_DecodeStereoPCM8(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	int16_t *decodeCache,
-	uint32_t samples
+	uint32_t samples,
+	FAudioWaveFormatEx *UNUSED1,
+	int16_t *UNUSED2,
+	uint16_t *UNUSED3
 ) {
 	uint32_t i;
 	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
@@ -537,11 +548,16 @@ void FAudio_INTERNAL_DecodeStereoPCM8(
 	}
 }
 
+/* 16-bit PCM Decoding */
+
 void FAudio_INTERNAL_DecodeMonoPCM16(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	int16_t *decodeCache,
-	uint32_t samples
+	uint32_t samples,
+	FAudioWaveFormatEx *UNUSED1,
+	int16_t *UNUSED2,
+	uint16_t *UNUSED3
 ) {
 	FAudio_memcpy(
 		decodeCache,
@@ -556,7 +572,10 @@ void FAudio_INTERNAL_DecodeStereoPCM16(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	int16_t *decodeCache,
-	uint32_t samples
+	uint32_t samples,
+	FAudioWaveFormatEx *UNUSED1,
+	int16_t *UNUSED2,
+	uint16_t *UNUSED3
 ) {
 	FAudio_memcpy(
 		decodeCache,
@@ -567,22 +586,430 @@ void FAudio_INTERNAL_DecodeStereoPCM16(
 	);
 }
 
+/* MSADPCM Decoding */
+
+static inline int16_t FAudio_INTERNAL_ParseNibble(
+	uint8_t nibble,
+	uint8_t predictor,
+	int16_t *delta,
+	int16_t *sample1,
+	int16_t *sample2
+) {
+	static const int32_t AdaptionTable[16] =
+	{
+		230, 230, 230, 230, 307, 409, 512, 614,
+		768, 614, 512, 409, 307, 230, 230, 230
+	};
+	static const int32_t AdaptCoeff_1[7] =
+	{
+		256, 512, 0, 192, 240, 460, 392
+	};
+	static const int32_t AdaptCoeff_2[7] =
+	{
+		0, -256, 0, 64, 0, -208, -232
+	};
+
+	int8_t signedNibble;
+	int32_t sampleInt;
+	int16_t sample;
+
+	signedNibble = (int8_t) nibble;
+	if (signedNibble & 0x08)
+	{
+		signedNibble -= 0x10;
+	}
+
+	sampleInt = (
+		(*sample1 * AdaptCoeff_1[predictor]) +
+		(*sample2 * AdaptCoeff_2[predictor])
+	) / 256;
+	sampleInt += signedNibble * (*delta);
+	sample = FAudio_clamp(sampleInt, -32768, 32767);
+
+	*sample2 = *sample1;
+	*sample1 = sample;
+	*delta = (int16_t) (AdaptionTable[nibble] * (int32_t) (*delta) / 256);
+	if (*delta < 16)
+	{
+		*delta = 16;
+	}
+	return sample;
+}
+
+#define READ(item, type) \
+	*item = *((type*) *buf); \
+	*buf += sizeof(type);
+
+static inline void FAudio_INTERNAL_ReadMonoPreamble(
+	uint8_t **buf,
+	uint8_t *predictor,
+	int16_t *delta,
+	int16_t *sample1,
+	int16_t *sample2
+) {
+	READ(predictor, uint8_t)
+	READ(delta, int16_t)
+	READ(sample1, int16_t)
+	READ(sample2, int16_t)
+}
+
+static inline void FAudio_INTERNAL_ReadStereoPreamble(
+	uint8_t **buf,
+	uint8_t *predictor_l,
+	uint8_t *predictor_r,
+	int16_t *delta_l,
+	int16_t *delta_r,
+	int16_t *sample1_l,
+	int16_t *sample1_r,
+	int16_t *sample2_l,
+	int16_t *sample2_r
+) {
+	READ(predictor_l, uint8_t)
+	READ(predictor_r, uint8_t)
+	READ(delta_l, int16_t)
+	READ(delta_r, int16_t)
+	READ(sample1_l, int16_t)
+	READ(sample1_r, int16_t)
+	READ(sample2_l, int16_t)
+	READ(sample2_r, int16_t)
+}
+
+#undef READ
+
 void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	int16_t *decodeCache,
-	uint32_t samples
+	uint32_t samples,
+	FAudioWaveFormatEx *format,
+	int16_t *msadpcmCache,
+	uint16_t *msadpcmExtra
 ) {
-	/* TODO */
-	FAudio_zero(decodeCache, samples * 2);
+	/* Iterators */
+	uint8_t b, i;
+
+	/* Read pointers */
+	uint8_t *buf;
+	int16_t *pcmExtra = msadpcmCache;
+
+	/* Read sizes */
+	uint32_t blocks, extra;
+
+	/* Temp storage for ADPCM blocks */
+	uint8_t predictor;
+	int16_t delta;
+	int16_t sample1;
+	int16_t sample2;
+	uint8_t nibbles[255]; /* Max align size */
+
+	/* Align, block size */
+	uint32_t align = format->nBlockAlign;
+	uint32_t bsize = (align + 16) * 2;
+
+	/* Do we only need to copy from the extra cache? */
+	if (*msadpcmExtra >= samples)
+	{
+		FAudio_memcpy(
+			decodeCache,
+			msadpcmCache,
+			samples * sizeof(int16_t)
+		);
+		if (*msadpcmExtra > samples)
+		{
+			FAudio_memmove(
+				msadpcmCache,
+				msadpcmCache + samples,
+				(*msadpcmExtra - samples) * sizeof(int16_t)
+			);
+		}
+		*msadpcmExtra -= samples;
+		return;
+	}
+
+	/* Copy the extra samples we got from last time into the output */
+	if (*msadpcmExtra > 0)
+	{
+		FAudio_memcpy(
+			decodeCache,
+			msadpcmCache,
+			*msadpcmExtra * sizeof(int16_t)
+		);
+		decodeCache += *msadpcmExtra;
+		samples -= *msadpcmExtra;
+		*msadpcmExtra = 0;
+	}
+
+	/* Where are we starting? */
+	blocks = curOffset / bsize;
+	if (curOffset % bsize)
+	{
+		blocks += 1;
+	}
+	buf = (uint8_t*) buffer->pAudioData + (blocks * (align + 22));
+
+	/* How many blocks do we need? */
+	blocks = samples / bsize;
+	extra = samples % bsize;
+
+	/* Read in each block directly to the decode cache */
+	for (b = 0; b < blocks; b += 1)
+	{
+		FAudio_INTERNAL_ReadMonoPreamble(
+			&buf,
+			&predictor,
+			&delta,
+			&sample1,
+			&sample2
+		);
+		*decodeCache++ = sample2;
+		*decodeCache++ = sample1;
+		FAudio_memcpy(
+			nibbles,
+			buf,
+			align + 15
+		);
+		buf += align + 15;
+		for (i = 0; i < (align + 15); i += 1)
+		{
+			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+		}
+	}
+
+	/* Have extra? Go to the MSADPCM cache */
+	if (extra > 0)
+	{
+		FAudio_INTERNAL_ReadMonoPreamble(
+			&buf,
+			&predictor,
+			&delta,
+			&sample1,
+			&sample2
+		);
+		*pcmExtra++ = sample2;
+		*pcmExtra++ = sample1;
+		FAudio_memcpy(
+			nibbles,
+			buf,
+			align + 15
+		);
+		buf += align + 15;
+		for (i = 0; i < (align + 15); i += 1)
+		{
+			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				predictor,
+				&delta,
+				&sample1,
+				&sample2
+			);
+		}
+		*msadpcmExtra = bsize - extra;
+		FAudio_memcpy(
+			decodeCache,
+			msadpcmCache,
+			extra * sizeof(int16_t)
+		);
+		FAudio_memmove(
+			msadpcmCache,
+			msadpcmCache + extra,
+			*msadpcmExtra * sizeof(int16_t)
+		);
+	}
 }
 
 void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	int16_t *decodeCache,
-	uint32_t samples
+	uint32_t samples,
+	FAudioWaveFormatEx *format,
+	int16_t *msadpcmCache,
+	uint16_t *msadpcmExtra
 ) {
-	/* TODO */
-	FAudio_zero(decodeCache, samples * 2);
+	/* Iterators */
+	uint8_t b, i;
+
+	/* Read pointers */
+	uint8_t *buf;
+	int16_t *pcmExtra = msadpcmCache;
+
+	/* Read sizes */
+	uint32_t blocks, extra;
+
+	/* Temp storage for ADPCM blocks */
+	uint8_t l_predictor;
+	uint8_t r_predictor;
+	int16_t l_delta;
+	int16_t r_delta;
+	int16_t l_sample1;
+	int16_t r_sample1;
+	int16_t l_sample2;
+	int16_t r_sample2;
+	uint8_t nibbles[510]; /* Max align size */
+
+	/* Align, block size */
+	uint32_t align = format->nBlockAlign;
+	uint32_t bsize = (align + 16) * 2;
+
+	/* Do we only need to copy from the extra cache? */
+	if (*msadpcmExtra >= samples)
+	{
+		FAudio_memcpy(
+			decodeCache,
+			msadpcmCache,
+			samples * sizeof(int16_t) * 2
+		);
+		if (*msadpcmExtra > samples)
+		{
+			FAudio_memmove(
+				msadpcmCache,
+				msadpcmCache + (samples * 2),
+				(*msadpcmExtra - samples) * sizeof(int16_t) * 2
+			);
+		}
+		*msadpcmExtra -= samples;
+		return;
+	}
+
+	/* Copy the extra samples we got from last time into the output */
+	if (*msadpcmExtra > 0)
+	{
+		FAudio_memcpy(
+			decodeCache,
+			msadpcmCache,
+			*msadpcmExtra * sizeof(int16_t) * 2
+		);
+		decodeCache += *msadpcmExtra * 2;
+		samples -= *msadpcmExtra;
+		*msadpcmExtra = 0;
+	}
+
+	/* Where are we starting? */
+	blocks = curOffset / bsize;
+	if (curOffset % bsize)
+	{
+		blocks += 1;
+	}
+	buf = (uint8_t*) buffer->pAudioData + (blocks * ((align + 22) * 2));
+
+	/* How many blocks do we need? */
+	blocks = samples / bsize;
+	extra = samples % bsize;
+
+	/* Read in each block directly to the decode cache */
+	for (b = 0; b < blocks; b += 1)
+	{
+		FAudio_INTERNAL_ReadStereoPreamble(
+			&buf,
+			&l_predictor,
+			&r_predictor,
+			&l_delta,
+			&r_delta,
+			&l_sample1,
+			&r_sample1,
+			&l_sample2,
+			&r_sample2
+		);
+		*decodeCache++ = l_sample2;
+		*decodeCache++ = r_sample2;
+		*decodeCache++ = l_sample1;
+		*decodeCache++ = r_sample1;
+		FAudio_memcpy(
+			nibbles,
+			buf,
+			(align + 15) * 2
+		);
+		buf += (align + 15) * 2;
+		for (i = 0; i < ((align + 15) * 2); i += 1)
+		{
+			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				l_predictor,
+				&l_delta,
+				&l_sample1,
+				&l_sample2
+			);
+			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				r_predictor,
+				&r_delta,
+				&r_sample1,
+				&r_sample2
+			);
+		}
+	}
+
+	/* Have extra? Go to the MSADPCM cache */
+	if (extra > 0)
+	{
+		FAudio_INTERNAL_ReadStereoPreamble(
+			&buf,
+			&l_predictor,
+			&r_predictor,
+			&l_delta,
+			&r_delta,
+			&l_sample1,
+			&r_sample1,
+			&l_sample2,
+			&r_sample2
+		);
+		*pcmExtra++ = l_sample2;
+		*pcmExtra++ = r_sample2;
+		*pcmExtra++ = l_sample1;
+		*pcmExtra++ = r_sample1;
+		FAudio_memcpy(
+			nibbles,
+			buf,
+			(align + 15) * 2
+		);
+		buf += (align + 15) * 2;
+		for (i = 0; i < ((align + 15) * 2); i += 1)
+		{
+			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] >> 4,
+				l_predictor,
+				&l_delta,
+				&l_sample1,
+				&l_sample2
+			);
+			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
+				nibbles[i] & 0x0F,
+				r_predictor,
+				&r_delta,
+				&r_sample1,
+				&r_sample2
+			);
+		}
+		*msadpcmExtra = bsize - extra;
+		FAudio_memcpy(
+			decodeCache,
+			msadpcmCache,
+			extra * sizeof(int16_t) * 2
+		);
+		FAudio_memmove(
+			msadpcmCache,
+			msadpcmCache + (extra * 2),
+			*msadpcmExtra * sizeof(int16_t) * 2
+		);
+	}
 }
