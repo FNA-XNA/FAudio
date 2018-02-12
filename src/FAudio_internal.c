@@ -342,6 +342,8 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 	/* TODO: Effects, filters */
 
+	/* TODO: Source volumes are applied _after_ effects/filters! */
+
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
@@ -401,6 +403,8 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		voice->mix.outputResampleCache,
 		voice->mix.outputSamples
 	);
+
+	/* TODO: Submix volumes are applied _before_ effects/filters! */
 
 	/* TODO: Effects, filters */
 
@@ -493,6 +497,8 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 			submix = submix->next;
 		}
 	}
+
+	/* TODO: Master effect chain processing */
 
 	/* OnProcessingPassEnd callbacks */
 	callback = audio->callbacks;
