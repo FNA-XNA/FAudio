@@ -455,6 +455,8 @@ uint32_t FAudioVoice_SetOutputVoices(
 	float **sampleCache;
 	uint32_t *outputSamples;
 	uint32_t inChannels, inSampleRate, outSampleRate;
+	FAudioVoiceSends defaultSends;
+	FAudioSendDescriptor defaultSend;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 
 	if (voice->type == FAUDIO_VOICE_SOURCE)
@@ -490,9 +492,18 @@ uint32_t FAudioVoice_SetOutputVoices(
 		FAudio_free(voice->sends.pSends);
 	}
 
-	/* No sends? Nothing to do... */
 	if (pSendList == NULL)
 	{
+		/* Default to the mastering voice as output */
+		defaultSend.Flags = 0;
+		defaultSend.pOutputVoice = voice->audio->master;
+		defaultSends.SendCount = 1;
+		defaultSends.pSends = &defaultSend;
+		pSendList = &defaultSends;
+	}
+	else if (pSendList->SendCount == 0)
+	{
+		/* No sends? Nothing to do... */
 		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
 		return 0;
 	}

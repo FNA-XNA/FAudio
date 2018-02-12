@@ -154,10 +154,10 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->loopCount = nLoopCount;
 
 	/* Create the voice */
-	sends.SendCount = 1;
-	sends.pSends = &send;
 	send.Flags = 0;
 	send.pOutputVoice = pWaveBank->parentEngine->master;
+	sends.SendCount = 1;
+	sends.pSends = &send;
 	format.wFormatTag = entry->Format.wFormatTag;
 	format.nChannels = entry->Format.nChannels;
 	format.nSamplesPerSec = entry->Format.nSamplesPerSec;
