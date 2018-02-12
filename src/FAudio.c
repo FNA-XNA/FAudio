@@ -131,21 +131,6 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->volume = 1.0f;
 	(*ppSourceVoice)->channelVolume[0] = 1.0f;
 	(*ppSourceVoice)->channelVolume[1] = 1.0f;
-	FAudio_assert(pSourceFormat->nChannels > 0 && pSourceFormat->nChannels < 3);
-	(*ppSourceVoice)->srcChannels = pSourceFormat->nChannels;
-	(*ppSourceVoice)->dstChannels = 2; /* FIXME: ??? */
-	if (pSourceFormat->nChannels == 2)
-	{
-		(*ppSourceVoice)->matrixCoefficients[0] = 1.0f;
-		(*ppSourceVoice)->matrixCoefficients[1] = 0.0f;
-		(*ppSourceVoice)->matrixCoefficients[2] = 0.0f;
-		(*ppSourceVoice)->matrixCoefficients[3] = 1.0f;
-	}
-	else
-	{
-		(*ppSourceVoice)->matrixCoefficients[0] = 1.0f;
-		(*ppSourceVoice)->matrixCoefficients[1] = 1.0f;
-	}
 
 	/* Source Properties */
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
@@ -249,21 +234,6 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->volume = 1.0f;
 	(*ppSubmixVoice)->channelVolume[0] = 1.0f;
 	(*ppSubmixVoice)->channelVolume[1] = 1.0f;
-	FAudio_assert(InputChannels > 0 && InputChannels < 3);
-	(*ppSubmixVoice)->srcChannels = InputChannels;
-	(*ppSubmixVoice)->dstChannels = 2; /* FIXME: ??? */
-	if (InputChannels == 2)
-	{
-		(*ppSubmixVoice)->matrixCoefficients[0] = 1.0f;
-		(*ppSubmixVoice)->matrixCoefficients[1] = 0.0f;
-		(*ppSubmixVoice)->matrixCoefficients[2] = 0.0f;
-		(*ppSubmixVoice)->matrixCoefficients[3] = 1.0f;
-	}
-	else
-	{
-		(*ppSubmixVoice)->matrixCoefficients[0] = 1.0f;
-		(*ppSubmixVoice)->matrixCoefficients[1] = 1.0f;
-	}
 
 	/* Submix Properties */
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
@@ -338,22 +308,6 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->volume = 1.0f;
 	(*ppMasteringVoice)->channelVolume[0] = 1.0f;
 	(*ppMasteringVoice)->channelVolume[1] = 1.0f;
-
-	 /* FIXME: Get all this from the device! */
-	(*ppMasteringVoice)->srcChannels = InputChannels;
-	(*ppMasteringVoice)->dstChannels = InputChannels;
-	if (InputChannels == 2)
-	{
-		(*ppMasteringVoice)->matrixCoefficients[0] = 1.0f;
-		(*ppMasteringVoice)->matrixCoefficients[1] = 0.0f;
-		(*ppMasteringVoice)->matrixCoefficients[2] = 0.0f;
-		(*ppMasteringVoice)->matrixCoefficients[3] = 1.0f;
-	}
-	else
-	{
-		(*ppMasteringVoice)->matrixCoefficients[0] = 1.0f;
-		(*ppMasteringVoice)->matrixCoefficients[1] = 1.0f;
-	}
 
 	/* Sends/Effects */
 	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
@@ -452,9 +406,11 @@ uint32_t FAudioVoice_SetOutputVoices(
 	FAudioVoice *voice,
 	const FAudioVoiceSends *pSendList
 ) {
+	uint32_t i;
 	float **sampleCache;
 	uint32_t *outputSamples;
-	uint32_t inChannels, inSampleRate, outSampleRate;
+	uint32_t inChannels, outChannels;
+	uint32_t inSampleRate, outSampleRate;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
@@ -486,6 +442,14 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		FAudio_free(*sampleCache);
 		*sampleCache = NULL;
+	}
+	for (i = 0; i < voice->sends.SendCount; i += 1)
+	{
+		FAudio_free(voice->sendCoefficients[i]);
+	}
+	if (voice->sendCoefficients != NULL)
+	{
+		FAudio_free(voice->sendCoefficients);
 	}
 	if (voice->sends.pSends != NULL)
 	{
@@ -519,18 +483,228 @@ uint32_t FAudioVoice_SetOutputVoices(
 		pSendList->SendCount * sizeof(FAudioSendDescriptor)
 	);
 
-	/* Reset to default output matrix */
-	if (inChannels == 2)
+	/* Allocate/Reset default output matrix */
+	FAudio_assert(inChannels > 0 && inChannels < 3);
+	voice->sendCoefficients = (float**) FAudio_malloc(
+		sizeof(float*) * pSendList->SendCount
+	);
+	for (i = 0; i < pSendList->SendCount; i += 1)
 	{
-		voice->matrixCoefficients[0] = 1.0f;
-		voice->matrixCoefficients[1] = 0.0f;
-		voice->matrixCoefficients[2] = 0.0f;
-		voice->matrixCoefficients[3] = 1.0f;
-	}
-	else
-	{
-		voice->matrixCoefficients[0] = 1.0f;
-		voice->matrixCoefficients[1] = 1.0f;
+		if (pSendList->pSends[i].pOutputVoice->type == FAUDIO_VOICE_MASTER)
+		{
+			outChannels = pSendList->pSends[i].pOutputVoice->master.inputChannels;
+		}
+		else
+		{
+			outChannels = pSendList->pSends[i].pOutputVoice->mix.inputChannels;
+		}
+		FAudio_assert(outChannels > 0 && outChannels < 9);
+		voice->sendCoefficients[i] = (float*) FAudio_malloc(
+			sizeof(float) * inChannels * outChannels
+		);
+
+		/* FIXME: This is hardcoded as FUCK */
+		if (inChannels == 2)
+		{
+			if (outChannels == 1)
+			{
+				/* Center */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 1.0f;
+			}
+			else if (outChannels == 2)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 0.0f;
+				/* Right */
+				voice->sendCoefficients[i][2] = 0.0f;
+				voice->sendCoefficients[i][3] = 1.0f;
+			}
+			else if (outChannels == 3)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 0.0f;
+				/* Right */
+				voice->sendCoefficients[i][2] = 0.0f;
+				voice->sendCoefficients[i][3] = 1.0f;
+				/* LFE */
+				voice->sendCoefficients[i][4] = 1.0f;
+				voice->sendCoefficients[i][5] = 1.0f;
+			}
+			else if (outChannels == 4)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 0.0f;
+				/* Right */
+				voice->sendCoefficients[i][2] = 0.0f;
+				voice->sendCoefficients[i][3] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][4] = 0.0f;
+				voice->sendCoefficients[i][5] = 0.0f;
+				/* Rear Right */
+				voice->sendCoefficients[i][6] = 0.0f;
+				voice->sendCoefficients[i][7] = 0.0f;
+			}
+			else if (outChannels == 5)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 0.0f;
+				/* Right */
+				voice->sendCoefficients[i][2] = 0.0f;
+				voice->sendCoefficients[i][3] = 1.0f;
+				/* LFE */
+				voice->sendCoefficients[i][4] = 1.0f;
+				voice->sendCoefficients[i][5] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][6] = 0.0f;
+				voice->sendCoefficients[i][7] = 0.0f;
+				/* Rear Right */
+				voice->sendCoefficients[i][8] = 0.0f;
+				voice->sendCoefficients[i][9] = 0.0f;
+			}
+			else if (outChannels == 6)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 0.0f;
+				/* Right */
+				voice->sendCoefficients[i][2] = 0.0f;
+				voice->sendCoefficients[i][3] = 1.0f;
+				/* Center */
+				voice->sendCoefficients[i][4] = 0.0f;
+				voice->sendCoefficients[i][5] = 0.0f;
+				/* LFE */
+				voice->sendCoefficients[i][6] = 1.0f;
+				voice->sendCoefficients[i][7] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][8] = 0.0f;
+				voice->sendCoefficients[i][9] = 0.0f;
+				/* Rear Right */
+				voice->sendCoefficients[i][10] = 0.0f;
+				voice->sendCoefficients[i][11] = 0.0f;
+			}
+			else if (outChannels == 8)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				voice->sendCoefficients[i][1] = 0.0f;
+				/* Right */
+				voice->sendCoefficients[i][2] = 1.0f;
+				voice->sendCoefficients[i][3] = 0.0f;
+				/* Center */
+				voice->sendCoefficients[i][4] = 0.0f;
+				voice->sendCoefficients[i][5] = 0.0f;
+				/* LFE */
+				voice->sendCoefficients[i][6] = 1.0f;
+				voice->sendCoefficients[i][7] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][8] = 0.0f;
+				voice->sendCoefficients[i][9] = 0.0f;
+				/* Rear Right */
+				voice->sendCoefficients[i][10] = 0.0f;
+				voice->sendCoefficients[i][11] = 0.0f;
+				/* Side Left */
+				voice->sendCoefficients[i][12] = 0.0f;
+				voice->sendCoefficients[i][13] = 0.0f;
+				/* Side Right */
+				voice->sendCoefficients[i][14] = 0.0f;
+				voice->sendCoefficients[i][15] = 0.0f;
+			}
+			else
+			{
+				FAudio_assert(0 && "Unrecognized output layout!");
+			}
+		}
+		else
+		{
+			if (outChannels == 1)
+			{
+				/* Center */
+				voice->sendCoefficients[i][0] = 1.0f;
+			}
+			else if (outChannels == 2)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				/* Right */
+				voice->sendCoefficients[i][1] = 1.0f;
+			}
+			else if (outChannels == 3)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				/* Right */
+				voice->sendCoefficients[i][1] = 1.0f;
+				/* LFE */
+				voice->sendCoefficients[i][2] = 1.0f;
+			}
+			else if (outChannels == 4)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				/* Right */
+				voice->sendCoefficients[i][1] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][2] = 0.0f;
+				/* Read Right */
+				voice->sendCoefficients[i][3] = 0.0f;
+			}
+			else if (outChannels == 5)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				/* Right */
+				voice->sendCoefficients[i][1] = 1.0f;
+				/* LFE */
+				voice->sendCoefficients[i][2] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][3] = 0.0f;
+				/* Read Right */
+				voice->sendCoefficients[i][4] = 0.0f;
+			}
+			else if (outChannels == 6)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				/* Right */
+				voice->sendCoefficients[i][1] = 1.0f;
+				/* Center */
+				voice->sendCoefficients[i][2] = 0.0f;
+				/* LFE */
+				voice->sendCoefficients[i][3] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][4] = 0.0f;
+				/* Read Right */
+				voice->sendCoefficients[i][5] = 0.0f;
+			}
+			else if (outChannels == 8)
+			{
+				/* Left */
+				voice->sendCoefficients[i][0] = 1.0f;
+				/* Right */
+				voice->sendCoefficients[i][1] = 1.0f;
+				/* Center */
+				voice->sendCoefficients[i][2] = 0.0f;
+				/* LFE */
+				voice->sendCoefficients[i][3] = 1.0f;
+				/* Rear Left */
+				voice->sendCoefficients[i][4] = 0.0f;
+				/* Read Right */
+				voice->sendCoefficients[i][5] = 0.0f;
+				/* Side Left */
+				voice->sendCoefficients[i][6] = 0.0f;
+				/* Side Right */
+				voice->sendCoefficients[i][7] = 0.0f;
+			}
+			else
+			{
+				FAudio_assert(0 && "Unrecognized output layout!");
+			}
+		}
 	}
 
 	/* Allocate resample cache */
@@ -741,14 +915,40 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	const float *pLevelMatrix,
 	uint32_t OperationSet
 ) {
+	uint32_t i;
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_assert(SourceChannels > 0 && SourceChannels < 3);
-	FAudio_assert(DestinationChannels > 0 && DestinationChannels < 9);
-	voice->srcChannels = SourceChannels;
-	voice->dstChannels = DestinationChannels;
+	/* Find the send index */
+	for (i = 0; i < voice->sends.SendCount; i += 1)
+	{
+		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)
+		{
+			break;
+		}
+	}
+	FAudio_assert(i < voice->sends.SendCount);
+
+	/* Verify the Source/Destination channel count */
+	if (voice->type == FAUDIO_VOICE_SOURCE)
+	{
+		FAudio_assert(SourceChannels == voice->src.format.nChannels);
+	}
+	else
+	{
+		FAudio_assert(SourceChannels == voice->mix.inputChannels);
+	}
+	if (pDestinationVoice->type == FAUDIO_VOICE_MASTER)
+	{
+		FAudio_assert(DestinationChannels == pDestinationVoice->master.inputChannels);
+	}
+	else
+	{
+		FAudio_assert(DestinationChannels == voice->mix.inputChannels);
+	}
+
+	/* Set the matrix values, finally */
 	FAudio_memcpy(
-		voice->matrixCoefficients,
+		voice->sendCoefficients[i],
 		pLevelMatrix,
 		sizeof(float) * SourceChannels * DestinationChannels
 	);
@@ -762,19 +962,47 @@ void FAudioVoice_GetOutputMatrix(
 	uint32_t DestinationChannels,
 	float *pLevelMatrix
 ) {
-	FAudio_assert(SourceChannels > 0 && SourceChannels < 3);
-	FAudio_assert(DestinationChannels > 0 && DestinationChannels < 9);
-	voice->srcChannels = SourceChannels;
-	voice->dstChannels = DestinationChannels;
+	uint32_t i;
+
+	/* Find the send index */
+	for (i = 0; i < voice->sends.SendCount; i += 1)
+	{
+		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)
+		{
+			break;
+		}
+	}
+	FAudio_assert(i < voice->sends.SendCount);
+
+	/* Verify the Source/Destination channel count */
+	if (voice->type == FAUDIO_VOICE_SOURCE)
+	{
+		FAudio_assert(SourceChannels == voice->src.format.nChannels);
+	}
+	else
+	{
+		FAudio_assert(SourceChannels == voice->mix.inputChannels);
+	}
+	if (pDestinationVoice->type == FAUDIO_VOICE_MASTER)
+	{
+		FAudio_assert(DestinationChannels == pDestinationVoice->master.inputChannels);
+	}
+	else
+	{
+		FAudio_assert(DestinationChannels == voice->mix.inputChannels);
+	}
+
+	/* Get the matrix values, finally */
 	FAudio_memcpy(
 		pLevelMatrix,
-		voice->matrixCoefficients,
+		voice->sendCoefficients[i],
 		sizeof(float) * SourceChannels * DestinationChannels
 	);
 }
 
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
+	uint32_t i;
 	FAudioSourceVoiceEntry *source, *srcPrev;
 	FAudioSubmixVoiceEntry *submix, *mixPrev;
 	/* TODO: Lock, check for dependencies and fail if still in use */
@@ -846,6 +1074,14 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	{
 		FAudio_PlatformQuit(voice->audio);
 		voice->audio->master = NULL;
+	}
+	for (i = 0; i < voice->sends.SendCount; i += 1)
+	{
+		FAudio_free(voice->sendCoefficients[i]);
+	}
+	if (voice->sendCoefficients != NULL)
+	{
+		FAudio_free(voice->sendCoefficients);
 	}
 	if (voice->sends.pSends != NULL)
 	{

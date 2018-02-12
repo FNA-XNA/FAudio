@@ -85,17 +85,16 @@ struct FAudio
 struct FAudioVoice
 {
 	FAudio *audio;
+	uint32_t flags;
 	FAudioVoiceType type;
+
 	FAudioVoiceSends sends;
+	float **sendCoefficients;
 	FAudioEffectChain effects;
 	FAudioFilterParameters filter;
-	uint32_t flags;
 
 	float volume;
 	float channelVolume[2]; /* Assuming stereo input */
-	uint32_t srcChannels;
-	uint32_t dstChannels;
-	float matrixCoefficients[2 * 8]; /* Assuming stereo input, 7.1 output */
 
 	union
 	{

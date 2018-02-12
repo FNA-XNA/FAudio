@@ -60,7 +60,9 @@
 
 void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
-	uint32_t i, j;
+	uint32_t i, j, co, ci;
+	float *stream;
+	uint32_t oChan;
 	FAudioVoice *out;
 	FAudioBuffer *buffer;
 	uint32_t toDecode, decoded, resampled;
@@ -342,34 +344,41 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 	/* TODO: Effects, filters */
 
-	/* TODO: Source volumes are applied _after_ effects/filters! */
-
 	/* Send float cache to sends */
+	resampled /= voice->src.format.nChannels;
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
-		/* TODO: Use output matrix */
 		out = voice->sends.pSends[i].pOutputVoice;
 		if (out->type == FAUDIO_VOICE_MASTER)
 		{
-			for (j = 0; j < resampled; j += 1)
-			{
-				out->master.output[j] = FAudio_clamp(
-					out->master.output[j] + voice->mix.outputResampleCache[j],
-					-FAUDIO_MAX_VOLUME_LEVEL,
-					FAUDIO_MAX_VOLUME_LEVEL
-				);
-			}
+			stream = out->master.output;
+			oChan = out->master.inputChannels;
 		}
 		else
 		{
-			for (j = 0; j < resampled; j += 1)
-			{
-				out->mix.inputCache[j] = FAudio_clamp(
-					out->mix.inputCache[j] + voice->mix.outputResampleCache[j],
-					-FAUDIO_MAX_VOLUME_LEVEL,
-					FAUDIO_MAX_VOLUME_LEVEL
-				);
-			}
+			stream = out->mix.inputCache;
+			oChan = out->mix.inputChannels;
+		}
+
+		for (j = 0; j < resampled; j += 1)
+		for (co = 0; co < oChan; co += 1)
+		for (ci = 0; ci < voice->src.format.nChannels; ci += 1)
+		{
+			/* Include source/channel volumes in the mix! */
+			stream[j * oChan + co] = FAudio_clamp(
+				stream[j * oChan + co] + (
+					voice->src.outputResampleCache[
+						j * voice->src.format.nChannels + ci
+					] *
+					voice->channelVolume[ci] *
+					voice->volume *
+					voice->sendCoefficients[i][
+						co * voice->src.format.nChannels + ci
+					]
+				),
+				-FAUDIO_MAX_VOLUME_LEVEL,
+				FAUDIO_MAX_VOLUME_LEVEL
+			);
 		}
 	}
 
@@ -386,8 +395,11 @@ end:
 
 void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 {
+	uint32_t i, j, co, ci;
+	float *stream;
+	uint32_t oChan;
 	FAudioVoice *out;
-	uint32_t resampled, i, j;
+	uint32_t resampled;
 
 	/* Nothing to do? */
 	if (voice->sends.SendCount == 0)
@@ -404,36 +416,58 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		voice->mix.outputSamples
 	);
 
-	/* TODO: Submix volumes are applied _before_ effects/filters! */
+	/* Submix volumes are applied _before_ effects/filters, blech! */
+	resampled /= voice->mix.inputChannels;
+	for (i = 0; i < resampled; i += 1)
+	for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
+	{
+		/* FIXME: Clip volume? */
+		voice->mix.outputResampleCache[
+			i * voice->mix.inputChannels + ci
+		] = (
+			voice->mix.outputResampleCache[
+				i * voice->mix.inputChannels + ci
+			] *
+			voice->channelVolume[ci] *
+			voice->volume
+		);
+	}
+	resampled *= voice->mix.inputChannels;
 
 	/* TODO: Effects, filters */
 
 	/* Send float cache to sends */
+	resampled /= voice->mix.inputChannels;
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
-		/* TODO: Use output matrix */
 		out = voice->sends.pSends[i].pOutputVoice;
 		if (out->type == FAUDIO_VOICE_MASTER)
 		{
-			for (j = 0; j < resampled; j += 1)
-			{
-				out->master.output[j] = FAudio_clamp(
-					out->master.output[j] + voice->mix.outputResampleCache[j],
-					-FAUDIO_MAX_VOLUME_LEVEL,
-					FAUDIO_MAX_VOLUME_LEVEL
-				);
-			}
+			stream = out->master.output;
+			oChan = out->master.inputChannels;
 		}
 		else
 		{
-			for (j = 0; j < resampled; j += 1)
-			{
-				out->mix.inputCache[j] = FAudio_clamp(
-					out->mix.inputCache[j] + voice->mix.outputResampleCache[j],
-					-FAUDIO_MAX_VOLUME_LEVEL,
-					FAUDIO_MAX_VOLUME_LEVEL
-				);
-			}
+			stream = out->mix.inputCache;
+			oChan = out->mix.inputChannels;
+		}
+
+		for (j = 0; j < resampled; j += 1)
+		for (co = 0; co < oChan; co += 1)
+		for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
+		{
+			stream[j * oChan + co] = FAudio_clamp(
+				stream[j * oChan + co] + (
+					voice->mix.outputResampleCache[
+						j * voice->mix.inputChannels + ci
+					] *
+					voice->sendCoefficients[i][
+						co * voice->mix.inputChannels + ci
+					]
+				),
+				-FAUDIO_MAX_VOLUME_LEVEL,
+				FAUDIO_MAX_VOLUME_LEVEL
+			);
 		}
 	}
 
