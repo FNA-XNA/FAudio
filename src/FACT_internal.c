@@ -7,11 +7,10 @@
 
 #include "FACT_internal.h"
 
-/* Various internal math functions */
+/* RNG (TODO) */
 
 float FACT_INTERNAL_rng()
 {
-	/* TODO: Random number generator */
 	static float butt = 0.0f;
 	float result = butt;
 	butt += 0.2;
@@ -22,148 +21,7 @@ float FACT_INTERNAL_rng()
 	return result;
 }
 
-FACTRPC* FACT_INTERNAL_GetRPC(
-	FACTAudioEngine *engine,
-	uint32_t code
-) {
-	uint16_t i;
-	for (i = 0; i < engine->rpcCount; i += 1)
-	{
-		if (engine->rpcCodes[i] == code)
-		{
-			return &engine->rpcs[i];
-		}
-	}
-
-	FAudio_assert(0 && "RPC code not found!");
-	return NULL;
-}
-
-float FACT_INTERNAL_CalculateRPC(
-	FACTRPC *rpc,
-	float var
-) {
-	float result;
-	uint8_t i;
-
-	/* Min/Max */
-	if (var <= rpc->points[0].x)
-	{
-		/* Zero to first defined point */
-		return rpc->points[0].y;
-	}
-	if (var >= rpc->points[rpc->pointCount - 1].x)
-	{
-		/* Last defined point to infinity */
-		return rpc->points[rpc->pointCount - 1].y;
-	}
-
-	/* Something between points... TODO: Non-linear curves */
-	result = 0.0f;
-	for (i = 0; i < rpc->pointCount - 1; i += 1)
-	{
-		/* y = b */
-		result = rpc->points[i].y;
-		if (var >= rpc->points[i].x && var <= rpc->points[i + 1].x)
-		{
-			/* y += mx */
-			result +=
-				((rpc->points[i + 1].y - rpc->points[i].y) /
-				(rpc->points[i + 1].x - rpc->points[i].x)) *
-					(var - rpc->points[i].x);
-
-			/* Pre-algebra, rockin'! */
-			break;
-		}
-	}
-	return result;
-}
-
-void FACT_INTERNAL_UpdateRPCs(
-	FACTCue *cue,
-	uint8_t codeCount,
-	uint32_t *codes,
-	FACTInstanceRPCData *data
-) {
-	uint8_t i;
-	FACTRPC *rpc;
-	float rpcResult;
-	FACTAudioEngine *engine = cue->parentBank->parentEngine;
-
-	if (codeCount > 0)
-	{
-		data->rpcVolume = 0.0f;
-		data->rpcPitch = 0.0f;
-		data->rpcFilterFreq = 0.0f; /* FIXME: Starting value? */
-		for (i = 0; i < codeCount; i += 1)
-		{
-			rpc = FACT_INTERNAL_GetRPC(
-				engine,
-				codes[i]
-			);
-			if (engine->variables[rpc->variable].accessibility & 0x04)
-			{
-				if (FAudio_strcmp(
-					engine->variableNames[rpc->variable],
-					"AttackTime"
-				) == 0) {
-					/* TODO: AttackTime */
-					rpcResult = 0.0f;
-				}
-				else if (FAudio_strcmp(
-					engine->variableNames[rpc->variable],
-					"ReleaseTime"
-				) == 0) {
-					/* TODO: ReleaseTime */
-					rpcResult = 0.0f;
-				}
-				else
-				{
-					rpcResult = FACT_INTERNAL_CalculateRPC(
-						rpc,
-						cue->variableValues[rpc->variable]
-					);
-				}
-			}
-			else
-			{
-				rpcResult = FACT_INTERNAL_CalculateRPC(
-					rpc,
-					engine->globalVariableValues[rpc->variable]
-				);
-			}
-			if (rpc->parameter == RPC_PARAMETER_VOLUME)
-			{
-				data->rpcVolume += rpcResult;
-			}
-			else if (rpc->parameter == RPC_PARAMETER_PITCH)
-			{
-				data->rpcPitch += rpcResult;
-			}
-			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
-			{
-				data->rpcFilterFreq += rpcResult;
-			}
-			else
-			{
-				FAudio_assert(0 && "Unhandled RPC parameter type!");
-			}
-		}
-	}
-}
-
-void FACT_INTERNAL_SetDSPParameter(
-	FACTDSPPreset *dsp,
-	FACTRPC *rpc,
-	float var
-) {
-	uint16_t par = rpc->parameter - RPC_PARAMETER_COUNT;
-	dsp->parameters[par].value = FAudio_clamp(
-		FACT_INTERNAL_CalculateRPC(rpc, var),
-		dsp->parameters[par].minVal,
-		dsp->parameters[par].maxVal
-	);
-}
+/* Internal Functions */
 
 float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
@@ -337,6 +195,174 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
 {
 	/* TODO */
 }
+
+/* RPC Helper Functions */
+
+FACTRPC* FACT_INTERNAL_GetRPC(
+	FACTAudioEngine *engine,
+	uint32_t code
+) {
+	uint16_t i;
+	for (i = 0; i < engine->rpcCount; i += 1)
+	{
+		if (engine->rpcCodes[i] == code)
+		{
+			return &engine->rpcs[i];
+		}
+	}
+
+	FAudio_assert(0 && "RPC code not found!");
+	return NULL;
+}
+
+float FACT_INTERNAL_CalculateRPC(
+	FACTRPC *rpc,
+	float var
+) {
+	float result;
+	uint8_t i;
+
+	/* Min/Max */
+	if (var <= rpc->points[0].x)
+	{
+		/* Zero to first defined point */
+		return rpc->points[0].y;
+	}
+	if (var >= rpc->points[rpc->pointCount - 1].x)
+	{
+		/* Last defined point to infinity */
+		return rpc->points[rpc->pointCount - 1].y;
+	}
+
+	/* Something between points... TODO: Non-linear curves */
+	result = 0.0f;
+	for (i = 0; i < rpc->pointCount - 1; i += 1)
+	{
+		/* y = b */
+		result = rpc->points[i].y;
+		if (var >= rpc->points[i].x && var <= rpc->points[i + 1].x)
+		{
+			/* y += mx */
+			result +=
+				((rpc->points[i + 1].y - rpc->points[i].y) /
+				(rpc->points[i + 1].x - rpc->points[i].x)) *
+					(var - rpc->points[i].x);
+
+			/* Pre-algebra, rockin'! */
+			break;
+		}
+	}
+	return result;
+}
+
+void FACT_INTERNAL_UpdateRPCs(
+	FACTCue *cue,
+	uint8_t codeCount,
+	uint32_t *codes,
+	FACTInstanceRPCData *data
+) {
+	uint8_t i;
+	FACTRPC *rpc;
+	float rpcResult;
+	FACTAudioEngine *engine = cue->parentBank->parentEngine;
+
+	if (codeCount > 0)
+	{
+		data->rpcVolume = 0.0f;
+		data->rpcPitch = 0.0f;
+		data->rpcFilterFreq = 0.0f; /* FIXME: Starting value? */
+		for (i = 0; i < codeCount; i += 1)
+		{
+			rpc = FACT_INTERNAL_GetRPC(
+				engine,
+				codes[i]
+			);
+			if (engine->variables[rpc->variable].accessibility & 0x04)
+			{
+				if (FAudio_strcmp(
+					engine->variableNames[rpc->variable],
+					"AttackTime"
+				) == 0) {
+					/* TODO: AttackTime */
+					rpcResult = 0.0f;
+				}
+				else if (FAudio_strcmp(
+					engine->variableNames[rpc->variable],
+					"ReleaseTime"
+				) == 0) {
+					/* TODO: ReleaseTime */
+					rpcResult = 0.0f;
+				}
+				else
+				{
+					rpcResult = FACT_INTERNAL_CalculateRPC(
+						rpc,
+						cue->variableValues[rpc->variable]
+					);
+				}
+			}
+			else
+			{
+				rpcResult = FACT_INTERNAL_CalculateRPC(
+					rpc,
+					engine->globalVariableValues[rpc->variable]
+				);
+			}
+			if (rpc->parameter == RPC_PARAMETER_VOLUME)
+			{
+				data->rpcVolume += rpcResult;
+			}
+			else if (rpc->parameter == RPC_PARAMETER_PITCH)
+			{
+				data->rpcPitch += rpcResult;
+			}
+			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
+			{
+				data->rpcFilterFreq += rpcResult;
+			}
+			else
+			{
+				FAudio_assert(0 && "Unhandled RPC parameter type!");
+			}
+		}
+	}
+}
+
+/* Engine Update Function */
+
+void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
+{
+	uint16_t i, j, par;
+	for (i = 0; i < engine->rpcCount; i += 1)
+	{
+		if (engine->rpcs[i].parameter >= RPC_PARAMETER_COUNT)
+		{
+			/* FIXME: Why did I make this global vars only...? */
+			if (!(engine->variables[engine->rpcs[i].variable].accessibility & 0x04))
+			{
+				for (j = 0; j < engine->dspPresetCount; j += 1)
+				{
+					/* FIXME: This affects all DSP presets!
+					 * What if there's more than one?
+					 */
+					par = engine->rpcs[i].parameter - RPC_PARAMETER_COUNT;
+					engine->dspPresets[j].parameters[par].value = FAudio_clamp(
+						FACT_INTERNAL_CalculateRPC(
+							&engine->rpcs[i],
+							engine->globalVariableValues[
+								engine->rpcs[i].variable
+							]
+						),
+						engine->dspPresets[j].parameters[par].minVal,
+						engine->dspPresets[j].parameters[par].maxVal
+					);
+				}
+			}
+		}
+	}
+}
+
+/* Cue Update Functions */
 
 void FACT_INTERNAL_ActivateEvent(
 	FACTCue *cue,
@@ -665,32 +691,6 @@ void FACT_INTERNAL_ActivateEvent(
 	else
 	{
 		evtInst->finished = 1;
-	}
-}
-
-void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
-{
-	uint16_t i, j;
-	for (i = 0; i < engine->rpcCount; i += 1)
-	{
-		if (engine->rpcs[i].parameter >= RPC_PARAMETER_COUNT)
-		{
-			/* FIXME: Why did I make this global vars only...? */
-			if (!(engine->variables[engine->rpcs[i].variable].accessibility & 0x04))
-			{
-				for (j = 0; j < engine->dspPresetCount; j += 1)
-				{
-					/* FIXME: This affects all DSP presets!
-					 * What if there's more than one?
-					 */
-					FACT_INTERNAL_SetDSPParameter(
-						&engine->dspPresets[j],
-						&engine->rpcs[i],
-						engine->globalVariableValues[engine->rpcs[i].variable]
-					);
-				}
-			}
-		}
 	}
 }
 
