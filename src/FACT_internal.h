@@ -318,12 +318,16 @@ typedef struct FACTVariationTable
 
 /* Internal Wave Types */
 
-typedef uint32_t (FACTCALL * FACTDecodeCallback)(
-	FACTWave *wave,
-	int16_t *decodeCacheL,
-	int16_t *decodeCacheR,
-	uint32_t samples
-);
+typedef struct FACTWaveCallback
+{
+	FAudioVoiceCallback callback;
+	FACTWave *wave;
+
+	/* Needed for PlayWaveEvent looping */
+	FACTCue *cue;
+	FACTEvent *event;
+	FACTEventInstance *eventInstance;
+} FACTWaveCallback;
 
 /* Public XACT Types */
 
@@ -350,15 +354,10 @@ struct FACTAudioEngine
 	FACTWaveBank *wbList;
 	float *globalVariableValues;
 
-#if 0 /* TODO: FAudio */
 	/* FAudio references */
 	FAudio *audio;
 	FAudioMasteringVoice *master;
 	FACTAudioEngineCallback callback;
-#else
-	/* Point this to your platform's device mix format */
-	FAudioWaveFormatExtensible *mixFormat;
-#endif
 };
 
 struct FACTSoundBank
@@ -416,20 +415,12 @@ struct FACTWave
 	uint32_t state;
 	float volume;
 	int16_t pitch;
-	uint32_t position;
 	uint32_t initialPosition;
 	uint8_t loopCount;
 
-	/* 3D Data */
-	uint32_t srcChannels;
-	uint32_t dstChannels;
-	float matrixCoefficients[2 * 8]; /* Stereo input, 7.1 output */
-
-	/* Decoding */
-	FACTDecodeCallback decode;
-	FAudioResampleState resample;
-	int16_t msadpcmCache[1024];
-	uint16_t msadpcmExtra;
+	/* FAudio references */
+	FAudioSourceVoice *voice;
+	FACTWaveCallback callback;
 };
 
 struct FACTCue
@@ -474,66 +465,13 @@ struct FACTCue
 
 /* Internal functions */
 
-void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback);
-
-/* TODO: Remove these entirely */
-void FACT_PlatformInitEngine(FACTAudioEngine *engine, int16_t *id);
-void FACT_PlatformCloseEngine(FACTAudioEngine *engine);
-
-/* TODO: Remove these from the header */
-void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine);
-void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed);
-
-/* TODO: Move this to FAudio */
-uint32_t FACT_INTERNAL_GetWave(
-	FACTWave *wave,
-	int16_t *decodeCacheL,
-	int16_t *decodeCacheR,
-	float *resampleCacheL,
-	float *resampleCacheR,
-	uint32_t samples
-);
-
 float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel);
 void FACT_INTERNAL_SelectSound(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
 
-/* TODO: Move this to FAudio */
-#define DECODE_FUNC(type) \
-	extern uint32_t FACT_INTERNAL_Decode##type( \
-		FACTWave *wave, \
-		int16_t *decodeCacheL, \
-		int16_t *decodeCacheR, \
-		uint32_t samples \
-	);
-DECODE_FUNC(MonoPCM8)
-DECODE_FUNC(MonoPCM16)
-DECODE_FUNC(MonoMSADPCM)
-DECODE_FUNC(StereoPCM8)
-DECODE_FUNC(StereoPCM16)
-DECODE_FUNC(StereoMSADPCM)
-#undef DECODE_FUNC
+/* FAudio callbacks */
 
-typedef size_t (FACTCALL * FACT_readfunc)(
-	void *data,
-	void *dst,
-	size_t size,
-	size_t count
-);
-typedef int64_t (FACTCALL * FACT_seekfunc)(
-	void *data,
-	int64_t offset,
-	int whence
-);
-typedef int (FACTCALL * FACT_closefunc)(
-	void *data
-);
-
-struct FACTIOStream
-{
-	void *data;
-	FACT_readfunc read;
-	FACT_seekfunc seek;
-	FACT_closefunc close;
-};
+void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback);
+void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext);
+void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback);

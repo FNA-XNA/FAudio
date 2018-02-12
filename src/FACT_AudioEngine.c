@@ -96,7 +96,7 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 ) {
 	FAudio_memcpy(
 		pFinalMixFormat,
-		pEngine->mixFormat,
+		pEngine->audio->mixFormat,
 		sizeof(FAudioWaveFormatExtensible)
 	);
 	return 0;
@@ -327,7 +327,6 @@ uint32_t FACTAudioEngine_Initialize(
 	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	pEngine->sbList = NULL;
 
-#if 0 /* TODO: FAudio */
 	pEngine->audio = pParams->pXAudio2;
 	if (pEngine->audio == NULL)
 	{
@@ -363,18 +362,13 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 	FAudio_CreateMasteringVoice(
 		pEngine->audio,
+		&pEngine->master,
 		FAUDIO_DEFAULT_CHANNELS,
-		FAUDIO_DEFAULT_SAMPLERATE,
+		48000, /* Should be FAUDIO_DEFAULT_SAMPLERATE, but SDL... */
 		0,
 		deviceIndex,
 		NULL
 	);
-#else
-	FACT_PlatformInitEngine(
-		pEngine,
-		pParams->pRendererID
-	);
-#endif
 	return 0;
 }
 
@@ -384,8 +378,8 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	FACTSoundBank *sb;
 	FACTWaveBank *wb;
 
-	/* Shutdown the platform stream before freeing stuff! */
-	FACT_PlatformCloseEngine(pEngine);
+	/* Stop the platform stream before freeing stuff! */
+	FAudio_StopEngine(pEngine->audio);
 
 	/* Unreference all the Banks */
 	sb = pEngine->sbList;
@@ -435,6 +429,8 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	FAudio_free(pEngine->dspPresetCodes);
 
 	/* Finally. */
+	FAudioVoice_DestroyVoice(pEngine->master);
+	FAudioDestroy(pEngine->audio);
 	FAudio_free(pEngine);
 	return 0;
 }

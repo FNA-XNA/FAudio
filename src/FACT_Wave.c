@@ -51,6 +51,7 @@ uint32_t FACTWave_Play(FACTWave *pWave)
 		FACT_STATE_PAUSED |
 		FACT_STATE_STOPPED
 	);
+	FAudioSourceVoice_Start(pWave->voice, 0, 0);
 	return 0;
 }
 
@@ -69,11 +70,15 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 			FACT_STATE_STOPPING |
 			FACT_STATE_PAUSED
 		);
-		pWave->position = pWave->initialPosition;
+		FAudioSourceVoice_Stop(pWave->voice, 0, 0);
+		FAudioSourceVoice_FlushSourceBuffers(pWave->voice);
 	}
 	else
 	{
 		pWave->state |= FACT_STATE_STOPPING;
+		/* TODO: TAILS or something fancier? -flibit */
+		FAudioSourceVoice_Stop(pWave->voice, 0, 0);
+		FAudioSourceVoice_FlushSourceBuffers(pWave->voice);
 	}
 	return 0;
 }
@@ -90,10 +95,12 @@ uint32_t FACTWave_Pause(FACTWave *pWave, int32_t fPause)
 	if (fPause)
 	{
 		pWave->state |= FACT_STATE_PAUSED;
+		FAudioSourceVoice_Stop(pWave->voice, 0, 0);
 	}
 	else
 	{
 		pWave->state &= ~FACT_STATE_PAUSED;
+		FAudioSourceVoice_Start(pWave->voice, 0, 0);
 	}
 	return 0;
 }
@@ -111,6 +118,11 @@ uint32_t FACTWave_SetPitch(FACTWave *pWave, int16_t pitch)
 		FACTPITCH_MIN_TOTAL,
 		FACTPITCH_MAX_TOTAL
 	);
+	FAudioSourceVoice_SetFrequencyRatio(
+		pWave->voice,
+		(float) FAudio_pow(2.0, pWave->pitch / 1200.0),
+		0
+	);
 	return 0;
 }
 
@@ -121,6 +133,11 @@ uint32_t FACTWave_SetVolume(FACTWave *pWave, float volume)
 		FACTVOLUME_MIN,
 		FACTVOLUME_MAX
 	);
+	FAudioVoice_SetVolume(
+		pWave->voice,
+		volume,
+		0
+	);
 	return 0;
 }
 
@@ -130,18 +147,14 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	uint32_t uDstChannelCount,
 	float *pMatrixCoefficients
 ) {
-	/* See FACTWave.matrixCoefficients declaration */
-	FAudio_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
-	FAudio_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
-
-	pWave->srcChannels = uSrcChannelCount;
-	pWave->dstChannels = uDstChannelCount;
-	FAudio_memcpy(
-		pWave->matrixCoefficients,
+	FAudioVoice_SetOutputMatrix(
+		pWave->voice,
+		pWave->voice->sends.pSends->pOutputVoice,
+		uSrcChannelCount,
+		uDstChannelCount,
 		pMatrixCoefficients,
-		sizeof(float) * uSrcChannelCount * uDstChannelCount
+		0
 	);
-
 	return 0;
 }
 

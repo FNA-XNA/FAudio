@@ -120,8 +120,12 @@ uint32_t FACTWaveBank_Prepare(
 	uint8_t nLoopCount,
 	FACTWave **ppWave
 ) {
+	FAudioBuffer buffer;
+	FAudioVoiceSends sends;
+	FAudioSendDescriptor send;
+	FAudioWaveFormatEx format;
 	FACTWave *latest;
-	FACTWaveBankMiniWaveFormat *fmt = &pWaveBank->entries[nWaveIndex].Format;
+	FACTWaveBankEntry *entry = &pWaveBank->entries[nWaveIndex];
 
 	*ppWave = (FACTWave*) FAudio_malloc(sizeof(FACTWave));
 	(*ppWave)->next = NULL;
@@ -138,7 +142,7 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		(*ppWave)->initialPosition = (uint32_t) (
 			( /* Samples per millisecond... */
-				(float) fmt->nSamplesPerSec /
+				(float) entry->Format.nSamplesPerSec /
 				1000.0f
 			) * (float) dwPlayOffset
 		);
@@ -147,55 +151,83 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		(*ppWave)->initialPosition = dwPlayOffset;
 	}
-	(*ppWave)->position = (*ppWave)->initialPosition;
 	(*ppWave)->loopCount = nLoopCount;
 
-	/* Decoding */
-	if (fmt->wFormatTag == 0x0) /* PCM */
+	/* Create the voice */
+	sends.SendCount = 1;
+	sends.pSends = &send;
+	send.Flags = 0;
+	send.pOutputVoice = pWaveBank->parentEngine->master;
+	format.wFormatTag = entry->Format.wFormatTag;
+	format.nChannels = entry->Format.nChannels;
+	format.nSamplesPerSec = entry->Format.nSamplesPerSec;
+	format.nBlockAlign = entry->Format.wBlockAlign;
+	format.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
+	if (format.wFormatTag == 0)
 	{
-		if (fmt->wBitsPerSample == 1)
-		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
-				FACT_INTERNAL_DecodeStereoPCM16 :
-				FACT_INTERNAL_DecodeMonoPCM16;
-		}
-		else
-		{
-			(*ppWave)->decode = (fmt->nChannels == 2) ?
-				FACT_INTERNAL_DecodeStereoPCM8 :
-				FACT_INTERNAL_DecodeMonoPCM8;
-		}
+		format.wFormatTag = 1; /* PCM */
 	}
-	else if (fmt->wFormatTag == 0x2) /* ADPCM */
-	{
-		(*ppWave)->decode = (fmt->nChannels == 2) ?
-			FACT_INTERNAL_DecodeStereoMSADPCM :
-			FACT_INTERNAL_DecodeMonoMSADPCM;
-	}
-	else /* Includes 0x1 - XMA, 0x3 - WMA */
+	else if (format.wFormatTag != 2) /* Includes 0x1 - XMA, 0x3 - WMA */
 	{
 		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
-	(*ppWave)->msadpcmExtra = 0;
-
-	/* 3D */
-	(*ppWave)->srcChannels = fmt->nChannels;
-	(*ppWave)->dstChannels = 2;
-	if (fmt->nChannels == 2)
+	(*ppWave)->callback.callback.OnBufferEnd = FACT_INTERNAL_OnBufferEnd;
+	(*ppWave)->callback.callback.OnBufferStart = NULL;
+	(*ppWave)->callback.callback.OnLoopEnd = NULL;
+	(*ppWave)->callback.callback.OnStreamEnd = FACT_INTERNAL_OnStreamEnd;
+	(*ppWave)->callback.callback.OnVoiceError = NULL;
+	(*ppWave)->callback.callback.OnVoiceProcessingPassEnd = NULL;
+	(*ppWave)->callback.callback.OnVoiceProcessingPassStart = NULL;
+	(*ppWave)->callback.wave = *ppWave;
+	(*ppWave)->callback.cue = NULL;
+	(*ppWave)->callback.event = NULL;
+	(*ppWave)->callback.eventInstance = NULL;
+	FAudio_CreateSourceVoice(
+		pWaveBank->parentEngine->audio,
+		&(*ppWave)->voice,
+		&format,
+		0,
+		4.0f,
+		(FAudioVoiceCallback*) &(*ppWave)->callback,
+		&sends,
+		NULL
+	);
+	if (pWaveBank->streaming)
 	{
-		(*ppWave)->matrixCoefficients[0] = 1.0f;
-		(*ppWave)->matrixCoefficients[1] = 0.0f;
-		(*ppWave)->matrixCoefficients[2] = 0.0f;
-		(*ppWave)->matrixCoefficients[3] = 1.0f;
+		FAudio_assert(0 && "TODO: Streaming WaveBanks!");
 	}
 	else
 	{
-		(*ppWave)->matrixCoefficients[0] = 1.0f;
-		(*ppWave)->matrixCoefficients[1] = 1.0f;
+		buffer.Flags = FAUDIO_END_OF_STREAM;
+		buffer.AudioBytes = entry->PlayRegion.dwLength;
+		buffer.pAudioData = FACT_memptr(
+			pWaveBank->io,
+			entry->PlayRegion.dwOffset
+		);
+		buffer.PlayBegin = (*ppWave)->initialPosition;
+		buffer.PlayLength = entry->PlayRegion.dwLength;
+		if (format.wFormatTag == 1)
+		{
+			if (format.wBitsPerSample == 16)
+			{
+				buffer.PlayLength /= 2;
+			}
+			buffer.PlayLength /= format.nChannels;
+		}
+		else if (format.wFormatTag == 2)
+		{
+			buffer.PlayLength = (
+				buffer.PlayLength /
+				((format.nBlockAlign + 22) * format.nChannels) *
+				((format.nBlockAlign + 16) * 2)
+			);
+		}
+		buffer.LoopBegin = entry->LoopRegion.dwStartSample;
+		buffer.LoopLength = entry->LoopRegion.dwTotalSamples;
+		buffer.LoopCount = nLoopCount;
 	}
-
-	/* Resampling */
-	FAudio_INTERNAL_InitResampler(&(*ppWave)->resample);
+	buffer.pContext = NULL;
+	FAudioSourceVoice_SubmitSourceBuffer((*ppWave)->voice, &buffer, NULL);
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)
