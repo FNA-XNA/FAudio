@@ -52,7 +52,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FAudio_free(pWaveBank->name);
 	FAudio_free(pWaveBank->entries);
 	FAudio_free(pWaveBank->entryRefs);
-	FACT_close(pWaveBank->io);
+	FAudio_close(pWaveBank->io);
 	FAudio_free(pWaveBank);
 	return 0;
 }
@@ -200,7 +200,7 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		buffer.Flags = FAUDIO_END_OF_STREAM;
 		buffer.AudioBytes = entry->PlayRegion.dwLength;
-		buffer.pAudioData = FACT_memptr(
+		buffer.pAudioData = FAudio_memptr(
 			pWaveBank->io,
 			entry->PlayRegion.dwOffset
 		);

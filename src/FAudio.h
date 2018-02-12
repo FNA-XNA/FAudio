@@ -267,6 +267,87 @@ typedef struct FAudioDebugConfiguration
 #define FAUDIO_LOG_MEMORY		0x0100
 #define FAUDIO_LOG_STREAMING		0x1000
 
+#ifndef _SPEAKER_POSITIONS_
+#define SPEAKER_FRONT_LEFT		0x00000001
+#define SPEAKER_FRONT_RIGHT		0x00000002
+#define SPEAKER_FRONT_CENTER		0x00000004
+#define SPEAKER_LOW_FREQUENCY		0x00000008
+#define SPEAKER_BACK_LEFT		0x00000010
+#define SPEAKER_BACK_RIGHT		0x00000020
+#define SPEAKER_FRONT_LEFT_OF_CENTER	0x00000040
+#define SPEAKER_FRONT_RIGHT_OF_CENTER	0x00000080
+#define SPEAKER_BACK_CENTER		0x00000100
+#define SPEAKER_SIDE_LEFT		0x00000200
+#define SPEAKER_SIDE_RIGHT		0x00000400
+#define SPEAKER_TOP_CENTER		0x00000800
+#define SPEAKER_TOP_FRONT_LEFT		0x00001000
+#define SPEAKER_TOP_FRONT_CENTER	0x00002000
+#define SPEAKER_TOP_FRONT_RIGHT		0x00004000
+#define SPEAKER_TOP_BACK_LEFT		0x00008000
+#define SPEAKER_TOP_BACK_CENTER		0x00010000
+#define SPEAKER_TOP_BACK_RIGHT		0x00020000
+#define _SPEAKER_POSITIONS_
+#endif
+
+#ifndef _SPEAKER_COMBINATIONS_
+#define SPEAKER_MONO	SPEAKER_FRONT_CENTER
+#define SPEAKER_STEREO	(SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT)
+#define SPEAKER_2POINT1 \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_LOW_FREQUENCY	)
+#define SPEAKER_SURROUND \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_FRONT_CENTER	| \
+		SPEAKER_BACK_CENTER	)
+#define SPEAKER_QUAD \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_BACK_LEFT	| \
+		SPEAKER_BACK_RIGHT	)
+#define SPEAKER_4POINT1 \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_LOW_FREQUENCY	| \
+		SPEAKER_BACK_LEFT	| \
+		SPEAKER_BACK_RIGHT	)
+#define SPEAKER_5POINT1 \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_FRONT_CENTER	| \
+		SPEAKER_LOW_FREQUENCY	| \
+		SPEAKER_BACK_LEFT	| \
+		SPEAKER_BACK_RIGHT	)
+#define SPEAKER_7POINT1 \
+	(	SPEAKER_FRONT_LEFT		| \
+		SPEAKER_FRONT_RIGHT		| \
+		SPEAKER_FRONT_CENTER		| \
+		SPEAKER_LOW_FREQUENCY		| \
+		SPEAKER_BACK_LEFT		| \
+		SPEAKER_BACK_RIGHT		| \
+		SPEAKER_FRONT_LEFT_OF_CENTER	| \
+		SPEAKER_FRONT_RIGHT_OF_CENTER	)
+#define SPEAKER_5POINT1_SURROUND \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_FRONT_CENTER	| \
+		SPEAKER_LOW_FREQUENCY	| \
+		SPEAKER_SIDE_LEFT	| \
+		SPEAKER_SIDE_RIGHT	)
+#define SPEAKER_7POINT1_SURROUND \
+	(	SPEAKER_FRONT_LEFT	| \
+		SPEAKER_FRONT_RIGHT	| \
+		SPEAKER_FRONT_CENTER	| \
+		SPEAKER_LOW_FREQUENCY	| \
+		SPEAKER_BACK_LEFT	| \
+		SPEAKER_BACK_RIGHT	| \
+		SPEAKER_SIDE_LEFT	| \
+		SPEAKER_SIDE_RIGHT	)
+#define SPEAKER_XBOX SPEAKER_5POINT1
+#define _SPEAKER_COMBINATIONS_
+#endif
+
 /* FAudio Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
@@ -587,6 +668,36 @@ struct FAudioVoiceCallback
 /* Functions */
 
 FAUDIOAPI uint32_t FAudioCreateReverb(void **ppApo, uint32_t Flags);
+
+/* FAudio I/O API */
+
+typedef size_t (FAUDIOCALL * FAudio_readfunc)(
+	void *data,
+	void *dst,
+	size_t size,
+	size_t count
+);
+typedef int64_t (FAUDIOCALL * FAudio_seekfunc)(
+	void *data,
+	int64_t offset,
+	int whence
+);
+typedef int (FAUDIOCALL * FAudio_closefunc)(
+	void *data
+);
+
+typedef struct FAudioIOStream
+{
+	void *data;
+	FAudio_readfunc read;
+	FAudio_seekfunc seek;
+	FAudio_closefunc close;
+} FAudioIOStream;
+
+FAUDIOAPI FAudioIOStream* FAudio_fopen(const char *path);
+FAUDIOAPI FAudioIOStream* FAudio_memopen(void *mem, int len);
+FAUDIOAPI uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset);
+FAUDIOAPI void FAudio_close(FAudioIOStream *io);
 
 #ifdef __cplusplus
 }

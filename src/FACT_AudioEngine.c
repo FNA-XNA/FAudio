@@ -1335,7 +1335,7 @@ uint32_t FACTAudioEngine_CreateSoundBank(
  */
 uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTAudioEngine *pEngine,
-	FACTIOStream *io,
+	FAudioIOStream *io,
 	uint16_t isStreaming,
 	FACTWaveBank **ppWaveBank
 ) {
@@ -1506,7 +1506,7 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 ) {
 	return FACT_INTERNAL_ParseWaveBank(
 		pEngine,
-		FACT_memopen((void*) pvBuffer, dwSize),
+		FAudio_memopen((void*) pvBuffer, dwSize),
 		0,
 		ppWaveBank
 	);
@@ -1517,7 +1517,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	const FACTStreamingParameters *pParms,
 	FACTWaveBank **ppWaveBank
 ) {
-	FACTIOStream *io = (FACTIOStream*) pParms->file;
+	FAudioIOStream *io = (FAudioIOStream*) pParms->file;
 	io->seek(io, pParms->offset, 0);
 	return FACT_INTERNAL_ParseWaveBank(
 		pEngine,

@@ -5,7 +5,7 @@
  * See LICENSE for details.
  */
 
-#include "FACT_internal.h"
+#include "FAudio_internal.h"
 
 #include <SDL.h>
 
@@ -474,42 +474,42 @@ uint32_t FAudio_timems()
 	return SDL_GetTicks();
 }
 
-/* FACT I/O */
+/* FAudio I/O */
 
-FACTIOStream* FACT_fopen(const char *path)
+FAudioIOStream* FAudio_fopen(const char *path)
 {
-	FACTIOStream *io = (FACTIOStream*) SDL_malloc(
-		sizeof(FACTIOStream)
+	FAudioIOStream *io = (FAudioIOStream*) SDL_malloc(
+		sizeof(FAudioIOStream)
 	);
 	SDL_RWops *rwops = SDL_RWFromFile(path, "rb");
 	io->data = rwops;
-	io->read = (FACT_readfunc) rwops->read;
-	io->seek = (FACT_seekfunc) rwops->seek;
-	io->close = (FACT_closefunc) rwops->close;
+	io->read = (FAudio_readfunc) rwops->read;
+	io->seek = (FAudio_seekfunc) rwops->seek;
+	io->close = (FAudio_closefunc) rwops->close;
 	return io;
 }
 
-FACTIOStream* FACT_memopen(void *mem, int len)
+FAudioIOStream* FAudio_memopen(void *mem, int len)
 {
-	FACTIOStream *io = (FACTIOStream*) SDL_malloc(
-		sizeof(FACTIOStream)
+	FAudioIOStream *io = (FAudioIOStream*) SDL_malloc(
+		sizeof(FAudioIOStream)
 	);
 	SDL_RWops *rwops = SDL_RWFromMem(mem, len);
 	io->data = rwops;
-	io->read = (FACT_readfunc) rwops->read;
-	io->seek = (FACT_seekfunc) rwops->seek;
-	io->close = (FACT_closefunc) rwops->close;
+	io->read = (FAudio_readfunc) rwops->read;
+	io->seek = (FAudio_seekfunc) rwops->seek;
+	io->close = (FAudio_closefunc) rwops->close;
 	return io;
 }
 
-uint8_t* FACT_memptr(FACTIOStream *io, size_t offset)
+uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 {
 	SDL_RWops *rwops = (SDL_RWops*) io->data;
 	FAudio_assert(rwops->type == SDL_RWOPS_MEMORY);
 	return rwops->hidden.mem.base + offset;
 }
 
-void FACT_close(FACTIOStream *io)
+void FAudio_close(FAudioIOStream *io)
 {
 	io->close(io->data);
 	SDL_free(io);

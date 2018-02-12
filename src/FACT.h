@@ -670,36 +670,6 @@ FACTAPI void FACT_XNA_SetSongVolume(
 
 FACTAPI uint32_t FACT_XNA_GetSongEnded(FACTXNASong *song);
 
-/* FACT I/O API */
-
-typedef size_t (FACTCALL * FACT_readfunc)(
-	void *data,
-	void *dst,
-	size_t size,
-	size_t count
-);
-typedef int64_t (FACTCALL * FACT_seekfunc)(
-	void *data,
-	int64_t offset,
-	int whence
-);
-typedef int (FACTCALL * FACT_closefunc)(
-	void *data
-);
-
-typedef struct FACTIOStream
-{
-	void *data;
-	FACT_readfunc read;
-	FACT_seekfunc seek;
-	FACT_closefunc close;
-} FACTIOStream;
-
-FACTAPI FACTIOStream* FACT_fopen(const char *path);
-FACTAPI FACTIOStream* FACT_memopen(void *mem, int len);
-FACTAPI uint8_t* FACT_memptr(FACTIOStream *io, size_t offset);
-FACTAPI void FACT_close(FACTIOStream *io);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
