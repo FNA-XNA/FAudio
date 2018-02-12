@@ -647,29 +647,6 @@ FACTAPI uint32_t FACTCue_SetOutputVoiceMatrix(
 	const float *pLevelMatrix /* SourceChannels * DestinationChannels */
 );
 
-/* XNA Sound API */
-
-typedef struct FACTXNASong FACTXNASong;
-
-FACTAPI FACTXNASong* FACT_XNA_GenSong(const char* name);
-
-FACTAPI void FACT_XNA_DisposeSong(FACTXNASong *song);
-
-FACTAPI void FACT_XNA_PlaySong(FACTXNASong *song);
-
-FACTAPI void FACT_XNA_PauseSong(FACTXNASong *song);
-
-FACTAPI void FACT_XNA_ResumeSong(FACTXNASong *song);
-
-FACTAPI void FACT_XNA_StopSong(FACTXNASong *song);
-
-FACTAPI void FACT_XNA_SetSongVolume(
-	FACTXNASong *song,
-	float volume
-);
-
-FACTAPI uint32_t FACT_XNA_GetSongEnded(FACTXNASong *song);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -26,8 +26,8 @@ FACTSRC = \
 	src/FACT_WaveBank.c \
 	src/FACT_Wave.c \
 	src/FACT_Cue.c \
-	src/FACT_XNA.c \
 	src/FACT_internal.c \
+	src/XNA_Song.c \
 	src/e_log.c \
 	src/e_log10.c \
 	src/FAudio_platform_sdl2.c
