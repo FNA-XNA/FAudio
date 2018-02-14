@@ -118,7 +118,11 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	 * extra sample needed for interpolating past the "end" of the
 	 * unresampled buffer.
 	 */
-	toDecode = voice->src.decodeSamples * voice->src.resampleStep;
+	toDecode = (
+		voice->src.decodeSamples *
+		voice->src.format.nChannels *
+		voice->src.resampleStep
+	);
 	toDecode += (
 		/* If frac > 0, int goes up by one... */
 		(voice->src.resampleOffset + FIXED_FRACTION_MASK) &

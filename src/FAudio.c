@@ -197,7 +197,7 @@ uint32_t FAudio_CreateSourceVoice(
 
 	/* Sample Storage */
 	(*ppSourceVoice)->src.decodeSamples = (
-		audio->updateSize * pSourceFormat->nChannels *
+		audio->updateSize *
 		(uint32_t) FAudio_ceil(
 			(double) pSourceFormat->nSamplesPerSec /
 			(double) audio->master->master.inputSampleRate
@@ -206,6 +206,7 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
 		sizeof(int16_t) *
 		(*ppSourceVoice)->src.decodeSamples *
+		pSourceFormat->nChannels *
 		(uint32_t) FAudio_ceil(MaxFrequencyRatio)
 	);
 
@@ -1296,7 +1297,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 
 	/* Sample Storage */
 	voice->src.decodeSamples = (
-		voice->audio->updateSize * voice->src.format.nChannels *
+		voice->audio->updateSize *
 		(uint32_t) FAudio_ceil(
 			(double) NewSourceSampleRate /
 			(double) voice->audio->master->master.inputSampleRate
@@ -1305,6 +1306,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	voice->src.decodeCache = (int16_t*) FAudio_malloc(
 		sizeof(int16_t) *
 		voice->src.decodeSamples *
+		voice->src.format.nChannels *
 		(uint32_t) FAudio_ceil(voice->src.maxFreqRatio)
 	);
 
