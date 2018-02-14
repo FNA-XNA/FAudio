@@ -1,11 +1,11 @@
-This is FACT#, a C# wrapper for FACT, an XACT reimplementation for FNA.
+This is FAudio#, a C# wrapper for FAudio, an XAudio reimplementation for FNA.
 
 Project Website: http://fna-xna.github.io/
 
 License
 -------
-FACT# is released under the zlib license. See LICENSE for details.
+FAudio# is released under the zlib license. See LICENSE for details.
 
-Building FACT#
---------------------
+Building FAudio#
+----------------
 Just type `make` in the root directory!

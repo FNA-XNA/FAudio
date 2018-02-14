@@ -1,10 +1,10 @@
-# Makefile for FACT#
+# Makefile for FAudio#
 # Written by Ethan "flibitijibibo" Lee
 
 build: clean
 	mkdir bin
-	cp FACT-CS.dll.config bin
-	dmcs /unsafe -debug -out:bin/FACT-CS.dll -target:library FACT.cs
+	cp FAudio-CS.dll.config bin
+	dmcs /unsafe -debug -out:bin/FAudio-CS.dll -target:library FAudio.cs
 
 clean:
 	rm -rf bin

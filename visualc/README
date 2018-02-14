@@ -1,6 +1,6 @@
-Building FACT for Windows
--------------------------
-FACT uses Visual Studio 2010 to build on Windows.
+Building FAudio for Windows
+---------------------------
+FAudio uses Visual Studio 2010 to build on Windows.
 
 TODO: REMOVE C RUNTIME DEPENDENCY!
 
@@ -15,5 +15,5 @@ version number (for example, 'SDL2-2.0.7' should be 'SDL2').
 
 Compiling
 ---------
-1. Build FACT.sln
+1. Build FAudio.sln
 2. Grab the output DLL along with SDL2.dll, ship it!

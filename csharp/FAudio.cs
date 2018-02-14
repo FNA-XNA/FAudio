@@ -1,4 +1,4 @@
-/* FACT# - C# Wrapper for FACT
+/* FAudio# - C# Wrapper for FAudio
  *
  * Copyright (c) 2018 Ethan Lee.
  *
@@ -29,11 +29,11 @@ using System;
 using System.Runtime.InteropServices;
 #endregion
 
-public static class FACT
+public static class FAudio
 {
 	#region Native Library Name
 
-	const string nativeLibName = "FACT.dll";
+	const string nativeLibName = "FAudio.dll";
 
 	#endregion
 

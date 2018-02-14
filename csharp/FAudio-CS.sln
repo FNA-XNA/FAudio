@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FACT-CS", "FACT-CS.csproj", "{4FF0E874-ADB4-4AE5-B059-DD6116C4A370}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FAudio-CS", "FAudio-CS.csproj", "{4FF0E874-ADB4-4AE5-B059-DD6116C4A370}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +15,6 @@ Global
 		{4FF0E874-ADB4-4AE5-B059-DD6116C4A370}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = FACT-CS.csproj
+		StartupItem = FAudio-CS.csproj
 	EndGlobalSection
 EndGlobal

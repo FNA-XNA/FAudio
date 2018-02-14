@@ -1,4 +1,4 @@
-/* FACT - XACT Reimplementation for FNA
+/* FAudio - XAudio Reimplementation for FNA
  * Copyright 2009-2018 Ethan Lee and the MonoGame Team
  *
  * Released under the Microsoft Public License.

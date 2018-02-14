@@ -1,4 +1,4 @@
-# Makefile for FACT
+# Makefile for FAudio
 # Written by Ethan "flibitijibibo" Lee
 
 # System information
@@ -16,7 +16,7 @@ endif
 CFLAGS += -g -Wall -pedantic -fpic -fPIC -shared
 
 # Source lists
-FACTSRC = \
+FAUDIOSRC = \
 	src/F3DAudio.c \
 	src/FACT3D.c \
 	src/FAudio.c \
@@ -29,18 +29,18 @@ FACTSRC = \
 	src/FAudio_platform_sdl2.c
 
 # Object code lists
-FACTOBJ = $(FACTSRC:%.c=%.o)
+FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
 
 # Targets
 
-all: $(FACTOBJ)
-	$(CC) $(CFLAGS) -o libFACT.$(TARGET) $(FACTOBJ) `sdl2-config --libs`
+all: $(FAUDIOOBJ)
+	$(CC) $(CFLAGS) -o libFAudio.$(TARGET) $(FAUDIOOBJ) `sdl2-config --libs`
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
 
 clean:
-	rm -f $(FACTOBJ) libFACT.$(TARGET)
+	rm -f $(FAUDIOOBJ) libFAudio.$(TARGET)
 
 .PHONY: test tool
 

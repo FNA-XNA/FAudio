@@ -12,7 +12,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}</ProjectGuid>
-    <RootNamespace>FACT</RootNamespace>
+    <RootNamespace>FAudio</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

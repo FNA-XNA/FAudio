@@ -1,5 +1,6 @@
-This is FACT, an XACT reimplementation that focuses solely on developing a fully
-accurate XACT runtime for the FNA project.
+This is FAudio, an XAudio reimplementation that focuses solely on developing
+fully accurate DirectX Audio runtime librariess for the FNA project, including
+XAudio2, X3DAudio, XAPO, and XACT.
 
 Project Website: http://fna-xna.github.io/
 
@@ -10,7 +11,7 @@ been fully integrated into FNA, unless you really like broken software.
 
 License
 -------
-FACT is released under the Microsoft Public License. See LICENSE for details.
+FAudio is released under the Microsoft Public License. See LICENSE for details.
 
 FNA uses code from the unxwb project, specially released under the MonoGame
 project license. See unxwb.LICENSE for details.
