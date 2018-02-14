@@ -427,7 +427,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	float **sampleCache;
 	uint32_t *outputSamples;
 	uint32_t inChannels, outChannels;
-	uint32_t inSampleRate, outSampleRate;
+	uint32_t outSampleRate;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
@@ -437,14 +437,12 @@ uint32_t FAudioVoice_SetOutputVoices(
 		sampleCache = &voice->src.outputResampleCache;
 		outputSamples = &voice->src.outputSamples;
 		inChannels = voice->src.format.nChannels;
-		inSampleRate = voice->src.format.nSamplesPerSec;
 	}
 	else
 	{
 		sampleCache = &voice->mix.outputResampleCache;
 		outputSamples = &voice->mix.outputSamples;
 		inChannels = voice->mix.inputChannels;
-		inSampleRate = voice->mix.inputSampleRate;
 
 		/* FIXME: This is lazy... */
 		if (voice->mix.resampler != NULL)
@@ -731,8 +729,8 @@ uint32_t FAudioVoice_SetOutputVoices(
 	*outputSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		inChannels *
-		(double) inSampleRate /
-		(double) outSampleRate
+		(double) outSampleRate /
+		(double) voice->audio->master->master.inputSampleRate
 	);
 	*sampleCache = (float*) FAudio_malloc(sizeof(float) * (*outputSamples));
 
@@ -1320,8 +1318,8 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	voice->src.outputSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		voice->src.format.nChannels *
-		(double) NewSourceSampleRate /
-		(double) outSampleRate
+		(double) outSampleRate /
+		(double) voice->audio->master->master.inputSampleRate
 	);
 	voice->src.outputResampleCache = (float*) FAudio_malloc(
 		sizeof(float) * voice->src.outputSamples
