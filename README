@@ -1,5 +1,5 @@
 This is FAudio, an XAudio reimplementation that focuses solely on developing
-fully accurate DirectX Audio runtime librariess for the FNA project, including
+fully accurate DirectX Audio runtime libraries for the FNA project, including
 XAudio2, X3DAudio, XAPO, and XACT3.
 
 Project Website: http://fna-xna.github.io/
