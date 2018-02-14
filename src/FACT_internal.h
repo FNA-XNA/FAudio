@@ -460,3 +460,21 @@ void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
 void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback);
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext);
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback);
+
+/* Parsing functions */
+uint32_t FACT_INTERNAL_ParseAudioEngine(
+	FACTAudioEngine *pEngine,
+	const FACTRuntimeParameters *pParams
+);
+uint32_t FACT_INTERNAL_ParseSoundBank(
+	FACTAudioEngine *pEngine,
+	const void *pvBuffer,
+	uint32_t dwSize,
+	FACTSoundBank **ppSoundBank
+);
+uint32_t FACT_INTERNAL_ParseWaveBank(
+	FACTAudioEngine *pEngine,
+	FAudioIOStream *io,
+	uint16_t isStreaming,
+	FACTWaveBank **ppWaveBank
+);
