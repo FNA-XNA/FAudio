@@ -196,18 +196,16 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
 
 	/* Sample Storage */
-	(*ppSourceVoice)->src.decodeSamples = (
+	(*ppSourceVoice)->src.decodeSamples = (uint32_t) FAudio_ceil(
 		audio->updateSize *
-		(uint32_t) FAudio_ceil(
-			(double) pSourceFormat->nSamplesPerSec /
-			(double) audio->master->master.inputSampleRate
-		)
+		pSourceFormat->nChannels *
+		(double) MaxFrequencyRatio *
+		(double) pSourceFormat->nSamplesPerSec /
+		(double) audio->master->master.inputSampleRate
 	);
 	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
 		sizeof(int16_t) *
-		(*ppSourceVoice)->src.decodeSamples *
-		pSourceFormat->nChannels *
-		(uint32_t) FAudio_ceil(MaxFrequencyRatio)
+		(*ppSourceVoice)->src.decodeSamples
 	);
 
 	/* Add to list, finally. */
@@ -269,12 +267,11 @@ uint32_t FAudio_CreateSubmixVoice(
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 
 	/* Sample Storage */
-	(*ppSubmixVoice)->mix.inputSamples = (
-		audio->updateSize * InputChannels *
-		(uint32_t) FAudio_ceil(
-			(double) InputSampleRate /
-			(double) audio->master->master.inputSampleRate
-		)
+	(*ppSubmixVoice)->mix.inputSamples = (uint32_t) FAudio_ceil(
+		audio->updateSize *
+		InputChannels *
+		(double) InputSampleRate /
+		(double) audio->master->master.inputSampleRate
 	);
 	(*ppSubmixVoice)->mix.inputCache = (float*) FAudio_malloc(
 		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
@@ -731,11 +728,11 @@ uint32_t FAudioVoice_SetOutputVoices(
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
-	*outputSamples = (
-		voice->audio->updateSize * inChannels *
-		(uint32_t) FAudio_ceil(
-			(double) inSampleRate / (double) outSampleRate
-		)
+	*outputSamples = (uint32_t) FAudio_ceil(
+		voice->audio->updateSize *
+		inChannels *
+		(double) inSampleRate /
+		(double) outSampleRate
 	);
 	*sampleCache = (float*) FAudio_malloc(sizeof(float) * (*outputSamples));
 
@@ -1296,18 +1293,16 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	FAudio_free(voice->src.decodeCache);
 
 	/* Sample Storage */
-	voice->src.decodeSamples = (
+	voice->src.decodeSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
-		(uint32_t) FAudio_ceil(
-			(double) NewSourceSampleRate /
-			(double) voice->audio->master->master.inputSampleRate
-		)
+		voice->src.format.nChannels *
+		(double) voice->src.maxFreqRatio *
+		(double) NewSourceSampleRate /
+		(double) voice->audio->master->master.inputSampleRate
 	);
 	voice->src.decodeCache = (int16_t*) FAudio_malloc(
 		sizeof(int16_t) *
-		voice->src.decodeSamples *
-		voice->src.format.nChannels *
-		(uint32_t) FAudio_ceil(voice->src.maxFreqRatio)
+		voice->src.decodeSamples
 	);
 
 	if (voice->sends.SendCount == 0)
@@ -1322,11 +1317,11 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
-	voice->src.outputSamples = (
-		voice->audio->updateSize * voice->src.format.nChannels *
-		(uint32_t) FAudio_ceil(
-			(double) NewSourceSampleRate / (double) outSampleRate
-		)
+	voice->src.outputSamples = (uint32_t) FAudio_ceil(
+		voice->audio->updateSize *
+		voice->src.format.nChannels *
+		(double) NewSourceSampleRate /
+		(double) outSampleRate
 	);
 	voice->src.outputResampleCache = (float*) FAudio_malloc(
 		sizeof(float) * voice->src.outputSamples

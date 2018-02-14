@@ -119,7 +119,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	 * unresampled buffer.
 	 */
 	toDecode = (
-		voice->src.decodeSamples *
+		voice->audio->updateSize *
 		voice->src.format.nChannels *
 		voice->src.resampleStep
 	);
