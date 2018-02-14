@@ -21,11 +21,7 @@ FACTSRC = \
 	src/FACT3D.c \
 	src/FAudio.c \
 	src/FAudio_internal.c \
-	src/FACT_AudioEngine.c \
-	src/FACT_SoundBank.c \
-	src/FACT_WaveBank.c \
-	src/FACT_Wave.c \
-	src/FACT_Cue.c \
+	src/FACT.c \
 	src/FACT_internal.c \
 	src/XNA_Song.c \
 	src/e_log.c \
