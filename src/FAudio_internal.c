@@ -53,14 +53,14 @@
  * The Integer block works exactly like you'd expect.
  * The Fraction block is divided by the Integer's "One" value.
  * So, the above Fraction represented visually...
- *   1 << 31
- *   -------
  *   1 << 32
+ *   -------
+ *   1 << 31
  * ... which, simplified, is...
- *   1 << 0
- *   ------
  *   1 << 1
- * ... in other words, 1 / 2, or 0.5.
+ *   ------
+ *   1 << 0
+ * ... in other words, 2 / 1, or 1.5.
  */
 #define FIXED_PRECISION		32
 #define FIXED_ONE		(1L << FIXED_PRECISION)
