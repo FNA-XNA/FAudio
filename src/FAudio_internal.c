@@ -42,36 +42,36 @@
  * while at the same time not letting it drift off into death
  * thanks to floating point madness.
  *
- * Steps are stored in fixed-point with 12 bits for the fraction:
+ * Steps are stored in fixed-point with 32 bits for the fraction:
  *
- * 00000000000000000000 000000000000
- * ^ Integer block (20) ^ Fraction block (12)
+ * 00000000000000000000000000000000 00000000000000000000000000000000
+ * ^ Integer block (32)             ^ Fraction block (32)
  *
  * For example, to get 1.5:
- * 00000000000000000001 100000000000
+ * 00000000000000000000000000000001 10000000000000000000000000000000
  *
  * The Integer block works exactly like you'd expect.
  * The Fraction block is divided by the Integer's "One" value.
  * So, the above Fraction represented visually...
- *   1 << 11
+ *   1 << 31
  *   -------
- *   1 << 12
+ *   1 << 32
  * ... which, simplified, is...
  *   1 << 0
  *   ------
  *   1 << 1
  * ... in other words, 1 / 2, or 0.5.
  */
-#define FIXED_PRECISION		12
-#define FIXED_ONE		(1 << FIXED_PRECISION)
+#define FIXED_PRECISION		32
+#define FIXED_ONE		(1L << FIXED_PRECISION)
 
 /* Quick way to drop parts */
 #define FIXED_FRACTION_MASK	(FIXED_ONE - 1)
-#define FIXED_INTEGER_MASK	~RESAMPLE_FRACTION_MASK
+#define FIXED_INTEGER_MASK	~FIXED_FRACTION_MASK
 
 /* Helper macros to convert fixed to float */
 #define DOUBLE_TO_FIXED(dbl) \
-	((uint32_t) (dbl * FIXED_ONE + 0.5)) /* FIXME: Just round, or ceil? */
+	((uint64_t) (dbl * FIXED_ONE + 0.5))
 #define FIXED_TO_DOUBLE(fxd) ( \
 	(double) (fxd >> FIXED_PRECISION) + /* Integer part */ \
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
@@ -84,10 +84,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	uint32_t oChan;
 	FAudioVoice *out;
 	FAudioBuffer *buffer;
-	uint32_t toDecode, decoded, resampled;
+	uint64_t toDecode, decoded, resampled;
 	uint32_t samples, end, endRead;
 	int16_t *decodeCache;
-	uint32_t cur;
+	uint64_t cur;
 
 	/* Nothing to do? */
 	if (voice->src.bufferList == 0)
@@ -114,32 +114,27 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* The easy part is just multiplying the final output size with the step
-	 * to get the "real" buffer size. But we also need to ceil() to get the
-	 * extra sample needed for interpolating past the "end" of the
-	 * unresampled buffer.
+	 * to get the "real" buffer size...
 	 */
 	toDecode = (
 		voice->audio->updateSize *
 		voice->src.format.nChannels *
 		voice->src.resampleStep
 	);
-	toDecode += (
-		/* If frac > 0, int goes up by one... */
-		(voice->src.resampleOffset + FIXED_FRACTION_MASK) &
-		/* ... then we chop off anything left */
-		FIXED_FRACTION_MASK
+
+	/* ... but we also need to ceil() to get the extra sample needed for
+	 * interpolating past the "end" of the unresampled buffer.
+	 */
+	toDecode = (
+		(toDecode >> FIXED_PRECISION) +
+		((toDecode & FIXED_FRACTION_MASK) > 0) +
+		((voice->src.resampleOffset & FIXED_FRACTION_MASK) > 0)
 	);
-	toDecode >>= FIXED_PRECISION;
+
+	/* Also, stereo size MUST be a multiple of two! */
 	if (voice->src.format.nChannels == 2)
 	{
-		/* Stereo size MUST be a multiple of two! */
 		toDecode = (toDecode + 1) & ~1;
-	}
-
-	/* Add padding for resampler */
-	if (voice->src.resampleStep != FIXED_ONE)
-	{
-		toDecode += voice->src.format.nChannels;
 	}
 
 	/* Last call for buffer data! */
@@ -153,16 +148,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Decode... */
-	decoded = 0;
-	if (voice->src.resampleOffset & FIXED_FRACTION_MASK)
+	decoded = voice->src.totalPad;
+	for (i = 0; i < voice->src.totalPad; i += 1)
 	{
-		voice->src.decodeCache[0] = voice->src.pad[0];
-		if (voice->src.format.nChannels == 2)
-		{
-			voice->src.decodeCache[1] = voice->src.pad[1];
-			decoded += 1;
-		}
-		decoded += 1;
+		voice->src.decodeCache[i] = voice->src.pad[i];
 	}
 	while (decoded < toDecode && voice->src.bufferList != NULL)
 	{
@@ -251,17 +240,16 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (voice->sends.SendCount == 0)
 	{
 		/* Assign padding? */
+		voice->src.totalPad = 0; /* FIXME: How do we calculate this? */
 		if (voice->src.resampleOffset & FIXED_FRACTION_MASK)
 		{
-			if (voice->src.format.nChannels == 2)
-			{
-				voice->src.pad[0] = voice->src.decodeCache[decoded - 2];
-				voice->src.pad[1] = voice->src.decodeCache[decoded - 1];
-			}
-			else
-			{
-				voice->src.pad[0] = voice->src.decodeCache[decoded - 1];
-			}
+			voice->src.totalPad += voice->src.format.nChannels;
+		}
+		for (i = 0; i < voice->src.totalPad; i += 1)
+		{
+			voice->src.pad[i] = voice->src.decodeCache[
+				decoded - (voice->src.totalPad + i)
+			];
 		}
 		goto end;
 	}
@@ -279,19 +267,22 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 	else
 	{
-		/* Remove padding size */
-		resampled = decoded - voice->src.format.nChannels;
 		/* uint32_t to fixed32 */
-		resampled <<= FIXED_PRECISION;
+		resampled = decoded << FIXED_PRECISION;
 		/* Division also turns fixed32 into uint32_t */
 		resampled /= voice->src.resampleStep;
+		/* Don't go past the end of the resample cache, the lerp will
+		 * do the work of going to the extra samples for us
+		 */
+		resampled = FAudio_min(resampled, voice->src.outputSamples);
 
 		/* Linear Resampler */
 		decodeCache = voice->src.decodeCache;
 		cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
 		if (voice->src.format.nChannels == 2)
 		{
-			for (i = 0; i < resampled; i += 2)
+			i = 0;
+			while (1) /* Scary! */
 			{
 				/* lerp, then convert to float value */
 				voice->src.outputResampleCache[i] = (float) (
@@ -309,6 +300,13 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 				voice->src.resampleOffset += voice->src.resampleStep;
 				cur += voice->src.resampleStep;
 
+				/* Break before the decodeCache increment! */
+				i += 2;
+				if (i >= resampled)
+				{
+					break;
+				}
+
 				/* Only increment the sample offset by integer values.
 				 * Sometimes this will be 0 until cur accumulates
 				 * enough steps, especially for "slow" rates.
@@ -324,7 +322,8 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		}
 		else
 		{
-			for (i = 0; i < resampled; i += 1)
+			i = 0;
+			while (1) /* Scary! */
 			{
 				/* lerp, then convert to float value */
 				voice->src.outputResampleCache[i] = (float) (
@@ -336,6 +335,13 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 				/* Increment fraction offset by the stepping value */
 				voice->src.resampleOffset += voice->src.resampleStep;
 				cur += voice->src.resampleStep;
+
+				/* Break before the decodeCache increment! */
+				i += 1;
+				if (i >= resampled)
+				{
+					break;
+				}
 
 				/* Only increment the sample offset by integer values.
 				 * Sometimes this will be 0 until cur accumulates
@@ -352,17 +358,12 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Assign padding? */
-	if (voice->src.resampleOffset & FIXED_FRACTION_MASK)
+	voice->src.totalPad = decoded - (decodeCache - voice->src.decodeCache);
+	for (i = 0; i < voice->src.totalPad; i += 1)
 	{
-		if (voice->src.format.nChannels == 2)
-		{
-			voice->src.pad[0] = voice->src.decodeCache[decoded - 2];
-			voice->src.pad[1] = voice->src.decodeCache[decoded - 1];
-		}
-		else
-		{
-			voice->src.pad[0] = voice->src.decodeCache[decoded - 1];
-		}
+		voice->src.pad[i] = voice->src.decodeCache[
+			decoded - (voice->src.totalPad + i)
+		];
 	}
 
 	/* TODO: Effects, filters */

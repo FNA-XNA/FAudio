@@ -129,9 +129,10 @@ struct FAudioVoice
 
 			/* Resampler */
 			float resampleFreqRatio;
-			uint32_t resampleStep;
-			uint32_t resampleOffset;
-			int16_t pad[2]; /* Assuming stereo input */
+			uint64_t resampleStep;
+			uint64_t resampleOffset;
+			uint32_t totalPad;
+			int16_t pad[4]; /* Assuming stereo input */
 
 			/* Read-only */
 			float maxFreqRatio;
