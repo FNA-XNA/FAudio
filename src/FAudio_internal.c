@@ -127,8 +127,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	 */
 	toDecode = (
 		(toDecode >> FIXED_PRECISION) +
-		((toDecode & FIXED_FRACTION_MASK) > 0) +
-		((voice->src.resampleOffset & FIXED_FRACTION_MASK) > 0)
+		(
+			((toDecode & FIXED_FRACTION_MASK) > 0) +
+			((voice->src.resampleOffset & FIXED_FRACTION_MASK) > 0)
+		) * voice->src.format.nChannels
 	);
 
 	/* Also, stereo size MUST be a multiple of two! */
@@ -241,16 +243,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		/* Assign padding? */
 		voice->src.totalPad = 0; /* FIXME: How do we calculate this? */
-		if (voice->src.resampleOffset & FIXED_FRACTION_MASK)
-		{
-			voice->src.totalPad += voice->src.format.nChannels;
-		}
-		for (i = 0; i < voice->src.totalPad; i += 1)
-		{
-			voice->src.pad[i] = voice->src.decodeCache[
-				decoded - (voice->src.totalPad + i)
-			];
-		}
+		FAudio_assert(voice->src.resampleStep == FIXED_ONE);
 		goto end;
 	}
 
@@ -363,11 +356,32 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		(decodeCache - voice->src.decodeCache) -
 		voice->src.format.nChannels
 	);
-	for (i = 0; i < voice->src.totalPad; i += 1)
+	if (voice->src.format.nChannels == 2)
 	{
-		voice->src.pad[i] = voice->src.decodeCache[
-			decoded - (voice->src.totalPad + i)
-		];
+		if (voice->src.totalPad == 4)
+		{
+			voice->src.pad[0] = decodeCache[0];
+			voice->src.pad[1] = decodeCache[1];
+			voice->src.pad[2] = decodeCache[2];
+			voice->src.pad[3] = decodeCache[3];
+		}
+		else
+		{
+			voice->src.pad[0] = decodeCache[2];
+			voice->src.pad[1] = decodeCache[3];
+		}
+	}
+	else
+	{
+		if (voice->src.totalPad == 2)
+		{
+			voice->src.pad[0] = decodeCache[0];
+			voice->src.pad[1] = decodeCache[1];
+		}
+		else
+		{
+			voice->src.pad[0] = decodeCache[1];
+		}
 	}
 
 	/* TODO: Effects, filters */
