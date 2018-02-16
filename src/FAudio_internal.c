@@ -358,7 +358,11 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Assign padding? */
-	voice->src.totalPad = decoded - (decodeCache - voice->src.decodeCache);
+	voice->src.totalPad = (
+		decoded -
+		(decodeCache - voice->src.decodeCache) -
+		voice->src.format.nChannels
+	);
 	for (i = 0; i < voice->src.totalPad; i += 1)
 	{
 		voice->src.pad[i] = voice->src.decodeCache[
