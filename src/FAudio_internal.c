@@ -77,29 +77,217 @@
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
 )
 
+uint32_t FAudio_INTERNAL_DecodeBuffers(
+	FAudioSourceVoice *voice,
+	uint64_t *toDecode
+) {
+	uint32_t end, endRead, decoding, decoded = 0, resetOffset = 0;
+	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
+
+	/* ... FIXME: I keep going past the buffer so fuck it */
+	*toDecode += EXTRA_DECODE_PADDING;
+
+	/* This should never go past the max ratio size */
+	FAudio_assert(*toDecode <= voice->src.decodeSamples);
+
+	while (decoded < *toDecode && buffer != NULL)
+	{
+		decoding = *toDecode - decoded;
+
+		/* Start-of-buffer behavior */
+		if (	voice->src.curBufferOffset == buffer->PlayBegin &&
+			voice->src.callback != NULL &&
+			voice->src.callback->OnBufferStart != NULL	)
+		{
+			voice->src.callback->OnBufferStart(
+				voice->src.callback,
+				buffer->pContext
+			);
+		}
+
+		/* Check for end-of-buffer */
+		end = (buffer->LoopCount > 0 && buffer->LoopLength > 0) ?
+			buffer->LoopLength :
+			buffer->PlayLength;
+		endRead = FAudio_min(
+			end - voice->src.curBufferOffset,
+			decoding
+		);
+
+		/* Decode... */
+		voice->src.decode(
+			buffer,
+			voice->src.curBufferOffset,
+			voice->src.decodeCache + (decoded * voice->src.format.nChannels),
+			endRead,
+			&voice->src.format
+		);
+
+		/* FIXME: I keep going past the buffer so fuck it */
+		if (endRead < decoding)
+		{
+			FAudio_zero(
+				voice->src.decodeCache + endRead,
+				(decoding - endRead) * sizeof(int16_t)
+			);
+		}
+
+		/* End-of-buffer behavior */
+		if (endRead < decoding)
+		{
+			resetOffset += endRead;
+			if (buffer->LoopCount > 0)
+			{
+				voice->src.curBufferOffset = buffer->LoopBegin;
+				if (buffer->LoopCount < 0xFF)
+				{
+					buffer->LoopCount -= 1;
+				}
+				if (	voice->src.callback != NULL &&
+					voice->src.callback->OnLoopEnd != NULL	)
+				{
+					voice->src.callback->OnLoopEnd(
+						voice->src.callback,
+						buffer->pContext
+					);
+				}
+			}
+			else
+			{
+				/* For EOS we can stop storing fraction offsets */
+				if (buffer->Flags & FAUDIO_END_OF_STREAM)
+				{
+					voice->src.curBufferOffsetDec = 0;
+				}
+
+				/* Callbacks */
+				if (voice->src.callback != NULL)
+				{
+					if (voice->src.callback->OnBufferEnd != NULL)
+					{
+						voice->src.callback->OnBufferEnd(
+							voice->src.callback,
+							buffer->pContext
+						);
+					}
+					if (	buffer->Flags & FAUDIO_END_OF_STREAM &&
+						voice->src.callback->OnStreamEnd != NULL	)
+					{
+						voice->src.callback->OnStreamEnd(
+							voice->src.callback
+						);
+					}
+				}
+
+				/* Change active buffer, delete finished buffer */
+				voice->src.bufferList = voice->src.bufferList->next;
+				FAudio_free(buffer);
+				if (voice->src.bufferList != NULL)
+				{
+					buffer = &voice->src.bufferList->buffer;
+					voice->src.curBufferOffset = buffer->PlayBegin;
+				}
+				else
+				{
+					buffer = NULL;
+				}
+			}
+		}
+
+		/* Finally. */
+		decoded += endRead;
+	}
+
+	/* ... FIXME: I keep going past the buffer so fuck it */
+	*toDecode = decoded - EXTRA_DECODE_PADDING;
+	return resetOffset;
+}
+
+void FAudio_INTERNAL_ResamplePCM(
+	FAudioSourceVoice *voice,
+	float *resampleCache,
+	uint64_t toResample
+) {
+	/* Linear Resampler */
+	uint32_t i;
+	int16_t *decodeCache = voice->src.decodeCache;
+	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	if (voice->src.format.nChannels == 2)
+	{
+		for (i = 0; i < toResample; i += 1)
+		{
+			/* lerp, then convert to float value */
+			*resampleCache++ = (float) (
+				decodeCache[0] +
+				(decodeCache[2] - decodeCache[0]) *
+				FIXED_TO_DOUBLE(cur)
+			) / 32768.0f;
+			*resampleCache++ = (float) (
+				decodeCache[1] +
+				(decodeCache[3] - decodeCache[1]) *
+				FIXED_TO_DOUBLE(cur)
+			) / 32768.0f;
+
+			/* Increment fraction offset by the stepping value */
+			voice->src.resampleOffset += voice->src.resampleStep;
+			cur += voice->src.resampleStep;
+
+			/* Only increment the sample offset by integer values.
+			 * Sometimes this will be 0 until cur accumulates
+			 * enough steps, especially for "slow" rates.
+			 */
+			decodeCache += cur >> FIXED_PRECISION;
+			decodeCache += cur >> FIXED_PRECISION;
+
+			/* Now that any integer has been added, drop it.
+			 * The offset pointer will preserve the total.
+			 */
+			cur &= FIXED_FRACTION_MASK;
+		}
+	}
+	else
+	{
+		for (i = 0; i < toResample; i += 1)
+		{
+			/* lerp, then convert to float value */
+			*resampleCache++ = (float) (
+				decodeCache[0] +
+				(decodeCache[1] - decodeCache[0]) *
+				FIXED_TO_DOUBLE(cur)
+			) / 32768.0f;
+
+			/* Increment fraction offset by the stepping value */
+			voice->src.resampleOffset += voice->src.resampleStep;
+			cur += voice->src.resampleStep;
+
+			/* Only increment the sample offset by integer values.
+			 * Sometimes this will be 0 until cur accumulates
+			 * enough steps, especially for "slow" rates.
+			 */
+			decodeCache += cur >> FIXED_PRECISION;
+
+			/* Now that any integer has been added, drop it.
+			 * The offset pointer will preserve the total.
+			 */
+			cur &= FIXED_FRACTION_MASK;
+		}
+	}
+}
+
 void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
 	uint32_t i, j, co, ci;
-	/* Decode variables */
-	FAudioBuffer *buffer;
+	/* Decode/Resample variables */
 	uint64_t toDecode;
-	uint32_t end, endRead;
-	/* Resample variables */
-	int16_t *decodeCache;
+	uint64_t toResample;
+	uint32_t resetOffset;
 	float *resampleCache;
-	uint64_t toResample, cur;
 	/* Output mix variables */
 	float *stream;
 	uint32_t mixed;
 	uint32_t oChan;
 	FAudioVoice *out;
-
-	/* Nothing to do? */
-	if (voice->src.bufferList == 0)
-	{
-		return;
-	}
 
 	/* Calculate the resample stepping value */
 	if (voice->src.resampleFreqRatio != voice->src.freqRatio)
@@ -129,21 +317,16 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		);
 	}
 
+	/* Nothing to do? */
+	if (voice->src.bufferList == NULL)
+	{
+		return;
+	}
+
 	mixed = 0;
 	resampleCache = voice->src.outputResampleCache;
 	while (mixed < voice->src.outputSamples && voice->src.bufferList != NULL)
 	{
-		/* Start-of-buffer behavior */
-		buffer = &voice->src.bufferList->buffer;
-		if (	voice->src.curBufferOffset == buffer->PlayBegin &&
-			voice->src.callback != NULL &&
-			voice->src.callback->OnBufferStart != NULL	)
-		{
-			voice->src.callback->OnBufferStart(
-				voice->src.callback,
-				buffer->pContext
-			);
-		}
 
 		/* Base decode size, int to fixed... */
 		toDecode = (voice->src.outputSamples - mixed) * voice->src.resampleStep;
@@ -151,39 +334,12 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
 		/* ... fixed to int, truncating extra fraction from rounding. */
 		toDecode >>= FIXED_PRECISION;
-		/* ... FIXME: I keep going past the buffer so fuck it */
-		toDecode += EXTRA_DECODE_PADDING;
-		/* This should never go past the max ratio size */
-		FAudio_assert(toDecode <= voice->src.decodeSamples);
 
 		/* Decode... */
-		end = (buffer->LoopCount > 0 && buffer->LoopLength > 0) ?
-			buffer->LoopLength :
-			buffer->PlayLength;
-		endRead = FAudio_min(
-			end - voice->src.curBufferOffset,
-			toDecode
-		);
-		voice->src.decode(
-			buffer,
-			voice->src.curBufferOffset,
-			voice->src.decodeCache,
-			endRead,
-			&voice->src.format
-		);
-		if (endRead < toDecode)
-		{
-			/* FIXME: I keep going past the buffer so fuck it */
-			FAudio_zero(
-				voice->src.decodeCache + endRead,
-				(toDecode - endRead) * sizeof(int16_t)
-			);
-		}
+		resetOffset = FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
 
-		/* FIXME: I keep going past the buffer so fuck it... */
-		toResample = toDecode - EXTRA_DECODE_PADDING;
-		/* ... int to fixed... */
-		toResample <<= FIXED_PRECISION;
+		/* int to fixed... */
+		toResample = toDecode << FIXED_PRECISION;
 		/* ... round back down based on current offset... */
 		toResample -= voice->src.curBufferOffsetDec;
 		/* ... undo step size, fixed to int. */
@@ -194,7 +350,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		/* Resample... */
 		if (voice->src.resampleStep == FIXED_ONE)
 		{
-			/* Just convert to float... */
+			/* Actually, just convert to float... */
 			toResample *= voice->src.format.nChannels;
 			for (i = 0; i < toResample; i += 1)
 			{
@@ -204,126 +360,29 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		}
 		else
 		{
-			/* Linear Resampler */
-			decodeCache = voice->src.decodeCache;
-			cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
-			if (voice->src.format.nChannels == 2)
-			{
-				for (i = 0; i < toResample; i += 1)
-				{
-					/* lerp, then convert to float value */
-					*resampleCache++ = (float) (
-						decodeCache[0] +
-						(decodeCache[2] - decodeCache[0]) *
-						FIXED_TO_DOUBLE(cur)
-					) / 32768.0f;
-					*resampleCache++ = (float) (
-						decodeCache[1] +
-						(decodeCache[3] - decodeCache[1]) *
-						FIXED_TO_DOUBLE(cur)
-					) / 32768.0f;
-
-					/* Increment fraction offset by the stepping value */
-					voice->src.resampleOffset += voice->src.resampleStep;
-					cur += voice->src.resampleStep;
-
-					/* Only increment the sample offset by integer values.
-					 * Sometimes this will be 0 until cur accumulates
-					 * enough steps, especially for "slow" rates.
-					 */
-					decodeCache += cur >> FIXED_PRECISION;
-					decodeCache += cur >> FIXED_PRECISION;
-
-					/* Now that any integer has been added, drop it.
-					 * The offset pointer will preserve the total.
-					 */
-					cur &= FIXED_FRACTION_MASK;
-				}
-			}
-			else
-			{
-				for (i = 0; i < toResample; i += 1)
-				{
-					/* lerp, then convert to float value */
-					*resampleCache++ = (float) (
-						decodeCache[0] +
-						(decodeCache[1] - decodeCache[0]) *
-						FIXED_TO_DOUBLE(cur)
-					) / 32768.0f;
-
-					/* Increment fraction offset by the stepping value */
-					voice->src.resampleOffset += voice->src.resampleStep;
-					cur += voice->src.resampleStep;
-
-					/* Only increment the sample offset by integer values.
-					 * Sometimes this will be 0 until cur accumulates
-					 * enough steps, especially for "slow" rates.
-					 */
-					decodeCache += cur >> FIXED_PRECISION;
-
-					/* Now that any integer has been added, drop it.
-					 * The offset pointer will preserve the total.
-					 */
-					cur &= FIXED_FRACTION_MASK;
-				}
-			}
+			FAudio_INTERNAL_ResamplePCM(voice, resampleCache, toResample);
 		}
-		mixed += toResample; /* Finally. */
 
-		/* Increment fixed offset by resample size, int to fixed... */
-		voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
-		/* ... increment int offset by fixed offset, may be 0! */
-		voice->src.curBufferOffset += voice->src.curBufferOffsetDec >> FIXED_PRECISION;
-		/* ... chop off any ints we got from the above increment */
-		voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
-
-		/* End-of-buffer behavior */
-		if (endRead < toDecode || voice->src.curBufferOffset >= end)
+		/* Update buffer offsets */
+		if (voice->src.bufferList != NULL)
+		{
+			/* Increment fixed offset by resample size, int to fixed... */
+			voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
+			/* ... increment int offset by fixed offset, may be 0! */
+			voice->src.curBufferOffset += voice->src.curBufferOffsetDec >> FIXED_PRECISION;
+			/* ... subtract any increment not applicable to our possibly new buffer... */
+			voice->src.curBufferOffset -= resetOffset;
+			/* ... chop off any ints we got from the above increment */
+			voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
+		}
+		else
 		{
 			voice->src.curBufferOffsetDec = 0;
-			if (buffer->LoopCount > 0)
-			{
-				voice->src.curBufferOffset = buffer->LoopBegin;
-				if (buffer->LoopCount < 0xFF)
-				{
-					buffer->LoopCount -= 1;
-				}
-				if (	voice->src.callback != NULL &&
-					voice->src.callback->OnLoopEnd != NULL	)
-				{
-					voice->src.callback->OnLoopEnd(
-						voice->src.callback,
-						buffer->pContext
-					);
-				}
-			}
-			else
-			{
-				if (voice->src.callback != NULL)
-				{
-					if (voice->src.callback->OnBufferEnd != NULL)
-					{
-						voice->src.callback->OnBufferEnd(
-							voice->src.callback,
-							buffer->pContext
-						);
-					}
-					if (	buffer->Flags & FAUDIO_END_OF_STREAM &&
-						voice->src.callback->OnStreamEnd != NULL	)
-					{
-						voice->src.callback->OnStreamEnd(
-							voice->src.callback
-						);
-					}
-				}
-				voice->src.bufferList = voice->src.bufferList->next;
-				if (voice->src.bufferList == NULL)
-				{
-					voice->src.curBufferOffset = 0;
-				}
-				FAudio_free(buffer);
-			}
+			voice->src.curBufferOffset = 0;
 		}
+
+		/* Finally. */
+		mixed += toResample;
 	}
 	if (mixed == 0)
 	{
