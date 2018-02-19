@@ -198,13 +198,13 @@ uint32_t FAudio_CreateSourceVoice(
 	/* Sample Storage */
 	(*ppSourceVoice)->src.decodeSamples = (uint32_t) FAudio_ceil(
 		audio->updateSize *
-		pSourceFormat->nChannels *
 		(double) MaxFrequencyRatio *
 		(double) pSourceFormat->nSamplesPerSec /
 		(double) audio->master->master.inputSampleRate
-	);
+	) + EXTRA_DECODE_PADDING;
 	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
 		sizeof(int16_t) *
+		pSourceFormat->nChannels *
 		(*ppSourceVoice)->src.decodeSamples
 	);
 
@@ -728,11 +728,14 @@ uint32_t FAudioVoice_SetOutputVoices(
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
 	*outputSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
-		inChannels *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
-	*sampleCache = (float*) FAudio_malloc(sizeof(float) * (*outputSamples));
+	*sampleCache = (float*) FAudio_malloc(
+		sizeof(float) *
+		(*outputSamples) *
+		inChannels
+	);
 
 	/* Init fixed-rate SRC if applicable */
 	if (voice->type == FAUDIO_VOICE_SUBMIX)
@@ -1294,14 +1297,14 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	/* Sample Storage */
 	voice->src.decodeSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
-		voice->src.format.nChannels *
 		(double) voice->src.maxFreqRatio *
 		(double) NewSourceSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
-	);
+	) + EXTRA_DECODE_PADDING;
 	voice->src.decodeCache = (int16_t*) FAudio_malloc(
 		sizeof(int16_t) *
-		voice->src.decodeSamples
+		voice->src.decodeSamples *
+		voice->src.format.nChannels
 	);
 
 	if (voice->sends.SendCount == 0)
@@ -1318,12 +1321,13 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
 	voice->src.outputSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
-		voice->src.format.nChannels *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
 	voice->src.outputResampleCache = (float*) FAudio_malloc(
-		sizeof(float) * voice->src.outputSamples
+		sizeof(float) *
+		voice->src.outputSamples *
+		voice->src.format.nChannels
 	);
 	return 0;
 }

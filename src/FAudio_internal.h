@@ -80,9 +80,7 @@ typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples,
-	FAudioWaveFormatEx *format,
-	int16_t *msadpcmCache,
-	uint16_t *msadpcmExtra
+	FAudioWaveFormatEx *format
 );
 
 typedef void* FAudioPlatformFixedRateSRC;
@@ -120,19 +118,18 @@ struct FAudioVoice
 		struct
 		{
 			/* Sample storage */
+			#define EXTRA_DECODE_PADDING 2
 			uint32_t decodeSamples;
 			int16_t *decodeCache;
 			uint32_t outputSamples;
 			float *outputResampleCache;
-			int16_t msadpcmCache[1024];
-			uint16_t msadpcmExtra;
 
 			/* Resampler */
 			float resampleFreqRatio;
 			uint64_t resampleStep;
 			uint64_t resampleOffset;
-			uint32_t totalPad;
-			int16_t pad[4]; /* Assuming stereo input */
+			uint64_t curBufferOffsetDec;
+			uint32_t curBufferOffset;
 
 			/* Read-only */
 			float maxFreqRatio;
@@ -145,7 +142,6 @@ struct FAudioVoice
 			float freqRatio;
 			uint64_t totalSamples;
 			FAudioBufferEntry *bufferList;
-			uint32_t curBufferOffset;
 		} src;
 		struct
 		{
@@ -184,9 +180,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 		uint32_t curOffset, \
 		int16_t *decodeCache, \
 		uint32_t samples, \
-		FAudioWaveFormatEx *format, \
-		int16_t *msadpcmCache, \
-		uint16_t *msadpcmExtra \
+		FAudioWaveFormatEx *format \
 	);
 DECODE_FUNC(MonoPCM8)
 DECODE_FUNC(MonoPCM16)

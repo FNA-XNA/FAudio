@@ -79,15 +79,21 @@
 
 void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
+	/* Iterators */
 	uint32_t i, j, co, ci;
+	/* Decode variables */
+	FAudioBuffer *buffer;
+	uint64_t toDecode;
+	uint32_t end, endRead;
+	/* Resample variables */
+	int16_t *decodeCache;
+	float *resampleCache;
+	uint64_t toResample, cur;
+	/* Output mix variables */
 	float *stream;
+	uint32_t mixed;
 	uint32_t oChan;
 	FAudioVoice *out;
-	FAudioBuffer *buffer;
-	uint64_t toDecode, decoded, resampled;
-	uint32_t samples, end, endRead;
-	int16_t *decodeCache;
-	uint64_t cur;
 
 	/* Nothing to do? */
 	if (voice->src.bufferList == 0)
@@ -113,53 +119,23 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.resampleFreqRatio = voice->src.freqRatio;
 	}
 
-	/* The easy part is just multiplying the final output size with the step
-	 * to get the "real" buffer size...
-	 */
-	toDecode = (
-		voice->audio->updateSize *
-		voice->src.format.nChannels *
-		voice->src.resampleStep
-	);
-
-	/* ... but we also need to ceil() to get the extra sample needed for
-	 * interpolating past the "end" of the unresampled buffer.
-	 */
-	toDecode = (
-		(toDecode >> FIXED_PRECISION) +
-		(
-			((toDecode & FIXED_FRACTION_MASK) > 0) +
-			((voice->src.resampleOffset & FIXED_FRACTION_MASK) > 0)
-		) * voice->src.format.nChannels
-	);
-
-	/* Also, stereo size MUST be a multiple of two! */
-	if (voice->src.format.nChannels == 2)
-	{
-		toDecode = (toDecode + 1) & ~1;
-	}
-
 	/* Last call for buffer data! */
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassStart != NULL)
 	{
 		voice->src.callback->OnVoiceProcessingPassStart(
 			voice->src.callback,
-			toDecode * sizeof(int16_t)
+			voice->src.decodeSamples * sizeof(int16_t)
 		);
 	}
 
-	/* Decode... */
-	decoded = voice->src.totalPad;
-	for (i = 0; i < voice->src.totalPad; i += 1)
-	{
-		voice->src.decodeCache[i] = voice->src.pad[i];
-	}
-	while (decoded < toDecode && voice->src.bufferList != NULL)
+	mixed = 0;
+	resampleCache = voice->src.outputResampleCache;
+	while (mixed < voice->src.outputSamples && voice->src.bufferList != NULL)
 	{
 		/* Start-of-buffer behavior */
 		buffer = &voice->src.bufferList->buffer;
-		if (	voice->src.curBufferOffset == 0 &&
+		if (	voice->src.curBufferOffset == buffer->PlayBegin &&
 			voice->src.callback != NULL &&
 			voice->src.callback->OnBufferStart != NULL	)
 		{
@@ -169,30 +145,142 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			);
 		}
 
-		/* Oh look it's the actual dang decoding part */
-		samples = (toDecode - decoded) / voice->src.format.nChannels;
+		/* Base decode size, int to fixed... */
+		toDecode = (voice->src.outputSamples - mixed) * voice->src.resampleStep;
+		/* ... rounded up based on current offset... */
+		toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
+		/* ... fixed to int, truncating extra fraction from rounding. */
+		toDecode >>= FIXED_PRECISION;
+		/* ... FIXME: I keep going past the buffer so fuck it */
+		toDecode += EXTRA_DECODE_PADDING;
+		/* This should never go past the max ratio size */
+		FAudio_assert(toDecode <= voice->src.decodeSamples);
+
+		/* Decode... */
 		end = (buffer->LoopCount > 0 && buffer->LoopLength > 0) ?
 			buffer->LoopLength :
 			buffer->PlayLength;
 		endRead = FAudio_min(
 			end - voice->src.curBufferOffset,
-			samples
+			toDecode
 		);
 		voice->src.decode(
 			buffer,
 			voice->src.curBufferOffset,
-			voice->src.decodeCache + decoded,
+			voice->src.decodeCache,
 			endRead,
-			&voice->src.format,
-			voice->src.msadpcmCache,
-			&voice->src.msadpcmExtra
+			&voice->src.format
 		);
-		decoded += endRead * voice->src.format.nChannels;
-		voice->src.curBufferOffset += endRead;
+		if (endRead < toDecode)
+		{
+			/* FIXME: I keep going past the buffer so fuck it */
+			FAudio_zero(
+				voice->src.decodeCache + endRead,
+				(toDecode - endRead) * sizeof(int16_t)
+			);
+		}
+
+		/* FIXME: I keep going past the buffer so fuck it... */
+		toResample = toDecode - EXTRA_DECODE_PADDING;
+		/* ... int to fixed... */
+		toResample <<= FIXED_PRECISION;
+		/* ... round back down based on current offset... */
+		toResample -= voice->src.curBufferOffsetDec;
+		/* ... undo step size, fixed to int. */
+		toResample /= voice->src.resampleStep;
+		/* FIXME: I feel like this should be an assert but I suck */
+		toResample = FAudio_min(toResample, voice->src.outputSamples - mixed);
+
+		/* Resample... */
+		if (voice->src.resampleStep == FIXED_ONE)
+		{
+			/* Just convert to float... */
+			toResample *= voice->src.format.nChannels;
+			for (i = 0; i < toResample; i += 1)
+			{
+				*resampleCache++ = (float) voice->src.decodeCache[i] / 32768.0f;
+			}
+			toResample /= voice->src.format.nChannels;
+		}
+		else
+		{
+			/* Linear Resampler */
+			decodeCache = voice->src.decodeCache;
+			cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+			if (voice->src.format.nChannels == 2)
+			{
+				for (i = 0; i < toResample; i += 1)
+				{
+					/* lerp, then convert to float value */
+					*resampleCache++ = (float) (
+						decodeCache[0] +
+						(decodeCache[2] - decodeCache[0]) *
+						FIXED_TO_DOUBLE(cur)
+					) / 32768.0f;
+					*resampleCache++ = (float) (
+						decodeCache[1] +
+						(decodeCache[3] - decodeCache[1]) *
+						FIXED_TO_DOUBLE(cur)
+					) / 32768.0f;
+
+					/* Increment fraction offset by the stepping value */
+					voice->src.resampleOffset += voice->src.resampleStep;
+					cur += voice->src.resampleStep;
+
+					/* Only increment the sample offset by integer values.
+					 * Sometimes this will be 0 until cur accumulates
+					 * enough steps, especially for "slow" rates.
+					 */
+					decodeCache += cur >> FIXED_PRECISION;
+					decodeCache += cur >> FIXED_PRECISION;
+
+					/* Now that any integer has been added, drop it.
+					 * The offset pointer will preserve the total.
+					 */
+					cur &= FIXED_FRACTION_MASK;
+				}
+			}
+			else
+			{
+				for (i = 0; i < toResample; i += 1)
+				{
+					/* lerp, then convert to float value */
+					*resampleCache++ = (float) (
+						decodeCache[0] +
+						(decodeCache[1] - decodeCache[0]) *
+						FIXED_TO_DOUBLE(cur)
+					) / 32768.0f;
+
+					/* Increment fraction offset by the stepping value */
+					voice->src.resampleOffset += voice->src.resampleStep;
+					cur += voice->src.resampleStep;
+
+					/* Only increment the sample offset by integer values.
+					 * Sometimes this will be 0 until cur accumulates
+					 * enough steps, especially for "slow" rates.
+					 */
+					decodeCache += cur >> FIXED_PRECISION;
+
+					/* Now that any integer has been added, drop it.
+					 * The offset pointer will preserve the total.
+					 */
+					cur &= FIXED_FRACTION_MASK;
+				}
+			}
+		}
+		mixed += toResample; /* Finally. */
+
+		/* Increment fixed offset by resample size, int to fixed... */
+		voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
+		/* ... increment int offset by fixed offset, may be 0! */
+		voice->src.curBufferOffset += voice->src.curBufferOffsetDec >> FIXED_PRECISION;
+		/* ... chop off any ints we got from the above increment */
+		voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
 
 		/* End-of-buffer behavior */
-		if (endRead < samples || voice->src.curBufferOffset == end)
+		if (endRead < toDecode || voice->src.curBufferOffset >= end)
 		{
+			voice->src.curBufferOffsetDec = 0;
 			if (buffer->LoopCount > 0)
 			{
 				voice->src.curBufferOffset = buffer->LoopBegin;
@@ -237,7 +325,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			}
 		}
 	}
-	if (decoded == 0)
+	if (mixed == 0)
 	{
 		goto end;
 	}
@@ -245,153 +333,12 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Nowhere to send it? Just skip resampling...*/
 	if (voice->sends.SendCount == 0)
 	{
-		/* Assign padding? */
-		voice->src.totalPad = 0; /* FIXME: How do we calculate this? */
-		FAudio_assert(voice->src.resampleStep == FIXED_ONE);
 		goto end;
-	}
-
-	/* Convert to float, resampling if necessary */
-	if (voice->src.resampleStep == FIXED_ONE)
-	{
-		/* Just convert to float... */
-		for (i = 0; i < decoded; i += 1)
-		{
-			voice->src.outputResampleCache[i] =
-				(float) voice->src.decodeCache[i] / 32768.0f;
-		}
-		resampled = decoded;
-	}
-	else
-	{
-		/* uint32_t to fixed32 */
-		resampled = decoded << FIXED_PRECISION;
-		/* Division also turns fixed32 into uint32_t */
-		resampled /= voice->src.resampleStep;
-		/* Don't go past the end of the resample cache, the lerp will
-		 * do the work of going to the extra samples for us
-		 */
-		resampled = FAudio_min(resampled, voice->src.outputSamples);
-
-		/* Linear Resampler */
-		decodeCache = voice->src.decodeCache;
-		cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
-		if (voice->src.format.nChannels == 2)
-		{
-			i = 0;
-			while (1) /* Scary! */
-			{
-				/* lerp, then convert to float value */
-				voice->src.outputResampleCache[i] = (float) (
-					decodeCache[0] +
-					(decodeCache[2] - decodeCache[0]) *
-					FIXED_TO_DOUBLE(cur)
-				) / 32768.0f;
-				voice->src.outputResampleCache[i + 1] = (float) (
-					decodeCache[1] +
-					(decodeCache[3] - decodeCache[1]) *
-					FIXED_TO_DOUBLE(cur)
-				) / 32768.0f;
-
-				/* Increment fraction offset by the stepping value */
-				voice->src.resampleOffset += voice->src.resampleStep;
-				cur += voice->src.resampleStep;
-
-				/* Break before the decodeCache increment! */
-				i += 2;
-				if (i >= resampled)
-				{
-					break;
-				}
-
-				/* Only increment the sample offset by integer values.
-				 * Sometimes this will be 0 until cur accumulates
-				 * enough steps, especially for "slow" rates.
-				 */
-				decodeCache += cur >> FIXED_PRECISION;
-				decodeCache += cur >> FIXED_PRECISION;
-
-				/* Now that any integer has been added, drop it.
-				 * The offset pointer will preserve the total.
-				 */
-				cur &= FIXED_FRACTION_MASK;
-			}
-		}
-		else
-		{
-			i = 0;
-			while (1) /* Scary! */
-			{
-				/* lerp, then convert to float value */
-				voice->src.outputResampleCache[i] = (float) (
-					decodeCache[0] +
-					(decodeCache[1] - decodeCache[0]) *
-					FIXED_TO_DOUBLE(cur)
-				) / 32768.0f;
-
-				/* Increment fraction offset by the stepping value */
-				voice->src.resampleOffset += voice->src.resampleStep;
-				cur += voice->src.resampleStep;
-
-				/* Break before the decodeCache increment! */
-				i += 1;
-				if (i >= resampled)
-				{
-					break;
-				}
-
-				/* Only increment the sample offset by integer values.
-				 * Sometimes this will be 0 until cur accumulates
-				 * enough steps, especially for "slow" rates.
-				 */
-				decodeCache += cur >> FIXED_PRECISION;
-
-				/* Now that any integer has been added, drop it.
-				 * The offset pointer will preserve the total.
-				 */
-				cur &= FIXED_FRACTION_MASK;
-			}
-		}
-	}
-
-	/* Assign padding? */
-	voice->src.totalPad = (
-		decoded -
-		(decodeCache - voice->src.decodeCache) -
-		voice->src.format.nChannels
-	);
-	if (voice->src.format.nChannels == 2)
-	{
-		if (voice->src.totalPad == 4)
-		{
-			voice->src.pad[0] = decodeCache[0];
-			voice->src.pad[1] = decodeCache[1];
-			voice->src.pad[2] = decodeCache[2];
-			voice->src.pad[3] = decodeCache[3];
-		}
-		else
-		{
-			voice->src.pad[0] = decodeCache[2];
-			voice->src.pad[1] = decodeCache[3];
-		}
-	}
-	else
-	{
-		if (voice->src.totalPad == 2)
-		{
-			voice->src.pad[0] = decodeCache[0];
-			voice->src.pad[1] = decodeCache[1];
-		}
-		else
-		{
-			voice->src.pad[0] = decodeCache[1];
-		}
 	}
 
 	/* TODO: Effects, filters */
 
 	/* Send float cache to sends */
-	resampled /= voice->src.format.nChannels;
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		out = voice->sends.pSends[i].pOutputVoice;
@@ -406,7 +353,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			oChan = out->mix.inputChannels;
 		}
 
-		for (j = 0; j < resampled; j += 1)
+		for (j = 0; j < mixed; j += 1)
 		for (co = 0; co < oChan; co += 1)
 		for (ci = 0; ci < voice->src.format.nChannels; ci += 1)
 		{
@@ -601,9 +548,7 @@ void FAudio_INTERNAL_DecodeMonoPCM8(
 	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED1,
-	int16_t *UNUSED2,
-	uint16_t *UNUSED3
+	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
 	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
@@ -620,9 +565,7 @@ void FAudio_INTERNAL_DecodeStereoPCM8(
 	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED1,
-	int16_t *UNUSED2,
-	uint16_t *UNUSED3
+	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
 	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
@@ -642,9 +585,7 @@ void FAudio_INTERNAL_DecodeMonoPCM16(
 	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED1,
-	int16_t *UNUSED2,
-	uint16_t *UNUSED3
+	FAudioWaveFormatEx *UNUSED
 ) {
 	FAudio_memcpy(
 		decodeCache,
@@ -660,9 +601,7 @@ void FAudio_INTERNAL_DecodeStereoPCM16(
 	uint32_t curOffset,
 	int16_t *decodeCache,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED1,
-	int16_t *UNUSED2,
-	uint16_t *UNUSED3
+	FAudioWaveFormatEx *UNUSED
 ) {
 	FAudio_memcpy(
 		decodeCache,
@@ -763,24 +702,12 @@ static inline void FAudio_INTERNAL_ReadStereoPreamble(
 
 #undef READ
 
-void FAudio_INTERNAL_DecodeMonoMSADPCM(
-	FAudioBuffer *buffer,
-	uint32_t curOffset,
-	int16_t *decodeCache,
-	uint32_t samples,
-	FAudioWaveFormatEx *format,
-	int16_t *msadpcmCache,
-	uint16_t *msadpcmExtra
+static inline void FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
+	uint8_t **buf,
+	int16_t *blockCache,
+	uint32_t align
 ) {
-	/* Iterators */
-	uint8_t b, i;
-
-	/* Read pointers */
-	uint8_t *buf;
-	int16_t *pcmExtra = msadpcmCache;
-
-	/* Read sizes */
-	uint32_t blocks, extra;
+	uint32_t i;
 
 	/* Temp storage for ADPCM blocks */
 	uint8_t predictor;
@@ -789,159 +716,46 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	int16_t sample2;
 	uint8_t nibbles[255]; /* Max align size */
 
-	/* Align, block size */
-	uint32_t align = format->nBlockAlign;
-	uint32_t bsize = (align + 16) * 2;
-
-	/* Do we only need to copy from the extra cache? */
-	if (*msadpcmExtra >= samples)
+	FAudio_INTERNAL_ReadMonoPreamble(
+		buf,
+		&predictor,
+		&delta,
+		&sample1,
+		&sample2
+	);
+	*blockCache++ = sample1;
+	*blockCache++ = sample2;
+	FAudio_memcpy(
+		nibbles,
+		*buf,
+		align + 15
+	);
+	*buf += align + 15;
+	for (i = 0; i < (align + 15); i += 1)
 	{
-		FAudio_memcpy(
-			decodeCache,
-			msadpcmCache,
-			samples * sizeof(int16_t)
-		);
-		if (*msadpcmExtra > samples)
-		{
-			FAudio_memmove(
-				msadpcmCache,
-				msadpcmCache + samples,
-				(*msadpcmExtra - samples) * sizeof(int16_t)
-			);
-		}
-		*msadpcmExtra -= samples;
-		return;
-	}
-
-	/* Copy the extra samples we got from last time into the output */
-	if (*msadpcmExtra > 0)
-	{
-		FAudio_memcpy(
-			decodeCache,
-			msadpcmCache,
-			*msadpcmExtra * sizeof(int16_t)
-		);
-		decodeCache += *msadpcmExtra;
-		samples -= *msadpcmExtra;
-		*msadpcmExtra = 0;
-	}
-
-	/* Where are we starting? */
-	blocks = curOffset / bsize;
-	if (curOffset % bsize)
-	{
-		blocks += 1;
-	}
-	buf = (uint8_t*) buffer->pAudioData + (blocks * (align + 22));
-
-	/* How many blocks do we need? */
-	blocks = samples / bsize;
-	extra = samples % bsize;
-
-	/* Read in each block directly to the decode cache */
-	for (b = 0; b < blocks; b += 1)
-	{
-		FAudio_INTERNAL_ReadMonoPreamble(
-			&buf,
-			&predictor,
+		*blockCache++ = FAudio_INTERNAL_ParseNibble(
+			nibbles[i] >> 4,
+			predictor,
 			&delta,
 			&sample1,
 			&sample2
 		);
-		*decodeCache++ = sample2;
-		*decodeCache++ = sample1;
-		FAudio_memcpy(
-			nibbles,
-			buf,
-			align + 15
-		);
-		buf += align + 15;
-		for (i = 0; i < (align + 15); i += 1)
-		{
-			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] >> 4,
-				predictor,
-				&delta,
-				&sample1,
-				&sample2
-			);
-			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] & 0x0F,
-				predictor,
-				&delta,
-				&sample1,
-				&sample2
-			);
-		}
-	}
-
-	/* Have extra? Go to the MSADPCM cache */
-	if (extra > 0)
-	{
-		FAudio_INTERNAL_ReadMonoPreamble(
-			&buf,
-			&predictor,
+		*blockCache++ = FAudio_INTERNAL_ParseNibble(
+			nibbles[i] & 0x0F,
+			predictor,
 			&delta,
 			&sample1,
 			&sample2
-		);
-		*pcmExtra++ = sample2;
-		*pcmExtra++ = sample1;
-		FAudio_memcpy(
-			nibbles,
-			buf,
-			align + 15
-		);
-		buf += align + 15;
-		for (i = 0; i < (align + 15); i += 1)
-		{
-			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] >> 4,
-				predictor,
-				&delta,
-				&sample1,
-				&sample2
-			);
-			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] & 0x0F,
-				predictor,
-				&delta,
-				&sample1,
-				&sample2
-			);
-		}
-		*msadpcmExtra = bsize - extra;
-		FAudio_memcpy(
-			decodeCache,
-			msadpcmCache,
-			extra * sizeof(int16_t)
-		);
-		FAudio_memmove(
-			msadpcmCache,
-			msadpcmCache + extra,
-			*msadpcmExtra * sizeof(int16_t)
 		);
 	}
 }
 
-void FAudio_INTERNAL_DecodeStereoMSADPCM(
-	FAudioBuffer *buffer,
-	uint32_t curOffset,
-	int16_t *decodeCache,
-	uint32_t samples,
-	FAudioWaveFormatEx *format,
-	int16_t *msadpcmCache,
-	uint16_t *msadpcmExtra
+static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
+	uint8_t **buf,
+	int16_t *blockCache,
+	uint32_t align
 ) {
-	/* Iterators */
-	uint8_t b, i;
-
-	/* Read pointers */
-	uint8_t *buf;
-	int16_t *pcmExtra = msadpcmCache;
-
-	/* Read sizes */
-	uint32_t blocks, extra;
+	uint32_t i;
 
 	/* Temp storage for ADPCM blocks */
 	uint8_t l_predictor;
@@ -954,149 +768,136 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	int16_t r_sample2;
 	uint8_t nibbles[510]; /* Max align size */
 
+	FAudio_INTERNAL_ReadStereoPreamble(
+		buf,
+		&l_predictor,
+		&r_predictor,
+		&l_delta,
+		&r_delta,
+		&l_sample1,
+		&r_sample1,
+		&l_sample2,
+		&r_sample2
+	);
+	*blockCache++ = l_sample2;
+	*blockCache++ = r_sample2;
+	*blockCache++ = l_sample1;
+	*blockCache++ = r_sample1;
+	FAudio_memcpy(
+		nibbles,
+		*buf,
+		(align + 15) * 2
+	);
+	*buf += (align + 15) * 2;
+	for (i = 0; i < ((align + 15) * 2); i += 1)
+	{
+		*blockCache++ = FAudio_INTERNAL_ParseNibble(
+			nibbles[i] >> 4,
+			l_predictor,
+			&l_delta,
+			&l_sample1,
+			&l_sample2
+		);
+		*blockCache++ = FAudio_INTERNAL_ParseNibble(
+			nibbles[i] & 0x0F,
+			r_predictor,
+			&r_delta,
+			&r_sample1,
+			&r_sample2
+		);
+	}
+}
+
+void FAudio_INTERNAL_DecodeMonoMSADPCM(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
+	int16_t *decodeCache,
+	uint32_t samples,
+	FAudioWaveFormatEx *format
+) {
+	/* Read pointers */
+	uint8_t *buf;
+	int32_t midOffset;
+
+	/* PCM block cache */
+	int16_t blockCache[512]; /* Max block size */
+
 	/* Align, block size */
 	uint32_t align = format->nBlockAlign;
 	uint32_t bsize = (align + 16) * 2;
 
-	/* Do we only need to copy from the extra cache? */
-	if (*msadpcmExtra >= samples)
-	{
-		FAudio_memcpy(
-			decodeCache,
-			msadpcmCache,
-			samples * sizeof(int16_t) * 2
-		);
-		if (*msadpcmExtra > samples)
-		{
-			FAudio_memmove(
-				msadpcmCache,
-				msadpcmCache + (samples * 2),
-				(*msadpcmExtra - samples) * sizeof(int16_t) * 2
-			);
-		}
-		*msadpcmExtra -= samples;
-		return;
-	}
-
-	/* Copy the extra samples we got from last time into the output */
-	if (*msadpcmExtra > 0)
-	{
-		FAudio_memcpy(
-			decodeCache,
-			msadpcmCache,
-			*msadpcmExtra * sizeof(int16_t) * 2
-		);
-		decodeCache += *msadpcmExtra * 2;
-		samples -= *msadpcmExtra;
-		*msadpcmExtra = 0;
-	}
-
 	/* Where are we starting? */
-	blocks = curOffset / bsize;
-	if (curOffset % bsize)
-	{
-		blocks += 1;
-	}
-	buf = (uint8_t*) buffer->pAudioData + (blocks * ((align + 22) * 2));
+	buf = (uint8_t*) buffer->pAudioData + (
+		(curOffset / bsize) *
+		(align + 22)
+	);
 
-	/* How many blocks do we need? */
-	blocks = samples / bsize;
-	extra = samples % bsize;
+	/* Are we starting in the middle? */
+	midOffset = (curOffset % bsize);
 
 	/* Read in each block directly to the decode cache */
-	for (b = 0; b < blocks; b += 1)
+	while (samples > 0)
 	{
-		FAudio_INTERNAL_ReadStereoPreamble(
+		const uint32_t copy = FAudio_min(samples, bsize - midOffset);
+		FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 			&buf,
-			&l_predictor,
-			&r_predictor,
-			&l_delta,
-			&r_delta,
-			&l_sample1,
-			&r_sample1,
-			&l_sample2,
-			&r_sample2
+			blockCache,
+			align
 		);
-		*decodeCache++ = l_sample2;
-		*decodeCache++ = r_sample2;
-		*decodeCache++ = l_sample1;
-		*decodeCache++ = r_sample1;
-		FAudio_memcpy(
-			nibbles,
-			buf,
-			(align + 15) * 2
-		);
-		buf += (align + 15) * 2;
-		for (i = 0; i < ((align + 15) * 2); i += 1)
-		{
-			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] >> 4,
-				l_predictor,
-				&l_delta,
-				&l_sample1,
-				&l_sample2
-			);
-			*decodeCache++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] & 0x0F,
-				r_predictor,
-				&r_delta,
-				&r_sample1,
-				&r_sample2
-			);
-		}
-	}
-
-	/* Have extra? Go to the MSADPCM cache */
-	if (extra > 0)
-	{
-		FAudio_INTERNAL_ReadStereoPreamble(
-			&buf,
-			&l_predictor,
-			&r_predictor,
-			&l_delta,
-			&r_delta,
-			&l_sample1,
-			&r_sample1,
-			&l_sample2,
-			&r_sample2
-		);
-		*pcmExtra++ = l_sample2;
-		*pcmExtra++ = r_sample2;
-		*pcmExtra++ = l_sample1;
-		*pcmExtra++ = r_sample1;
-		FAudio_memcpy(
-			nibbles,
-			buf,
-			(align + 15) * 2
-		);
-		buf += (align + 15) * 2;
-		for (i = 0; i < ((align + 15) * 2); i += 1)
-		{
-			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] >> 4,
-				l_predictor,
-				&l_delta,
-				&l_sample1,
-				&l_sample2
-			);
-			*pcmExtra++ = FAudio_INTERNAL_ParseNibble(
-				nibbles[i] & 0x0F,
-				r_predictor,
-				&r_delta,
-				&r_sample1,
-				&r_sample2
-			);
-		}
-		*msadpcmExtra = bsize - extra;
 		FAudio_memcpy(
 			decodeCache,
-			msadpcmCache,
-			extra * sizeof(int16_t) * 2
+			blockCache + midOffset,
+			copy * sizeof(int16_t)
 		);
-		FAudio_memmove(
-			msadpcmCache,
-			msadpcmCache + (extra * 2),
-			*msadpcmExtra * sizeof(int16_t) * 2
+		decodeCache += copy;
+		samples -= copy;
+		midOffset = 0;
+	}
+}
+
+void FAudio_INTERNAL_DecodeStereoMSADPCM(
+	FAudioBuffer *buffer,
+	uint32_t curOffset,
+	int16_t *decodeCache,
+	uint32_t samples,
+	FAudioWaveFormatEx *format
+) {
+	/* Read pointers */
+	uint8_t *buf;
+	int32_t midOffset;
+
+	/* PCM block cache */
+	int16_t blockCache[1024]; /* Max block size */
+
+	/* Align, block size */
+	uint32_t align = format->nBlockAlign;
+	uint32_t bsize = (align + 16) * 2;
+
+	/* Where are we starting? */
+	buf = (uint8_t*) buffer->pAudioData + (
+		(curOffset / bsize) *
+		((align + 22) * 2)
+	);
+
+	/* Are we starting in the middle? */
+	midOffset = (curOffset % bsize);
+
+	/* Read in each block directly to the decode cache */
+	while (samples > 0)
+	{
+		const uint32_t copy = FAudio_min(samples, bsize - midOffset);
+		FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
+			&buf,
+			blockCache,
+			align
 		);
+		FAudio_memcpy(
+			decodeCache,
+			blockCache + midOffset * 2,
+			copy * 2 * sizeof(int16_t)
+		);
+		decodeCache += copy * 2;
+		samples -= copy;
+		midOffset = 0;
 	}
 }
