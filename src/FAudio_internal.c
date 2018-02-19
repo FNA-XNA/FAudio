@@ -229,6 +229,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 					}
 				}
 				voice->src.bufferList = voice->src.bufferList->next;
+				if (voice->src.bufferList == NULL)
+				{
+					voice->src.curBufferOffset = 0;
+				}
 				FAudio_free(buffer);
 			}
 		}

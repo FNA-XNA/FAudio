@@ -1152,6 +1152,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	if (voice->src.bufferList == NULL)
 	{
 		voice->src.bufferList = entry;
+		voice->src.curBufferOffset = entry->buffer.PlayBegin;
 	}
 	else
 	{
