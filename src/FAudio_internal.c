@@ -123,15 +123,6 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 			&voice->src.format
 		);
 
-		/* FIXME: I keep going past the buffer so fuck it */
-		if (endRead < decoding)
-		{
-			FAudio_zero(
-				voice->src.decodeCache + endRead,
-				(decoding - endRead) * sizeof(int16_t)
-			);
-		}
-
 		/* End-of-buffer behavior */
 		if (endRead < decoding)
 		{
@@ -190,6 +181,15 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 				else
 				{
 					buffer = NULL;
+
+					/* FIXME: I keep going past the buffer so fuck it */
+					FAudio_zero(
+						voice->src.decodeCache + (
+							(decoded * voice->src.format.nChannels) +
+							endRead
+						),
+						(decoding - endRead) * sizeof(int16_t)
+					);
 				}
 			}
 		}
