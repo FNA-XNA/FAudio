@@ -13,9 +13,6 @@ License
 -------
 FAudio is released under the zlib license. See LICENSE for details.
 
-FACT uses code from the unxwb project, specially released under the MonoGame
-project license. See unxwb.LICENSE for details.
-
 Found an issue?
 ---------------
 Issues and patches can be reported via GitHub:

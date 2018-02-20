@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2018 Ethan Lee and the MonoGame Team
+ * Copyright (c) 2011-2018 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -1821,14 +1821,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	return 0;
 }
 
-/* The unxwb project, written by Luigi Auriemma, was released in 2006 under the
- * GNU General Public License, version 2.0:
+/* This parser is based on the unxwb project, written by Luigi Auriemma.
  *
- * http://www.gnu.org/licenses/gpl-2.0.html
- *
- * While the unxwb project was released under the GPL, Luigi has given express
- * permission to the MonoGame project to use code from unxwb under the MonoGame
- * project license. See unxwb.LICENSE for details.
+ * While the unxwb project was released under the GPL, Luigi has given us
+ * permission to use the unxwb sources under the zlib license.
  *
  * The unxwb website can be found here:
  *
