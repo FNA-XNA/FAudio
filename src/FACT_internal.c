@@ -1828,7 +1828,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
  *
  * While the unxwb project was released under the GPL, Luigi has given express
  * permission to the MonoGame project to use code from unxwb under the MonoGame
- * project license. See LICENSE for details.
+ * project license. See unxwb.LICENSE for details.
  *
  * The unxwb website can be found here:
  *
