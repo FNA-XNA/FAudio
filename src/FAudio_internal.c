@@ -63,7 +63,7 @@
  * ... in other words, 2 / 1, or 1.5.
  */
 #define FIXED_PRECISION		32
-#define FIXED_ONE		(1L << FIXED_PRECISION)
+#define FIXED_ONE		(1LL << FIXED_PRECISION)
 
 /* Quick way to drop parts */
 #define FIXED_FRACTION_MASK	(FIXED_ONE - 1)
