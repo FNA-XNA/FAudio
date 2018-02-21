@@ -320,7 +320,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Nothing to do? */
 	if (voice->src.bufferList == NULL)
 	{
-		return;
+		goto end;
 	}
 
 	mixed = 0;
