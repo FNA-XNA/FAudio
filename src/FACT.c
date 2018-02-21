@@ -1028,7 +1028,9 @@ uint32_t FACTWaveBank_Prepare(
 	{
 		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
-	(*ppWave)->callback.callback.OnBufferEnd = FACT_INTERNAL_OnBufferEnd;
+	(*ppWave)->callback.callback.OnBufferEnd = pWaveBank->streaming ?
+		FACT_INTERNAL_OnBufferEnd :
+		NULL;
 	(*ppWave)->callback.callback.OnBufferStart = NULL;
 	(*ppWave)->callback.callback.OnLoopEnd = NULL;
 	(*ppWave)->callback.callback.OnStreamEnd = FACT_INTERNAL_OnStreamEnd;
