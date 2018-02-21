@@ -1212,9 +1212,7 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 	else
 	{
 		pWave->state |= FACT_STATE_STOPPING;
-		/* TODO: TAILS or something fancier? -flibit */
-		FAudioSourceVoice_Stop(pWave->voice, 0, 0);
-		FAudioSourceVoice_FlushSourceBuffers(pWave->voice);
+		FAudioSourceVoice_ExitLoop(pWave->voice, 0);
 	}
 	return 0;
 }
