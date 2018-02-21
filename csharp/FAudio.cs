@@ -37,7 +37,658 @@ public static class FAudio
 
 	#endregion
 
-	#region Delegates
+	#region FAudio API
+
+	/* Enumerations */
+
+	public enum FAudioDeviceRole
+	{
+		NotDefaultDevice =		0x0,
+		DefaultConsoleDevice =		0x1,
+		DefaultMultimediaDevice =	0x2,
+		DefaultCommunicationsDevice =	0x4,
+		DefaultGameDevice =		0x8,
+		GlobalDefaultDevice =		0xF,
+		InvalidDeviceRole = ~GlobalDefaultDevice
+	}
+
+	public enum FAudioFilterType
+	{
+		LowPassFilter,
+		BandPassFilter,
+		HighPassFilter,
+		NotchFilter
+	}
+
+	/* FIXME: The original enum violates ISO C and is platform specific anyway... */
+	public const uint FAUDIO_DEFAULT_PROCESSOR = 0xFFFFFFFF;
+
+	/* Structures */
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct FAudioGUID
+	{
+		public uint Data1;
+		public ushort Data2;
+		public ushort Data3;
+		public fixed byte Data4[8];
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FAudioWaveFormatEx
+	{
+		public ushort wFormatTag;
+		public ushort nChannels;
+		public uint nSamplesPerSec;
+		public uint nAvgBytesPerSec;
+		public ushort nBlockAlign;
+		public ushort wBitsPerSample;
+		public ushort cbSize;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FAudioWaveFormatExtensible
+	{
+		public FAudioWaveFormatEx Format;
+		public ushort Samples; /* FIXME: union! */
+		public uint dwChannelMask;
+		public FAudioGUID SubFormat;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FAudioADPCMCoefSet
+	{
+		public short iCoef1;
+		public short iCoef2;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FAudioADPCMWaveFormat
+	{
+		public FAudioWaveFormatEx wfx;
+		public ushort wSamplesPerBlock;
+		public ushort wNumCoef;
+		public IntPtr aCoef; /* FAudioADPCMCoefSet[] */
+		/* MSADPCM has 7 coefficient pairs:
+		 * {
+		 *	{ 256,    0 },
+		 *	{ 512, -256 },
+		 *	{   0,    0 },
+		 *	{ 192,   64 },
+		 *	{ 240,    0 },
+		 *	{ 460, -208 },
+		 *	{ 392, -232 }
+		 * }
+		 */
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct FAudioDeviceDetails
+	{
+		public fixed short DeviceID[256]; /* Win32 wchar_t */
+		public fixed short DisplayName[256]; /* Win32 wchar_t */
+		public FAudioDeviceRole Role;
+		public FAudioWaveFormatExtensible OutputFormat;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioVoiceDetails
+	{
+		public uint CreationFlags;
+		public uint InputChannels;
+		public uint InputSampleRate;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioSendDescriptor
+	{
+		public uint Flags;
+		public IntPtr pOutputVoice; /* FAudioVoice* */
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioVoiceSends
+	{
+		public uint SendCount;
+		public IntPtr pSends; /* FAudioSendDescriptor* */
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioEffectDescriptor
+	{
+		public IntPtr pEffect; /* void* */
+		public byte InitialState;
+		public uint OutputChannels;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioEffectChain
+	{
+		public uint EffectCount;
+		public IntPtr pEffectDescriptors; /* FAudioEffectDescriptor* */
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioFilterParameters
+	{
+		public FAudioFilterType Type;
+		public float Frequency;
+		public float OneOverQ;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioBuffer
+	{
+		public uint Flags;
+		public uint AudioBytes;
+		public IntPtr pAudioData; /* const uint8_t* */
+		public uint PlayBegin;
+		public uint PlayLength;
+		public uint LoopBegin;
+		public uint LoopLength;
+		public uint LoopCount;
+		IntPtr pContext; /* void* */
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioBufferWMA
+	{
+		public IntPtr pDecodedPacketCumulativeBytes; /* const uint32_t* */
+		public uint PacketCount;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioVoiceState
+	{
+		public IntPtr pCurrentBufferContext; /* void* */
+		public uint BuffersQueued;
+		public ulong SamplesPlayed;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioPerformanceData
+	{
+		public ulong AudioCyclesSinceLastQuery;
+		public ulong TotalCyclesSinceLastQuery;
+		public uint MinimumCyclesPerQuantum;
+		public uint MaximumCyclesPerQuantum;
+		public uint MemoryUsageInBytes;
+		public uint CurrentLatencyInSamples;
+		public uint GlitchesSinceEngineStarted;
+		public uint ActiveSourceVoiceCount;
+		public uint TotalSourceVoiceCount;
+		public uint ActiveSubmixVoiceCount;
+		public uint ActiveResamplerCount;
+		public uint ActiveMatrixMixCount;
+		public uint ActiveXmaSourceVoices;
+		public uint ActiveXmaStreams;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioDebugConfiguration
+	{
+		public uint TraceMask;
+		public uint BreakMask;
+		public byte LogThreadID;
+		public byte LogFileline;
+		public byte LogFunctionName;
+		public byte LogTiming;
+	}
+
+	/* Constants */
+
+	public const uint FAUDIO_MAX_BUFFER_BYTES =		0x80000000;
+	public const uint FAUDIO_MAX_QUEUED_BUFFERS =		64;
+	public const uint FAUDIO_MAX_AUDIO_CHANNELS =		64;
+	public const uint FAUDIO_MIN_SAMPLE_RATE =		1000;
+	public const uint FAUDIO_MAX_SAMPLE_RATE =		200000;
+	public const float FAUDIO_MAX_VOLUME_LEVEL =		16777216.0f;
+	public const float FAUDIO_MIN_FREQ_RATIO =		(1.0f / 1024.0f);
+	public const float FAUDIO_MAX_FREQ_RATIO =		1024.0f;
+	public const float FAUDIO_DEFAULT_FREQ_RATIO =		2.0f;
+	public const float FAUDIO_MAX_FILTER_ONEOVERQ =		1.5f;
+	public const float FAUDIO_MAX_FILTER_FREQUENCY =	1.0f;
+	public const uint FAUDIO_MAX_LOOP_COUNT =		254;
+
+	public const uint FAUDIO_COMMIT_NOW =		0;
+	public const uint FAUDIO_COMMIT_ALL =		0;
+	public const uint FAUDIO_INVALID_OPSET =	unchecked((uint) -1);
+	public const uint FAUDIO_NO_LOOP_REGION =	0;
+	public const uint FAUDIO_LOOP_INFINITE =	255;
+	public const uint FAUDIO_DEFAULT_CHANNELS =	0;
+	public const uint FAUDIO_DEFAULT_SAMPLERATE =	0;
+
+	public const byte FAUDIO_DEBUG_ENGINE =		0x01;
+	public const byte FAUDIO_VOICE_NOPITCH =	0x02;
+	public const byte FAUDIO_VOICE_NOSRC =		0x04;
+	public const byte FAUDIO_VOICE_USEFILTER =	0x08;
+	public const byte FAUDIO_VOICE_MUSIC =		0x10;
+	public const byte FAUDIO_PLAY_TAILS =		0x20;
+	public const byte FAUDIO_END_OF_STREAM =	0x40;
+	public const byte FAUDIO_SEND_USEFILTER =	0x80;
+
+	public const FAudioFilterType FAUDIO_DEFAULT_FILTER_TYPE =	FAudioFilterType.LowPassFilter;
+	public const float FAUDIO_DEFAULT_FILTER_FREQUENCY =		FAUDIO_MAX_FILTER_FREQUENCY;
+	public const float FAUDIO_DEFAULT_FILTER_ONEOVERQ =		1.0f;
+
+	public const ushort FAUDIO_LOG_ERRORS =		0x0001;
+	public const ushort FAUDIO_LOG_WARNINGS =	0x0002;
+	public const ushort FAUDIO_LOG_INFO =		0x0004;
+	public const ushort FAUDIO_LOG_DETAIL =		0x0008;
+	public const ushort FAUDIO_LOG_API_CALLS =	0x0010;
+	public const ushort FAUDIO_LOG_FUNC_CALLS =	0x0020;
+	public const ushort FAUDIO_LOG_TIMING =		0x0040;
+	public const ushort FAUDIO_LOG_LOCKS =		0x0080;
+	public const ushort FAUDIO_LOG_MEMORY =		0x0100;
+	public const ushort FAUDIO_LOG_STREAMING =	0x1000;
+
+	/* FAudio Interface */
+
+	/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreate(
+		out IntPtr ppFudio, /* FAudio** */
+		uint Flags,
+		uint XAudio2Processor /* FAudioProcessor */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioDestroy( /* FIXME: NOT XAUDIO2 SPEC! */
+		IntPtr audio /* FAudio* */
+	);
+
+	/* FIXME: AddRef/Release/Query? Or just ignore COM garbage... -flibit */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_GetDeviceCount(
+		IntPtr audio, /* FAudio* */
+		out uint pCount
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_GetDeviceDetails(
+		IntPtr audio, /* FAudio* */
+		uint Index,
+		ref FAudioDeviceDetails pDeviceDetails
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_Initialize(
+		IntPtr audio, /* FAudio* */
+		uint Flags,
+		uint XAudio2Processor /* FAudioProcessor */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_RegisterForCallbacks(
+		IntPtr audio, /* FAudio* */
+		IntPtr pCallback /* FAudioEngineCallback* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudio_UnregisterForCallbacks(
+		IntPtr audio, /* FAudio* */
+		IntPtr pCallback /* FAudioEngineCallback* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_CreateSourceVoice(
+		IntPtr audio, /* FAudio* */
+		out IntPtr ppSourceVoice, /* FAudioSourceVoice** */
+		ref FAudioWaveFormatEx pSourceFormat,
+		uint Flags,
+		float MaxFrequencyRatio,
+		IntPtr pCallback, /* FAudioVoiceCallback* */
+		ref FAudioVoiceSends pSendList,
+		ref FAudioEffectChain pEffectChain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_CreateSubmixVoice(
+		IntPtr audio, /* FAudio* */
+		out IntPtr ppSubmixVoice, /* FAudioSubmixVoice** */
+		uint InputChannels,
+		uint InputSampleRate,
+		uint Flags,
+		uint ProcessingStage,
+		ref FAudioVoiceSends pSendList,
+		ref FAudioEffectChain pEffectChain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_CreateMasteringVoice(
+		IntPtr audio, /* FAudio* */
+		out IntPtr ppMasteringVoice, /* FAudioMasteringVoice** */
+		uint InputChannels,
+		uint InputSampleRate,
+		uint Flags,
+		uint DeviceIndex,
+		ref FAudioEffectChain pEffectChain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_StartEngine(
+		IntPtr audio /* FAudio* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudio_StopEngine(
+		IntPtr audio /* FAudio* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_CommitChanges(
+		IntPtr audio /* FAudio* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudio_GetPerformanceData(
+		IntPtr audio, /* FAudio* */
+		out FAudioPerformanceData pPerfData
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudio_SetDebugConfiguration(
+		IntPtr audio, /* FAudio* */
+		ref FAudioDebugConfiguration pDebugConfiguration,
+		IntPtr pReserved /* void* */
+	);
+
+	/* FAudioVoice Interface */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetVoiceDetails(
+		IntPtr voice, /* FAudioVoice* */
+		out FAudioVoiceDetails pVoiceDetails
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetOutputVoices(
+		IntPtr voice, /* FAudioVoice* */
+		ref FAudioVoiceSends pSendList
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetEffectChain(
+		IntPtr voice, /* FAudioVoice* */
+		ref FAudioEffectChain pEffectChain
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_EnableEffect(
+		IntPtr voice, /* FAudioVoice* */
+		uint EffectIndex,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_DisableEffect(
+		IntPtr voice, /* FAudioVoice* */
+		uint EffectIndex,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetEffectState(
+		IntPtr voice, /* FAudioVoice* */
+		uint EffectIndex,
+		out byte pEnabled
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetEffectParameters(
+		IntPtr voice, /* FAudioVoice* */
+		uint EffectIndex,
+		IntPtr pParameters, /* const void* */
+		uint ParametersByteSize,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_GetEffectParameters(
+		IntPtr voice, /* FAudioVoice* */
+		IntPtr pParameters, /* void* */
+		uint ParametersByteSize
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetFilterParameters(
+		IntPtr voice, /* FAudioVoice* */
+		ref FAudioFilterParameters pParameters,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetFilterParameters(
+		IntPtr voice, /* FAudioVoice* */
+		out FAudioFilterParameters pParameters
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetOutputFilterParameters(
+		IntPtr voice, /* FAudioVoice* */
+		IntPtr pDestinationVoice, /* FAudioVoice */
+		ref FAudioFilterParameters pParameters,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetOutputFilterParameters(
+		IntPtr voice, /* FAudioVoice* */
+		IntPtr pDestinationVoice, /* FAudioVoice */
+		out FAudioFilterParameters pParameters
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetVolume(
+		IntPtr voice, /* FAudioVoice* */
+		float Volume,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetVolume(
+		IntPtr voice, /* FAudioVoice* */
+		out float pVolume
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetChannelVolumes(
+		IntPtr voice, /* FAudioVoice* */
+		uint Channels,
+		float[] pVolumes,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetChannelVolumes(
+		IntPtr voice, /* FAudioVoice* */
+		uint Channels,
+		float[] pVolumes
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_SetOutputMatrix(
+		IntPtr voice, /* FAudioVoice* */
+		IntPtr pDestinationVoice, /* FAudioVoice* */
+		uint SourceChannels,
+		uint DestinationChannels,
+		float[] pLevelMatrix,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_GetOutputMatrix(
+		IntPtr voice, /* FAudioVoice* */
+		IntPtr pDestinationVoice, /* FAudioVoice* */
+		uint SourceChannels,
+		uint DestinationChannels,
+		float[] pLevelMatrix
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioVoice_DestroyVoice(
+		IntPtr voice /* FAudioVoice* */
+	);
+
+	/* FAudioSourceVoice Interface */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_Start(
+		IntPtr voice, /* FAudioSourceVoice* */
+		uint Flags,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_Stop(
+		IntPtr voice, /* FAudioSourceVoice* */
+		uint Flags,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_SubmitSourceBuffer(
+		IntPtr voice, /* FAudioSourceVoice* */
+		ref FAudioBuffer pBuffer,
+		IntPtr pBufferWMA /* const FAudioBufferWMA* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_FlushSourceBuffers(
+		IntPtr voice /* FAudioSourceVoice* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_Discontinuity(
+		IntPtr voice /* FAudioSourceVoice* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_ExitLoop(
+		IntPtr voice, /* FAudioSourceVoice* */
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioSourceVoice_GetState(
+		IntPtr voice, /* FAudioSourceVoice* */
+		out FAudioVoiceState pVoiceState
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_SetFrequencyRatio(
+		IntPtr voice, /* FAudioSourceVoice* */
+		float Ratio,
+		uint OperationSet
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudioSourceVoice_GetFrequencyRatio(
+		IntPtr voice, /* FAudioSourceVoice* */
+		out float pRatio
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_SetSourceSampleRate(
+		IntPtr voice, /* FAudioSourceVoice* */
+		uint NewSourceSampleRate
+	);
+
+	/* FAudioEngineCallback Interface */
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnCriticalErrorFunc(
+		IntPtr callback, /* FAudioEngineCallback* */
+		uint Error
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnProcessingPassEndFunc(
+		IntPtr callback /* FAudioEngineCallback* */
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnProcessingPassStartFunc(
+		IntPtr callback /* FAudioEngineCallback* */
+	);
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioEngineCallback
+	{
+		public IntPtr OnCriticalError; /* OnCriticalErrorFunc */
+		public IntPtr OnProcessingPassEnd; /* OnProcessingPassEndFunc */
+		public IntPtr OnProcessingPassStart; /* OnProcessingPassStartFunc */
+	}
+
+	/* FAudioVoiceCallback Interface */
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnBufferEndFunc(
+		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr pBufferContext /* void* */
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnBufferStartFunc(
+		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr pBufferContext /* void* */
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnLoopEndFunc(
+		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr pBufferContext /* void* */
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnStreamEndFunc(
+		IntPtr callback /* FAudioVoiceCallback* */
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnVoiceErrorFunc(
+		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr pBufferContext, /* void* */
+		uint Error
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnVoiceProcessingPassEndFunc(
+		IntPtr callback /* FAudioVoiceCallback* */
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void OnVoiceProcessingPassStartFunc(
+		IntPtr callback, /* FAudioVoiceCallback* */
+		uint BytesRequired
+	);
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioVoiceCallback
+	{
+		public IntPtr OnBufferEnd; /* OnBufferEndFunc */
+		public IntPtr OnBufferStart; /* OnBufferStartFunc */
+		public IntPtr OnLoopEnd; /* OnLoopEndFunc */
+		public IntPtr OnStreamEnd; /* OnStreamEndFunc */
+		public IntPtr OnVoiceError; /* OnVoiceErrorFunc */
+		public IntPtr OnVoiceProcessingPassEnd; /* OnVoiceProcessingPassEndFunc */
+		public IntPtr OnVoiceProcessingPassStart; /* OnVoiceProcessingPassStartFunc */
+	}
+
+	/* Functions */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateReverb(
+		out IntPtr ppApo, /* void** */
+		uint Flags
+	);
+
+	#endregion
+
+	#region FACT API
+
+	/* Delegates */
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate int FACTReadFileCallback(
@@ -59,9 +710,19 @@ public static class FAudio
 		IntPtr pNotification /* const FACTNotification* */
 	);
 
-	#endregion
+	/* Enumerations */
 
-	#region Structures
+	public enum FACTWaveBankSegIdx
+	{
+		FACT_WAVEBANK_SEGIDX_BANKDATA = 0,
+		FACT_WAVEBANK_SEGIDX_ENTRYMETADATA,
+		FACT_WAVEBANK_SEGIDX_SEEKTABLES,
+		FACT_WAVEBANK_SEGIDX_ENTRYNAMES,
+		FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA,
+		FACT_WAVEBANK_SEGIDX_COUNT
+	}
+
+	/* Structures */
 
 	[StructLayout(LayoutKind.Sequential)]
 	public unsafe struct FACTRendererDetails
@@ -69,36 +730,6 @@ public static class FAudio
 		public fixed short rendererID[0xFF]; // Win32 wchar_t
 		public fixed short displayName[0xFF]; // Win32 wchar_t
 		public int defaultDevice;
-	}
-
-	[StructLayout(LayoutKind.Sequential)]
-	public unsafe struct FACTGUID
-	{
-		public uint Data1;
-		public ushort Data2;
-		public ushort Data3;
-		public fixed byte Data4[8];
-	}
-
-	[StructLayout(LayoutKind.Sequential, Pack = 1)]
-	public struct FACTWaveFormatEx
-	{
-		public ushort wFormatTag;
-		public ushort nChannels;
-		public uint nSamplesPerSec;
-		public uint nAvgBytesPerSec;
-		public ushort nBlockAlign;
-		public ushort wBitsPerSample;
-		public ushort cbSize;
-	}
-
-	[StructLayout(LayoutKind.Sequential, Pack = 1)]
-	public struct FACTWaveFormatExtensible
-	{
-		public FACTWaveFormatEx Format;
-		public ushort Samples; /* FIXME: union! */
-		public uint dwChannelMask;
-		public FACTGUID SubFormat;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -141,6 +772,7 @@ public static class FAudio
 		public IntPtr pvContext;
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
 	public struct FACTRuntimeParameters
 	{
 		public uint lookAheadTime;
@@ -308,23 +940,7 @@ public static class FAudio
 		public FACTSoundVariationProperties activeVariationProperties;
 	}
 
-	#endregion
-
-	#region Enums
-
-	public enum FACTWaveBankSegIdx
-	{
-		FACT_WAVEBANK_SEGIDX_BANKDATA = 0,
-		FACT_WAVEBANK_SEGIDX_ENTRYMETADATA,
-		FACT_WAVEBANK_SEGIDX_SEEKTABLES,
-		FACT_WAVEBANK_SEGIDX_ENTRYNAMES,
-		FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA,
-		FACT_WAVEBANK_SEGIDX_COUNT
-	}
-
-	#endregion
-
-	#region Constants
+	/* Constants */
 
 	public const int FACT_CONTENT_VERSION = 46;
 
@@ -371,9 +987,7 @@ public static class FAudio
 	public const uint FACT_WAVEBANK_FLAGS_SEEKTABLES =	0x00080000;
 	public const uint FACT_WAVEBANK_FLAGS_MASK =		0x000F0000;
 
-	#endregion
-
-	#region AudioEngine Interface
+	/* AudioEngine Interface */
 
 	/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -400,7 +1014,7 @@ public static class FAudio
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTAudioEngine_GetFinalMixFormat(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		out FACTWaveFormatExtensible pFinalMixFormat
+		out FAudioWaveFormatExtensible pFinalMixFormat
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -543,9 +1157,7 @@ public static class FAudio
 		out float pnValue
 	);
 
-	#endregion
-
-	#region SoundBank Interface
+	/* SoundBank Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern ushort FACTSoundBank_GetCueIndex(
@@ -599,7 +1211,7 @@ public static class FAudio
 		ushort nCueIndex,
 		uint dwFlags,
 		int timeOffset,
-		ref FACT3DAUDIO_DSP_SETTINGS pDSPSettings,
+		ref F3DAUDIO_DSP_SETTINGS pDSPSettings,
 		IntPtr ppCue /* Pass IntPtr.Zero! */
 	);
 
@@ -621,9 +1233,7 @@ public static class FAudio
 		out uint pdwState
 	);
 
-	#endregion
-
-	#region WaveBank Interface
+	/* WaveBank Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTWaveBank_Destroy(
@@ -682,9 +1292,7 @@ public static class FAudio
 		uint dwFlags
 	);
 
-	#endregion
-
-	#region Wave Interface
+	/* Wave Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTWave_Destroy(
@@ -740,9 +1348,7 @@ public static class FAudio
 		out FACTWaveInstanceProperties pProperties
 	);
 
-	#endregion
-
-	#region Cue Interface
+	/* Cue Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTCue_Destroy(
@@ -806,18 +1412,16 @@ public static class FAudio
 		out FACTCueInstanceProperties ppProperties
 	);
 
-	/* FIXME: Can we reproduce these two functions...? -flibit */
-
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTCue_SetOutputVoices(
 		IntPtr pCue, /* FACTCue* */
-		IntPtr pSendList /* Optional XAUDIO2_VOICE_SENDS */
+		IntPtr pSendList /* Optional FAudioVoiceSends* */
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTCue_SetOutputVoiceMatrix(
 		IntPtr pCue, /* FACTCue* */
-		IntPtr pDestinationVoice, /* Optional IXAudio2Voice */
+		IntPtr pDestinationVoice, /* Optional FAudioVoice* */
 		uint SourceChannels,
 		uint DestinationChannels,
 		float[] pLevelMatrix /* SourceChannels * DestinationChannels */
@@ -825,22 +1429,9 @@ public static class FAudio
 
 	#endregion
 
-	#region 3D Audio API
+	#region F3DAudio API
 
-	public const float FACT3DAUDIO_PI =	3.141592654f;
-	public const float FACT3DAUDIO_2PI =	6.283185307f;
-
-	public const float LEFT_AZIMUTH =			(3.0f * FACT3DAUDIO_PI / 2.0f);
-	public const float RIGHT_AZIMUTH =			(FACT3DAUDIO_PI / 2.0f);
-	public const float FRONT_LEFT_AZIMUTH =			(7.0f * FACT3DAUDIO_PI / 4.0f);
-	public const float FRONT_RIGHT_AZIMUTH =		(FACT3DAUDIO_PI / 4.0f);
-	public const float FRONT_CENTER_AZIMUTH =		0.0f;
-	public const float LOW_FREQUENCY_AZIMUTH =		FACT3DAUDIO_2PI;
-	public const float BACK_LEFT_AZIMUTH =			(5.0f * FACT3DAUDIO_PI / 4.0f);
-	public const float BACK_RIGHT_AZIMUTH =			(3.0f * FACT3DAUDIO_PI / 4.0f);
-	public const float BACK_CENTER_AZIMUTH =		FACT3DAUDIO_PI;
-	public const float FRONT_LEFT_OF_CENTER_AZIMUTH =	(15.0f * FACT3DAUDIO_PI / 8.0f);
-	public const float FRONT_RIGHT_OF_CENTER_AZIMUTH =	(FACT3DAUDIO_PI / 8.0f);
+	/* Constants */
 
 	public const uint SPEAKER_FRONT_LEFT =			0x00000001;
 	public const uint SPEAKER_FRONT_RIGHT =			0x00000002;
@@ -919,22 +1510,29 @@ public static class FAudio
 	/* FIXME: Hmmmm */
 	public const uint SPEAKER_XBOX = SPEAKER_5POINT1;
 
-	public const uint FACT3DAUDIO_CALCULATE_MATRIX =		0x00000001;
-	public const uint FACT3DAUDIO_CALCULATE_DELAY =			0x00000002;
-	public const uint FACT3DAUDIO_CALCULATE_LPF_DIRECT =		0x00000004;
-	public const uint FACT3DAUDIO_CALCULATE_LPF_REVERB =		0x00000008;
-	public const uint FACT3DAUDIO_CALCULATE_REVERB =		0x00000010;
-	public const uint FACT3DAUDIO_CALCULATE_DOPPLER =		0x00000020;
-	public const uint FACT3DAUDIO_CALCULATE_EMITTER_ANGLE =		0x00000040;
-	public const uint FACT3DAUDIO_CALCULATE_ZEROCENTER =		0x00010000;
-	public const uint FACT3DAUDIO_CALCULATE_REDIRECT_TO_LFE =	0x00020000;
+	public const float F3DAUDIO_PI =	3.141592654f;
+	public const float F3DAUDIO_2PI =	6.283185307f;
+
+	public const uint F3DAUDIO_CALCULATE_MATRIX =		0x00000001;
+	public const uint F3DAUDIO_CALCULATE_DELAY =		0x00000002;
+	public const uint F3DAUDIO_CALCULATE_LPF_DIRECT =	0x00000004;
+	public const uint F3DAUDIO_CALCULATE_LPF_REVERB =	0x00000008;
+	public const uint F3DAUDIO_CALCULATE_REVERB =		0x00000010;
+	public const uint F3DAUDIO_CALCULATE_DOPPLER =		0x00000020;
+	public const uint F3DAUDIO_CALCULATE_EMITTER_ANGLE =	0x00000040;
+	public const uint F3DAUDIO_CALCULATE_ZEROCENTER =	0x00010000;
+	public const uint F3DAUDIO_CALCULATE_REDIRECT_TO_LFE =	0x00020000;
+
+	/* Type Declarations */
 
 	/* FIXME: Everything about this type blows */
-	public const int FACT3DAUDIO_HANDLE_BYTESIZE = 20;
-	// Alloc a byte[] of size FACT3DAUDIO_HANDLE_BYTESIZE!
+	public const int F3DAUDIO_HANDLE_BYTESIZE = 20;
+	// Alloc a byte[] of size F3DAUDIO_HANDLE_BYTESIZE!
+
+	/* Structures */
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_VECTOR
+	public struct F3DAUDIO_VECTOR
 	{
 		public float x;
 		public float y;
@@ -942,21 +1540,21 @@ public static class FAudio
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_DISTANCE_CURVE_POINT
+	public struct F3DAUDIO_DISTANCE_CURVE_POINT
 	{
 		public float Distance;
 		public float DSPSetting;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_DISTANCE_CURVE
+	public struct F3DAUDIO_DISTANCE_CURVE
 	{
-		IntPtr pPoints; /* FACT3DAUDIO_DISTANCE_CURVE_POINT* */
+		IntPtr pPoints; /* F3DAUDIO_DISTANCE_CURVE_POINT* */
 		public uint PointCount;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_CONE
+	public struct F3DAUDIO_CONE
 	{
 		public float InnerAngle;
 		public float OuterAngle;
@@ -969,39 +1567,39 @@ public static class FAudio
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_LISTENER
+	public struct F3DAUDIO_LISTENER
 	{
-		public FACT3DAUDIO_VECTOR OrientFront;
-		public FACT3DAUDIO_VECTOR OrientTop;
-		public FACT3DAUDIO_VECTOR Position;
-		public FACT3DAUDIO_VECTOR Velocity;
-		public IntPtr pCone; /* FACT3DAUDIO_CONE* */
+		public F3DAUDIO_VECTOR OrientFront;
+		public F3DAUDIO_VECTOR OrientTop;
+		public F3DAUDIO_VECTOR Position;
+		public F3DAUDIO_VECTOR Velocity;
+		public IntPtr pCone; /* F3DAUDIO_CONE* */
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_EMITTER
+	public struct F3DAUDIO_EMITTER
 	{
-		public IntPtr pCone; /* FACT3DAUDIO_CONE* */
-		public FACT3DAUDIO_VECTOR OrientFront;
-		public FACT3DAUDIO_VECTOR OrientTop;
-		public FACT3DAUDIO_VECTOR Position;
-		public FACT3DAUDIO_VECTOR Velocity;
+		public IntPtr pCone; /* F3DAUDIO_CONE* */
+		public F3DAUDIO_VECTOR OrientFront;
+		public F3DAUDIO_VECTOR OrientTop;
+		public F3DAUDIO_VECTOR Position;
+		public F3DAUDIO_VECTOR Velocity;
 		public float InnerRadius;
 		public float InnerRadiusAngle;
 		public uint ChannelCount;
 		public float ChannelRadius;
 		public IntPtr pChannelAzimuths; /* float */
 		public IntPtr pVolumeCurve;
-		public IntPtr pLFECurve; /* FACT3DAUDIO_DISTANCE_CURVE* */
-		public IntPtr pLPFDirectCurve; /* FACT3DAUDIO_DISTANCE_CURVE* */
-		public IntPtr pLPFReverbCurve; /* FACT3DAUDIO_DISTANCE_CURVE* */
-		public IntPtr pReverbCurve; /* FACT3DAUDIO_DISTANCE_CURVE* */
+		public IntPtr pLFECurve; /* F3DAUDIO_DISTANCE_CURVE* */
+		public IntPtr pLPFDirectCurve; /* F3DAUDIO_DISTANCE_CURVE* */
+		public IntPtr pLPFReverbCurve; /* F3DAUDIO_DISTANCE_CURVE* */
+		public IntPtr pReverbCurve; /* F3DAUDIO_DISTANCE_CURVE* */
 		public float CurveDistanceScaler;
 		public float DopplerScaler;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACT3DAUDIO_DSP_SETTINGS
+	public struct F3DAUDIO_DSP_SETTINGS
 	{
 		public IntPtr pMatrixCoefficients; /* float* */
 		public IntPtr pDelayTimes; /* float* */
@@ -1016,6 +1614,42 @@ public static class FAudio
 		public float EmitterVelocityComponent;
 		public float ListenerVelocityComponent;
 	}
+
+	/* Functions */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void F3DAudioInitialize(
+		uint SpeakerChannelMask,
+		float SpeedOfSound,
+		byte[] Instance // F3DAUDIO_HANDLE
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void F3DAudioCalculate(
+		byte[] Instance, // F3DAUDIO_HANDLE
+		ref F3DAUDIO_LISTENER pListener,
+		ref F3DAUDIO_EMITTER pEmitter,
+		uint Flags,
+		out F3DAUDIO_DSP_SETTINGS pDSPSettings
+	);
+
+	#endregion
+
+	#region FACT3D API
+
+	/* Constants */
+
+	public const float LEFT_AZIMUTH =			(3.0f * F3DAUDIO_PI / 2.0f);
+	public const float RIGHT_AZIMUTH =			(F3DAUDIO_PI / 2.0f);
+	public const float FRONT_LEFT_AZIMUTH =			(7.0f * F3DAUDIO_PI / 4.0f);
+	public const float FRONT_RIGHT_AZIMUTH =		(F3DAUDIO_PI / 4.0f);
+	public const float FRONT_CENTER_AZIMUTH =		0.0f;
+	public const float LOW_FREQUENCY_AZIMUTH =		F3DAUDIO_2PI;
+	public const float BACK_LEFT_AZIMUTH =			(5.0f * F3DAUDIO_PI / 4.0f);
+	public const float BACK_RIGHT_AZIMUTH =			(3.0f * F3DAUDIO_PI / 4.0f);
+	public const float BACK_CENTER_AZIMUTH =		F3DAUDIO_PI;
+	public const float FRONT_LEFT_OF_CENTER_AZIMUTH =	(15.0f * F3DAUDIO_PI / 8.0f);
+	public const float FRONT_RIGHT_OF_CENTER_AZIMUTH =	(F3DAUDIO_PI / 8.0f);
 
 	public static readonly float[] aStereoLayout = new float[]
 	{
@@ -1064,264 +1698,114 @@ public static class FAudio
 		RIGHT_AZIMUTH
 	};
 
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT3DAudioInitialize(
-		uint SpeakerChannelMask,
-		float SpeedOfSound,
-		byte[] Instance // FACT3DAUDIO_HANDLE
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT3DAudioCalculate(
-		byte[] Instance, // FACT3DAUDIO_HANDLE
-		ref FACT3DAUDIO_LISTENER pListener,
-		ref FACT3DAUDIO_EMITTER pEmitter,
-		uint Flags,
-		out FACT3DAUDIO_DSP_SETTINGS pDSPSettings
-	);
+	/* Functions */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACT3DInitialize(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		byte[] D3FInstance // FACT3DAUDIO_HANDLE
+		byte[] D3FInstance // F3DAUDIO_HANDLE
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACT3DCalculate(
-		byte[] F3DInstance, // FACT3DAUDIO_HANDLE
-		ref FACT3DAUDIO_LISTENER pListener,
-		ref FACT3DAUDIO_EMITTER pEmitter,
-		out FACT3DAUDIO_DSP_SETTINGS pDSPSettings
+		byte[] F3DInstance, // F3DAUDIO_HANDLE
+		ref F3DAUDIO_LISTENER pListener,
+		ref F3DAUDIO_EMITTER pEmitter,
+		out F3DAUDIO_DSP_SETTINGS pDSPSettings
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACT3DApply(
-		ref FACT3DAUDIO_DSP_SETTINGS pDSPSettings,
+		ref F3DAUDIO_DSP_SETTINGS pDSPSettings,
 		IntPtr pCue /* FACTCue* */
 	);
 
 	#endregion
 
-	#region XNA Sound API
+	#region XNA Song API
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_Init();
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_Quit();
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetMasterVolume();
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetMasterVolume(float volume);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetDistanceScale();
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetDistanceScale(float scale);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetDopplerScale();
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetDopplerScale(float scale);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetSpeedOfSound();
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetSpeedOfSound(float speedOfSound);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern IntPtr FACT_XNA_GenBuffer(
-		byte[] buffer,
-		int offset,
-		int count,
-		int sampleRate,
-		int channels,
-		int loopStart,
-		int loopLength,
-		ushort format,
-		uint formatParameter
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_DisposeBuffer(IntPtr buffer);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern int FACT_XNA_GetBufferDuration(IntPtr buffer);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FACT_XNA_PlayBuffer(
-		IntPtr buffer,
-		float volume,
-		float pitch,
-		float pan
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern IntPtr FACT_XNA_GenSource(IntPtr buffer);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern IntPtr FACT_XNA_GenDynamicSource(
-		int sampleRate,
-		int channels
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_DisposeSource(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern int FACT_XNA_GetSourceState(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern int FACT_XNA_GetSourceLooped(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetSourceLooped(
-		IntPtr source,
-		int looped
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetSourcePan(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetSourcePan(
-		IntPtr source,
-		float pan
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetSourcePitch(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetSourcePitch(
-		IntPtr source,
-		float pitch
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern float FACT_XNA_GetSourceVolume(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetSourceVolume(
-		IntPtr source,
-		float volume
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ApplySource3D(
-		IntPtr source,
-		ref FACT3DAUDIO_LISTENER listener,
-		ref FACT3DAUDIO_EMITTER emitter
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_PlaySource(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_PauseSource(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ResumeSource(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_StopSource(
-		IntPtr source,
-		int immediate
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ApplySourceReverb(
-		IntPtr source,
-		float rvGain
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ApplySourceLowPass(
-		IntPtr source,
-		float hfGain
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ApplySourceHighPass(
-		IntPtr source,
-		float lfGain
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ApplySourceBandPass(
-		IntPtr source,
-		float hfGain,
-		float lfGain
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern int FACT_XNA_GetSourceBufferCount(IntPtr source);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_QueueSourceBufferB(
-		IntPtr source,
-		byte[] buffer,
-		int offset,
-		int count
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_QueueSourceBufferF(
-		IntPtr source,
-		float[] buffer,
-		int offset,
-		int count
-	);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern IntPtr FACT_XNA_GenSong(
+	public static extern IntPtr XNA_GenSong(
 		[MarshalAs(UnmanagedType.LPStr)] string name
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_DisposeSong(IntPtr song);
+	public static extern void XNA_DisposeSong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_PlaySong(IntPtr song);
+	public static extern void XNA_PlaySong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_PauseSong(IntPtr song);
+	public static extern void XNA_PauseSong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_ResumeSong(IntPtr song);
+	public static extern void XNA_ResumeSong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_StopSong(IntPtr song);
+	public static extern void XNA_StopSong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_XNA_SetSongVolume(
+	public static extern void XNA_SetSongVolume(
 		IntPtr song,
 		float volume
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FACT_XNA_GetSongEnded(IntPtr song);
+	public static extern uint XNA_GetSongEnded(IntPtr song);
 
 	#endregion
 
-	#region FACT I/O API
+	#region FAudio I/O API
 
-	/* IntPtr refers to an FACTIOStream* */
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern IntPtr FACT_fopen([MarshalAs(UnmanagedType.LPStr)] string path);
+	/* Delegates */
 
-	/* IntPtr refers to an FACTIOStream* */
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern IntPtr FACT_memopen(IntPtr mem, int len);
+	/* IntPtr refers to a size_t */
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate IntPtr FAudio_readfunc(
+		IntPtr data, /* void* */
+		IntPtr dst, /* void* */
+		IntPtr size, /* size_t */
+		IntPtr count /* size_t */
+	);
 
-	/* io refers to an FACTIOStream* */
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate long FAudio_seekfunc(
+		IntPtr data, /* void* */
+		long offset,
+		int whence
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate int FAudio_closefunc(IntPtr data);
+
+	/* Structures */
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioIOStream
+	{
+		public IntPtr data;
+		public IntPtr read; /* FAudio_readfunc */
+		public IntPtr seek; /* FAudio_seekfunc */
+		public IntPtr close; /* FAudio_closefunc */
+	}
+
+	/* Functions */
+
+	/* IntPtr refers to an FAudioIOStream* */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FACT_close(IntPtr io);
+	public static extern IntPtr FAudio_fopen([MarshalAs(UnmanagedType.LPStr)] string path);
+
+	/* IntPtr refers to an FAudioIOStream* */
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr FAudio_memopen(IntPtr mem, int len);
+
+	/* IntPtr refers to a uint8_t* */
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr FAudio_memptr(IntPtr io, IntPtr offset);
+
+	/* io refers to an FAudioIOStream* */
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudio_close(IntPtr io);
 
 	#endregion
 }
