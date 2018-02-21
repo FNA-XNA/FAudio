@@ -162,7 +162,11 @@ void FAudio_PlatformInit(FAudio *audio)
 		device->format.Format.wBitsPerSample = 32;
 		device->format.Format.cbSize = 0; /* ? */
 		device->format.Samples.wValidBitsPerSample = 32;
-		if (have.channels == 2)
+		if (have.channels == 1)
+		{
+			device->format.dwChannelMask = SPEAKER_MONO;
+		}
+		else if (have.channels == 2)
 		{
 			device->format.dwChannelMask = SPEAKER_STEREO;
 		}
