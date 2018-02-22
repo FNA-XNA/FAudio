@@ -41,6 +41,7 @@ public static class FAudio
 
 	/* Enumerations */
 
+	[Flags]
 	public enum FAudioDeviceRole
 	{
 		NotDefaultDevice =		0x0,
@@ -187,7 +188,7 @@ public static class FAudio
 		public uint LoopBegin;
 		public uint LoopLength;
 		public uint LoopCount;
-		IntPtr pContext; /* void* */
+		public IntPtr pContext; /* void* */
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -309,7 +310,7 @@ public static class FAudio
 	public static extern uint FAudio_GetDeviceDetails(
 		IntPtr audio, /* FAudio* */
 		uint Index,
-		ref FAudioDeviceDetails pDeviceDetails
+		out FAudioDeviceDetails pDeviceDetails
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -339,8 +340,8 @@ public static class FAudio
 		uint Flags,
 		float MaxFrequencyRatio,
 		IntPtr pCallback, /* FAudioVoiceCallback* */
-		ref FAudioVoiceSends pSendList,
-		ref FAudioEffectChain pEffectChain
+		IntPtr pSendList, /* FAudioVoiceSends* */
+		IntPtr pEffectChain /* FAudioEffectChain* */
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -351,8 +352,8 @@ public static class FAudio
 		uint InputSampleRate,
 		uint Flags,
 		uint ProcessingStage,
-		ref FAudioVoiceSends pSendList,
-		ref FAudioEffectChain pEffectChain
+		IntPtr pSendList, /* FAudioVoiceSends* */
+		IntPtr pEffectChain /* FAudioEffectChain* */
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -363,7 +364,7 @@ public static class FAudio
 		uint InputSampleRate,
 		uint Flags,
 		uint DeviceIndex,
-		ref FAudioEffectChain pEffectChain
+		IntPtr pEffectChain /* FAudioEffectChain* */
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -513,7 +514,7 @@ public static class FAudio
 		IntPtr pDestinationVoice, /* FAudioVoice* */
 		uint SourceChannels,
 		uint DestinationChannels,
-		float[] pLevelMatrix,
+		IntPtr pLevelMatrix, /* float* */
 		uint OperationSet
 	);
 
