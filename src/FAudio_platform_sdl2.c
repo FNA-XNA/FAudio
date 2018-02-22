@@ -51,6 +51,7 @@ struct FAudioPlatformDevice
 /* Globals */
 
 FAudioPlatformDevice *devlist = NULL;
+uint32_t refcount = 0;
 
 /* Mixer Thread */
 
@@ -73,17 +74,35 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 
 /* Platform Functions */
 
+void FAudio_PlatformAddRef()
+{
+	refcount += 1;
+	if (!SDL_WasInit(SDL_INIT_AUDIO))
+	{
+		SDL_InitSubSystem(SDL_INIT_AUDIO);
+	}
+}
+
+void FAudio_PlatformRelease()
+{
+	if (refcount == 0)
+	{
+		return;
+	}
+
+	refcount -= 1;
+	if (refcount == 0)
+	{
+		SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	}
+}
+
 void FAudio_PlatformInit(FAudio *audio)
 {
 	FAudioEntry *entry, *entryList;
 	FAudioPlatformDevice *device, *deviceList;
 	SDL_AudioSpec want, have;
 	const char *name;
-
-	if (!SDL_WasInit(SDL_INIT_AUDIO))
-	{
-		SDL_InitSubSystem(SDL_INIT_AUDIO);
-	}
 
 	/* The entry to be added to the audio device */
 	entry = (FAudioEntry*) FAudio_malloc(sizeof(FAudioEntry));
@@ -302,12 +321,6 @@ void FAudio_PlatformQuit(FAudio *audio)
 			dev = dev->next;
 		}
 	}
-
-	/* No more devices? We're done here... */
-	if (devlist == NULL)
-	{
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-	}
 }
 
 void FAudio_PlatformStart(FAudio *audio)
@@ -376,9 +389,16 @@ void FAudio_PlatformGetDeviceDetails(
 	{
 		details->DisplayName[i] = name[i];
 	}
+
 	details->Role = (index == 0) ?
 		GlobalDefaultDevice :
 		NotDefaultDevice;
+
+	/* FIXME: SDL needs a device format query function! */
+	details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
+	details->OutputFormat.Format.nChannels = 2;
+	details->OutputFormat.Format.nSamplesPerSec = 48000;
+	details->OutputFormat.Samples.wValidBitsPerSample = 4;
 }
 
 FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(

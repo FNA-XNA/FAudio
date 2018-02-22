@@ -33,6 +33,7 @@ uint32_t FAudioCreate(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
+	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
 	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
@@ -44,6 +45,7 @@ void FAudioDestroy(FAudio *audio)
 	/* TODO: Delete all of the voices still allocated */
 	FAudio_StopEngine(audio);
 	FAudio_free(audio);
+	FAudio_PlatformRelease();
 }
 
 uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount)
@@ -937,6 +939,10 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	/* Find the send index */
+	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
+	{
+		pDestinationVoice = voice->audio->master;
+	}
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)

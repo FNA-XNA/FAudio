@@ -192,6 +192,8 @@ DECODE_FUNC(StereoMSADPCM)
 
 /* Platform Functions */
 
+void FAudio_PlatformAddRef();
+void FAudio_PlatformRelease();
 void FAudio_PlatformInit(FAudio *audio);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
