@@ -251,6 +251,12 @@ void FAudio_PlatformInit(FAudio *audio)
 		audio->updateSize = device->bufferSize;
 		audio->mixFormat = &device->format;
 
+		/* Someone else was here first, you get their format! */
+		audio->master->master.inputChannels =
+			device->format.Format.nChannels;
+		audio->master->master.inputSampleRate =
+			device->format.Format.nSamplesPerSec;
+
 		entryList = device->engineList;
 		while (entryList->next != NULL)
 		{
