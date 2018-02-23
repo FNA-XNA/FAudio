@@ -56,7 +56,9 @@ void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 	{
 		return;
 	}
-	buffer.Flags = (decoded < activeSongInfo.sample_rate);
+	buffer.Flags = (decoded < activeSongInfo.sample_rate) ?
+		FAUDIO_END_OF_STREAM :
+		0;
 	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(int16_t);
 	buffer.pAudioData = songCache;
 	buffer.PlayBegin = 0;
