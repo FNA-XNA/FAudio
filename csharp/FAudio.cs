@@ -1727,7 +1727,8 @@ public static class FAudio
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern IntPtr XNA_GenSong(
-		[MarshalAs(UnmanagedType.LPStr)] string name
+		[MarshalAs(UnmanagedType.LPStr)] string name,
+		out float seconds
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]

@@ -123,13 +123,14 @@ void XNA_SongDevice_Release()
 
 /* "Public" API */
 
-FAUDIOAPI stb_vorbis* XNA_GenSong(const char* name)
+FAUDIOAPI stb_vorbis* XNA_GenSong(const char* name, float *seconds)
 {
 	stb_vorbis *result = stb_vorbis_open_filename(name, NULL, NULL);
 	if (result != NULL)
 	{
 		XNA_SongDevice_AddRef();
 	}
+	*seconds = stb_vorbis_stream_length_in_seconds(result);
 	return result;
 }
 
