@@ -172,12 +172,7 @@ FAUDIOAPI void XNA_PlaySong(stb_vorbis *song)
 		format.nSamplesPerSec * format.nChannels * sizeof(int16_t)
 	);
 
-	/* Okay, this song is decoding now */
-	activeSong = song;
-	stb_vorbis_seek_start(activeSong);
-	XNA_SongSubmitBuffer(NULL, NULL);
-
-	/* Init voice, start! */
+	/* Init voice */
 	FAudio_zero(&callbacks, sizeof(FAudioVoiceCallback));
 	callbacks.OnBufferEnd = XNA_SongSubmitBuffer;
 	FAudio_CreateSourceVoice(
@@ -191,6 +186,13 @@ FAUDIOAPI void XNA_PlaySong(stb_vorbis *song)
 		NULL
 	);
 	FAudioVoice_SetVolume(songVoice, songVolume, 0);
+
+	/* Okay, this song is decoding now */
+	activeSong = song;
+	stb_vorbis_seek_start(activeSong);
+	XNA_SongSubmitBuffer(NULL, NULL);
+
+	/* Finally. */
 	FAudioSourceVoice_Start(songVoice, 0, 0);
 }
 

@@ -371,7 +371,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			/* ... increment int offset by fixed offset, may be 0! */
 			voice->src.curBufferOffset += voice->src.curBufferOffsetDec >> FIXED_PRECISION;
 			/* ... subtract any increment not applicable to our possibly new buffer... */
-			voice->src.curBufferOffset -= resetOffset;
+			voice->src.curBufferOffset -= FAudio_min(resetOffset, voice->src.curBufferOffset);
 			/* ... chop off any ints we got from the above increment */
 			voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
 		}
