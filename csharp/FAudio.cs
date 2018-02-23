@@ -1737,22 +1737,19 @@ public static class FAudio
 	public static extern void XNA_PlaySong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_PauseSong(IntPtr song);
+	public static extern void XNA_PauseSong();
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_ResumeSong(IntPtr song);
+	public static extern void XNA_ResumeSong();
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_StopSong(IntPtr song);
+	public static extern void XNA_StopSong();
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_SetSongVolume(
-		IntPtr song,
-		float volume
-	);
+	public static extern void XNA_SetSongVolume(float volume);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint XNA_GetSongEnded(IntPtr song);
+	public static extern uint XNA_GetSongEnded();
 
 	#endregion
 

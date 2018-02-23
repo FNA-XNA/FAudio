@@ -51,7 +51,7 @@ struct FAudioPlatformDevice
 /* Globals */
 
 FAudioPlatformDevice *devlist = NULL;
-uint32_t refcount = 0;
+uint32_t platformRefcount = 0;
 
 /* Mixer Thread */
 
@@ -76,7 +76,7 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 
 void FAudio_PlatformAddRef()
 {
-	refcount += 1;
+	platformRefcount += 1;
 	if (!SDL_WasInit(SDL_INIT_AUDIO))
 	{
 		SDL_InitSubSystem(SDL_INIT_AUDIO);
@@ -85,13 +85,13 @@ void FAudio_PlatformAddRef()
 
 void FAudio_PlatformRelease()
 {
-	if (refcount == 0)
+	if (platformRefcount == 0)
 	{
 		return;
 	}
 
-	refcount -= 1;
-	if (refcount == 0)
+	platformRefcount -= 1;
+	if (platformRefcount == 0)
 	{
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	}

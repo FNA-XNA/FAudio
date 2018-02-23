@@ -26,49 +26,212 @@
 
 #include "FAudio_internal.h"
 
-typedef struct XNASong
-{
-	uint8_t TODO;
-} XNASong;
+#include "stb_vorbis.c" /* TODO: Remove CRT dependency */
 
-FAUDIOAPI XNASong* XNA_GenSong(const char* name)
+/* Globals */
+
+uint32_t songRefcount = 0;
+float songVolume = 1.0f;
+FAudio *songAudio = NULL;
+FAudioMasteringVoice *songMaster = NULL;
+
+FAudioSourceVoice *songVoice = NULL;
+FAudioVoiceCallback callbacks;
+stb_vorbis *activeSong = NULL;
+stb_vorbis_info activeSongInfo;
+uint8_t *songCache;
+
+/* Internal Functions */
+
+void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
-	/* TODO */
-	return NULL;
+	FAudioBuffer buffer;
+	int32_t decoded = stb_vorbis_get_samples_short_interleaved(
+		activeSong,
+		2,
+		(short*) songCache,
+		activeSongInfo.sample_rate
+	);
+	if (decoded == 0)
+	{
+		return;
+	}
+	buffer.Flags = (decoded < activeSongInfo.sample_rate);
+	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(int16_t);
+	buffer.pAudioData = songCache;
+	buffer.PlayBegin = 0;
+	buffer.PlayLength = decoded;
+	buffer.LoopBegin = 0;
+	buffer.LoopLength = 0;
+	buffer.LoopCount = 0;
+	buffer.pContext = NULL;
+	FAudioSourceVoice_SubmitSourceBuffer(
+		songVoice,
+		&buffer,
+		NULL
+	);
 }
 
-FAUDIOAPI void XNA_DisposeSong(XNASong *song)
+void XNA_SongKill()
 {
-	/* TODO */
+	if (songVoice != NULL)
+	{
+		FAudioSourceVoice_Stop(songVoice, 0, 0);
+		FAudioVoice_DestroyVoice(songVoice);
+		songVoice = NULL;
+	}
+	if (songCache != NULL)
+	{
+		FAudio_free(songCache);
+		songCache = NULL;
+	}
+	activeSong = NULL;
 }
 
-FAUDIOAPI void XNA_PlaySong(XNASong *song)
+void XNA_SongDevice_AddRef()
 {
-	/* TODO */
+	songRefcount += 1;
+	if (songRefcount == 1)
+	{
+		FAudioCreate(&songAudio, 0, FAUDIO_DEFAULT_PROCESSOR);
+		FAudio_CreateMasteringVoice(
+			songAudio,
+			&songMaster,
+			FAUDIO_DEFAULT_CHANNELS,
+			48000, /* Should be 0, but SDL... */
+			0,
+			0,
+			NULL
+		);
+	}
 }
 
-FAUDIOAPI void XNA_PauseSong(XNASong *song)
+void XNA_SongDevice_Release()
 {
-	/* TODO */
+	if (songRefcount == 0)
+	{
+		return;
+	}
+	songRefcount -= 1;
+	if (songRefcount == 0)
+	{
+		XNA_SongKill();
+		FAudioVoice_DestroyVoice(songMaster);
+		FAudioDestroy(songAudio);
+	}
 }
 
-FAUDIOAPI void XNA_ResumeSong(XNASong *song)
+/* "Public" API */
+
+FAUDIOAPI stb_vorbis* XNA_GenSong(const char* name)
 {
-	/* TODO */
+	stb_vorbis *result = stb_vorbis_open_filename(name, NULL, NULL);
+	if (result != NULL)
+	{
+		XNA_SongDevice_AddRef();
+	}
+	return result;
 }
 
-FAUDIOAPI void XNA_StopSong(XNASong *song)
+FAUDIOAPI void XNA_DisposeSong(stb_vorbis *song)
 {
-	/* TODO */
+	if (song == NULL)
+	{
+		return;
+	}
+	if (song == activeSong)
+	{
+		XNA_SongKill();
+	}
+	stb_vorbis_close(song);
+	XNA_SongDevice_Release();
 }
 
-FAUDIOAPI void XNA_SetSongVolume(XNASong *song, float volume)
+FAUDIOAPI void XNA_PlaySong(stb_vorbis *song)
 {
-	/* TODO */
+	FAudioWaveFormatEx format;
+	if (song == NULL || song == activeSong)
+	{
+		return;
+	}
+	XNA_SongKill();
+
+	/* Set format info */
+	activeSongInfo = stb_vorbis_get_info(song);
+	format.wFormatTag = 1;
+	format.nChannels = activeSongInfo.channels;
+	format.nSamplesPerSec = activeSongInfo.sample_rate;
+	format.nAvgBytesPerSec = 0; /* FIXME */
+	format.nBlockAlign = 0; /* FIXME */
+	format.wBitsPerSample = 16;
+	format.cbSize = 0;
+
+	/* Allocate decode cache */
+	songCache = (uint8_t*) FAudio_malloc(
+		format.nSamplesPerSec * format.nChannels * sizeof(int16_t)
+	);
+
+	/* Okay, this song is decoding now */
+	activeSong = song;
+	stb_vorbis_seek_start(activeSong);
+	XNA_SongSubmitBuffer(NULL, NULL);
+
+	/* Init voice, start! */
+	FAudio_zero(&callbacks, sizeof(FAudioVoiceCallback));
+	callbacks.OnBufferEnd = XNA_SongSubmitBuffer;
+	FAudio_CreateSourceVoice(
+		songAudio,
+		&songVoice,
+		&format,
+		0,
+		1.0f, /* No pitch shifting here! */
+		&callbacks,
+		NULL,
+		NULL
+	);
+	FAudioVoice_SetVolume(songVoice, songVolume, 0);
+	FAudioSourceVoice_Start(songVoice, 0, 0);
 }
 
-FAUDIOAPI uint32_t XNA_GetSongEnded(XNASong *song)
+FAUDIOAPI void XNA_PauseSong()
 {
-	/* TODO */
-	return 0;
+	if (songVoice == NULL)
+	{
+		return;
+	}
+	FAudioSourceVoice_Stop(songVoice, 0, 0);
+}
+
+FAUDIOAPI void XNA_ResumeSong()
+{
+	if (songVoice == NULL)
+	{
+		return;
+	}
+	FAudioSourceVoice_Start(songVoice, 0, 0);
+}
+
+FAUDIOAPI void XNA_StopSong()
+{
+	XNA_SongKill();
+}
+
+FAUDIOAPI void XNA_SetSongVolume(float volume)
+{
+	songVolume = volume;
+	if (songVoice != NULL)
+	{
+		FAudioVoice_SetVolume(songVoice, songVolume, 0);
+	}
+}
+
+FAUDIOAPI uint32_t XNA_GetSongEnded()
+{
+	FAudioVoiceState state;
+	if (songVoice == NULL || activeSong == NULL)
+	{
+		return 1;
+	}
+	FAudioSourceVoice_GetState(songVoice, &state);
+	return state.BuffersQueued == 0;
 }
