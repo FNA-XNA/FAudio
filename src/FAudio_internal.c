@@ -722,44 +722,8 @@ static inline int16_t FAudio_INTERNAL_ParseNibble(
 }
 
 #define READ(item, type) \
-	*item = *((type*) *buf); \
+	item = *((type*) *buf); \
 	*buf += sizeof(type);
-
-static inline void FAudio_INTERNAL_ReadMonoPreamble(
-	uint8_t **buf,
-	uint8_t *predictor,
-	int16_t *delta,
-	int16_t *sample1,
-	int16_t *sample2
-) {
-	READ(predictor, uint8_t)
-	READ(delta, int16_t)
-	READ(sample1, int16_t)
-	READ(sample2, int16_t)
-}
-
-static inline void FAudio_INTERNAL_ReadStereoPreamble(
-	uint8_t **buf,
-	uint8_t *predictor_l,
-	uint8_t *predictor_r,
-	int16_t *delta_l,
-	int16_t *delta_r,
-	int16_t *sample1_l,
-	int16_t *sample1_r,
-	int16_t *sample2_l,
-	int16_t *sample2_r
-) {
-	READ(predictor_l, uint8_t)
-	READ(predictor_r, uint8_t)
-	READ(delta_l, int16_t)
-	READ(delta_r, int16_t)
-	READ(sample1_l, int16_t)
-	READ(sample1_r, int16_t)
-	READ(sample2_l, int16_t)
-	READ(sample2_r, int16_t)
-}
-
-#undef READ
 
 static inline void FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 	uint8_t **buf,
@@ -775,21 +739,21 @@ static inline void FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 	int16_t sample2;
 	uint8_t nibbles[255]; /* Max align size */
 
-	FAudio_INTERNAL_ReadMonoPreamble(
-		buf,
-		&predictor,
-		&delta,
-		&sample1,
-		&sample2
-	);
-	*blockCache++ = sample1;
-	*blockCache++ = sample2;
+	/* Preamble */
+	READ(predictor, uint8_t)
+	READ(delta, int16_t)
+	READ(sample1, int16_t)
+	READ(sample2, int16_t)
 	FAudio_memcpy(
 		nibbles,
 		*buf,
 		align + 15
 	);
 	*buf += align + 15;
+
+	/* Samples */
+	*blockCache++ = sample1;
+	*blockCache++ = sample2;
 	for (i = 0; i < (align + 15); i += 1)
 	{
 		*blockCache++ = FAudio_INTERNAL_ParseNibble(
@@ -827,27 +791,27 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 	int16_t r_sample2;
 	uint8_t nibbles[510]; /* Max align size */
 
-	FAudio_INTERNAL_ReadStereoPreamble(
-		buf,
-		&l_predictor,
-		&r_predictor,
-		&l_delta,
-		&r_delta,
-		&l_sample1,
-		&r_sample1,
-		&l_sample2,
-		&r_sample2
-	);
-	*blockCache++ = l_sample2;
-	*blockCache++ = r_sample2;
-	*blockCache++ = l_sample1;
-	*blockCache++ = r_sample1;
+	/* Preamble */
+	READ(l_predictor, uint8_t)
+	READ(r_predictor, uint8_t)
+	READ(l_delta, int16_t)
+	READ(r_delta, int16_t)
+	READ(l_sample1, int16_t)
+	READ(r_sample1, int16_t)
+	READ(l_sample2, int16_t)
+	READ(r_sample2, int16_t)
 	FAudio_memcpy(
 		nibbles,
 		*buf,
 		(align + 15) * 2
 	);
 	*buf += (align + 15) * 2;
+
+	/* Samples */
+	*blockCache++ = l_sample2;
+	*blockCache++ = r_sample2;
+	*blockCache++ = l_sample1;
+	*blockCache++ = r_sample1;
 	for (i = 0; i < ((align + 15) * 2); i += 1)
 	{
 		*blockCache++ = FAudio_INTERNAL_ParseNibble(
@@ -866,6 +830,8 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 		);
 	}
 }
+
+#undef READ
 
 void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	FAudioBuffer *buffer,
