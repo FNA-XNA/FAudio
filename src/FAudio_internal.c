@@ -755,17 +755,18 @@ static inline void FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 	READ(delta, int16_t)
 	READ(sample1, int16_t)
 	READ(sample2, int16_t)
+	align -= 7;
 	FAudio_memcpy(
 		nibbles,
 		*buf,
-		align + 15
+		align
 	);
-	*buf += align + 15;
+	*buf += align;
 
 	/* Samples */
 	*blockCache++ = sample1;
 	*blockCache++ = sample2;
-	for (i = 0; i < (align + 15); i += 1)
+	for (i = 0; i < align; i += 1)
 	{
 		*blockCache++ = FAudio_INTERNAL_ParseNibble(
 			nibbles[i] >> 4,
@@ -811,19 +812,20 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 	READ(r_sample1, int16_t)
 	READ(l_sample2, int16_t)
 	READ(r_sample2, int16_t)
+	align -= 14;
 	FAudio_memcpy(
 		nibbles,
 		*buf,
-		(align + 15) * 2
+		align
 	);
-	*buf += (align + 15) * 2;
+	*buf += align;
 
 	/* Samples */
 	*blockCache++ = l_sample2;
 	*blockCache++ = r_sample2;
 	*blockCache++ = l_sample1;
 	*blockCache++ = r_sample1;
-	for (i = 0; i < ((align + 15) * 2); i += 1)
+	for (i = 0; i < align; i += 1)
 	{
 		*blockCache++ = FAudio_INTERNAL_ParseNibble(
 			nibbles[i] >> 4,
@@ -858,14 +860,13 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	/* PCM block cache */
 	int16_t blockCache[512]; /* Max block size */
 
-	/* Align, block size */
-	uint32_t align = format->nBlockAlign;
-	uint32_t bsize = (align + 16) * 2;
+	/* Block size */
+	uint32_t bsize = (format->nBlockAlign - 6) * 2;
 
 	/* Where are we starting? */
 	buf = (uint8_t*) buffer->pAudioData + (
 		(curOffset / bsize) *
-		(align + 22)
+		format->nBlockAlign
 	);
 
 	/* Are we starting in the middle? */
@@ -878,7 +879,7 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 		FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 			&buf,
 			blockCache,
-			align
+			format->nBlockAlign
 		);
 		FAudio_memcpy(
 			decodeCache,
@@ -906,13 +907,12 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	int16_t blockCache[1024]; /* Max block size */
 
 	/* Align, block size */
-	uint32_t align = format->nBlockAlign;
-	uint32_t bsize = (align + 16) * 2;
+	uint32_t bsize = ((format->nBlockAlign / 2) - 6) * 2;
 
 	/* Where are we starting? */
 	buf = (uint8_t*) buffer->pAudioData + (
 		(curOffset / bsize) *
-		((align + 22) * 2)
+		format->nBlockAlign
 	);
 
 	/* Are we starting in the middle? */
@@ -925,7 +925,7 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 			&buf,
 			blockCache,
-			align
+			format->nBlockAlign
 		);
 		FAudio_memcpy(
 			decodeCache,

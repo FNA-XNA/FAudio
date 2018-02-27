@@ -1018,7 +1018,7 @@ uint32_t FACTWaveBank_Prepare(
 	format.wFormatTag = entry->Format.wFormatTag;
 	format.nChannels = entry->Format.nChannels;
 	format.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	format.nBlockAlign = entry->Format.wBlockAlign;
+	format.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.nChannels;
 	format.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
 	if (format.wFormatTag == 0)
 	{
@@ -1066,8 +1066,8 @@ uint32_t FACTWaveBank_Prepare(
 		{
 			(*ppWave)->streamSize = (
 				format.nSamplesPerSec /
-				((format.nBlockAlign + 16) * 2) *
-				((format.nBlockAlign + 22) * format.nChannels)
+				(((format.nBlockAlign / format.nChannels) - 6) * 2) *
+				format.nBlockAlign
 			);
 		}
 		(*ppWave)->streamCache = (uint8_t*) FAudio_malloc((*ppWave)->streamSize);
@@ -1095,8 +1095,8 @@ uint32_t FACTWaveBank_Prepare(
 		{
 			buffer.PlayLength = (
 				buffer.PlayLength /
-				((format.nBlockAlign + 22) * format.nChannels) *
-				((format.nBlockAlign + 16) * 2)
+				format.nBlockAlign *
+				(((format.nBlockAlign / format.nChannels) - 6) * 2)
 			);
 		}
 		buffer.LoopBegin = entry->LoopRegion.dwStartSample;

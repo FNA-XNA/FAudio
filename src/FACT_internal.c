@@ -907,6 +907,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	FAudioBuffer buffer;
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
 	FACTWaveBankEntry *entry = &c->wave->parentBank->entries[c->wave->index];
+	uint16_t align = (entry->Format.wBlockAlign + 22) * entry->Format.nChannels;
 
 	/* Don't bother if we're EOS */
 	if (c->wave->streamOffset == (entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength))
@@ -973,8 +974,8 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	{
 		buffer.PlayLength = (
 			buffer.AudioBytes /
-			((entry->Format.wBlockAlign + 22) * entry->Format.nChannels) *
-			((entry->Format.wBlockAlign + 16) * 2)
+			align *
+			(((align / entry->Format.nChannels) - 6) * 2)
 		);
 	}
 
