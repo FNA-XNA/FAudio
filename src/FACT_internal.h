@@ -422,6 +422,11 @@ struct FACTWave
 	uint32_t initialPosition;
 	uint8_t loopCount;
 
+	/* Stream data */
+	uint32_t streamSize;
+	uint32_t streamOffset;
+	uint8_t *streamCache;
+
 	/* FAudio references */
 	FAudioSourceVoice *voice;
 	FACTWaveCallback callback;

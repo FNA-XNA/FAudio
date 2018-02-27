@@ -26,7 +26,7 @@
 
 #include "FAudio_internal.h"
 
-#include "stb_vorbis.c" /* TODO: Remove CRT dependency */
+#include "stb_vorbis.h" /* TODO: Remove CRT dependency */
 
 /* Globals */
 
@@ -46,7 +46,7 @@ uint8_t *songCache;
 void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
 	FAudioBuffer buffer;
-	int32_t decoded = stb_vorbis_get_samples_short_interleaved(
+	uint32_t decoded = stb_vorbis_get_samples_short_interleaved(
 		activeSong,
 		2,
 		(short*) songCache,

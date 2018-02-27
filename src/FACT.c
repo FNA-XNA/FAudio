@@ -254,7 +254,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	FACTWaveBank **ppWaveBank
 ) {
 	FAudioIOStream *io = (FAudioIOStream*) pParms->file;
-	io->seek(io, pParms->offset, 0);
+	io->seek(io->data, pParms->offset, 0);
 	return FACT_INTERNAL_ParseWaveBank(
 		pEngine,
 		io,
@@ -1053,7 +1053,28 @@ uint32_t FACTWaveBank_Prepare(
 	);
 	if (pWaveBank->streaming)
 	{
-		FAudio_assert(0 && "TODO: Streaming WaveBanks!");
+		/* Init stream cache info */
+		if (format.wFormatTag == 1)
+		{
+			(*ppWave)->streamSize = (
+				format.nSamplesPerSec *
+				format.nChannels *
+				(format.wBitsPerSample / 8)
+			);
+		}
+		else if (format.wFormatTag == 2)
+		{
+			(*ppWave)->streamSize = (
+				format.nSamplesPerSec /
+				((format.nBlockAlign + 16) * 2) *
+				((format.nBlockAlign + 22) * format.nChannels)
+			);
+		}
+		(*ppWave)->streamCache = (uint8_t*) FAudio_malloc((*ppWave)->streamSize);
+		(*ppWave)->streamOffset = entry->PlayRegion.dwOffset;
+
+		/* Read and submit first buffer from the WaveBank */
+		FACT_INTERNAL_OnBufferEnd(&(*ppWave)->callback.callback, NULL);
 	}
 	else
 	{
@@ -1067,10 +1088,7 @@ uint32_t FACTWaveBank_Prepare(
 		buffer.PlayLength = entry->PlayRegion.dwLength;
 		if (format.wFormatTag == 1)
 		{
-			if (format.wBitsPerSample == 16)
-			{
-				buffer.PlayLength /= 2;
-			}
+			buffer.PlayLength /= format.wBitsPerSample / 8;
 			buffer.PlayLength /= format.nChannels;
 		}
 		else if (format.wFormatTag == 2)
@@ -1084,9 +1102,9 @@ uint32_t FACTWaveBank_Prepare(
 		buffer.LoopBegin = entry->LoopRegion.dwStartSample;
 		buffer.LoopLength = entry->LoopRegion.dwTotalSamples;
 		buffer.LoopCount = nLoopCount;
+		buffer.pContext = NULL;
+		FAudioSourceVoice_SubmitSourceBuffer((*ppWave)->voice, &buffer, NULL);
 	}
-	buffer.pContext = NULL;
-	FAudioSourceVoice_SubmitSourceBuffer((*ppWave)->voice, &buffer, NULL);
 
 	/* Add to the WaveBank Wave list */
 	if (pWaveBank->waveList == NULL)

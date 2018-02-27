@@ -904,7 +904,89 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 {
-	/* TODO: FACTWaveCallback *c = (FACTWaveCallback*) callback; */
+	FAudioBuffer buffer;
+	FACTWaveCallback *c = (FACTWaveCallback*) callback;
+	FACTWaveBankEntry *entry = &c->wave->parentBank->entries[c->wave->index];
+
+	/* Don't bother if we're EOS */
+	if (c->wave->streamOffset == (entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength))
+	{
+		return;
+	}
+
+	/* Assign buffer memory */
+	buffer.pAudioData = c->wave->streamCache;
+	buffer.AudioBytes = FAudio_min(
+		c->wave->streamSize,
+		entry->PlayRegion.dwLength
+	);
+
+	/* Last buffer in the stream? */
+	if (	buffer.AudioBytes < c->wave->streamSize &&
+		c->wave->loopCount == 0	)
+	{
+		buffer.Flags = FAUDIO_END_OF_STREAM;
+	}
+	else
+	{
+		buffer.Flags = 0;
+	}
+
+	/* Read! */
+	c->wave->parentBank->io->seek(
+		c->wave->parentBank->io->data,
+		c->wave->streamOffset,
+		0
+	);
+	c->wave->parentBank->io->read(
+		c->wave->parentBank->io->data,
+		c->wave->streamCache,
+		c->wave->streamSize,
+		1
+	);
+
+	/* Where do we go next? */
+	if (	buffer.AudioBytes < c->wave->streamSize &&
+		c->wave->loopCount > 0	)
+	{
+		if (c->wave->loopCount != 255)
+		{
+			c->wave->loopCount -= 1;
+		}
+		c->wave->streamOffset = entry->PlayRegion.dwOffset;
+	}
+	else
+	{
+		c->wave->streamOffset += buffer.AudioBytes;
+	}
+
+	/* Assign length based on buffer read size */
+	if (entry->Format.wFormatTag == 1)
+	{
+		buffer.PlayLength = (
+			buffer.AudioBytes /
+			entry->Format.nChannels /
+			(entry->Format.wBitsPerSample / 8)
+		);
+	}
+	else if (entry->Format.wFormatTag == 2)
+	{
+		buffer.PlayLength = (
+			buffer.AudioBytes /
+			((entry->Format.wBlockAlign + 22) * entry->Format.nChannels) *
+			((entry->Format.wBlockAlign + 16) * 2)
+		);
+	}
+
+	/* Unused properties */
+	buffer.PlayBegin = 0;
+	buffer.LoopBegin = 0;
+	buffer.LoopLength = 0;
+	buffer.LoopCount = 0;
+	buffer.pContext = NULL;
+
+	/* Submit, finally. */
+	FAudioSourceVoice_SubmitSourceBuffer(c->wave->voice, &buffer, NULL);
 }
 
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
