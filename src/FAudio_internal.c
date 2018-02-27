@@ -533,7 +533,7 @@ end:
 
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 {
-	uint32_t i;
+	uint32_t i, totalSamples;
 	FAudioSourceVoiceEntry *source;
 	FAudioSubmixVoiceEntry *submix;
 	FAudioEngineCallbackEntry *callback;
@@ -582,6 +582,17 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 			}
 			submix = submix->next;
 		}
+	}
+
+	/* Apply master volume */
+	totalSamples = audio->updateSize * audio->master->master.inputChannels;
+	for (i = 0; i < totalSamples; i += 1)
+	{
+		output[i] = FAudio_clamp(
+			output[i] * audio->master->volume,
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
 	}
 
 	/* TODO: Master effect chain processing */
