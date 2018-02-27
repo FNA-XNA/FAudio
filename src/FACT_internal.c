@@ -909,7 +909,10 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 {
-	/* TODO: FACTWaveCallback *c = (FACTWaveCallback*) callback; */
+	FACTWaveCallback *c = (FACTWaveCallback*) callback;
+	c->wave->state = FACT_STATE_STOPPED;
+
+	/* TODO: Cue loop notification */
 }
 
 /* Parsing functions */
