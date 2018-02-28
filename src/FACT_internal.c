@@ -189,7 +189,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 				cue->playing.sound.tracks[i].events[j].timestamp =
 					cue->playing.sound.sound->tracks[i].events[j].timestamp;
 				cue->playing.sound.tracks[i].events[j].loopCount =
-					cue->playing.sound.sound->tracks[i].events[j].loopCount;
+					cue->playing.sound.sound->tracks[i].events[j].wave.loopCount;
 				cue->playing.sound.tracks[i].events[j].finished = 0;
 
 				FAudio_zero(
@@ -491,7 +491,7 @@ void FACT_INTERNAL_ActivateEvent(
 				FACT_INTERNAL_rng() *
 				(evt->wave.maxPitch - evt->wave.minPitch)
 			);
-			if (evtInst->loopCount < evt->loopCount)
+			if (evtInst->loopCount < evt->wave.loopCount)
 			{
 				/* Variation on Loop */
 				if (evt->wave.variationFlags & 0x0100)
@@ -525,7 +525,7 @@ void FACT_INTERNAL_ActivateEvent(
 				FACT_INTERNAL_rng() *
 				(evt->wave.maxVolume - evt->wave.minVolume)
 			);
-			if (evtInst->loopCount < evt->loopCount)
+			if (evtInst->loopCount < evt->wave.loopCount)
 			{
 				/* Variation on Loop */
 				if (evt->wave.variationFlags & 0x0200)
@@ -563,7 +563,7 @@ void FACT_INTERNAL_ActivateEvent(
 				FACT_INTERNAL_rng() *
 				(evt->wave.maxFrequency - evt->wave.minFrequency)
 			);
-			if (evtInst->loopCount < evt->loopCount)
+			if (evtInst->loopCount < evt->wave.loopCount)
 			{
 				/* Variation on Loop */
 				if (evt->wave.variationFlags & 0x0C00)
@@ -601,7 +601,7 @@ void FACT_INTERNAL_ActivateEvent(
 		}
 
 		/* For infinite loops with no variation, let Wave do the work */
-		if (evt->loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
+		if (evt->wave.loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
 		{
 			evtInst->data.wave.wave->loopCount = 255;
 			evtInst->loopCount = 0;
@@ -682,6 +682,16 @@ void FACT_INTERNAL_ActivateEvent(
 		{
 			return;
 		}
+		if (evtInst->loopCount > 0)
+		{
+			if (evtInst->loopCount != 0xFF)
+			{
+				evtInst->loopCount -= 1;
+			}
+
+			evtInst->timestamp += evt->value.frequency;
+			return;
+		}
 	}
 
 	/* MARKER */
@@ -689,6 +699,16 @@ void FACT_INTERNAL_ActivateEvent(
 			evt->type == FACTEVENT_MARKERREPEATING	)
 	{
 		/* TODO: FACT_INTERNAL_Marker(evt->marker*) */
+		if (evtInst->loopCount > 0)
+		{
+			if (evtInst->loopCount != 0xFF)
+			{
+				evtInst->loopCount -= 1;
+			}
+
+			evtInst->timestamp += evt->marker.frequency;
+			return;
+		}
 	}
 
 	/* ??? */
@@ -697,20 +717,8 @@ void FACT_INTERNAL_ActivateEvent(
 		FAudio_assert(0 && "Unknown event type!");
 	}
 
-	/* Either loop or mark this event as complete */
-	if (evtInst->loopCount > 0)
-	{
-		if (evtInst->loopCount != 0xFF)
-		{
-			evtInst->loopCount -= 1;
-		}
-
-		evtInst->timestamp += evt->timestamp;
-	}
-	else
-	{
-		evtInst->finished = 1;
-	}
+	/* If we made it here, we're done! */
+	evtInst->finished = 1;
 }
 
 void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
@@ -1292,7 +1300,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].wave.flags = read_u8(ptr);
 			track->events[i].wave.simple.track = read_u16(ptr);
 			track->events[i].wave.simple.wavebank = read_u8(ptr);
-			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr);
 			track->events[i].wave.angle = read_u16(ptr);
 
@@ -1304,7 +1312,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			/* Complex Wave */
 			track->events[i].wave.isComplex = 1;
 			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr);
 			track->events[i].wave.angle = read_u16(ptr);
 
@@ -1345,7 +1353,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].wave.flags = read_u8(ptr);
 			track->events[i].wave.simple.track = read_u16(ptr);
 			track->events[i].wave.simple.wavebank = read_u8(ptr);
-			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr);
 			track->events[i].wave.angle = read_u16(ptr);
 
@@ -1365,7 +1373,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			/* Complex Wave */
 			track->events[i].wave.isComplex = 1;
 			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].loopCount = read_u8(ptr);
+			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr);
 			track->events[i].wave.angle = read_u16(ptr);
 
@@ -1415,7 +1423,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].value.settings = read_u8(ptr);
 			if (track->events[i].value.settings & 1) /* Ramp */
 			{
-				track->events[i].loopCount = 0;
+				track->events[i].value.repeats = 0;
 				track->events[i].value.ramp.initialValue = read_f32(ptr);
 				track->events[i].value.ramp.initialSlope = read_f32(ptr);
 				track->events[i].value.ramp.slopeDelta = read_f32(ptr);
@@ -1436,28 +1444,26 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 				if (	EVTTYPE(FACTEVENT_PITCHREPEATING) ||
 					EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 				{
-					track->events[i].loopCount = read_u16(ptr);
-					track->events[i].frequency = read_u16(ptr);
+					track->events[i].value.repeats = read_u16(ptr);
+					track->events[i].value.frequency = read_u16(ptr);
 				}
 				else
 				{
-					track->events[i].loopCount = 0;
+					track->events[i].value.repeats = 0;
 				}
 			}
 		}
 		else if (EVTTYPE(FACTEVENT_MARKER))
 		{
 			track->events[i].marker.marker = read_u32(ptr);
-			track->events[i].loopCount = read_u16(ptr);
-			track->events[i].frequency = read_u16(ptr);
-			track->events[i].marker.repeating = 0;
+			track->events[i].marker.repeats = 0;
+			track->events[i].marker.frequency = 0;
 		}
 		else if (EVTTYPE(FACTEVENT_MARKERREPEATING))
 		{
 			track->events[i].marker.marker = read_u32(ptr);
-			track->events[i].loopCount = read_u16(ptr);
-			track->events[i].frequency = read_u16(ptr);
-			track->events[i].marker.repeating = 1;
+			track->events[i].marker.repeats = read_u16(ptr);
+			track->events[i].marker.frequency = read_u16(ptr);
 		}
 		else
 		{

@@ -140,6 +140,7 @@ typedef struct FACTSimpleWave
 typedef struct FACTEvent_PlayWave
 {
 	uint8_t flags;
+	uint8_t loopCount;
 	uint16_t position;
 	uint16_t angle;
 
@@ -173,6 +174,8 @@ typedef struct FACTEvent_PlayWave
 typedef struct FACTEvent_SetValue
 {
 	uint8_t settings;
+	uint16_t repeats;
+	uint16_t frequency;
 	union
 	{
 		struct
@@ -199,7 +202,8 @@ typedef struct FACTEvent_Stop
 typedef struct FACTEvent_Marker
 {
 	uint32_t marker;
-	uint8_t repeating;
+	uint16_t repeats;
+	uint16_t frequency;
 } FACTEvent_Marker;
 
 typedef struct FACTEvent
@@ -207,8 +211,6 @@ typedef struct FACTEvent
 	uint16_t type;
 	uint16_t timestamp;
 	uint16_t randomOffset;
-	uint8_t loopCount;
-	uint16_t frequency;
 	union
 	{
 		FACTEvent_PlayWave wave;
@@ -261,7 +263,7 @@ typedef struct FACTInstanceRPCData
 typedef struct FACTEventInstance
 {
 	uint16_t timestamp;
-	uint8_t loopCount;
+	uint16_t loopCount;
 	uint8_t finished;
 	union
 	{
