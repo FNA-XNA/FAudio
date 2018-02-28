@@ -262,7 +262,7 @@ typedef struct FACTInstanceRPCData
 
 typedef struct FACTEventInstance
 {
-	uint16_t timestamp;
+	uint32_t timestamp;
 	uint16_t loopCount;
 	uint8_t finished;
 	union
