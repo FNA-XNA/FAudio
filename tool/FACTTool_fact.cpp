@@ -633,14 +633,6 @@ void FACTTool_Update()
 									"Random Offset: %d",
 									evt->randomOffset
 								);
-								ImGui::Text(
-									"Loop Count: %d",
-									evt->loopCount
-								);
-								ImGui::Text(
-									"Frequency: %d",
-									evt->frequency
-								);
 								if (evt->type == FACTEVENT_STOP)
 								{
 									ImGui::Text(
@@ -664,6 +656,10 @@ void FACTTool_Update()
 									ImGui::Text(
 										"Angle: %d",
 										evt->wave.angle
+									);
+									ImGui::Text(
+										"Loop Count: %d",
+										evt->wave.loopCount
 									);
 									if (evt->wave.isComplex)
 									{
@@ -806,6 +802,14 @@ void FACTTool_Update()
 											evt->value.ramp.duration
 										);
 									}
+									ImGui::Text(
+										"Repeats: %d",
+										evt->value.repeats
+									);
+									ImGui::Text(
+										"Frequency: %d",
+										evt->value.frequency
+									);
 								}
 								else if (	evt->type == FACTEVENT_MARKER ||
 										evt->type == FACTEVENT_MARKERREPEATING	)
@@ -815,8 +819,12 @@ void FACTTool_Update()
 										evt->marker.marker
 									);
 									ImGui::Text(
-										"Repeating: %d",
-										evt->marker.repeating
+										"Repeats: %d",
+										evt->marker.repeats
+									);
+									ImGui::Text(
+										"Frequency: %d",
+										evt->marker.frequency
 									);
 								}
 								else

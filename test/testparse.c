@@ -273,15 +273,11 @@ int main(int argc, char **argv)
 					"\t\t\t\t\tEvent %d:\n"
 					"\t\t\t\t\t\tType: %d\n"
 					"\t\t\t\t\t\tTimestamp: %d\n"
-					"\t\t\t\t\t\tRandom Offset: %d\n"
-					"\t\t\t\t\t\tLoop Count: %d\n"
-					"\t\t\t\t\t\tFrequency: %d\n",
+					"\t\t\t\t\t\tRandom Offset: %d\n",
 					k,
 					evt->type,
 					evt->timestamp,
-					evt->randomOffset,
-					evt->loopCount,
-					evt->frequency
+					evt->randomOffset
 				);
 				if (evt->type == FACTEVENT_STOP)
 				{
@@ -298,10 +294,12 @@ int main(int argc, char **argv)
 					printf(
 						"\t\t\t\t\t\tPlay Flags: %X\n"
 						"\t\t\t\t\t\tPosition: %d\n"
-						"\t\t\t\t\t\tAngle: %d\n",
+						"\t\t\t\t\t\tAngle: %d\n"
+						"\t\t\t\t\t\tLoop Count: %d\n",
 						evt->wave.flags,
 						evt->wave.position,
-						evt->wave.angle
+						evt->wave.angle,
+						evt->wave.loopCount
 					);
 					if (evt->wave.isComplex)
 					{
@@ -411,15 +409,23 @@ int main(int argc, char **argv)
 							evt->value.ramp.duration
 						);
 					}
+					printf(
+						"\t\t\t\t\t\tRepeats: %d\n"
+						"\t\t\t\t\t\tFrequency: %d\n",
+						evt->value.repeats,
+						evt->value.frequency
+					);
 				}
 				else if (	evt->type == FACTEVENT_MARKER ||
 						evt->type == FACTEVENT_MARKERREPEATING	)
 				{
 					printf(
 						"\t\t\t\t\t\tMarker: %d\n"
-						"\t\t\t\t\t\tRepeating: %d\n",
+						"\t\t\t\t\t\tRepeats: %d\n"
+						"\t\t\t\t\t\tFrequency: %d\n",
 						evt->marker.marker,
-						evt->marker.repeating
+						evt->marker.repeats,
+						evt->marker.frequency
 					);
 				}
 				else
