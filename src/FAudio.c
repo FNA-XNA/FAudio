@@ -140,6 +140,7 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
+	uint32_t i;
 	FAudioSourceVoiceEntry *entry, *latest;
 
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
@@ -187,6 +188,12 @@ uint32_t FAudio_CreateSourceVoice(
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
 			FAudio_INTERNAL_DecodeMonoMSADPCM;
 	}
+	else if (pSourceFormat->wFormatTag == 3)
+	{
+		(*ppSourceVoice)->src.decode = (pSourceFormat->nChannels == 2) ?
+			FAudio_INTERNAL_DecodeStereoPCM32F :
+			FAudio_INTERNAL_DecodeMonoPCM32F;
+	}
 	else
 	{
 		FAudio_assert(0 && "Unsupported wFormatTag!");
@@ -204,11 +211,13 @@ uint32_t FAudio_CreateSourceVoice(
 		(double) pSourceFormat->nSamplesPerSec /
 		(double) audio->master->master.inputSampleRate
 	) + EXTRA_DECODE_PADDING * 2;
-	(*ppSourceVoice)->src.decodeCache = (int16_t*) FAudio_malloc(
-		sizeof(int16_t) *
-		pSourceFormat->nChannels *
-		(*ppSourceVoice)->src.decodeSamples
-	);
+	for (i = 0; i < pSourceFormat->nChannels; i += 1)
+	{
+		(*ppSourceVoice)->src.decodeCache[i] = (float*) FAudio_malloc(
+			sizeof(float) *
+			(*ppSourceVoice)->src.decodeSamples
+		);
+	}
 
 	/* Add to list, finally. */
 	entry = (FAudioSourceVoiceEntry*) FAudio_malloc(
@@ -1049,7 +1058,13 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 				break;
 			}
 		}
-		FAudio_free(voice->src.decodeCache);
+		for (i = 0; i < voice->src.format.nChannels; i += 1)
+		{
+			if (voice->src.decodeCache[i] != NULL)
+			{
+				FAudio_free(voice->src.decodeCache[i]);
+			}
+		}
 		if (voice->src.outputResampleCache != NULL)
 		{
 			FAudio_free(voice->src.outputResampleCache);
@@ -1290,7 +1305,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	FAudioSourceVoice *voice,
 	uint32_t NewSourceSampleRate
 ) {
-	uint32_t outSampleRate;
+	uint32_t i, outSampleRate;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_assert(	NewSourceSampleRate >= FAUDIO_MIN_SAMPLE_RATE &&
@@ -1298,7 +1313,14 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	voice->src.format.nSamplesPerSec = NewSourceSampleRate;
 
 	/* FIXME: This is lazy... */
-	FAudio_free(voice->src.decodeCache);
+	for (i = 0; i < voice->src.format.nChannels; i += 1)
+	{
+		if (voice->src.decodeCache[i] != NULL)
+		{
+			FAudio_free(voice->src.decodeCache[i]);
+			voice->src.decodeCache[i] = NULL;
+		}
+	}
 
 	/* Sample Storage */
 	voice->src.decodeSamples = (uint32_t) FAudio_ceil(
@@ -1307,11 +1329,13 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 		(double) NewSourceSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	) + EXTRA_DECODE_PADDING * 2;
-	voice->src.decodeCache = (int16_t*) FAudio_malloc(
-		sizeof(int16_t) *
-		voice->src.decodeSamples *
-		voice->src.format.nChannels
-	);
+	for (i = 0; i < voice->src.format.nChannels; i += 1)
+	{
+		voice->src.decodeCache[i] = (float*) FAudio_malloc(
+			sizeof(float) *
+			voice->src.decodeSamples
+		);
+	}
 
 	if (voice->sends.SendCount == 0)
 	{

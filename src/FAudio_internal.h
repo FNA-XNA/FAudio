@@ -78,7 +78,8 @@ struct FAudioBufferEntry
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	int16_t *decodeCache,
+	float *decodeCacheL,
+	float *decodeCacheR,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 );
@@ -120,7 +121,7 @@ struct FAudioVoice
 			/* Sample storage */
 			#define EXTRA_DECODE_PADDING 2
 			uint32_t decodeSamples;
-			int16_t *decodeCache;
+			float *decodeCache[2];
 			uint32_t outputSamples;
 			float *outputResampleCache;
 
@@ -178,15 +179,18 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 	extern void FAudio_INTERNAL_Decode##type( \
 		FAudioBuffer *buffer, \
 		uint32_t curOffset, \
-		int16_t *decodeCache, \
+		float *decodeCacheL, \
+		float *decodeCacheR, \
 		uint32_t samples, \
 		FAudioWaveFormatEx *format \
 	);
 DECODE_FUNC(MonoPCM8)
 DECODE_FUNC(MonoPCM16)
+DECODE_FUNC(MonoPCM32F)
 DECODE_FUNC(MonoMSADPCM)
 DECODE_FUNC(StereoPCM8)
 DECODE_FUNC(StereoPCM16)
+DECODE_FUNC(StereoPCM32F)
 DECODE_FUNC(StereoMSADPCM)
 #undef DECODE_FUNC
 
