@@ -455,7 +455,7 @@ void FACTTool_Update()
 		if (ImGui::CollapsingHeader("WaveBank Dependencies"))
 		for (uint8_t j = 0; j < soundBanks[i]->wavebankCount; j += 1)
 		{
-			ImGui::Text(soundBanks[i]->wavebankNames[j]);
+			ImGui::Text("%s", soundBanks[i]->wavebankNames[j]);
 		}
 
 		/* Cues */
