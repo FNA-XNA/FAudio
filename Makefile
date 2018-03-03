@@ -13,7 +13,7 @@ else
 	TARGET = so
 endif
 
-CFLAGS += -g -Wall -pedantic -fpic -fPIC -shared
+CFLAGS += -g -Wall -pedantic -fpic -fPIC
 
 # Source lists
 FAUDIOSRC = \
@@ -34,7 +34,7 @@ FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
 # Targets
 
 all: $(FAUDIOOBJ)
-	$(CC) $(CFLAGS) -o libFAudio.$(TARGET) $(FAUDIOOBJ) `sdl2-config --libs`
+	$(CC) $(CFLAGS) -shared -o libFAudio.$(TARGET) $(FAUDIOOBJ) `sdl2-config --libs`
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
