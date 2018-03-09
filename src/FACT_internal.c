@@ -47,12 +47,215 @@ float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 	return FAudio_pow(10.0, decibel / 2000.0);
 }
 
+void FACT_INTERNAL_GetNextWave(
+	FACTCue *cue,
+	FACTSound *sound,
+	FACTTrack *track,
+	FACTTrackInstance *trackInst,
+	FACTEvent *evt,
+	FACTEventInstance *evtInst
+) {
+	const char *wbName;
+	FACTWaveBank *wb;
+	uint16_t wbTrack;
+	uint8_t wbIndex;
+	uint8_t loopCount = 0;
+
+	/* Last loop running? Ignore us.. */
+	if (	evtInst->loopCount == 0 &&
+		(trackInst->wave != NULL || trackInst->upcomingWave != NULL)	)
+	{
+		return;
+	}
+
+	/* Track Variation */
+	if (evt->wave.isComplex)
+	{
+		/* TODO: Complex wave selection */
+		wbIndex = evt->wave.complex.wavebanks[0];
+		wbTrack = evt->wave.complex.tracks[0];
+	}
+	else
+	{
+		wbIndex = evt->wave.simple.wavebank;
+		wbTrack = evt->wave.simple.track;
+	}
+	wbName = cue->parentBank->wavebankNames[wbIndex];
+	wb = cue->parentBank->parentEngine->wbList;
+	while (wb != NULL)
+	{
+		if (FAudio_strcmp(wbName, wb->name) == 0)
+		{
+			break;
+		}
+		wb = wb->next;
+	}
+	FAudio_assert(wb != NULL);
+
+	/* Generate the Wave */
+	/* For infinite loops with no variation, let Wave do the work */
+	if (evtInst->loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
+	{
+		loopCount = 255;
+		evtInst->loopCount = 0;
+	}
+	FACTWaveBank_Prepare(
+		wb,
+		wbTrack,
+		evt->wave.flags,
+		0,
+		loopCount,
+		&trackInst->upcomingWave
+	);
+	trackInst->upcomingWave->callback.cue = cue;
+	trackInst->upcomingWave->callback.event = evt;
+	trackInst->upcomingWave->callback.eventInstance = evtInst;
+
+	/* 3D Audio */
+	if (cue->active3D)
+	{
+		FACTWave_SetMatrixCoefficients(
+			trackInst->upcomingWave,
+			cue->srcChannels,
+			cue->dstChannels,
+			cue->matrixCoefficients
+		);
+	}
+	else
+	{
+		/* TODO: Position/Angle/UseCenterSpeaker */
+	}
+
+	/* Pitch Variation */
+	if (evt->wave.variationFlags & 0x1000)
+	{
+		const int16_t rngPitch = (int16_t) (
+			FACT_INTERNAL_rng() *
+			(evt->wave.maxPitch - evt->wave.minPitch)
+		);
+		if (evtInst->loopCount < evt->wave.loopCount)
+		{
+			/* Variation on Loop */
+			if (evt->wave.variationFlags & 0x0100)
+			{
+				/* Add/Replace */
+				if (evt->wave.variationFlags & 0x0004)
+				{
+					trackInst->basePitch += rngPitch;
+				}
+				else
+				{
+					trackInst->basePitch = rngPitch + sound->pitch;
+				}
+			}
+		}
+		else
+		{
+			/* Initial Pitch Variation */
+			trackInst->basePitch = rngPitch + sound->pitch;
+		}
+	}
+	else
+	{
+		trackInst->basePitch = sound->pitch;
+	}
+
+	/* Volume Variation */
+	if (evt->wave.variationFlags & 0x2000)
+	{
+		const float rngVolume = track->volume + (
+			FACT_INTERNAL_rng() *
+			(evt->wave.maxVolume - evt->wave.minVolume)
+		);
+		if (evtInst->loopCount < evt->wave.loopCount)
+		{
+			/* Variation on Loop */
+			if (evt->wave.variationFlags & 0x0200)
+			{
+				/* Add/Replace */
+				if (evt->wave.variationFlags & 0x0001)
+				{
+					trackInst->baseVolume += rngVolume;
+				}
+				else
+				{
+					trackInst->baseVolume = rngVolume + sound->volume;
+				}
+			}
+		}
+		else
+		{
+			/* Initial Volume Variation */
+			trackInst->baseVolume = rngVolume + sound->volume;
+		}
+	}
+	else
+	{
+		trackInst->baseVolume = sound->volume + track->volume;
+	}
+
+	/* Filter Variation, QFactor/Freq are always together */
+	if (evt->wave.variationFlags & 0xC000)
+	{
+		const float rngQFactor = (
+			FACT_INTERNAL_rng() *
+			(evt->wave.maxQFactor - evt->wave.minQFactor)
+		);
+		const float rngFrequency = (
+			FACT_INTERNAL_rng() *
+			(evt->wave.maxFrequency - evt->wave.minFrequency)
+		);
+		if (evtInst->loopCount < evt->wave.loopCount)
+		{
+			/* Variation on Loop */
+			if (evt->wave.variationFlags & 0x0C00)
+			{
+				/* TODO: Add/Replace */
+				/* FIXME: Which is QFactor/Freq?
+				if (evt->wave.variationFlags & 0x0010)
+				{
+				}
+				else
+				{
+				}
+				if (evt->wave.variationFlags & 0x0040)
+				{
+				}
+				else
+				{
+				}
+				*/
+				trackInst->baseQFactor = rngQFactor;
+				trackInst->baseFrequency = rngFrequency;
+			}
+		}
+		else
+		{
+			/* Initial Filter Variation */
+			trackInst->baseQFactor = rngQFactor;
+			trackInst->baseFrequency = rngFrequency;
+		}
+	}
+	else
+	{
+		trackInst->baseQFactor = track->qfactor;
+		trackInst->baseFrequency = track->frequency;
+	}
+
+	/* Try to change loop counter at the very end */
+	if (evtInst->loopCount > 0)
+	{
+		evtInst->loopCount -= 1;
+	}
+}
+
 void FACT_INTERNAL_SelectSound(FACTCue *cue)
 {
 	uint16_t i, j;
 	float max, next, weight;
 	const char *wbName;
 	FACTWaveBank *wb;
+	FACTEvent *evt;
 
 	if (cue->data->flags & 0x04)
 	{
@@ -181,22 +384,49 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 		);
 		for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
 		{
+			cue->playing.sound.tracks[i].rpcData.rpcVolume = 1.0f;
+			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
+			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = 0.0f; /* FIXME */
+
+			cue->playing.sound.tracks[i].wave = NULL;
+			cue->playing.sound.tracks[i].upcomingWave = NULL;;
+			cue->playing.sound.tracks[i].baseVolume = 1.0f;
+			cue->playing.sound.tracks[i].basePitch = 0;
+			cue->playing.sound.tracks[i].baseQFactor = 0.0f; /* FIXME */
+			cue->playing.sound.tracks[i].baseFrequency = 0.0f; /* FIXME */
+
 			cue->playing.sound.tracks[i].events = (FACTEventInstance*) FAudio_malloc(
 				sizeof(FACTEventInstance) * cue->playing.sound.sound->tracks[i].eventCount
 			);
 			for (j = 0; j < cue->playing.sound.sound->tracks[i].eventCount; j += 1)
 			{
+				evt = &cue->playing.sound.sound->tracks[i].events[j];
+
 				cue->playing.sound.tracks[i].events[j].timestamp =
 					cue->playing.sound.sound->tracks[i].events[j].timestamp;
 				cue->playing.sound.tracks[i].events[j].loopCount =
 					cue->playing.sound.sound->tracks[i].events[j].wave.loopCount;
 				cue->playing.sound.tracks[i].events[j].finished = 0;
 				cue->playing.sound.tracks[i].events[j].value = 0.0f;
-			}
 
-			cue->playing.sound.tracks[i].rpcData.rpcVolume = 1.0f;
-			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
-			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = 0.0f; /* FIXME */
+				if (	evt->type == FACTEVENT_PLAYWAVE ||
+					evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+					evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+					evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+				{
+					FACT_INTERNAL_GetNextWave(
+						cue,
+						cue->playing.sound.sound,
+						&cue->playing.sound.sound->tracks[i],
+						&cue->playing.sound.tracks[i],
+						evt,
+						&cue->playing.sound.tracks[i].events[j]
+					);
+					cue->playing.sound.tracks[j].waveEvt = evt;
+					cue->playing.sound.tracks[j].waveEvtInst =
+						&cue->playing.sound.tracks[i].events[j];
+				}
+			}
 		}
 	}
 }
@@ -381,7 +611,6 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 
 void FACT_INTERNAL_ActivateEvent(
 	FACTCue *cue,
-	FACTSound *sound,
 	FACTTrack *track,
 	FACTTrackInstance *trackInst,
 	FACTEvent *evt,
@@ -390,10 +619,6 @@ void FACT_INTERNAL_ActivateEvent(
 ) {
 	uint8_t i;
 	float svResult;
-	const char *wbName;
-	uint16_t wbTrack;
-	uint8_t wbIndex;
-	FACTWaveBank *wb;
 	uint8_t skipLoopCheck = 0;
 
 	/* STOP */
@@ -406,11 +631,7 @@ void FACT_INTERNAL_ActivateEvent(
 		}
 
 		/* Stop track */
-		else for (i = 0; i < track->eventCount; i += 1)
-		if (	track->events[i].type == FACTEVENT_PLAYWAVE ||
-			track->events[i].type == FACTEVENT_PLAYWAVETRACKVARIATION ||
-			track->events[i].type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
-			track->events[i].type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+		else
 		{
 			if (trackInst->wave != NULL)
 			{
@@ -418,6 +639,24 @@ void FACT_INTERNAL_ActivateEvent(
 					trackInst->wave,
 					evt->stop.flags & 0x01
 				);
+			}
+
+			/* If there was another sound coming, it ain't now! */
+			if (trackInst->upcomingWave != NULL)
+			{
+				FACTWave_Destroy(trackInst->upcomingWave);
+				trackInst->upcomingWave = NULL;
+			}
+
+			/* Kill the loop count too */
+			for (i = 0; i < track->eventCount; i += 1)
+			if (	track->events[i].type == FACTEVENT_PLAYWAVE ||
+				track->events[i].type == FACTEVENT_PLAYWAVETRACKVARIATION ||
+				track->events[i].type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
+				track->events[i].type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+			{
+				trackInst->events[i].loopCount = 0;
+				break;
 			}
 		}
 	}
@@ -428,182 +667,10 @@ void FACT_INTERNAL_ActivateEvent(
 			evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 			evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 	{
-		/* Track Variation */
-		if (evt->wave.isComplex)
-		{
-			/* TODO: Complex wave selection */
-			wbIndex = evt->wave.complex.wavebanks[0];
-			wbTrack = evt->wave.complex.tracks[0];
-		}
-		else
-		{
-			wbIndex = evt->wave.simple.wavebank;
-			wbTrack = evt->wave.simple.track;
-		}
-		wbName = cue->parentBank->wavebankNames[wbIndex];
-		wb = cue->parentBank->parentEngine->wbList;
-		while (wb != NULL)
-		{
-			if (FAudio_strcmp(wbName, wb->name) == 0)
-			{
-				break;
-			}
-			wb = wb->next;
-		}
-		FAudio_assert(wb != NULL);
-
-		/* TODO: Generate the first wave at Play time! */
-		FACTWaveBank_Prepare(
-			wb,
-			wbTrack,
-			evt->wave.flags,
-			0,
-			0, /* FIXME: evtInst->loopCount? */
-			&trackInst->wave
-		);
-		trackInst->wave->callback.cue = cue;
-		trackInst->wave->callback.event = evt;
-		trackInst->wave->callback.eventInstance = evtInst;
-
-		/* 3D Audio */
-		if (cue->active3D)
-		{
-			FACTWave_SetMatrixCoefficients(
-				trackInst->wave,
-				cue->srcChannels,
-				cue->dstChannels,
-				cue->matrixCoefficients
-			);
-		}
-		else
-		{
-			/* TODO: Position/Angle/UseCenterSpeaker */
-		}
-
-		/* Pitch Variation */
-		if (evt->wave.variationFlags & 0x1000)
-		{
-			const int16_t rngPitch = (int16_t) (
-				FACT_INTERNAL_rng() *
-				(evt->wave.maxPitch - evt->wave.minPitch)
-			);
-			if (evtInst->loopCount < evt->wave.loopCount)
-			{
-				/* Variation on Loop */
-				if (evt->wave.variationFlags & 0x0100)
-				{
-					/* Add/Replace */
-					if (evt->wave.variationFlags & 0x0004)
-					{
-						trackInst->basePitch += rngPitch;
-					}
-					else
-					{
-						trackInst->basePitch = rngPitch + sound->pitch;
-					}
-				}
-			}
-			else
-			{
-				/* Initial Pitch Variation */
-				trackInst->basePitch = rngPitch + sound->pitch;
-			}
-		}
-		else
-		{
-			trackInst->basePitch = sound->pitch;
-		}
-
-		/* Volume Variation */
-		if (evt->wave.variationFlags & 0x2000)
-		{
-			const float rngVolume = track->volume + (
-				FACT_INTERNAL_rng() *
-				(evt->wave.maxVolume - evt->wave.minVolume)
-			);
-			if (evtInst->loopCount < evt->wave.loopCount)
-			{
-				/* Variation on Loop */
-				if (evt->wave.variationFlags & 0x0200)
-				{
-					/* Add/Replace */
-					if (evt->wave.variationFlags & 0x0001)
-					{
-						trackInst->baseVolume += rngVolume;
-					}
-					else
-					{
-						trackInst->baseVolume = rngVolume + sound->volume;
-					}
-				}
-			}
-			else
-			{
-				/* Initial Volume Variation */
-				trackInst->baseVolume = rngVolume + sound->volume;
-			}
-		}
-		else
-		{
-			trackInst->baseVolume = sound->volume + track->volume;
-		}
-
-		/* Filter Variation, QFactor/Freq are always together */
-		if (evt->wave.variationFlags & 0xC000)
-		{
-			const float rngQFactor = (
-				FACT_INTERNAL_rng() *
-				(evt->wave.maxQFactor - evt->wave.minQFactor)
-			);
-			const float rngFrequency = (
-				FACT_INTERNAL_rng() *
-				(evt->wave.maxFrequency - evt->wave.minFrequency)
-			);
-			if (evtInst->loopCount < evt->wave.loopCount)
-			{
-				/* Variation on Loop */
-				if (evt->wave.variationFlags & 0x0C00)
-				{
-					/* TODO: Add/Replace */
-					/* FIXME: Which is QFactor/Freq?
-					if (evt->wave.variationFlags & 0x0010)
-					{
-					}
-					else
-					{
-					}
-					if (evt->wave.variationFlags & 0x0040)
-					{
-					}
-					else
-					{
-					}
-					*/
-					trackInst->baseQFactor = rngQFactor;
-					trackInst->baseFrequency = rngFrequency;
-				}
-			}
-			else
-			{
-				/* Initial Filter Variation */
-				trackInst->baseQFactor = rngQFactor;
-				trackInst->baseFrequency = rngFrequency;
-			}
-		}
-		else
-		{
-			trackInst->baseQFactor = track->qfactor;
-			trackInst->baseFrequency = track->frequency;
-		}
-
-		/* For infinite loops with no variation, let Wave do the work */
-		if (evt->wave.loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
-		{
-			trackInst->wave->loopCount = 255;
-			evtInst->loopCount = 0;
-		}
-
-		/* Play, finally. */
+		FAudio_assert(trackInst->wave == NULL);
+		FAudio_assert(trackInst->upcomingWave != NULL);
+		trackInst->wave = trackInst->upcomingWave;
+		trackInst->upcomingWave = NULL;
 		FACTWave_Play(trackInst->wave);
 	}
 
@@ -787,7 +854,6 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 				{
 					FACT_INTERNAL_ActivateEvent(
 						cue,
-						active->sound,
 						&active->sound->tracks[i],
 						&active->tracks[i],
 						&active->sound->tracks[i].events[j],

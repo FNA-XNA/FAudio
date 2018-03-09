@@ -279,6 +279,8 @@ typedef struct FACTTrackInstance
 	/* Wave playback */
 	FACTWave *wave;
 	FACTWave *upcomingWave;
+	FACTEvent *waveEvt;
+	FACTEventInstance *waveEvtInst;
 	float baseVolume;
 	int16_t basePitch;
 	float baseQFactor;
@@ -474,6 +476,14 @@ struct FACTCue
 /* Internal functions */
 
 float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel);
+void FACT_INTERNAL_GetNextWave(
+	FACTCue *cue,
+	FACTSound *sound,
+	FACTTrack *track,
+	FACTTrackInstance *trackInst,
+	FACTEvent *evt,
+	FACTEventInstance *evtInst
+);
 void FACT_INTERNAL_SelectSound(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);

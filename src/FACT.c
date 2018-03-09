@@ -212,6 +212,34 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 
 uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 {
+	uint8_t i;
+	FACTCue *cue;
+	FACTSoundBank *sb = pEngine->sbList;
+	while (sb != NULL)
+	{
+		cue = sb->cueList;
+		while (cue != NULL)
+		{
+			if (cue->active & 0x02)
+			for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+			{
+				if (	cue->playing.sound.tracks[i].upcomingWave == NULL &&
+					cue->playing.sound.tracks[i].waveEvtInst->loopCount > 0	)
+				{
+					FACT_INTERNAL_GetNextWave(
+						cue,
+						cue->playing.sound.sound,
+						&cue->playing.sound.sound->tracks[i],
+						&cue->playing.sound.tracks[i],
+						cue->playing.sound.tracks[i].waveEvt,
+						cue->playing.sound.tracks[i].waveEvtInst
+					);
+				}
+			}
+			cue = cue->next;
+		}
+		sb = sb->next;
+	}
 	return 0;
 }
 
@@ -1510,8 +1538,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
-	FACTEvent *evt;
-	uint8_t i, j;
+	uint8_t i;
 
 	/* There are two ways that a Cue might be stopped immediately:
 	 * 1. The program explicitly asks for it
@@ -1538,27 +1565,17 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		{
 			for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
 			{
-				for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
+				if (pCue->playing.sound.tracks[i].wave != NULL)
 				{
-					evt = &pCue->playing.sound.sound->tracks[i].events[j];
-					if (	evt->type == FACTEVENT_PLAYWAVE ||
-						evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
-						evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
-						evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
-					{
-						if (pCue->playing.sound.tracks[i].wave != NULL)
-						{
-							FACTWave_Destroy(
-								pCue->playing.sound.tracks[i].wave
-							);
-						}
-						if (pCue->playing.sound.tracks[i].upcomingWave != NULL)
-						{
-							FACTWave_Destroy(
-								pCue->playing.sound.tracks[i].upcomingWave
-							);
-						}
-					}
+					FACTWave_Destroy(
+						pCue->playing.sound.tracks[i].wave
+					);
+				}
+				if (pCue->playing.sound.tracks[i].upcomingWave != NULL)
+				{
+					FACTWave_Destroy(
+						pCue->playing.sound.tracks[i].upcomingWave
+					);
 				}
 				FAudio_free(pCue->playing.sound.tracks[i].events);
 			}
@@ -1590,8 +1607,7 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	uint32_t uDstChannelCount,
 	float *pMatrixCoefficients
 ) {
-	FACTEvent *evt;
-	uint8_t i, j;
+	uint8_t i;
 
 	/* See FACTCue.matrixCoefficients declaration */
 	FAudio_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
@@ -1620,23 +1636,15 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	else if (pCue->active & 0x02)
 	{
 		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
-		for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
 		{
-			evt = &pCue->playing.sound.sound->tracks[i].events[j];
-			if (	evt->type == FACTEVENT_PLAYWAVE ||
-				evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
-				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
-				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+			if (pCue->playing.sound.tracks[i].wave != NULL)
 			{
-				if (pCue->playing.sound.tracks[i].wave != NULL)
-				{
-					FACTWave_SetMatrixCoefficients(
-						pCue->playing.sound.tracks[i].wave,
-						uSrcChannelCount,
-						uDstChannelCount,
-						pMatrixCoefficients
-					);
-				}
+				FACTWave_SetMatrixCoefficients(
+					pCue->playing.sound.tracks[i].wave,
+					uSrcChannelCount,
+					uDstChannelCount,
+					pMatrixCoefficients
+				);
 			}
 		}
 	}
@@ -1698,8 +1706,7 @@ uint32_t FACTCue_GetVariable(
 
 uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 {
-	FACTEvent *evt;
-	uint8_t i, j;
+	uint8_t i;
 
 	/* "A stopping or stopped cue cannot be paused." */
 	if (pCue->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))
@@ -1728,21 +1735,13 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	else if (pCue->active & 0x02)
 	{
 		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
-		for (j = 0; j < pCue->playing.sound.sound->tracks[i].eventCount; j += 1)
 		{
-			evt = &pCue->playing.sound.sound->tracks[i].events[j];
-			if (	evt->type == FACTEVENT_PLAYWAVE ||
-				evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
-				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
-				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+			if (pCue->playing.sound.tracks[i].wave != NULL)
 			{
-				if (pCue->playing.sound.tracks[i].wave != NULL)
-				{
-					FACTWave_Pause(
-						pCue->playing.sound.tracks[i].wave,
-						fPause
-					);
-				}
+				FACTWave_Pause(
+					pCue->playing.sound.tracks[i].wave,
+					fPause
+				);
 			}
 		}
 	}
