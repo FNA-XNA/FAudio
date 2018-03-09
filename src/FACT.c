@@ -1065,9 +1065,6 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->callback.callback.OnVoiceProcessingPassEnd = NULL;
 	(*ppWave)->callback.callback.OnVoiceProcessingPassStart = NULL;
 	(*ppWave)->callback.wave = *ppWave;
-	(*ppWave)->callback.cue = NULL;
-	(*ppWave)->callback.event = NULL;
-	(*ppWave)->callback.eventInstance = NULL;
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,

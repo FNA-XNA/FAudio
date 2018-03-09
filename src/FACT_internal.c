@@ -107,9 +107,6 @@ void FACT_INTERNAL_GetNextWave(
 		loopCount,
 		&trackInst->upcomingWave
 	);
-	trackInst->upcomingWave->callback.cue = cue;
-	trackInst->upcomingWave->callback.event = evt;
-	trackInst->upcomingWave->callback.eventInstance = evtInst;
 
 	/* 3D Audio */
 	if (cue->active3D)

@@ -327,11 +327,6 @@ typedef struct FACTWaveCallback
 {
 	FAudioVoiceCallback callback;
 	FACTWave *wave;
-
-	/* Needed for PlayWaveEvent looping */
-	FACTCue *cue;
-	FACTEvent *event;
-	FACTEventInstance *eventInstance;
 } FACTWaveCallback;
 
 /* Public XACT Types */
