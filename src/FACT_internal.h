@@ -265,18 +265,7 @@ typedef struct FACTEventInstance
 	uint32_t timestamp;
 	uint16_t loopCount;
 	uint8_t finished;
-	union
-	{
-		struct
-		{
-			FACTWave *wave;
-			float baseVolume;
-			int16_t basePitch;
-			float baseQFactor;
-			float baseFrequency;
-		} wave;
-		float value;
-	} data;
+	float value;
 } FACTEventInstance;
 
 typedef struct FACTTrackInstance
@@ -286,6 +275,14 @@ typedef struct FACTTrackInstance
 
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;
+
+	/* Wave playback */
+	FACTWave *wave;
+	FACTWave *upcomingWave;
+	float baseVolume;
+	int16_t basePitch;
+	float baseQFactor;
+	float baseFrequency;
 } FACTTrackInstance;
 
 typedef struct FACTSoundInstance

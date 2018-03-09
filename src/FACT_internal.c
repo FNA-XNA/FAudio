@@ -191,11 +191,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 				cue->playing.sound.tracks[i].events[j].loopCount =
 					cue->playing.sound.sound->tracks[i].events[j].wave.loopCount;
 				cue->playing.sound.tracks[i].events[j].finished = 0;
-
-				FAudio_zero(
-					&cue->playing.sound.tracks[i].events[j].data,
-					sizeof(cue->playing.sound.tracks[i].events[j].data)
-				);
+				cue->playing.sound.tracks[i].events[j].value = 0.0f;
 			}
 
 			cue->playing.sound.tracks[i].rpcData.rpcVolume = 1.0f;
@@ -416,10 +412,10 @@ void FACT_INTERNAL_ActivateEvent(
 			track->events[i].type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 			track->events[i].type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 		{
-			if (trackInst->events[i].data.wave.wave != NULL)
+			if (trackInst->wave != NULL)
 			{
 				FACTWave_Stop(
-					trackInst->events[i].data.wave.wave,
+					trackInst->wave,
 					evt->stop.flags & 0x01
 				);
 			}
@@ -456,24 +452,24 @@ void FACT_INTERNAL_ActivateEvent(
 		}
 		FAudio_assert(wb != NULL);
 
-		/* Generate the wave... */
+		/* TODO: Generate the first wave at Play time! */
 		FACTWaveBank_Prepare(
 			wb,
 			wbTrack,
 			evt->wave.flags,
 			0,
 			0, /* FIXME: evtInst->loopCount? */
-			&evtInst->data.wave.wave
+			&trackInst->wave
 		);
-		evtInst->data.wave.wave->callback.cue = cue;
-		evtInst->data.wave.wave->callback.event = evt;
-		evtInst->data.wave.wave->callback.eventInstance = evtInst;
+		trackInst->wave->callback.cue = cue;
+		trackInst->wave->callback.event = evt;
+		trackInst->wave->callback.eventInstance = evtInst;
 
 		/* 3D Audio */
 		if (cue->active3D)
 		{
 			FACTWave_SetMatrixCoefficients(
-				evtInst->data.wave.wave,
+				trackInst->wave,
 				cue->srcChannels,
 				cue->dstChannels,
 				cue->matrixCoefficients
@@ -499,23 +495,23 @@ void FACT_INTERNAL_ActivateEvent(
 					/* Add/Replace */
 					if (evt->wave.variationFlags & 0x0004)
 					{
-						evtInst->data.wave.basePitch += rngPitch;
+						trackInst->basePitch += rngPitch;
 					}
 					else
 					{
-						evtInst->data.wave.basePitch = rngPitch + sound->pitch;
+						trackInst->basePitch = rngPitch + sound->pitch;
 					}
 				}
 			}
 			else
 			{
 				/* Initial Pitch Variation */
-				evtInst->data.wave.basePitch = rngPitch + sound->pitch;
+				trackInst->basePitch = rngPitch + sound->pitch;
 			}
 		}
 		else
 		{
-			evtInst->data.wave.basePitch = sound->pitch;
+			trackInst->basePitch = sound->pitch;
 		}
 
 		/* Volume Variation */
@@ -533,23 +529,23 @@ void FACT_INTERNAL_ActivateEvent(
 					/* Add/Replace */
 					if (evt->wave.variationFlags & 0x0001)
 					{
-						evtInst->data.wave.baseVolume += rngVolume;
+						trackInst->baseVolume += rngVolume;
 					}
 					else
 					{
-						evtInst->data.wave.baseVolume = rngVolume + sound->volume;
+						trackInst->baseVolume = rngVolume + sound->volume;
 					}
 				}
 			}
 			else
 			{
 				/* Initial Volume Variation */
-				evtInst->data.wave.baseVolume = rngVolume + sound->volume;
+				trackInst->baseVolume = rngVolume + sound->volume;
 			}
 		}
 		else
 		{
-			evtInst->data.wave.baseVolume = sound->volume + track->volume;
+			trackInst->baseVolume = sound->volume + track->volume;
 		}
 
 		/* Filter Variation, QFactor/Freq are always together */
@@ -583,32 +579,32 @@ void FACT_INTERNAL_ActivateEvent(
 					{
 					}
 					*/
-					evtInst->data.wave.baseQFactor = rngQFactor;
-					evtInst->data.wave.baseFrequency = rngFrequency;
+					trackInst->baseQFactor = rngQFactor;
+					trackInst->baseFrequency = rngFrequency;
 				}
 			}
 			else
 			{
 				/* Initial Filter Variation */
-				evtInst->data.wave.baseQFactor = rngQFactor;
-				evtInst->data.wave.baseFrequency = rngFrequency;
+				trackInst->baseQFactor = rngQFactor;
+				trackInst->baseFrequency = rngFrequency;
 			}
 		}
 		else
 		{
-			evtInst->data.wave.baseQFactor = track->qfactor;
-			evtInst->data.wave.baseFrequency = track->frequency;
+			trackInst->baseQFactor = track->qfactor;
+			trackInst->baseFrequency = track->frequency;
 		}
 
 		/* For infinite loops with no variation, let Wave do the work */
 		if (evt->wave.loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
 		{
-			evtInst->data.wave.wave->loopCount = 255;
+			trackInst->wave->loopCount = 255;
 			evtInst->loopCount = 0;
 		}
 
 		/* Play, finally. */
-		FACTWave_Play(evtInst->data.wave.wave);
+		FACTWave_Play(trackInst->wave);
 	}
 
 	/* SETVALUE */
@@ -659,11 +655,11 @@ void FACT_INTERNAL_ActivateEvent(
 			/* Add/Replace */
 			if (evt->value.equation.flags & 0x01)
 			{
-				evtInst->data.value += svResult;
+				evtInst->value += svResult;
 			}
 			else
 			{
-				evtInst->data.value = svResult;
+				evtInst->value = svResult;
 			}
 		}
 
@@ -726,7 +722,6 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	uint8_t i, j;
 	uint32_t waveState;
 	FACTSoundInstance *active;
-	FACTEvent *evt;
 	FACTEventInstance *evtInst;
 	uint8_t finished = 1;
 
@@ -777,80 +772,79 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 
 	/* Go through each event for each track */
 	for (i = 0; i < active->sound->trackCount; i += 1)
-	for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
 	{
-		evt = &active->sound->tracks[i].events[j];
-		evtInst = &active->tracks[i].events[j];
-
-		if (!evtInst->finished)
+		/* Event updates */
+		for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
 		{
-			/* Cue's not done yet...! */
-			finished = 0;
-
-			/* Trigger events at the right time */
-			if (elapsed > evtInst->timestamp)
+			evtInst = &active->tracks[i].events[j];
+			if (!evtInst->finished)
 			{
-				FACT_INTERNAL_ActivateEvent(
-					cue,
-					active->sound,
-					&active->sound->tracks[i],
-					&active->tracks[i],
-					evt,
-					evtInst,
-					elapsed
-				);
+				/* Cue's not done yet...! */
+				finished = 0;
+
+				/* Trigger events at the right time */
+				if (elapsed > evtInst->timestamp)
+				{
+					FACT_INTERNAL_ActivateEvent(
+						cue,
+						active->sound,
+						&active->sound->tracks[i],
+						&active->tracks[i],
+						&active->sound->tracks[i].events[j],
+						evtInst,
+						elapsed
+					);
+				}
 			}
 		}
 
 		/* Wave updates */
-		if (	evt->type == FACTEVENT_PLAYWAVE ||
-			evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
-			evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
-			evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
+		if (active->tracks[i].wave == NULL)
 		{
-			if (evtInst->data.wave.wave == NULL)
-			{
-				continue;
-			}
-			finished = 0;
-
-			/* Clear out Waves as they finish */
-			FACTWave_GetState(
-				evtInst->data.wave.wave,
-				&waveState
-			);
-			if (waveState & FACT_STATE_STOPPED)
-			{
-				FACTWave_Destroy(
-					evtInst->data.wave.wave
-				);
-				evtInst->data.wave.wave = NULL;
-				continue;
-			}
-
-			/* TODO: Event volume/pitch values */
-			FACTWave_SetVolume(
-				evtInst->data.wave.wave,
-				FACT_INTERNAL_CalculateAmplitudeRatio(
-					evtInst->data.wave.baseVolume +
-					active->rpcData.rpcVolume +
-					active->tracks[i].rpcData.rpcVolume
-				) * cue->parentBank->parentEngine->categories[active->sound->category].currentVolume
-			);
-			FACTWave_SetPitch(
-				evtInst->data.wave.wave,
-				(
-					evtInst->data.wave.basePitch +
-					active->rpcData.rpcPitch +
-					active->tracks[i].rpcData.rpcPitch
-				)
-			);
-			/* TODO: Wave updates:
-			 * - Filter (QFactor/Frequency)
-			 * - Reverb
-			 * - Fade in/out
-			 */
+			continue;
 		}
+		finished = 0;
+
+		/* Clear out Waves as they finish */
+		FACTWave_GetState(
+			active->tracks[i].wave,
+			&waveState
+		);
+		if (waveState & FACT_STATE_STOPPED)
+		{
+			FACTWave_Destroy(active->tracks[i].wave);
+			active->tracks[i].wave = active->tracks[i].upcomingWave;
+			active->tracks[i].upcomingWave = NULL;
+			if (active->tracks[i].wave == NULL)
+			{
+				continue;
+			}
+			/* TODO: Variation changes! */
+			FACTWave_Play(active->tracks[i].wave);
+		}
+
+		/* TODO: Event volume/pitch values */
+		FACTWave_SetVolume(
+			active->tracks[i].wave,
+			FACT_INTERNAL_CalculateAmplitudeRatio(
+				active->tracks[i].baseVolume +
+				active->rpcData.rpcVolume +
+				active->tracks[i].rpcData.rpcVolume
+			) * cue->parentBank->parentEngine->categories[active->sound->category].currentVolume
+		);
+		FACTWave_SetPitch(
+			active->tracks[i].wave,
+			(
+				active->tracks[i].basePitch +
+				active->rpcData.rpcPitch +
+				active->tracks[i].rpcData.rpcPitch
+			)
+		);
+		/* TODO: Wave updates:
+		 * - Filter (QFactor/Frequency)
+		 * - Reverb
+		 * - Fade in/out
+		 */
 	}
 
 	/* If everything has been played and finished, set STOPPED */

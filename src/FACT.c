@@ -1511,7 +1511,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
 	FACTEvent *evt;
-	FACTWave *wave;
 	uint8_t i, j;
 
 	/* There are two ways that a Cue might be stopped immediately:
@@ -1547,10 +1546,17 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 						evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 						evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 					{
-						wave = pCue->playing.sound.tracks[i].events[j].data.wave.wave;
-						if (wave != NULL)
+						if (pCue->playing.sound.tracks[i].wave != NULL)
 						{
-							FACTWave_Destroy(wave);
+							FACTWave_Destroy(
+								pCue->playing.sound.tracks[i].wave
+							);
+						}
+						if (pCue->playing.sound.tracks[i].upcomingWave != NULL)
+						{
+							FACTWave_Destroy(
+								pCue->playing.sound.tracks[i].upcomingWave
+							);
 						}
 					}
 				}
@@ -1585,7 +1591,6 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	float *pMatrixCoefficients
 ) {
 	FACTEvent *evt;
-	FACTWave *wave;
 	uint8_t i, j;
 
 	/* See FACTCue.matrixCoefficients declaration */
@@ -1623,11 +1628,10 @@ uint32_t FACTCue_SetMatrixCoefficients(
 				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 			{
-				wave = pCue->playing.sound.tracks[i].events[j].data.wave.wave;
-				if (wave != NULL)
+				if (pCue->playing.sound.tracks[i].wave != NULL)
 				{
 					FACTWave_SetMatrixCoefficients(
-						wave,
+						pCue->playing.sound.tracks[i].wave,
 						uSrcChannelCount,
 						uDstChannelCount,
 						pMatrixCoefficients
@@ -1695,7 +1699,6 @@ uint32_t FACTCue_GetVariable(
 uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 {
 	FACTEvent *evt;
-	FACTWave *wave;
 	uint8_t i, j;
 
 	/* "A stopping or stopped cue cannot be paused." */
@@ -1733,11 +1736,10 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 				evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 				evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 			{
-				wave = pCue->playing.sound.tracks[i].events[j].data.wave.wave;
-				if (wave != NULL)
+				if (pCue->playing.sound.tracks[i].wave != NULL)
 				{
 					FACTWave_Pause(
-						wave,
+						pCue->playing.sound.tracks[i].wave,
 						fPause
 					);
 				}
