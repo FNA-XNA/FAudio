@@ -848,7 +848,7 @@ void FACTTool_Update()
 		for (uint16_t j = 0; j < soundBanks[i]->variationCount; j += 1)
 		if (ImGui::TreeNode(
 			(void*) (intptr_t) j,
-			"Code %d",
+			"Code #%d",
 			soundBanks[i]->variationCodes[j]
 		)) {
 			ImGui::Text(
