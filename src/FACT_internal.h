@@ -265,7 +265,11 @@ typedef struct FACTEventInstance
 	uint32_t timestamp;
 	uint16_t loopCount;
 	uint8_t finished;
-	float value;
+	union
+	{
+		float value;
+		uint32_t valuei;
+	};
 } FACTEventInstance;
 
 typedef struct FACTTrackInstance

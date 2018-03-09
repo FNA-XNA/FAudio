@@ -60,20 +60,77 @@ void FACT_INTERNAL_GetNextWave(
 	uint16_t wbTrack;
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
-
-	/* Last loop running? Ignore us.. */
-	if (	evtInst->loopCount == 0 &&
-		(trackInst->wave != NULL || trackInst->upcomingWave != NULL)	)
-	{
-		return;
-	}
+	float max, next;
+	uint16_t i;
 
 	/* Track Variation */
 	if (evt->wave.isComplex)
 	{
-		/* TODO: Complex wave selection */
-		wbIndex = evt->wave.complex.wavebanks[0];
-		wbTrack = evt->wave.complex.tracks[0];
+		if (	trackInst->wave == NULL ||
+			!(evt->wave.complex.variation & 0x00F0)	)
+		{
+			/* No-op, no variation on loop */
+		}
+		/* Ordered, Ordered From Random */
+		else if (	(evt->wave.complex.variation & 0xF) == 0 ||
+				(evt->wave.complex.variation & 0xF) == 1	)
+		{
+			evtInst->valuei += 1;
+			if (evtInst->valuei >= evt->wave.complex.trackCount)
+			{
+				evtInst->valuei = 0;
+			}
+		}
+		/* Random */
+		else if ((evt->wave.complex.variation & 0xF) == 2)
+		{
+			max = 0.0f;
+			for (i = 0; i < evt->wave.complex.trackCount; i += 1)
+			{
+				max += evt->wave.complex.weights[i];
+			}
+			next = FACT_INTERNAL_rng() * max;
+			for (i = evt->wave.complex.trackCount - 1; i >= 0; i -= 1)
+			{
+				if (next > (max - evt->wave.complex.weights[i]))
+				{
+					evtInst->valuei = i;
+					break;
+				}
+				max -= evt->wave.complex.weights[i];
+			}
+		}
+		/* Random (No Immediate Repeats), Shuffle */
+		else if (	(evt->wave.complex.variation & 0xF) == 3 ||
+				(evt->wave.complex.variation & 0xF) == 4	)
+		{
+			max = 0.0f;
+			for (i = 0; i < evt->wave.complex.trackCount; i += 1)
+			{
+				if (i == evtInst->valuei)
+				{
+					continue;
+				}
+				max += evt->wave.complex.weights[i];
+			}
+			next = FACT_INTERNAL_rng() * max;
+			for (i = evt->wave.complex.trackCount - 1; i >= 0; i -= 1)
+			{
+				if (i == evtInst->valuei)
+				{
+					continue;
+				}
+				if (next > (max - evt->wave.complex.weights[i]))
+				{
+					evtInst->valuei = i;
+					break;
+				}
+				max -= evt->wave.complex.weights[i];
+			}
+		}
+
+		wbIndex = evt->wave.complex.wavebanks[evtInst->valuei];
+		wbTrack = evt->wave.complex.tracks[evtInst->valuei];
 	}
 	else
 	{
@@ -253,6 +310,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	const char *wbName;
 	FACTWaveBank *wb;
 	FACTEvent *evt;
+	FACTEventInstance *evtInst;
 
 	if (cue->data->flags & 0x04)
 	{
@@ -411,17 +469,28 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 					evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 					evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 				{
+					evtInst = &cue->playing.sound.tracks[i].events[j];
+					if ((evt->wave.complex.variation & 0xF) == 1)
+					{
+						evtInst->valuei = 0;
+					}
+					else
+					{
+						evtInst->valuei = (uint32_t) (
+							evt->wave.complex.trackCount *
+							FACT_INTERNAL_rng()
+						);
+					}
 					FACT_INTERNAL_GetNextWave(
 						cue,
 						cue->playing.sound.sound,
 						&cue->playing.sound.sound->tracks[i],
 						&cue->playing.sound.tracks[i],
 						evt,
-						&cue->playing.sound.tracks[i].events[j]
+						evtInst
 					);
 					cue->playing.sound.tracks[j].waveEvt = evt;
-					cue->playing.sound.tracks[j].waveEvtInst =
-						&cue->playing.sound.tracks[i].events[j];
+					cue->playing.sound.tracks[j].waveEvtInst = evtInst;
 				}
 			}
 		}
