@@ -896,7 +896,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		if (next != cue->interactive)
 		{
 			cue->interactive = next;
-printf("%f\n", cue->interactive);
+
 			/* New sound, time for death! */
 			if (cue->active)
 			{
