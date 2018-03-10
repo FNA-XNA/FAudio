@@ -450,6 +450,7 @@ struct FACTCue
 
 	/* Instance data */
 	float *variableValues;
+	float interactive;
 
 	/* Playback */
 	uint32_t state;

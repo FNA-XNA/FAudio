@@ -853,6 +853,7 @@ void FACT_INTERNAL_ActivateEvent(
 void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 {
 	uint8_t i, j;
+	float next;
 	uint32_t waveState;
 	FACTSoundInstance *active;
 	FACTEventInstance *evtInst;
@@ -871,7 +872,51 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		cue->state = cue->playing.wave->state;
 		return;
 	}
-	else if (!cue->active)
+
+	/* Interactive sound selection */
+	if (!(cue->data->flags & 0x04) && cue->sound.variation->flags == 3)
+	{
+		/* Interactive */
+		if (cue->parentBank->parentEngine->variables[cue->sound.variation->variable].accessibility & 0x04)
+		{
+			FACTCue_GetVariable(
+				cue,
+				cue->sound.variation->variable,
+				&next
+			);
+		}
+		else
+		{
+			FACTAudioEngine_GetGlobalVariable(
+				cue->parentBank->parentEngine,
+				cue->sound.variation->variable,
+				&next
+			);
+		}
+		if (next != cue->interactive)
+		{
+			cue->interactive = next;
+printf("%f\n", cue->interactive);
+			/* New sound, time for death! */
+			if (cue->active)
+			{
+				active = &cue->playing.sound;
+				for (i = 0; i < active->sound->trackCount; i += 1)
+				if (active->tracks[i].wave != NULL)
+				{
+					FACTWave_Destroy(active->tracks[i].wave);
+				}
+			}
+			cue->start = elapsed;
+			cue->elapsed = 0;
+
+			/* FIXME: Free SelectSound leaks! */
+			FACT_INTERNAL_SelectSound(cue);
+		}
+	}
+
+	/* No sound, nothing to do... */
+	if (!cue->active)
 	{
 		return;
 	}
@@ -881,10 +926,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	 */
 	elapsed -= cue->start - cue->elapsed;
 
-	/* FIXME: Multiple sounds may exist for interactive Cues? */
 	active = &cue->playing.sound;
-
-	/* TODO: Interactive Cues, will set `active` based on variable */
 
 	/* RPC updates */
 	FACT_INTERNAL_UpdateRPCs(

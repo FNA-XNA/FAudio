@@ -627,6 +627,12 @@ uint32_t FACTSoundBank_Prepare(
 				break;
 			}
 		}
+		if ((*ppCue)->sound.variation->flags == 3)
+		{
+			(*ppCue)->interactive = pSoundBank->parentEngine->variables[
+				(*ppCue)->sound.variation->variable
+			].initialValue;
+		}
 	}
 
 	/* Instance data */
