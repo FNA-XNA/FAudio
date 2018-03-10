@@ -993,7 +993,7 @@ printf("%f\n", cue->interactive);
 			{
 				continue;
 			}
-			/* TODO: Variation changes! */
+			/* TODO: Separate variations for wave/upcomingWave! */
 			FACTWave_Play(active->tracks[i].wave);
 		}
 
