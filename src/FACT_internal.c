@@ -1086,8 +1086,12 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	FACTWaveBankEntry *entry = &c->wave->parentBank->entries[c->wave->index];
 	uint16_t align = (entry->Format.wBlockAlign + 22) * entry->Format.nChannels;
 
+	/* TODO: Loop regions */
+	uint32_t end = entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength;
+	uint32_t left = entry->PlayRegion.dwLength - (c->wave->streamOffset - entry->PlayRegion.dwOffset);
+
 	/* Don't bother if we're EOS */
-	if (c->wave->streamOffset == (entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength))
+	if (c->wave->streamOffset >= end)
 	{
 		return;
 	}
@@ -1096,7 +1100,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	buffer.pAudioData = c->wave->streamCache;
 	buffer.AudioBytes = FAudio_min(
 		c->wave->streamSize,
-		entry->PlayRegion.dwLength
+		left
 	);
 
 	/* Last buffer in the stream? */
@@ -1119,23 +1123,21 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	c->wave->parentBank->io->read(
 		c->wave->parentBank->io->data,
 		c->wave->streamCache,
-		c->wave->streamSize,
+		buffer.AudioBytes,
 		1
 	);
 
-	/* Where do we go next? */
-	if (	buffer.AudioBytes < c->wave->streamSize &&
+	/* Loop if applicable */
+	c->wave->streamOffset += buffer.AudioBytes;
+	if (	c->wave->streamOffset >= end &&
 		c->wave->loopCount > 0	)
 	{
 		if (c->wave->loopCount != 255)
 		{
 			c->wave->loopCount -= 1;
 		}
+		/* TODO: Loop start */
 		c->wave->streamOffset = entry->PlayRegion.dwOffset;
-	}
-	else
-	{
-		c->wave->streamOffset += buffer.AudioBytes;
 	}
 
 	/* Assign length based on buffer read size */
