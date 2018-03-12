@@ -476,9 +476,10 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 					}
 					else
 					{
+						const float rng = FACT_INTERNAL_rng();
 						evtInst->valuei = (uint32_t) (
 							evt->wave.complex.trackCount *
-							FACT_INTERNAL_rng()
+							FAudio_min(rng, 0.99f)
 						);
 					}
 					FACT_INTERNAL_GetNextWave(
@@ -489,8 +490,8 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 						evt,
 						evtInst
 					);
-					cue->playing.sound.tracks[j].waveEvt = evt;
-					cue->playing.sound.tracks[j].waveEvtInst = evtInst;
+					cue->playing.sound.tracks[i].waveEvt = evt;
+					cue->playing.sound.tracks[i].waveEvtInst = evtInst;
 				}
 			}
 		}
