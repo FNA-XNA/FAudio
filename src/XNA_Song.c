@@ -48,7 +48,7 @@ void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 	FAudioBuffer buffer;
 	uint32_t decoded = stb_vorbis_get_samples_short_interleaved(
 		activeSong,
-		2,
+		activeSongInfo.channels,
 		(short*) songCache,
 		activeSongInfo.sample_rate
 	);
