@@ -315,20 +315,20 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	if (cue->data->flags & 0x04)
 	{
 		/* Sound */
-		cue->playing.sound.sound = cue->sound.sound;
+		cue->playing.sound.sound = cue->sound;
 		cue->active = 0x02;
 	}
 	else
 	{
 		/* Variation */
-		if (cue->sound.variation->flags == 3)
+		if (cue->variation->flags == 3)
 		{
 			/* Interactive */
-			if (cue->parentBank->parentEngine->variables[cue->sound.variation->variable].accessibility & 0x04)
+			if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & 0x04)
 			{
 				FACTCue_GetVariable(
 					cue,
-					cue->sound.variation->variable,
+					cue->variation->variable,
 					&next
 				);
 			}
@@ -336,14 +336,14 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			{
 				FACTAudioEngine_GetGlobalVariable(
 					cue->parentBank->parentEngine,
-					cue->sound.variation->variable,
+					cue->variation->variable,
 					&next
 				);
 			}
-			for (i = 0; i < cue->sound.variation->entryCount; i += 1)
+			for (i = 0; i < cue->variation->entryCount; i += 1)
 			{
-				if (	next <= cue->sound.variation->entries[i].maxWeight &&
-					next >= cue->sound.variation->entries[i].minWeight	)
+				if (	next <= cue->variation->entries[i].maxWeight &&
+					next >= cue->variation->entries[i].minWeight	)
 				{
 					break;
 				}
@@ -354,7 +354,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			 * which case we are just silent. But, we should still
 			 * claim to be "playing" in the meantime.
 			 */
-			if (i == cue->sound.variation->entryCount)
+			if (i == cue->variation->entryCount)
 			{
 				cue->active = 0x00;
 				return;
@@ -364,21 +364,21 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 		{
 			/* Random */
 			max = 0.0f;
-			for (i = 0; i < cue->sound.variation->entryCount; i += 1)
+			for (i = 0; i < cue->variation->entryCount; i += 1)
 			{
 				max += (
-					cue->sound.variation->entries[i].maxWeight -
-					cue->sound.variation->entries[i].minWeight
+					cue->variation->entries[i].maxWeight -
+					cue->variation->entries[i].minWeight
 				);
 			}
 			next = FACT_INTERNAL_rng() * max;
 
 			/* Use > 0, not >= 0. If we hit 0, that's it! */
-			for (i = cue->sound.variation->entryCount - 1; i > 0; i -= 1)
+			for (i = cue->variation->entryCount - 1; i > 0; i -= 1)
 			{
 				weight = (
-					cue->sound.variation->entries[i].maxWeight -
-					cue->sound.variation->entries[i].minWeight
+					cue->variation->entries[i].maxWeight -
+					cue->variation->entries[i].minWeight
 				);
 				if (next > (max - weight))
 				{
@@ -388,12 +388,12 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			}
 		}
 
-		if (cue->sound.variation->isComplex)
+		if (cue->variation->isComplex)
 		{
 			/* Grab the Sound via the code. FIXME: Do this at load time? */
 			for (j = 0; j < cue->parentBank->soundCount; j += 1)
 			{
-				if (cue->sound.variation->entries[i].soundCode == cue->parentBank->soundCodes[j])
+				if (cue->variation->entries[i].soundCode == cue->parentBank->soundCodes[j])
 				{
 					cue->playing.sound.sound = &cue->parentBank->sounds[j];
 					break;
@@ -405,7 +405,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 		{
 			/* Pull in the WaveBank... */
 			wbName = cue->parentBank->wavebankNames[
-				cue->sound.variation->entries[i].simple.wavebank
+				cue->variation->entries[i].simple.wavebank
 			];
 			wb = cue->parentBank->parentEngine->wbList;
 			while (wb != NULL)
@@ -421,7 +421,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			/* Generate the wave... */
 			FACTWaveBank_Prepare(
 				wb,
-				cue->sound.variation->entries[i].simple.track,
+				cue->variation->entries[i].simple.track,
 				0,
 				0,
 				0,
@@ -874,14 +874,14 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 	}
 
 	/* Interactive sound selection */
-	if (!(cue->data->flags & 0x04) && cue->sound.variation->flags == 3)
+	if (!(cue->data->flags & 0x04) && cue->variation->flags == 3)
 	{
 		/* Interactive */
-		if (cue->parentBank->parentEngine->variables[cue->sound.variation->variable].accessibility & 0x04)
+		if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & 0x04)
 		{
 			FACTCue_GetVariable(
 				cue,
-				cue->sound.variation->variable,
+				cue->variation->variable,
 				&next
 			);
 		}
@@ -889,7 +889,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		{
 			FACTAudioEngine_GetGlobalVariable(
 				cue->parentBank->parentEngine,
-				cue->sound.variation->variable,
+				cue->variation->variable,
 				&next
 			);
 		}

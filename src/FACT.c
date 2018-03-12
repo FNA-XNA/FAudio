@@ -612,7 +612,7 @@ uint32_t FACTSoundBank_Prepare(
 		{
 			if ((*ppCue)->data->sbCode == pSoundBank->soundCodes[i])
 			{
-				(*ppCue)->sound.sound = &pSoundBank->sounds[i];
+				(*ppCue)->sound = &pSoundBank->sounds[i];
 				break;
 			}
 		}
@@ -623,14 +623,14 @@ uint32_t FACTSoundBank_Prepare(
 		{
 			if ((*ppCue)->data->sbCode == pSoundBank->variationCodes[i])
 			{
-				(*ppCue)->sound.variation = &pSoundBank->variations[i];
+				(*ppCue)->variation = &pSoundBank->variations[i];
 				break;
 			}
 		}
-		if ((*ppCue)->sound.variation->flags == 3)
+		if ((*ppCue)->variation->flags == 3)
 		{
 			(*ppCue)->interactive = pSoundBank->parentEngine->variables[
-				(*ppCue)->sound.variation->variable
+				(*ppCue)->variation->variable
 			].initialValue;
 		}
 	}
@@ -1778,7 +1778,7 @@ uint32_t FACTCue_GetProperties(
 			pCue->playingVariation->maxWeight -
 			pCue->playingVariation->minWeight
 		);
-		if (pCue->sound.variation->flags == 3)
+		if (pCue->variation->flags == 3)
 		{
 			varProps->iaVariableMin =
 				pCue->playingVariation->minWeight;

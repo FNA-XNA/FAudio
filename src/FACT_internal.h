@@ -444,9 +444,14 @@ struct FACTCue
 	FACTCueData *data;
 	union
 	{
-		FACTSound *sound;
 		FACTVariationTable *variation;
-	} sound;
+
+		/* This is only used in scenarios where there is only one
+		 * Sound; XACT does not generate variation tables for
+		 * Cues with only one Sound.
+		 */
+		FACTSound *sound;
+	};
 
 	/* Instance data */
 	float *variableValues;
