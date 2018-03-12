@@ -215,6 +215,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	uint8_t i;
 	FACTCue *cue;
 	FACTSoundBank *sb = pEngine->sbList;
+	FAudio_PlatformLockAudio(pEngine->audio);
 	while (sb != NULL)
 	{
 		cue = sb->cueList;
@@ -240,6 +241,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 		}
 		sb = sb->next;
 	}
+	FAudio_PlatformUnlockAudio(pEngine->audio);
 	return 0;
 }
 
@@ -1411,6 +1413,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	FAudio_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 
+	FAudio_PlatformLockAudio(pCue->parentBank->parentEngine->audio);
+
 	/* Need an initial sound to play */
 	FACT_INTERNAL_SelectSound(pCue);
 
@@ -1421,6 +1425,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		if (obj->maxInstanceBehavior == 0) /* Fail */ \
 		{ \
 			/* FIXME: May need to delete stuff from SelectSound */ \
+			FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio); \
 			return 1; \
 		} \
 		else if (obj->maxInstanceBehavior == 1) /* Queue */ \
@@ -1535,6 +1540,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		}
 		FACTWave_Play(pCue->playing.wave);
 	}
+
+	FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
 
 	return 0;
 }

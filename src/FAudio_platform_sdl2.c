@@ -357,6 +357,46 @@ void FAudio_PlatformStop(FAudio *audio)
 	}
 }
 
+void FAudio_PlatformLockAudio(FAudio *audio)
+{
+	FAudioEntry *entry;
+	FAudioPlatformDevice *dev = devlist;
+	while (dev != NULL)
+	{
+		entry = dev->engineList;
+		while (entry != NULL)
+		{
+			if (entry->audio == audio)
+			{
+				SDL_LockAudioDevice(dev->device);
+				return;
+			}
+			entry = entry->next;
+		}
+		dev = dev->next;
+	}
+}
+
+void FAudio_PlatformUnlockAudio(FAudio *audio)
+{
+	FAudioEntry *entry;
+	FAudioPlatformDevice *dev = devlist;
+	while (dev != NULL)
+	{
+		entry = dev->engineList;
+		while (entry != NULL)
+		{
+			if (entry->audio == audio)
+			{
+				SDL_UnlockAudioDevice(dev->device);
+				return;
+			}
+			entry = entry->next;
+		}
+		dev = dev->next;
+	}
+}
+
 uint32_t FAudio_PlatformGetDeviceCount()
 {
 	return SDL_GetNumAudioDevices(0);

@@ -202,6 +202,8 @@ void FAudio_PlatformInit(FAudio *audio);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
 void FAudio_PlatformStop(FAudio *audio);
+void FAudio_PlatformLockAudio(FAudio *audio);
+void FAudio_PlatformUnlockAudio(FAudio *audio);
 
 uint32_t FAudio_PlatformGetDeviceCount();
 void FAudio_PlatformGetDeviceDetails(
