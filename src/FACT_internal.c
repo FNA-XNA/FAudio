@@ -26,19 +26,12 @@
 
 #include "FACT_internal.h"
 
-/* RNG (TODO) */
+/* RNG */
 
-float FACT_INTERNAL_rng()
-{
-	static float butt = 0.0f;
-	float result = butt;
-	butt += 0.2;
-	if (butt > 1.0f)
-	{
-		butt = 0.0f;
-	}
-	return result;
-}
+#define STB_EXTERN
+#define STB_DEFINE
+#include "stb.h"
+#define FACT_INTERNAL_rng stb_frand
 
 /* Internal Functions */
 
