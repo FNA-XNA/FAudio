@@ -27,20 +27,42 @@
 #include "F3DAudio.h"
 #include "FAudio_internal.h"
 
-/* FIXME: What is even inside Instance, wtf -flibit */
+#include <math.h> /* ONLY USE THIS FOR isnan! */
+
 #define INSTANCE_SPEAKERMASK \
 	*((uint32_t*) &Instance[0])
+#define INSTANCE_SPEAKERCOUNT \
+	*((uint32_t*) &Instance[4])
+#define INSTANCE_UNKNOWN1 \
+	*((uint32_t*) &Instance[8])
 #define INSTANCE_SPEEDOFSOUND \
-	*((float*) &Instance[sizeof(uint32_t)])
+	*((float*) &Instance[12])
+#define INSTANCE_SPEEDOFSOUNDEPSILON \
+	*((float*) &Instance[16])
 
 void F3DAudioInitialize(
 	uint32_t SpeakerChannelMask,
 	float SpeedOfSound,
 	F3DAUDIO_HANDLE Instance
 ) {
-	/* FIXME: What is even inside Instance, wtf -flibit */
+	uint32_t epsilonHack;
+	uint8_t speakerCount = 0;
 	INSTANCE_SPEAKERMASK = SpeakerChannelMask;
+	while (SpeakerChannelMask != 0)
+	{
+		speakerCount += SpeakerChannelMask & 1;
+		SpeakerChannelMask >>= 1;
+	}
+	INSTANCE_SPEAKERCOUNT = speakerCount;
+	INSTANCE_UNKNOWN1 = 0xFFFFFFFF; /* lolwut */
 	INSTANCE_SPEEDOFSOUND = SpeedOfSound;
+
+	/* Convert raw float to int... */
+	epsilonHack = *((uint32_t*) &SpeedOfSound);
+	/* ... Subtract epsilon value... */
+	epsilonHack -= 1;
+	/* ... Convert back to float. */
+	INSTANCE_SPEEDOFSOUNDEPSILON = *((float*) &epsilonHack);
 }
 
 void F3DAudioCalculate(
@@ -144,7 +166,10 @@ void F3DAudioCalculate(
 			) / (
 				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * projectedEmitterVelocity
 			);
-			/* FIXME: Check isnan(DopplerFactor) */
+			if (isnan(pDSPSettings->DopplerFactor))
+			{
+				pDSPSettings->DopplerFactor = 1.0f;
+			}
 
 			/* Limit the pitch shifting to 2 octaves up and 1 octave down */
 			pDSPSettings->DopplerFactor = FAudio_clamp(
