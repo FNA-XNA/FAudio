@@ -43,7 +43,7 @@ clean:
 .PHONY: test tool
 
 test:
-	$(CC) -g -Wall -pedantic test/testparse.c src/*.c -Isrc `sdl2-config --cflags --libs`
+	$(CC) -g -Wall -pedantic test/testparse.c src/F*.c -Isrc `sdl2-config --cflags --libs`
 
 tool:
 	$(CXX) -g -Wall tool/*.c* src/*.c -Isrc `sdl2-config --cflags --libs`
