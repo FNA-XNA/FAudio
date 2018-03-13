@@ -76,8 +76,6 @@
     <ClCompile Include="..\src\FACT.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
     <ClCompile Include="..\src\XNA_Song.c" />
-    <ClCompile Include="..\src\e_log.c" />
-    <ClCompile Include="..\src\e_log10.c" />
     <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
