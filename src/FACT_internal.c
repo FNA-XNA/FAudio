@@ -31,7 +31,7 @@
 #define STB_EXTERN
 #define STB_DEFINE
 #include "stb.h"
-#define FACT_INTERNAL_rng stb_frand
+#define FACT_INTERNAL_rng() (stb_rand() / (float) UINT64_MAX)
 
 /* Internal Functions */
 
