@@ -218,7 +218,7 @@ void FAudio_INTERNAL_ResamplePCM(
 		for (j = 0; j < voice->src.format.nChannels; j += 1)
 		{
 			/* lerp, then convert to float value */
-			*resampleCache[j]++ = (float) (
+			*(*resampleCache)++ = (float) (
 				dCache[j][0] +
 				(dCache[j][1] - dCache[j][0]) *
 				FIXED_TO_DOUBLE(cur)
@@ -253,7 +253,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	uint64_t toDecode;
 	uint64_t toResample;
 	uint32_t resetOffset;
-	float *resampleCache[2];
+	float *resampleCache;
 	/* Output mix variables */
 	float *stream;
 	uint32_t mixed;
@@ -295,8 +295,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	mixed = 0;
-	resampleCache[0] = voice->src.outputResampleCache;
-	resampleCache[1] = voice->src.outputResampleCache + voice->src.outputSamples;
+	resampleCache = voice->src.outputResampleCache;
 	while (mixed < voice->src.outputSamples && voice->src.bufferList != NULL)
 	{
 
@@ -323,19 +322,15 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		if (voice->src.resampleStep == FIXED_ONE)
 		{
 			/* Actually, just copy directly... */
-			for (i = 0; i < voice->src.format.nChannels; i += 1)
+			for (i = 0; i < toResample; i += 1)
+			for (j = 0; j < voice->src.format.nChannels; j += 1)
 			{
-				FAudio_memcpy(
-					resampleCache[i],
-					voice->src.decodeCache[i],
-					sizeof(float) * toResample
-				);
-				resampleCache[i] += toResample;
+				*resampleCache++ = voice->src.decodeCache[j][i];
 			}
 		}
 		else
 		{
-			FAudio_INTERNAL_ResamplePCM(voice, resampleCache, toResample);
+			FAudio_INTERNAL_ResamplePCM(voice, &resampleCache, toResample);
 		}
 
 		/* Update buffer offsets */
@@ -373,8 +368,6 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* TODO: Effects, filters */
 
 	/* Send float cache to sends */
-	resampleCache[0] = voice->src.outputResampleCache;
-	resampleCache[1] = voice->src.outputResampleCache + voice->src.outputSamples;
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		out = voice->sends.pSends[i].pOutputVoice;
@@ -396,7 +389,9 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			/* Include source/channel volumes in the mix! */
 			stream[j * oChan + co] = FAudio_clamp(
 				stream[j * oChan + co] + (
-					resampleCache[ci][j] *
+					voice->src.outputResampleCache[
+						j * voice->src.format.nChannels + ci
+					] *
 					voice->channelVolume[ci] *
 					voice->volume *
 					voice->sendCoefficients[i][
@@ -441,10 +436,9 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		voice->mix.inputSamples,
 		voice->mix.outputResampleCache,
 		voice->mix.outputSamples
-	);
+	) / voice->mix.inputChannels;
 
 	/* Submix volumes are applied _before_ effects/filters, blech! */
-	resampled /= voice->mix.inputChannels;
 	for (i = 0; i < resampled; i += 1)
 	for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
 	{
@@ -459,12 +453,10 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->volume
 		);
 	}
-	resampled *= voice->mix.inputChannels;
 
-	/* TODO: Deinterleave? Effects, filters */
+	/* TODO: Effects, filters */
 
 	/* Send float cache to sends */
-	resampled /= voice->mix.inputChannels;
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		out = voice->sends.pSends[i].pOutputVoice;
