@@ -104,18 +104,6 @@ typedef struct FACTDSPPreset
 
 /* Internal SoundBank Types */
 
-typedef struct FACTCueData
-{
-	uint8_t flags;
-	uint32_t sbCode;
-	uint32_t transitionOffset;
-	uint8_t instanceLimit;
-	uint16_t fadeInMS;
-	uint16_t fadeOutMS;
-	uint8_t maxInstanceBehavior;
-	uint8_t instanceCount;
-} FACTCueData;
-
 typedef enum
 {
 	FACTEVENT_STOP =				0,
@@ -131,81 +119,6 @@ typedef enum
 	FACTEVENT_MARKERREPEATING =			18
 } FACTEventType;
 
-typedef struct FACTSimpleWave
-{
-	uint16_t track;
-	uint8_t wavebank;
-} FACTSimpleWave;
-
-typedef struct FACTEvent_PlayWave
-{
-	uint8_t flags;
-	uint8_t loopCount;
-	uint16_t position;
-	uint16_t angle;
-
-	/* Track Variation */
-	uint8_t isComplex;
-	union
-	{
-		FACTSimpleWave simple;
-		struct
-		{
-			uint16_t variation;
-			uint16_t trackCount;
-			uint16_t *tracks;
-			uint8_t *wavebanks;
-			uint8_t *weights;
-		} complex;
-	};
-
-	/* Effect Variation */
-	int16_t minPitch;
-	int16_t maxPitch;
-	float minVolume;
-	float maxVolume;
-	float minFrequency;
-	float maxFrequency;
-	float minQFactor;
-	float maxQFactor;
-	uint16_t variationFlags;
-} FACTEvent_PlayWave;
-
-typedef struct FACTEvent_SetValue
-{
-	uint8_t settings;
-	uint16_t repeats;
-	uint16_t frequency;
-	union
-	{
-		struct
-		{
-			float initialValue;
-			float initialSlope;
-			float slopeDelta;
-			uint16_t duration;
-		} ramp;
-		struct
-		{
-			uint8_t flags;
-			float value1;
-			float value2;
-		} equation;
-	};
-} FACTEvent_SetValue;
-
-typedef struct FACTEvent_Stop
-{
-	uint8_t flags;
-} FACTEvent_Stop;
-
-typedef struct FACTEvent_Marker
-{
-	uint32_t marker;
-	uint16_t repeats;
-	uint16_t frequency;
-} FACTEvent_Marker;
-
 typedef struct FACTEvent
 {
 	uint16_t type;
@@ -213,10 +126,79 @@ typedef struct FACTEvent
 	uint16_t randomOffset;
 	union
 	{
-		FACTEvent_PlayWave wave;
-		FACTEvent_SetValue value;
-		FACTEvent_Stop stop;
-		FACTEvent_Marker marker;
+		/* Play Wave Event */
+		struct
+		{
+			uint8_t flags;
+			uint8_t loopCount;
+			uint16_t position;
+			uint16_t angle;
+
+			/* Track Variation */
+			uint8_t isComplex;
+			union
+			{
+				struct
+				{
+					uint16_t track;
+					uint8_t wavebank;
+				} simple;
+				struct
+				{
+					uint16_t variation;
+					uint16_t trackCount;
+					uint16_t *tracks;
+					uint8_t *wavebanks;
+					uint8_t *weights;
+				} complex;
+			};
+
+			/* Effect Variation */
+			int16_t minPitch;
+			int16_t maxPitch;
+			float minVolume;
+			float maxVolume;
+			float minFrequency;
+			float maxFrequency;
+			float minQFactor;
+			float maxQFactor;
+			uint16_t variationFlags;
+		} wave;
+		/* Set Pitch/Volume Event */
+		struct
+		{
+			uint8_t settings;
+			uint16_t repeats;
+			uint16_t frequency;
+			union
+			{
+				struct
+				{
+					float initialValue;
+					float initialSlope;
+					float slopeDelta;
+					uint16_t duration;
+				} ramp;
+				struct
+				{
+					uint8_t flags;
+					float value1;
+					float value2;
+				} equation;
+			};
+		} value;
+		/* Stop Event */
+		struct
+		{
+			uint8_t flags;
+		} stop;
+		/* Marker Event */
+		struct
+		{
+			uint32_t marker;
+			uint16_t repeats;
+			uint16_t frequency;
+		} marker;
 	};
 } FACTEvent;
 
@@ -252,6 +234,46 @@ typedef struct FACTSound
 	uint32_t *rpcCodes;
 	uint32_t *dspCodes;
 } FACTSound;
+
+typedef struct FACTCueData
+{
+	uint8_t flags;
+	uint32_t sbCode;
+	uint32_t transitionOffset;
+	uint8_t instanceLimit;
+	uint16_t fadeInMS;
+	uint16_t fadeOutMS;
+	uint8_t maxInstanceBehavior;
+	uint8_t instanceCount;
+} FACTCueData;
+
+typedef struct FACTVariation
+{
+	union
+	{
+		struct
+		{
+			uint16_t track;
+			uint8_t wavebank;
+		} simple;
+		uint32_t soundCode;
+	};
+	float minWeight;
+	float maxWeight;
+	uint32_t linger;
+} FACTVariation;
+
+typedef struct FACTVariationTable
+{
+	uint8_t flags;
+	int16_t variable;
+	uint8_t isComplex;
+
+	uint16_t entryCount;
+	FACTVariation *entries;
+} FACTVariationTable;
+
+/* Internal Cue Types */
 
 typedef struct FACTInstanceRPCData
 {
@@ -304,28 +326,6 @@ typedef struct FACTSoundInstance
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;
 } FACTSoundInstance;
-
-typedef struct FACTVariation
-{
-	union
-	{
-		FACTSimpleWave simple;
-		uint32_t soundCode;
-	};
-	float minWeight;
-	float maxWeight;
-	uint32_t linger;
-} FACTVariation;
-
-typedef struct FACTVariationTable
-{
-	uint8_t flags;
-	int16_t variable;
-	uint8_t isComplex;
-
-	uint16_t entryCount;
-	FACTVariation *entries;
-} FACTVariationTable;
 
 /* Internal Wave Types */
 
