@@ -59,7 +59,7 @@ void FACT_INTERNAL_GetNextWave(
 	/* Track Variation */
 	if (evt->wave.isComplex)
 	{
-		if (	trackInst->wave == NULL ||
+		if (	trackInst->activeWave.wave == NULL ||
 			!(evt->wave.complex.variation & 0x00F0)	)
 		{
 			/* No-op, no variation on loop */
@@ -155,14 +155,14 @@ void FACT_INTERNAL_GetNextWave(
 		evt->wave.flags,
 		0,
 		loopCount,
-		&trackInst->upcomingWave
+		&trackInst->upcomingWave.wave
 	);
 
 	/* 3D Audio */
 	if (cue->active3D)
 	{
 		FACTWave_SetMatrixCoefficients(
-			trackInst->upcomingWave,
+			trackInst->upcomingWave.wave,
 			cue->srcChannels,
 			cue->dstChannels,
 			cue->matrixCoefficients
@@ -188,23 +188,24 @@ void FACT_INTERNAL_GetNextWave(
 				/* Add/Replace */
 				if (evt->wave.variationFlags & 0x0004)
 				{
-					trackInst->basePitch += rngPitch;
+					trackInst->upcomingWave.basePitch =
+						trackInst->activeWave.basePitch + rngPitch;
 				}
 				else
 				{
-					trackInst->basePitch = rngPitch + sound->pitch;
+					trackInst->upcomingWave.basePitch = rngPitch + sound->pitch;
 				}
 			}
 		}
 		else
 		{
 			/* Initial Pitch Variation */
-			trackInst->basePitch = rngPitch + sound->pitch;
+			trackInst->upcomingWave.basePitch = rngPitch + sound->pitch;
 		}
 	}
 	else
 	{
-		trackInst->basePitch = sound->pitch;
+		trackInst->upcomingWave.basePitch = sound->pitch;
 	}
 
 	/* Volume Variation */
@@ -222,23 +223,24 @@ void FACT_INTERNAL_GetNextWave(
 				/* Add/Replace */
 				if (evt->wave.variationFlags & 0x0001)
 				{
-					trackInst->baseVolume += rngVolume;
+					trackInst->upcomingWave.baseVolume =
+						trackInst->activeWave.baseVolume + rngVolume;
 				}
 				else
 				{
-					trackInst->baseVolume = rngVolume + sound->volume;
+					trackInst->upcomingWave.baseVolume = rngVolume + sound->volume;
 				}
 			}
 		}
 		else
 		{
 			/* Initial Volume Variation */
-			trackInst->baseVolume = rngVolume + sound->volume;
+			trackInst->upcomingWave.baseVolume = rngVolume + sound->volume;
 		}
 	}
 	else
 	{
-		trackInst->baseVolume = sound->volume + track->volume;
+		trackInst->upcomingWave.baseVolume = sound->volume + track->volume;
 	}
 
 	/* Filter Variation, QFactor/Freq are always together */
@@ -272,21 +274,21 @@ void FACT_INTERNAL_GetNextWave(
 				{
 				}
 				*/
-				trackInst->baseQFactor = rngQFactor;
-				trackInst->baseFrequency = rngFrequency;
+				trackInst->upcomingWave.baseQFactor = rngQFactor;
+				trackInst->upcomingWave.baseFrequency = rngFrequency;
 			}
 		}
 		else
 		{
 			/* Initial Filter Variation */
-			trackInst->baseQFactor = rngQFactor;
-			trackInst->baseFrequency = rngFrequency;
+			trackInst->upcomingWave.baseQFactor = rngQFactor;
+			trackInst->upcomingWave.baseFrequency = rngFrequency;
 		}
 	}
 	else
 	{
-		trackInst->baseQFactor = track->qfactor;
-		trackInst->baseFrequency = track->frequency;
+		trackInst->upcomingWave.baseQFactor = track->qfactor;
+		trackInst->upcomingWave.baseFrequency = track->frequency;
 	}
 
 	/* Try to change loop counter at the very end */
@@ -436,12 +438,16 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
 			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = 0.0f; /* FIXME */
 
-			cue->playing.sound.tracks[i].wave = NULL;
-			cue->playing.sound.tracks[i].upcomingWave = NULL;;
-			cue->playing.sound.tracks[i].baseVolume = 1.0f;
-			cue->playing.sound.tracks[i].basePitch = 0;
-			cue->playing.sound.tracks[i].baseQFactor = 0.0f; /* FIXME */
-			cue->playing.sound.tracks[i].baseFrequency = 0.0f; /* FIXME */
+			cue->playing.sound.tracks[i].activeWave.wave = NULL;
+			cue->playing.sound.tracks[i].activeWave.baseVolume = 1.0f;
+			cue->playing.sound.tracks[i].activeWave.basePitch = 0;
+			cue->playing.sound.tracks[i].activeWave.baseQFactor = 0.0f; /* FIXME */
+			cue->playing.sound.tracks[i].activeWave.baseFrequency = 0.0f; /* FIXME */
+			cue->playing.sound.tracks[i].upcomingWave.wave = NULL;
+			cue->playing.sound.tracks[i].upcomingWave.baseVolume = 1.0f;
+			cue->playing.sound.tracks[i].upcomingWave.basePitch = 0;
+			cue->playing.sound.tracks[i].upcomingWave.baseQFactor = 0.0f; /* FIXME */
+			cue->playing.sound.tracks[i].upcomingWave.baseFrequency = 0.0f; /* FIXME */
 
 			cue->playing.sound.tracks[i].events = (FACTEventInstance*) FAudio_malloc(
 				sizeof(FACTEventInstance) * cue->playing.sound.sound->tracks[i].eventCount
@@ -693,19 +699,19 @@ void FACT_INTERNAL_ActivateEvent(
 		/* Stop track */
 		else
 		{
-			if (trackInst->wave != NULL)
+			if (trackInst->activeWave.wave != NULL)
 			{
 				FACTWave_Stop(
-					trackInst->wave,
+					trackInst->activeWave.wave,
 					evt->stop.flags & 0x01
 				);
 			}
 
 			/* If there was another sound coming, it ain't now! */
-			if (trackInst->upcomingWave != NULL)
+			if (trackInst->upcomingWave.wave != NULL)
 			{
-				FACTWave_Destroy(trackInst->upcomingWave);
-				trackInst->upcomingWave = NULL;
+				FACTWave_Destroy(trackInst->upcomingWave.wave);
+				trackInst->upcomingWave.wave = NULL;
 			}
 
 			/* Kill the loop count too */
@@ -727,11 +733,15 @@ void FACT_INTERNAL_ActivateEvent(
 			evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 			evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 	{
-		FAudio_assert(trackInst->wave == NULL);
-		FAudio_assert(trackInst->upcomingWave != NULL);
-		trackInst->wave = trackInst->upcomingWave;
-		trackInst->upcomingWave = NULL;
-		FACTWave_Play(trackInst->wave);
+		FAudio_assert(trackInst->activeWave.wave == NULL);
+		FAudio_assert(trackInst->upcomingWave.wave != NULL);
+		FAudio_memcpy(
+			&trackInst->activeWave,
+			&trackInst->upcomingWave,
+			sizeof(trackInst->activeWave)
+		);
+		trackInst->upcomingWave.wave = NULL;
+		FACTWave_Play(trackInst->activeWave.wave);
 	}
 
 	/* SETVALUE */
@@ -896,9 +906,9 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			{
 				active = &cue->playing.sound;
 				for (i = 0; i < active->sound->trackCount; i += 1)
-				if (active->tracks[i].wave != NULL)
+				if (active->tracks[i].activeWave.wave != NULL)
 				{
-					FACTWave_Destroy(active->tracks[i].wave);
+					FACTWave_Destroy(active->tracks[i].activeWave.wave);
 				}
 			}
 			cue->start = elapsed;
@@ -967,7 +977,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		}
 
 		/* Wave updates */
-		if (active->tracks[i].wave == NULL)
+		if (active->tracks[i].activeWave.wave == NULL)
 		{
 			continue;
 		}
@@ -975,35 +985,38 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 
 		/* Clear out Waves as they finish */
 		FACTWave_GetState(
-			active->tracks[i].wave,
+			active->tracks[i].activeWave.wave,
 			&waveState
 		);
 		if (waveState & FACT_STATE_STOPPED)
 		{
-			FACTWave_Destroy(active->tracks[i].wave);
-			active->tracks[i].wave = active->tracks[i].upcomingWave;
-			active->tracks[i].upcomingWave = NULL;
-			if (active->tracks[i].wave == NULL)
+			FACTWave_Destroy(active->tracks[i].activeWave.wave);
+			FAudio_memcpy(
+				&active->tracks[i].activeWave,
+				&active->tracks[i].upcomingWave,
+				sizeof(active->tracks[i].activeWave)
+			);
+			active->tracks[i].upcomingWave.wave = NULL;
+			if (active->tracks[i].activeWave.wave == NULL)
 			{
 				continue;
 			}
-			/* TODO: Separate variations for wave/upcomingWave! */
-			FACTWave_Play(active->tracks[i].wave);
+			FACTWave_Play(active->tracks[i].activeWave.wave);
 		}
 
 		/* TODO: Event volume/pitch values */
 		FACTWave_SetVolume(
-			active->tracks[i].wave,
+			active->tracks[i].activeWave.wave,
 			FACT_INTERNAL_CalculateAmplitudeRatio(
-				active->tracks[i].baseVolume +
+				active->tracks[i].activeWave.baseVolume +
 				active->rpcData.rpcVolume +
 				active->tracks[i].rpcData.rpcVolume
 			) * cue->parentBank->parentEngine->categories[active->sound->category].currentVolume
 		);
 		FACTWave_SetPitch(
-			active->tracks[i].wave,
+			active->tracks[i].activeWave.wave,
 			(
-				active->tracks[i].basePitch +
+				active->tracks[i].activeWave.basePitch +
 				active->rpcData.rpcPitch +
 				active->tracks[i].rpcData.rpcPitch
 			)

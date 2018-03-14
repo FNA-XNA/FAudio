@@ -281,14 +281,16 @@ typedef struct FACTTrackInstance
 	FACTInstanceRPCData rpcData;
 
 	/* Wave playback */
-	FACTWave *wave;
-	FACTWave *upcomingWave;
+	struct
+	{
+		FACTWave *wave;
+		float baseVolume;
+		int16_t basePitch;
+		float baseQFactor;
+		float baseFrequency;
+	} activeWave, upcomingWave;
 	FACTEvent *waveEvt;
 	FACTEventInstance *waveEvtInst;
-	float baseVolume;
-	int16_t basePitch;
-	float baseQFactor;
-	float baseFrequency;
 } FACTTrackInstance;
 
 typedef struct FACTSoundInstance

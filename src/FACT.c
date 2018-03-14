@@ -224,7 +224,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 			if (cue->active & 0x02)
 			for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
 			{
-				if (	cue->playing.sound.tracks[i].upcomingWave == NULL &&
+				if (	cue->playing.sound.tracks[i].upcomingWave.wave == NULL &&
 					cue->playing.sound.tracks[i].waveEvtInst->loopCount > 0	)
 				{
 					FACT_INTERNAL_GetNextWave(
@@ -1575,16 +1575,16 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		{
 			for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
 			{
-				if (pCue->playing.sound.tracks[i].wave != NULL)
+				if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
 				{
 					FACTWave_Destroy(
-						pCue->playing.sound.tracks[i].wave
+						pCue->playing.sound.tracks[i].activeWave.wave
 					);
 				}
-				if (pCue->playing.sound.tracks[i].upcomingWave != NULL)
+				if (pCue->playing.sound.tracks[i].upcomingWave.wave != NULL)
 				{
 					FACTWave_Destroy(
-						pCue->playing.sound.tracks[i].upcomingWave
+						pCue->playing.sound.tracks[i].upcomingWave.wave
 					);
 				}
 				FAudio_free(pCue->playing.sound.tracks[i].events);
@@ -1647,10 +1647,10 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	{
 		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
 		{
-			if (pCue->playing.sound.tracks[i].wave != NULL)
+			if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
 			{
 				FACTWave_SetMatrixCoefficients(
-					pCue->playing.sound.tracks[i].wave,
+					pCue->playing.sound.tracks[i].activeWave.wave,
 					uSrcChannelCount,
 					uDstChannelCount,
 					pMatrixCoefficients
@@ -1746,10 +1746,10 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	{
 		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
 		{
-			if (pCue->playing.sound.tracks[i].wave != NULL)
+			if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
 			{
 				FACTWave_Pause(
-					pCue->playing.sound.tracks[i].wave,
+					pCue->playing.sound.tracks[i].activeWave.wave,
 					fPause
 				);
 			}
