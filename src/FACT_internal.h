@@ -280,6 +280,7 @@ typedef struct FACTInstanceRPCData
 	float rpcVolume;
 	float rpcPitch;
 	float rpcFilterFreq;
+	float rpcFilterQFactor;
 } FACTInstanceRPCData;
 
 typedef struct FACTEventInstance
