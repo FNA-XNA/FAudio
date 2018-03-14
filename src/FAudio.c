@@ -1361,3 +1361,8 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	);
 	return 0;
 }
+
+uint32_t FAudioCreateReverb(void **ppApo, uint32_t Flags)
+{
+	return 0;
+}

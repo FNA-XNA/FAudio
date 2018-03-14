@@ -48,6 +48,10 @@ void FACT_INTERNAL_GetNextWave(
 	FACTEvent *evt,
 	FACTEventInstance *evtInst
 ) {
+#if 0 /* TODO: Implement reverb first! */
+	FAudioSendDescriptor reverbDesc[2];
+	FAudioVoiceSends reverbSends;
+#endif
 	const char *wbName;
 	FACTWaveBank *wb;
 	uint16_t wbTrack;
@@ -157,6 +161,21 @@ void FACT_INTERNAL_GetNextWave(
 		loopCount,
 		&trackInst->upcomingWave.wave
 	);
+#if 0 /* TODO: Implement reverb first! */
+	if (sound->dspCodeCount > 0) /* Never more than 1...? */
+	{
+		reverbDesc[0].Flags = 0;
+		reverbDesc[0].pOutputVoice = cue->parentBank->parentEngine->master;
+		reverbDesc[1].Flags = 0;
+		reverbDesc[1].pOutputVoice = cue->parentBank->parentEngine->reverbVoice;
+		reverbSends.SendCount = 2;
+		reverbSends.pSends = reverbDesc;
+		FAudioVoice_SetOutputVoices(
+			trackInst->upcomingWave.wave->voice,
+			&reverbSends
+		);
+	}
+#endif
 
 	/* 3D Audio */
 	if (cue->active3D)
@@ -436,6 +455,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 		{
 			cue->playing.sound.tracks[i].rpcData.rpcVolume = 1.0f;
 			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
+			cue->playing.sound.tracks[i].rpcData.rpcReverbSend = 0.0f;
 			cue->playing.sound.tracks[i].rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
 			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
@@ -582,6 +602,7 @@ void FACT_INTERNAL_UpdateRPCs(
 	{
 		data->rpcVolume = 0.0f;
 		data->rpcPitch = 0.0f;
+		data->rpcReverbSend = 0.0f;
 		data->rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 		data->rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
 		for (i = 0; i < codeCount; i += 1)
@@ -628,6 +649,10 @@ void FACT_INTERNAL_UpdateRPCs(
 			else if (rpc->parameter == RPC_PARAMETER_PITCH)
 			{
 				data->rpcPitch += rpcResult;
+			}
+			else if (rpc->parameter == RPC_PARAMETER_REVERBSEND)
+			{
+				data->rpcReverbSend += rpcResult;
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
 			{
@@ -679,6 +704,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 			}
 		}
 	}
+	/* TODO: Set Submit Effect0 Parameters from above RPC changes */
 }
 
 /* Cue Update Functions */
@@ -1057,7 +1083,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			0
 		);
 		/* TODO: Wave updates:
-		 * - Reverb
+		 * - ReverbSend (SetOutputMatrix on index 1, submix voice)
 		 * - Fade in/out
 		 */
 	}

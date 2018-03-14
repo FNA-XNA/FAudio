@@ -95,6 +95,11 @@ uint32_t FACTAudioEngine_Initialize(
 ) {
 	uint32_t parseRet;
 	uint32_t deviceIndex;
+#if 0 /* TODO: Implement reverb first! */
+	FAudioVoiceDetails masterDetails;
+	FAudioEffectDescriptor reverbDesc;
+	FAudioEffectChain reverbChain;
+#endif
 
 	/* Parse the file */
 	parseRet = FACT_INTERNAL_ParseAudioEngine(pEngine, pParams);
@@ -144,6 +149,35 @@ uint32_t FACTAudioEngine_Initialize(
 		deviceIndex,
 		NULL
 	);
+
+#if 0 /* TODO: Implement reverb first! */
+	/* Create the reverb effect, if applicable */
+	if (pEngine->dspPresetCount > 0) /* Never more than 1...? */
+	{
+		FAudioVoice_GetVoiceDetails(pEngine->master, &masterDetails);
+
+		/* Reverb effect chain... */
+		FAudioCreateReverb(&reverbDesc.pEffect, 0);
+		reverbDesc.InitialState = 1;
+		reverbDesc.OutputChannels = masterDetails.InputChannels;
+		reverbChain.EffectCount = 1;
+		reverbChain.pEffectDescriptors = &reverbDesc;
+
+		/* Reverb submix voice... */
+		FAudio_CreateSubmixVoice(
+			pEngine->audio,
+			&pEngine->reverbVoice,
+			masterDetails.InputChannels,
+			masterDetails.InputSampleRate,
+			0,
+			0,
+			NULL,
+			&reverbChain
+		);
+
+		/* TODO: Release reverbDesc.pEffect */
+	}
+#endif
 	return 0;
 }
 
@@ -204,6 +238,10 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	FAudio_free(pEngine->dspPresetCodes);
 
 	/* Finally. */
+	if (pEngine->reverbVoice != NULL)
+	{
+		FAudioVoice_DestroyVoice(pEngine->reverbVoice);
+	}
 	FAudioVoice_DestroyVoice(pEngine->master);
 	FAudioDestroy(pEngine->audio);
 	FAudio_free(pEngine);

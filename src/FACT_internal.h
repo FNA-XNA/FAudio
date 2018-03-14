@@ -279,6 +279,7 @@ typedef struct FACTInstanceRPCData
 {
 	float rpcVolume;
 	float rpcPitch;
+	float rpcReverbSend;
 	float rpcFilterFreq;
 	float rpcFilterQFactor;
 } FACTInstanceRPCData;
@@ -364,6 +365,7 @@ struct FACTAudioEngine
 	/* FAudio references */
 	FAudio *audio;
 	FAudioMasteringVoice *master;
+	FAudioSubmixVoice *reverbVoice;
 	FACTAudioEngineCallback callback;
 };
 
