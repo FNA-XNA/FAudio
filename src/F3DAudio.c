@@ -29,16 +29,12 @@
 
 #include <math.h> /* ONLY USE THIS FOR isnan! */
 
-#define INSTANCE_SPEAKERMASK \
-	*((uint32_t*) &Instance[0])
-#define INSTANCE_SPEAKERCOUNT \
-	*((uint32_t*) &Instance[4])
-#define INSTANCE_UNKNOWN1 \
-	*((uint32_t*) &Instance[8])
-#define INSTANCE_SPEEDOFSOUND \
-	*((float*) &Instance[12])
-#define INSTANCE_SPEEDOFSOUNDEPSILON \
-	*((float*) &Instance[16])
+/* F3DAUDIO_HANDLE Structure */
+#define INSTANCE_SPEAKERMASK		*((uint32_t*)	&Instance[0])
+#define INSTANCE_SPEAKERCOUNT		*((uint32_t*)	&Instance[4])
+#define INSTANCE_UNKNOWN1		*((uint32_t*)	&Instance[8])
+#define INSTANCE_SPEEDOFSOUND		*((float*)	&Instance[12])
+#define INSTANCE_SPEEDOFSOUNDEPSILON	*((float*)	&Instance[16])
 
 void F3DAudioInitialize(
 	uint32_t SpeakerChannelMask,
