@@ -439,24 +439,19 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		voice->mix.inputSamples,
 		voice->mix.outputResampleCache,
 		voice->mix.outputSamples
-	) / voice->mix.inputChannels;
+	);
 
-	/* Submix volumes are applied _before_ effects/filters, blech! */
+	/* Submix overall volume is applied _before_ effects/filters, blech! */
 	for (i = 0; i < resampled; i += 1)
-	for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
 	{
 		/* TODO: SSE */
-		/* FIXME: Clip volume? */
-		voice->mix.outputResampleCache[
-			i * voice->mix.inputChannels + ci
-		] = (
-			voice->mix.outputResampleCache[
-				i * voice->mix.inputChannels + ci
-			] *
-			voice->channelVolume[ci] *
-			voice->volume
+		voice->mix.outputResampleCache[i] = FAudio_clamp(
+			voice->mix.outputResampleCache[i] * voice->volume,
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
 		);
 	}
+	resampled /= voice->mix.inputChannels;
 
 	/* TODO: Effects, filters */
 
@@ -485,6 +480,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 					voice->mix.outputResampleCache[
 						j * voice->mix.inputChannels + ci
 					] *
+					voice->channelVolume[ci] *
 					voice->sendCoefficients[i][
 						co * voice->mix.inputChannels + ci
 					]
