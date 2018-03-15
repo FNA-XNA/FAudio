@@ -453,19 +453,19 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 		);
 		for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
 		{
-			cue->playing.sound.tracks[i].rpcData.rpcVolume = 1.0f;
+			cue->playing.sound.tracks[i].rpcData.rpcVolume = 0.0f;
 			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
 			cue->playing.sound.tracks[i].rpcData.rpcReverbSend = 0.0f;
 			cue->playing.sound.tracks[i].rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
 			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
 			cue->playing.sound.tracks[i].activeWave.wave = NULL;
-			cue->playing.sound.tracks[i].activeWave.baseVolume = 1.0f;
+			cue->playing.sound.tracks[i].activeWave.baseVolume = 0.0f;
 			cue->playing.sound.tracks[i].activeWave.basePitch = 0;
 			cue->playing.sound.tracks[i].activeWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
 			cue->playing.sound.tracks[i].activeWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 			cue->playing.sound.tracks[i].upcomingWave.wave = NULL;
-			cue->playing.sound.tracks[i].upcomingWave.baseVolume = 1.0f;
+			cue->playing.sound.tracks[i].upcomingWave.baseVolume = 0.0f;
 			cue->playing.sound.tracks[i].upcomingWave.basePitch = 0;
 			cue->playing.sound.tracks[i].upcomingWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
 			cue->playing.sound.tracks[i].upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
@@ -1065,7 +1065,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		else
 		{
 			/* TODO: How are all the freq/QFactor values put together? */
-			filterParams.Type = active->sound->tracks[i].filter;
+			filterParams.Type = (FAudioFilterType) active->sound->tracks[i].filter;
 			filterParams.Frequency = (
 				active->tracks[i].activeWave.baseFrequency +
 				active->rpcData.rpcFilterFreq +

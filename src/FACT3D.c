@@ -127,7 +127,9 @@ uint32_t FACT3DCalculate(
 		pListener,
 		pEmitter,
 		(
+#if 0 /* TODO: F3DAUDIO_CALCULATE_MATRIX */
 			F3DAUDIO_CALCULATE_MATRIX |
+#endif
 			F3DAUDIO_CALCULATE_DOPPLER |
 			F3DAUDIO_CALCULATE_EMITTER_ANGLE
 		),
@@ -145,12 +147,14 @@ uint32_t FACT3DApply(
 		return 0;
 	}
 
+#if 0 /* TODO: F3DAUDIO_CALCULATE_MATRIX */
 	FACTCue_SetMatrixCoefficients(
 		pCue,
 		pDSPSettings->SrcChannelCount,
 		pDSPSettings->DstChannelCount,
 		pDSPSettings->pMatrixCoefficients
 	);
+#endif
 	FACTCue_SetVariable(
 		pCue,
 		FACTCue_GetVariableIndex(pCue, "Distance"),
