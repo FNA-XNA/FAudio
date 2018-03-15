@@ -34,8 +34,7 @@ int main(int argc, char **argv)
 	FACTWaveBank *wb;
 	FACTRuntimeParameters params;
 	uint8_t *buf;
-	uint32_t len;
-	SDL_RWops *fileIn;
+	size_t len;
 	uint32_t i, j, k, l;
 
 	/* We need an AudioEngine, SoundBank and WaveBank! */
@@ -44,24 +43,18 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	/* I/O busy work... */
-	#define OPENFILE(name) \
-		fileIn = SDL_RWFromFile(argv[name], "rb"); \
-		len = SDL_RWsize(fileIn); \
-		buf = (uint8_t*) SDL_malloc(len); \
-		SDL_RWread(fileIn, buf, len, 1); \
-		SDL_RWclose(fileIn);
-
 	/* Parse the AudioEngine */
-	OPENFILE(1)
+	buf = (uint8_t*) SDL_LoadFile(argv[1], &len);
 	params.pGlobalSettingsBuffer = buf;
 	params.globalSettingsBufferSize = len;
+	params.pXAudio2 = NULL;
+	params.pRendererID = NULL;
 	FACTCreateEngine(0, &engine);
 	FACTAudioEngine_Initialize(engine, &params);
 	SDL_free(buf);
 
 	/* Parse the SoundBank */
-	OPENFILE(2)
+	buf = (uint8_t*) SDL_LoadFile(argv[2], &len);
 	FACTAudioEngine_CreateSoundBank(
 		engine,
 		buf,
@@ -73,7 +66,7 @@ int main(int argc, char **argv)
 	SDL_free(buf);
 
 	/* Parse the WaveBank, do NOT free this memory yet! */
-	OPENFILE(3)
+	buf = (uint8_t*) SDL_LoadFile(argv[3], &len);
 	FACTAudioEngine_CreateInMemoryWaveBank(
 		engine,
 		buf,
@@ -82,9 +75,6 @@ int main(int argc, char **argv)
 		0,
 		&wb
 	);
-
-	/* Done with I/O busy work... */
-	#undef OPENFILE
 
 	/* Print AudioEngine information */
 	printf("AudioEngine:\n");

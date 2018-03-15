@@ -1503,7 +1503,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 {
 	uint32_t evtInfo;
-	uint8_t minWeight, maxWeight;
+	uint8_t minWeight, maxWeight, separator;
 	uint8_t i;
 	uint16_t j;
 
@@ -1521,7 +1521,8 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 		track->events[i].type = evtInfo & 0x001F;
 		track->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
 
-		FAudio_assert(read_u8(ptr) == 0xFF); /* Separator? */
+		separator = read_u8(ptr);
+		FAudio_assert(separator == 0xFF); /* Separator? */
 
 		#define EVTTYPE(t) (track->events[i].type == t)
 		if (EVTTYPE(FACTEVENT_STOP))
