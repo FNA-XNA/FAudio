@@ -210,6 +210,7 @@ void FAudio_INTERNAL_ResamplePCM(
 	uint64_t toResample
 ) {
 	/* Linear Resampler */
+	/* TODO: SSE */
 	uint32_t i, j;
 	float *dCache[2] = { voice->src.decodeCache[0], voice->src.decodeCache[1] };
 	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
@@ -325,6 +326,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			for (i = 0; i < toResample; i += 1)
 			for (j = 0; j < voice->src.format.nChannels; j += 1)
 			{
+				/* TODO: SSE */
 				*resampleCache++ = voice->src.decodeCache[j][i];
 			}
 		}
@@ -382,6 +384,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			oChan = out->mix.inputChannels;
 		}
 
+		/* TODO: SSE */
 		for (j = 0; j < mixed; j += 1)
 		for (co = 0; co < oChan; co += 1)
 		for (ci = 0; ci < voice->src.format.nChannels; ci += 1)
@@ -442,6 +445,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	for (i = 0; i < resampled; i += 1)
 	for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
 	{
+		/* TODO: SSE */
 		/* FIXME: Clip volume? */
 		voice->mix.outputResampleCache[
 			i * voice->mix.inputChannels + ci
@@ -471,6 +475,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			oChan = out->mix.inputChannels;
 		}
 
+		/* TODO: SSE */
 		for (j = 0; j < resampled; j += 1)
 		for (co = 0; co < oChan; co += 1)
 		for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
@@ -555,6 +560,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	totalSamples = audio->updateSize * audio->master->master.inputChannels;
 	for (i = 0; i < totalSamples; i += 1)
 	{
+		/* TODO: SSE */
 		output[i] = FAudio_clamp(
 			output[i] * audio->master->volume,
 			-FAUDIO_MAX_VOLUME_LEVEL,
@@ -594,6 +600,7 @@ void FAudio_INTERNAL_DecodeMonoPCM8(
 	);
 	for (i = 0; i < samples; i += 1)
 	{
+		/* TODO: SSE */
 		*decodeCache++ = *buf++ / 128.0f;
 	}
 }
@@ -612,6 +619,7 @@ void FAudio_INTERNAL_DecodeStereoPCM8(
 	);
 	for (i = 0; i < samples; i += 1)
 	{
+		/* TODO: SSE */
 		*decodeCacheL++ = *buf++ / 128.0f;
 		*decodeCacheR++ = *buf++ / 128.0f;
 	}
@@ -633,6 +641,7 @@ void FAudio_INTERNAL_DecodeMonoPCM16(
 	);
 	for (i = 0; i < samples; i += 1)
 	{
+		/* TODO: SSE */
 		*decodeCache++ = *buf++ / 32768.0f;
 	}
 }
@@ -651,6 +660,7 @@ void FAudio_INTERNAL_DecodeStereoPCM16(
 	);
 	for (i = 0; i < samples; i += 1)
 	{
+		/* TODO: SSE */
 		*decodeCacheL++ = *buf++ / 32768.0f;
 		*decodeCacheR++ = *buf++ / 32768.0f;
 	}
@@ -690,6 +700,7 @@ void FAudio_INTERNAL_DecodeStereoPCM32F(
 	);
 	for (i = 0; i < samples; i += 1)
 	{
+		/* TODO: SSE */
 		*decodeCacheL++ = *buf++;
 		*decodeCacheR++ = *buf++;
 	}
@@ -884,6 +895,7 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 			blockCache,
 			format->nBlockAlign
 		);
+		/* TODO: SSE */
 		for (i = 0, off = midOffset; i < copy; i += 1)
 		{
 			*decodeCache++ = blockCache[off++] / 32768.0f;
@@ -932,6 +944,7 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 			blockCache,
 			format->nBlockAlign
 		);
+		/* TODO: SSE */
 		for (i = 0, off = midOffset * 2; i < copy; i += 1)
 		{
 			*decodeCacheL++ = blockCache[off++] / 32768.0f;
