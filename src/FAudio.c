@@ -847,11 +847,25 @@ uint32_t FAudioVoice_SetFilterParameters(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
+	if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		// documentation: "This method is usable only on source and submix voices and has no effect on mastering voices."
+		return 0;
+	}
+
 	FAudio_memcpy(
 		&voice->filter,
 		pParameters,
 		sizeof(FAudioFilterParameters)
 	);
+
+	if (voice->filterState == NULL)
+	{
+		int channels = (voice->type == FAUDIO_VOICE_SUBMIX) ? voice->mix.inputChannels : voice->src.format.nChannels;
+		voice->filterState = (FAudioFilterState *) FAudio_malloc(sizeof(FAudioFilterState) * channels);
+		FAudio_zero(voice->filterState, sizeof(FAudioFilterState) * channels);
+	}
+
 	return 0;
 }
 
@@ -1129,6 +1143,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	if (voice->effects.pEffectDescriptors != NULL)
 	{
 		FAudio_free(voice->effects.pEffectDescriptors);
+	}
+	if (voice->filterState != NULL)
+	{
+		FAudio_free(voice->filterState);
 	}
 	FAudio_free(voice);
 }

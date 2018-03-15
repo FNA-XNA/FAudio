@@ -86,6 +86,8 @@ typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 
 typedef void* FAudioPlatformFixedRateSRC;
 
+typedef float FAudioFilterState[4];
+
 /* Public FAudio Types */
 
 struct FAudio
@@ -110,6 +112,7 @@ struct FAudioVoice
 	float **sendCoefficients;
 	FAudioEffectChain effects;
 	FAudioFilterParameters filter;
+	FAudioFilterState *filterState;
 
 	float volume;
 	float channelVolume[2]; /* Assuming stereo input */

@@ -246,6 +246,37 @@ void FAudio_INTERNAL_ResamplePCM(
 	}
 }
 
+static void FAudio_INTERNAL_FilterVoice(
+	const FAudioFilterParameters *filter,
+	FAudioFilterState *filterState,
+	float *samples,
+	uint32_t numSamples,
+	uint16_t numChannels)
+{
+	uint32_t j, ci;
+	FAudio_assert(filter->Type != 0xff);
+	FAudio_assert(filterState != NULL);
+
+	/* Apply a digital state-variable filter to the voice; the difference equations of the filter are:
+		Yl(n) = F Yb(n - 1) + Yl(n - 1)
+		Yh(n) = x(n) - Yl(n) - OneOverQ Yb(n - 1)
+		Yb(n) = F Yh(n) + Yb(n - 1)
+		Yn(n) = Yl(n) + Yh(n)
+	   Please note that FAudioFilterParameters.Frequency is defined as:
+		(2 * sin(pi * (desired filter cutoff frequency) / sampleRate))
+	*/
+
+	for (j = 0; j < numSamples; j += 1)
+	for (ci = 0; ci < numChannels; ci += 1)
+	{
+		filterState[ci][LowPassFilter] = filterState[ci][LowPassFilter] + (filter->Frequency * filterState[ci][BandPassFilter]);
+		filterState[ci][HighPassFilter] = samples[j * numChannels + ci] - filterState[ci][LowPassFilter] - (filter->OneOverQ * filterState[ci][BandPassFilter]);
+		filterState[ci][BandPassFilter] = (filter->Frequency * filterState[ci][HighPassFilter]) + filterState[ci][BandPassFilter];
+		filterState[ci][NotchFilter] = filterState[ci][HighPassFilter] + filterState[ci][LowPassFilter];
+		samples[j * numChannels + ci] = filterState[ci][filter->Type];
+	}
+}
+
 void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
@@ -367,7 +398,19 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		goto end;
 	}
 
-	/* TODO: Effects, filters */
+	/* TODO: Effects */
+
+	/* Filters */
+	if (voice->filter.Type != 0xff)
+	{
+		FAudio_INTERNAL_FilterVoice(
+			&voice->filter,
+			voice->filterState,
+			voice->src.outputResampleCache,
+			mixed,
+			voice->src.format.nChannels
+		);
+	}
 
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -453,7 +496,19 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 	resampled /= voice->mix.inputChannels;
 
-	/* TODO: Effects, filters */
+	/* TODO: Effects */
+
+	/* Filters */
+	if (voice->filter.Type != 0xff)
+	{
+		FAudio_INTERNAL_FilterVoice(
+			&voice->filter,
+			voice->filterState,
+			voice->mix.outputResampleCache,
+			resampled,
+			voice->mix.inputChannels
+		);
+	}
 
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
