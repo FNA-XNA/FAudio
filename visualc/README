@@ -11,7 +11,7 @@ Before building, download SDL2's VC development libraries from SDL's website:
 http://libsdl.org/download-2.0.php
 
 After extracting the zip file, be sure to rename the directory to remove the
-version number (for example, 'SDL2-2.0.7' should be 'SDL2').
+version number (for example, 'SDL2-2.0.8' should be 'SDL2').
 
 Compiling
 ---------
