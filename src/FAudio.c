@@ -1081,6 +1081,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 				FAudio_free(source);
 				break;
 			}
+			srcPrev = source;
 			source = source->next;
 		}
 		for (i = 0; i < voice->src.format.nChannels; i += 1)
@@ -1113,6 +1114,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 				FAudio_free(submix);
 				break;
 			}
+			mixPrev = submix;
 			submix = submix->next;
 		}
 		voice->audio->submixStages = 0;
