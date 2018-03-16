@@ -845,11 +845,14 @@ uint32_t FAudioVoice_SetFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
+	uint32_t channels;
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
+	/* MSDN: "This method is usable only on source and submix voices and
+	 * has no effect on mastering voices."
+	 */
 	if (voice->type == FAUDIO_VOICE_MASTER)
 	{
-		// documentation: "This method is usable only on source and submix voices and has no effect on mastering voices."
 		return 0;
 	}
 
@@ -861,9 +864,16 @@ uint32_t FAudioVoice_SetFilterParameters(
 
 	if (voice->filterState == NULL)
 	{
-		int channels = (voice->type == FAUDIO_VOICE_SUBMIX) ? voice->mix.inputChannels : voice->src.format.nChannels;
-		voice->filterState = (FAudioFilterState *) FAudio_malloc(sizeof(FAudioFilterState) * channels);
-		FAudio_zero(voice->filterState, sizeof(FAudioFilterState) * channels);
+		channels = (voice->type == FAUDIO_VOICE_SUBMIX) ?
+			voice->mix.inputChannels :
+			voice->src.format.nChannels;
+		voice->filterState = (FAudioFilterState *) FAudio_malloc(
+			sizeof(FAudioFilterState) * channels
+		);
+		FAudio_zero(
+			voice->filterState,
+			sizeof(FAudioFilterState) * channels
+		);
 	}
 
 	return 0;

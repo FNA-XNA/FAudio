@@ -257,14 +257,20 @@ static void FAudio_INTERNAL_FilterVoice(
 	FAudio_assert(filter->Type != 0xff);
 	FAudio_assert(filterState != NULL);
 
-	/* Apply a digital state-variable filter to the voice; the difference equations of the filter are:
-		Yl(n) = F Yb(n - 1) + Yl(n - 1)
-		Yh(n) = x(n) - Yl(n) - OneOverQ Yb(n - 1)
-		Yb(n) = F Yh(n) + Yb(n - 1)
-		Yn(n) = Yl(n) + Yh(n)
-	   Please note that FAudioFilterParameters.Frequency is defined as:
-		(2 * sin(pi * (desired filter cutoff frequency) / sampleRate))
-	*/
+	/* Apply a digital state-variable filter to the voice.
+	 * The difference equations of the filter are:
+	 *
+	 * Yl(n) = F Yb(n - 1) + Yl(n - 1)
+	 * Yh(n) = x(n) - Yl(n) - OneOverQ Yb(n - 1)
+	 * Yb(n) = F Yh(n) + Yb(n - 1)
+	 * Yn(n) = Yl(n) + Yh(n)
+	 *
+	 * Please note that FAudioFilterParameters.Frequency is defined as:
+	 *
+	 * (2 * sin(pi * (desired filter cutoff frequency) / sampleRate))
+	 *
+	 * - @JohanSmet
+	 */
 
 	for (j = 0; j < numSamples; j += 1)
 	for (ci = 0; ci < numChannels; ci += 1)
