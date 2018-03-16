@@ -92,7 +92,7 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 
 	while (decoded < *toDecode && buffer != NULL)
 	{
-		decoding = *toDecode - decoded;
+		decoding = (uint32_t) *toDecode - decoded;
 
 		/* Start-of-buffer behavior */
 		if (	voice->src.curBufferOffset == buffer->PlayBegin &&
@@ -391,7 +391,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		}
 
 		/* Finally. */
-		mixed += toResample;
+		mixed += (uint32_t) toResample;
 	}
 	if (mixed == 0)
 	{

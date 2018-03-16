@@ -37,7 +37,7 @@
 
 float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
-	return FAudio_pow(10.0, decibel / 2000.0);
+	return (float) FAudio_pow(10.0, decibel / 2000.0);
 }
 
 void FACT_INTERNAL_GetNextWave(
@@ -1050,7 +1050,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 		);
 		FACTWave_SetPitch(
 			active->tracks[i].activeWave.wave,
-			(
+			(int16_t) (
 				active->tracks[i].activeWave.basePitch +
 				active->rpcData.rpcPitch +
 				active->tracks[i].rpcData.rpcPitch
