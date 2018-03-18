@@ -41,7 +41,11 @@ void F3DAudioInitialize(
 	float SpeedOfSound,
 	F3DAUDIO_HANDLE Instance
 ) {
-	uint32_t epsilonHack;
+	union
+	{
+		float f;
+		uint32_t i;
+	} epsilonHack;
 	uint8_t speakerCount = 0;
 	INSTANCE_SPEAKERMASK = SpeakerChannelMask;
 	while (SpeakerChannelMask != 0)
@@ -53,12 +57,12 @@ void F3DAudioInitialize(
 	INSTANCE_UNKNOWN1 = 0xFFFFFFFF; /* lolwut */
 	INSTANCE_SPEEDOFSOUND = SpeedOfSound;
 
-	/* Convert raw float to int... */
-	epsilonHack = *((uint32_t*) &SpeedOfSound);
+	/* "Convert" raw float to int... */
+	epsilonHack.f = SpeedOfSound;
 	/* ... Subtract epsilon value... */
-	epsilonHack -= 1;
+	epsilonHack.i -= 1;
 	/* ... Convert back to float. */
-	INSTANCE_SPEEDOFSOUNDEPSILON = *((float*) &epsilonHack);
+	INSTANCE_SPEEDOFSOUNDEPSILON = epsilonHack.f;
 }
 
 void F3DAudioCalculate(
