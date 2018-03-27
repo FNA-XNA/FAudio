@@ -615,18 +615,18 @@ public static class FAudio
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnCriticalErrorFunc(
-		IntPtr callback, /* FAudioEngineCallback* */
+		IntPtr engineCallback, /* FAudioEngineCallback* */
 		uint Error
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnProcessingPassEndFunc(
-		IntPtr callback /* FAudioEngineCallback* */
+		IntPtr engineCallback /* FAudioEngineCallback* */
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnProcessingPassStartFunc(
-		IntPtr callback /* FAudioEngineCallback* */
+		IntPtr engineCallback /* FAudioEngineCallback* */
 	);
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -641,42 +641,42 @@ public static class FAudio
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnBufferEndFunc(
-		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr voiceCallback, /* FAudioVoiceCallback* */
 		IntPtr pBufferContext /* void* */
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnBufferStartFunc(
-		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr voiceCallback, /* FAudioVoiceCallback* */
 		IntPtr pBufferContext /* void* */
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnLoopEndFunc(
-		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr voiceCallback, /* FAudioVoiceCallback* */
 		IntPtr pBufferContext /* void* */
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnStreamEndFunc(
-		IntPtr callback /* FAudioVoiceCallback* */
+		IntPtr voiceCallback /* FAudioVoiceCallback* */
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnVoiceErrorFunc(
-		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr voiceCallback, /* FAudioVoiceCallback* */
 		IntPtr pBufferContext, /* void* */
 		uint Error
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnVoiceProcessingPassEndFunc(
-		IntPtr callback /* FAudioVoiceCallback* */
+		IntPtr voiceCallback /* FAudioVoiceCallback* */
 	);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void OnVoiceProcessingPassStartFunc(
-		IntPtr callback, /* FAudioVoiceCallback* */
+		IntPtr voiceCallback, /* FAudioVoiceCallback* */
 		uint BytesRequired
 	);
 
