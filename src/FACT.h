@@ -43,6 +43,7 @@ typedef struct FACTSoundBank FACTSoundBank;
 typedef struct FACTWaveBank FACTWaveBank;
 typedef struct FACTWave FACTWave;
 typedef struct FACTCue FACTCue;
+typedef struct FACTNotification FACTNotification;
 
 typedef struct FACTRendererDetails
 {
@@ -86,30 +87,6 @@ typedef struct FACTFileIOCallbacks
 	FACTReadFileCallback readFileCallback;
 	FACTGetOverlappedResultCallback getOverlappedResultCallback;
 } FACTFileIOCallbacks;
-
-typedef struct FACTNotification
-{
-	uint8_t type;
-	int32_t timeStamp;
-	void *pvContext;
-	union
-	{
-		uint32_t filler; /* TODO: Notifications */
-	};
-} FACTNotification;
-
-typedef struct FACTNotificationDescription
-{
-	uint8_t type;
-	uint8_t flags;
-	FACTSoundBank *pSoundBank;
-	FACTWaveBank *pWaveBank;
-	FACTCue *pCue;
-	FACTWave *pWave;
-	uint16_t cueIndex;
-	uint16_t waveIndex;
-	void *pvContext;
-} FACTNotificationDescription;
 
 typedef void (FACTCALL * FACTNotificationCallback)(
 	const FACTNotification *pNotification
@@ -294,6 +271,90 @@ typedef struct FACTCueInstanceProperties
 	FACTSoundVariationProperties activeVariationProperties;
 } FACTCueInstanceProperties;
 
+#pragma pack(push, 1)
+
+typedef struct FACTNotificationDescription
+{
+	uint8_t type;
+	uint8_t flags;
+	FACTSoundBank *pSoundBank;
+	FACTWaveBank *pWaveBank;
+	FACTCue *pCue;
+	FACTWave *pWave;
+	uint16_t cueIndex;
+	uint16_t waveIndex;
+	void* pvContext;
+} FACTNotificationDescription;
+
+typedef struct FACTNotificationCue
+{
+	uint16_t cueIndex;
+	FACTSoundBank *pSoundBank;
+	FACTCue *pCue;
+} FACTNotificationCue;
+
+typedef struct FACTNotificationMarker
+{
+	uint16_t cueIndex;
+	FACTSoundBank *pSoundBank;
+	FACTCue *pCue;
+	uint32_t marker;
+} FACTNotificationMarker;
+
+typedef struct FACTNotificationSoundBank
+{
+	FACTSoundBank *pSoundBank;
+} FACTNotificationSoundBank;
+
+typedef struct FACTNotificationWaveBank
+{
+	FACTWaveBank *pWaveBank;
+} FACTNotificationWaveBank;
+
+typedef struct FACTNotificationVariable
+{
+	uint16_t cueIndex;
+	FACTSoundBank *pSoundBank;
+	FACTCue *pCue;
+	uint16_t variableIndex;
+	float variableValue;
+	uint8_t local;
+} FACTNotificationVariable;
+
+typedef struct FACTNotificationGUI
+{
+	uint32_t reserved;
+} FACTNotificationGUI;
+
+typedef struct FACTNotificationWave
+{
+	FACTWaveBank *pWaveBank;
+	uint16_t waveIndex;
+	uint16_t cueIndex;
+	FACTSoundBank *pSoundBank;
+	FACTCue *pCue;
+	FACTWave *pWave;
+} FACTNotificationWave;
+
+typedef struct FACTNotification
+{
+	uint8_t type;
+	int32_t timeStamp;
+	void *pvContext;
+	union
+	{
+		FACTNotificationCue cue;
+		FACTNotificationMarker marker;
+		FACTNotificationSoundBank soundBank;
+		FACTNotificationWaveBank waveBank;
+		FACTNotificationVariable variable;
+		FACTNotificationGUI gui;
+		FACTNotificationWave wave;
+	};
+} FACTNotification;
+
+#pragma pack(pop)
+
 /* Constants */
 
 #define FACT_CONTENT_VERSION 46
@@ -328,6 +389,27 @@ static const float FACTVOLUME_MAX = 16777216.0f;
 static const uint16_t FACTINDEX_INVALID =		0xFFFF;
 static const uint16_t FACTVARIABLEINDEX_INVALID =	0xFFFF;
 static const uint16_t FACTCATEGORY_INVALID =		0xFFFF;
+
+static const uint8_t FACTNOTIFICATIONTYPE_CUEPREPARED =				1;
+static const uint8_t FACTNOTIFICATIONTYPE_CUEPLAY =				2;
+static const uint8_t FACTNOTIFICATIONTYPE_CUESTOP =				3;
+static const uint8_t FACTNOTIFICATIONTYPE_CUEDESTROYED =			4;
+static const uint8_t FACTNOTIFICATIONTYPE_MARKER =				5;
+static const uint8_t FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED =			6;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED =			7;
+static const uint8_t FACTNOTIFICATIONTYPE_LOCALVARIABLECHANGED =		8;
+static const uint8_t FACTNOTIFICATIONTYPE_GLOBALVARIABLECHANGED =		9;
+static const uint8_t FACTNOTIFICATIONTYPE_GUICONNECTED =			10;
+static const uint8_t FACTNOTIFICATIONTYPE_GUIDISCONNECTED =			11;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVEPREPARED =			12;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVEPLAY =				13;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVESTOP =				14;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVELOOPED =				15;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVEDESTROYED =			16;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVEBANKPREPARED =			17;
+static const uint8_t FACTNOTIFICATIONTYPE_WAVEBANKSTREAMING_INVALIDCONTENT =	18;
+
+static const uint8_t FACT_FLAG_NOTIFICATION_PERSIST = 0x01;
 
 #define FACT_ENGINE_LOOKAHEAD_DEFAULT 250
 

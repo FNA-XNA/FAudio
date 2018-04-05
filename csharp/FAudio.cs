@@ -771,29 +771,6 @@ public static class FAudio
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct FACTNotification
-	{
-		public byte type;
-		public int timeStamp;
-		public IntPtr pvContext;
-		public uint fillter; /* TODO: Notifications */
-	}
-
-	[StructLayout(LayoutKind.Sequential)]
-	public struct FACTNotificationDescription
-	{
-		public byte type;
-		public byte flags;
-		public IntPtr pSoundBank; /* FACTSoundBank* */
-		public IntPtr pWaveBank; /* FACTWaveBank* */
-		public IntPtr pCue; /* FACTCue* */
-		public IntPtr pWave; /* FACTWave* */
-		public ushort cueIndex;
-		public ushort waveIndex;
-		public IntPtr pvContext;
-	}
-
-	[StructLayout(LayoutKind.Sequential)]
 	public struct FACTRuntimeParameters
 	{
 		public uint lookAheadTime;
@@ -961,6 +938,105 @@ public static class FAudio
 		public FACTSoundVariationProperties activeVariationProperties;
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationDescription
+	{
+		public byte type;
+		public byte flags;
+		public IntPtr pSoundBank; /* FACTSoundBank* */
+		public IntPtr pWaveBank; /* FACTWaveBank* */
+		public IntPtr pCue; /* FACTCue* */
+		public IntPtr pWave; /* FACTWave* */
+		public ushort cueIndex;
+		public ushort waveIndex;
+		public IntPtr pvContext;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationCue
+	{
+		public ushort cueIndex;
+		public IntPtr pSoundBank; /* FACTSoundBank* */
+		public IntPtr pCue; /* FACTCue* */
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationMarker
+	{
+		public ushort cueIndex;
+		public IntPtr pSoundBank; /* FACTSoundBank* */
+		public IntPtr pCue; /* FACTCue* */
+		public uint marker;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationSoundBank
+	{
+		public IntPtr pSoundBank; /* FACTSoundBank* */
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationWaveBank
+	{
+		public IntPtr pWaveBank; /* FACTWaveBank* */
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationVariable
+	{
+		public ushort cueIndex;
+		public IntPtr pSoundBank; /* FACTSoundBank* */
+		public IntPtr pCue; /* FACTCue* */
+		public ushort variableIndex;
+		public float variableValue;
+		public byte local;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationGUI
+	{
+		public uint reserved;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotificationWave
+	{
+		public IntPtr pWaveBank; /* FACTWaveBank* */
+		public ushort waveIndex;
+		public ushort cueIndex;
+		public IntPtr pSoundBank; /* FACTSoundBank* */
+		public IntPtr pCue; /* FACTCue* */
+		public IntPtr pWave; /* FACTWave* */
+	}
+
+	[StructLayout(LayoutKind.Explicit)]
+	public struct FACTNotification_union
+	{
+		[FieldOffset(0)]
+		public FACTNotificationCue cue;
+		[FieldOffset(0)]
+		public FACTNotificationMarker marker;
+		[FieldOffset(0)]
+		public FACTNotificationSoundBank soundBank;
+		[FieldOffset(0)]
+		public FACTNotificationWaveBank waveBank;
+		[FieldOffset(0)]
+		public FACTNotificationVariable variable;
+		[FieldOffset(0)]
+		public FACTNotificationGUI gui;
+		[FieldOffset(0)]
+		public FACTNotificationWave wave;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct FACTNotification
+	{
+		public byte type;
+		public int timeStamp;
+		public IntPtr pvContext;
+		public FACTNotification_union anon;
+	}
+
 	/* Constants */
 
 	public const int FACT_CONTENT_VERSION = 46;
@@ -997,6 +1073,27 @@ public static class FAudio
 	public const ushort FACTCATEGORY_INVALID =	0xFFFF;
 
 	public const uint FACT_ENGINE_LOOKAHEAD_DEFAULT = 250;
+
+	public const byte FACTNOTIFICATIONTYPE_CUEPREPARED =				1;
+	public const byte FACTNOTIFICATIONTYPE_CUEPLAY =				2;
+	public const byte FACTNOTIFICATIONTYPE_CUESTOP =				3;
+	public const byte FACTNOTIFICATIONTYPE_CUEDESTROYED =				4;
+	public const byte FACTNOTIFICATIONTYPE_MARKER =					5;
+	public const byte FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED =			6;
+	public const byte FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED =			7;
+	public const byte FACTNOTIFICATIONTYPE_LOCALVARIABLECHANGED =			8;
+	public const byte FACTNOTIFICATIONTYPE_GLOBALVARIABLECHANGED =			9;
+	public const byte FACTNOTIFICATIONTYPE_GUICONNECTED =				10;
+	public const byte FACTNOTIFICATIONTYPE_GUIDISCONNECTED =			11;
+	public const byte FACTNOTIFICATIONTYPE_WAVEPREPARED =				12;
+	public const byte FACTNOTIFICATIONTYPE_WAVEPLAY =				13;
+	public const byte FACTNOTIFICATIONTYPE_WAVESTOP =				14;
+	public const byte FACTNOTIFICATIONTYPE_WAVELOOPED =				15;
+	public const byte FACTNOTIFICATIONTYPE_WAVEDESTROYED =				16;
+	public const byte FACTNOTIFICATIONTYPE_WAVEBANKPREPARED =			17;
+	public const byte FACTNOTIFICATIONTYPE_WAVEBANKSTREAMING_INVALIDCONTENT =	18;
+
+	public const byte FACT_FLAG_NOTIFICATION_PERSIST = 0x01;
 
 	public const uint FACT_WAVEBANK_TYPE_BUFFER =		0x00000000;
 	public const uint FACT_WAVEBANK_TYPE_STREAMING =	0x00000001;
