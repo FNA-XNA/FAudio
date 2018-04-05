@@ -126,6 +126,10 @@ uint32_t FACTAudioEngine_Initialize(
 	{
 		return parseRet;
 	}
+
+	/* Assign the notification callback */
+	pEngine->notificationCallback = pParams->fnNotificationCallback;
+
 	/* Init the FAudio subsystem */
 	pEngine->audio = pParams->pXAudio2;
 	if (pEngine->audio == NULL)
@@ -403,7 +407,29 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	FACTAudioEngine *pEngine,
 	const FACTNotificationDescription *pNotificationDescription
 ) {
-	/* TODO: Notifications */
+	FAudio_assert(pEngine != NULL);
+	FAudio_assert(pNotificationDescription != NULL);
+	FAudio_assert(pEngine->notificationCallback != NULL);
+	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
+	{
+		pNotificationDescription->pCue->notifyOnDestroy = 1;
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
+	{
+		pNotificationDescription->pSoundBank->notifyOnDestroy = 1;
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
+	{
+		pNotificationDescription->pWaveBank->notifyOnDestroy = 1;
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
+	{
+		pNotificationDescription->pWave->notifyOnDestroy = 1;
+	}
+	else
+	{
+		FAudio_assert(0 && "TODO: Unimplemented notification!");
+	}
 	return 0;
 }
 
@@ -411,7 +437,29 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 	FACTAudioEngine *pEngine,
 	const FACTNotificationDescription *pNotificationDescription
 ) {
-	/* TODO: Notifications */
+	FAudio_assert(pEngine != NULL);
+	FAudio_assert(pNotificationDescription != NULL);
+	FAudio_assert(pEngine->notificationCallback != NULL);
+	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
+	{
+		pNotificationDescription->pCue->notifyOnDestroy = 0;
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
+	{
+		pNotificationDescription->pSoundBank->notifyOnDestroy = 0;
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
+	{
+		pNotificationDescription->pWaveBank->notifyOnDestroy = 0;
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
+	{
+		pNotificationDescription->pWave->notifyOnDestroy = 0;
+	}
+	else
+	{
+		FAudio_assert(0 && "TODO: Unimplemented notification!");
+	}
 	return 0;
 }
 
@@ -827,6 +875,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	uint16_t i, j, k;
 	FACTSoundBank *prev, *sb = pSoundBank;
 	FACTCue *cue;
+	FACTNotification note;
 
 	/* Synchronously destroys all cues that are associated */
 	cue = pSoundBank->cueList;
@@ -928,6 +977,12 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	FAudio_free(sb->cueNames);
 
 	/* Finally. */
+	if (sb->notifyOnDestroy)
+	{
+		note.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
+		note.soundBank.pSoundBank = sb;
+		sb->parentEngine->notificationCallback(&note);
+	}
 	FAudio_free(sb);
 	return 0;
 }
@@ -954,6 +1009,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
 	FACTWaveBank *wb, *prev;
 	FACTWave *wave;
+	FACTNotification note;
 
 	/* Synchronously destroys any cues that are using the wavebank
 	 * FIXME: Destroys CUES? Ah hell
@@ -995,6 +1051,12 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FAudio_free(pWaveBank->entries);
 	FAudio_free(pWaveBank->entryRefs);
 	FAudio_close(pWaveBank->io);
+	if (pWaveBank->notifyOnDestroy)
+	{
+		note.type = FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED;
+		note.waveBank.pWaveBank = pWaveBank;
+		pWaveBank->parentEngine->notificationCallback(&note);
+	}
 	FAudio_free(pWaveBank);
 	return 0;
 }
@@ -1248,6 +1310,7 @@ uint32_t FACTWaveBank_Stop(
 uint32_t FACTWave_Destroy(FACTWave *pWave)
 {
 	FACTWave *wave, *prev;
+	FACTNotification note;
 
 	/* Stop before we start deleting everything */
 	FACTWave_Stop(pWave, FACT_FLAG_STOP_IMMEDIATE);
@@ -1277,6 +1340,12 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 		FAudio_assert(wave != NULL && "Could not find Wave reference!");
 	}
 
+	if (pWave->notifyOnDestroy)
+	{
+		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
+		note.wave.pWave = pWave;
+		pWave->parentBank->parentEngine->notificationCallback(&note);
+	}
 	FAudio_free(pWave);
 	return 0;
 }
@@ -1415,6 +1484,7 @@ uint32_t FACTWave_GetProperties(
 uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
 	FACTCue *cue, *prev;
+	FACTNotification note;
 
 	/* Stop before we start deleting everything */
 	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
@@ -1445,6 +1515,12 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	}
 
 	FAudio_free(pCue->variableValues);
+	if (pCue->notifyOnDestroy)
+	{
+		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
+		note.cue.pCue = pCue;
+		pCue->parentBank->parentEngine->notificationCallback(&note);
+	}
 	FAudio_free(pCue);
 	return 0;
 }

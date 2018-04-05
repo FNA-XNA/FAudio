@@ -342,6 +342,7 @@ typedef struct FACTWaveCallback
 struct FACTAudioEngine
 {
 	uint32_t refcount;
+	FACTNotificationCallback notificationCallback;
 
 	uint16_t categoryCount;
 	uint16_t variableCount;
@@ -377,6 +378,7 @@ struct FACTSoundBank
 	FACTAudioEngine *parentEngine;
 	FACTSoundBank *next;
 	FACTCue *cueList;
+	uint8_t notifyOnDestroy;
 
 	/* Array sizes */
 	uint16_t cueCount;
@@ -403,6 +405,7 @@ struct FACTWaveBank
 	FACTAudioEngine *parentEngine;
 	FACTWave *waveList;
 	FACTWaveBank *next;
+	uint8_t notifyOnDestroy;
 
 	/* Actual WaveBank information */
 	char *name;
@@ -421,6 +424,7 @@ struct FACTWave
 	FACTWaveBank *parentBank;
 	FACTWave *next;
 	uint16_t index;
+	uint8_t notifyOnDestroy;
 
 	/* Playback */
 	uint32_t state;
@@ -446,6 +450,7 @@ struct FACTCue
 	FACTCue *next;
 	uint8_t managed;
 	uint16_t index;
+	uint8_t notifyOnDestroy;
 
 	/* Sound data */
 	FACTCueData *data;
