@@ -508,7 +508,7 @@ int main(int argc, char **argv)
 	FACTWaveBank_Destroy(wb);
 	SDL_free(buf);
 	FACTSoundBank_Destroy(sb);
-	FACTAudioEngine_Shutdown(engine);
+	FACTAudioEngine_ShutDown(engine);
 
 	return 0;
 }

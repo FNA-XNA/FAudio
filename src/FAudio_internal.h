@@ -93,6 +93,7 @@ typedef float FAudioFilterState[4];
 struct FAudio
 {
 	uint8_t active;
+	uint32_t refcount;
 	uint32_t updateSize;
 	uint32_t submixStages;
 	FAudioMasteringVoice *master;

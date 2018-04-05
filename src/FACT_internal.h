@@ -341,6 +341,8 @@ typedef struct FACTWaveCallback
 
 struct FACTAudioEngine
 {
+	uint32_t refcount;
+
 	uint16_t categoryCount;
 	uint16_t variableCount;
 	uint16_t rpcCount;

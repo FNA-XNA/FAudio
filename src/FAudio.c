@@ -36,18 +36,29 @@ uint32_t FAudioCreate(
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
+	(*ppFAudio)->refcount = 1;
 	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
 	return 0;
 }
 
-void FAudioDestroy(FAudio *audio)
+uint32_t FAudio_AddRef(FAudio *audio)
 {
-	/* TODO: Delete all of the voices still allocated */
-	FAudio_StopEngine(audio);
-	FAudio_free(audio->decodeCache);
-	FAudio_free(audio->resampleCache);
-	FAudio_free(audio);
-	FAudio_PlatformRelease();
+	audio->refcount += 1;
+	return 0;
+}
+
+uint32_t FAudio_Release(FAudio *audio)
+{
+	audio->refcount -= 1;
+	if (audio->refcount == 0)
+	{
+		FAudio_StopEngine(audio);
+		FAudio_free(audio->decodeCache);
+		FAudio_free(audio->resampleCache);
+		FAudio_free(audio);
+		FAudio_PlatformRelease();
+	}
+	return 0;
 }
 
 uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount)
@@ -243,6 +254,7 @@ uint32_t FAudio_CreateSourceVoice(
 		}
 		latest->next = entry;
 	}
+	FAudio_AddRef(audio);
 	return 0;
 }
 
@@ -316,6 +328,7 @@ uint32_t FAudio_CreateSubmixVoice(
 		}
 		latest->next = entry;
 	}
+	FAudio_AddRef(audio);
 	return 0;
 }
 
@@ -353,6 +366,7 @@ uint32_t FAudio_CreateMasteringVoice(
 
 	/* Platform Device */
 	audio->master = *ppMasteringVoice;
+	FAudio_AddRef(audio);
 	FAudio_PlatformInit(audio);
 	if (audio->active)
 	{
@@ -1143,6 +1157,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	{
 		FAudio_free(voice->filterState);
 	}
+	FAudio_Release(voice->audio);
 	FAudio_free(voice);
 }
 

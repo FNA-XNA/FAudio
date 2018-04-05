@@ -414,7 +414,7 @@ void FACTTool_Update()
 				}
 
 				/* Close file, finally */
-				FACTAudioEngine_Shutdown(engines[i]);
+				FACTAudioEngine_ShutDown(engines[i]);
 				engines.erase(engines.begin() + i);
 				engineNames.erase(engineNames.begin() + i);
 				engineShows.erase(engineShows.begin() + i);

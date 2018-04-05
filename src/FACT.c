@@ -38,6 +38,25 @@ uint32_t FACTCreateEngine(
 		return -1; /* TODO: E_OUTOFMEMORY */
 	}
 	FAudio_zero(*ppEngine, sizeof(FACTAudioEngine));
+	(*ppEngine)->refcount = 1;
+	return 0;
+}
+
+uint32_t FACTAudioEngine_AddRef(FACTAudioEngine *pEngine)
+{
+	pEngine->refcount += 1;
+	return pEngine->refcount;
+}
+
+uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine)
+{
+	pEngine->refcount -= 1;
+	if (pEngine->refcount > 0)
+	{
+		return pEngine->refcount;
+	}
+	FACTAudioEngine_ShutDown(pEngine);
+	FAudio_free(pEngine);
 	return 0;
 }
 
@@ -181,27 +200,43 @@ uint32_t FACTAudioEngine_Initialize(
 	return 0;
 }
 
-uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
+uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 {
-	uint32_t i;
+	uint32_t i, refcount;
 	FACTSoundBank *sb;
 	FACTWaveBank *wb;
+	FACTCue *cue;
+	FACTWave *wave;
 
 	/* Stop the platform stream before freeing stuff! */
 	FAudio_StopEngine(pEngine->audio);
 
-	/* Unreference all the Banks */
+	/* This method destroys all existing cues, sound banks, and wave banks.
+	 * It blocks until all cues are destroyed.
+	 */
 	sb = pEngine->sbList;
 	while (sb != NULL)
 	{
-		sb->parentEngine = NULL;
-		sb = sb->next;
+		cue = sb->cueList;
+		while (cue != NULL)
+		{
+			FACTCue_Destroy(cue);
+			cue = sb->cueList;
+		}
+		FACTSoundBank_Destroy(sb);
+		sb = pEngine->sbList;
 	}
 	wb = pEngine->wbList;
 	while (wb != NULL)
 	{
-		wb->parentEngine = NULL;
-		wb = wb->next;
+		wave = wb->waveList;
+		while (wave != NULL)
+		{
+			FACTWave_Destroy(wave);
+			wave = wb->waveList;
+		}
+		FACTWaveBank_Destroy(wb);
+		wb = pEngine->wbList;
 	}
 
 	/* Category data */
@@ -237,14 +272,18 @@ uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine)
 	FAudio_free(pEngine->dspPresets);
 	FAudio_free(pEngine->dspPresetCodes);
 
-	/* Finally. */
+	/* Audio resources */
 	if (pEngine->reverbVoice != NULL)
 	{
 		FAudioVoice_DestroyVoice(pEngine->reverbVoice);
 	}
 	FAudioVoice_DestroyVoice(pEngine->master);
-	FAudioDestroy(pEngine->audio);
-	FAudio_free(pEngine);
+	FAudio_Release(pEngine->audio);
+
+	/* Finally. */
+	refcount = pEngine->refcount;
+	FAudio_zero(pEngine, sizeof(FACTAudioEngine));
+	pEngine->refcount = refcount;
 	return 0;
 }
 

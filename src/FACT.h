@@ -339,7 +339,11 @@ FACTAPI uint32_t FACTCreateEngine(
 	FACTAudioEngine **ppEngine
 );
 
-/* FIXME: AddRef/Release? Or just ignore COM garbage... -flibit */
+FACTAPI uint32_t FACTAudioEngine_AddRef(FACTAudioEngine *pEngine);
+
+FACTAPI uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine);
+
+/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
 FACTAPI uint32_t FACTAudioEngine_GetRendererCount(
 	FACTAudioEngine *pEngine,
@@ -362,7 +366,7 @@ FACTAPI uint32_t FACTAudioEngine_Initialize(
 	const FACTRuntimeParameters *pParams
 );
 
-FACTAPI uint32_t FACTAudioEngine_Shutdown(FACTAudioEngine *pEngine);
+FACTAPI uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine);
 
 FACTAPI uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine);
 

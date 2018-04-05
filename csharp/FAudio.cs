@@ -309,11 +309,16 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void FAudioDestroy( /* FIXME: NOT XAUDIO2 SPEC! */
+	public static extern uint FAudio_AddRef(
+		IntPtr audio /* FAudio */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_Release(
 		IntPtr audio /* FAudio* */
 	);
 
-	/* FIXME: AddRef/Release/Query? Or just ignore COM garbage... -flibit */
+	/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudio_GetDeviceCount(
@@ -1012,7 +1017,17 @@ public static class FAudio
 		out IntPtr ppEngine /* FACTAudioEngine** */
 	);
 
-	/* FIXME: AddRef/Release? Or just ignore COM garbage... -flibit */
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FACTAudioEngine_AddRef(
+		IntPtr pEngine /* FACTAudioEngine* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FACTAudioEngine_Release(
+		IntPtr pEngine /* FACTAudioEngine* */
+	);
+
+	/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTAudioEngine_GetRendererCount(
@@ -1040,7 +1055,7 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FACTAudioEngine_Shutdown(
+	public static extern uint FACTAudioEngine_ShutDown(
 		IntPtr pEngine /* FACTAudioEngine* */
 	);
 

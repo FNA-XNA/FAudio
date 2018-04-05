@@ -376,9 +376,11 @@ FAUDIOAPI uint32_t FAudioCreate(
 	FAudioProcessor XAudio2Processor
 );
 
-FAUDIOAPI void FAudioDestroy(FAudio *audio); /* FIXME: NOT XAUDIO2 SPEC! */
+FAUDIOAPI uint32_t FAudio_AddRef(FAudio *audio);
 
-/* FIXME: AddRef/Release/Query? Or just ignore COM garbage... -flibit */
+FAUDIOAPI uint32_t FAudio_Release(FAudio *audio);
+
+/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
 FAUDIOAPI uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount);
 

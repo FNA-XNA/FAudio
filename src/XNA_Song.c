@@ -119,7 +119,7 @@ void XNA_SongDevice_Release()
 	{
 		XNA_SongKill();
 		FAudioVoice_DestroyVoice(songMaster);
-		FAudioDestroy(songAudio);
+		FAudio_Release(songAudio);
 	}
 }
 
