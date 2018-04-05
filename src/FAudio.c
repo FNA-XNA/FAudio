@@ -44,6 +44,8 @@ void FAudioDestroy(FAudio *audio)
 {
 	/* TODO: Delete all of the voices still allocated */
 	FAudio_StopEngine(audio);
+	FAudio_free(audio->decodeCache);
+	FAudio_free(audio->resampleCache);
 	FAudio_free(audio);
 	FAudio_PlatformRelease();
 }
@@ -70,6 +72,13 @@ uint32_t FAudio_Initialize(
 ) {
 	FAudio_assert(Flags == 0);
 	FAudio_assert(XAudio2Processor == FAUDIO_DEFAULT_PROCESSOR);
+
+	/* FIXME: This is lazy... */
+	audio->decodeCache = (float*) FAudio_malloc(sizeof(float));
+	audio->resampleCache = (float*) FAudio_malloc(sizeof(float));
+	audio->decodeSamples = 1;
+	audio->resampleSamples = 1;
+
 	FAudio_StartEngine(audio);
 	return 0;
 }
@@ -140,7 +149,6 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	uint32_t i;
 	FAudioSourceVoiceEntry *entry, *latest;
 
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
@@ -211,13 +219,10 @@ uint32_t FAudio_CreateSourceVoice(
 		(double) pSourceFormat->nSamplesPerSec /
 		(double) audio->master->master.inputSampleRate
 	) + EXTRA_DECODE_PADDING * 2;
-	for (i = 0; i < pSourceFormat->nChannels; i += 1)
-	{
-		(*ppSourceVoice)->src.decodeCache[i] = (float*) FAudio_malloc(
-			sizeof(float) *
-			(*ppSourceVoice)->src.decodeSamples
-		);
-	}
+	FAudio_INTERNAL_ResizeDecodeCache(
+		audio,
+		(*ppSourceVoice)->src.decodeSamples * pSourceFormat->nChannels
+	);
 
 	/* Add to list, finally. */
 	entry = (FAudioSourceVoiceEntry*) FAudio_malloc(
@@ -435,7 +440,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 	const FAudioVoiceSends *pSendList
 ) {
 	uint32_t i;
-	float **sampleCache;
 	uint32_t *outputSamples;
 	uint32_t inChannels, outChannels;
 	uint32_t outSampleRate;
@@ -445,13 +449,11 @@ uint32_t FAudioVoice_SetOutputVoices(
 
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
-		sampleCache = &voice->src.outputResampleCache;
-		outputSamples = &voice->src.outputSamples;
+		outputSamples = &voice->src.resampleSamples;
 		inChannels = voice->src.format.nChannels;
 	}
 	else
 	{
-		sampleCache = &voice->mix.outputResampleCache;
 		outputSamples = &voice->mix.outputSamples;
 		inChannels = voice->mix.inputChannels;
 
@@ -464,11 +466,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 	}
 
 	/* FIXME: This is lazy... */
-	if (*sampleCache != NULL)
-	{
-		FAudio_free(*sampleCache);
-		*sampleCache = NULL;
-	}
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		FAudio_free(voice->sendCoefficients[i]);
@@ -742,10 +739,9 @@ uint32_t FAudioVoice_SetOutputVoices(
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
-	*sampleCache = (float*) FAudio_malloc(
-		sizeof(float) *
-		(*outputSamples) *
-		inChannels
+	FAudio_INTERNAL_ResizeResampleCache(
+		voice->audio,
+		*outputSamples * inChannels
 	);
 
 	/* Init fixed-rate SRC if applicable */
@@ -1084,17 +1080,6 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 			srcPrev = source;
 			source = source->next;
 		}
-		for (i = 0; i < voice->src.format.nChannels; i += 1)
-		{
-			if (voice->src.decodeCache[i] != NULL)
-			{
-				FAudio_free(voice->src.decodeCache[i]);
-			}
-		}
-		if (voice->src.outputResampleCache != NULL)
-		{
-			FAudio_free(voice->src.outputResampleCache);
-		}
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -1128,10 +1113,6 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 			submix = submix->next;
 		}
 		FAudio_free(voice->mix.inputCache);
-		if (voice->mix.outputResampleCache != NULL)
-		{
-			FAudio_free(voice->mix.outputResampleCache);
-		}
 		if (voice->mix.resampler != NULL)
 		{
 			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
@@ -1337,59 +1318,42 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	FAudioSourceVoice *voice,
 	uint32_t NewSourceSampleRate
 ) {
-	uint32_t i, outSampleRate;
+	uint32_t outSampleRate;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_assert(	NewSourceSampleRate >= FAUDIO_MIN_SAMPLE_RATE &&
 			NewSourceSampleRate <= FAUDIO_MAX_SAMPLE_RATE	);
 	voice->src.format.nSamplesPerSec = NewSourceSampleRate;
 
-	/* FIXME: This is lazy... */
-	for (i = 0; i < voice->src.format.nChannels; i += 1)
-	{
-		if (voice->src.decodeCache[i] != NULL)
-		{
-			FAudio_free(voice->src.decodeCache[i]);
-			voice->src.decodeCache[i] = NULL;
-		}
-	}
-
-	/* Sample Storage */
+	/* Resize decode cache */
 	voice->src.decodeSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		(double) voice->src.maxFreqRatio *
 		(double) NewSourceSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	) + EXTRA_DECODE_PADDING * 2;
-	for (i = 0; i < voice->src.format.nChannels; i += 1)
-	{
-		voice->src.decodeCache[i] = (float*) FAudio_malloc(
-			sizeof(float) *
-			voice->src.decodeSamples
-		);
-	}
+	FAudio_INTERNAL_ResizeDecodeCache(
+		voice->audio,
+		voice->src.decodeSamples * voice->src.format.nChannels
+	);
 
 	if (voice->sends.SendCount == 0)
 	{
 		return 0;
 	}
 
-	/* FIXME: This is lazy... */
-	FAudio_free(voice->src.outputResampleCache);
-
-	/* Allocate resample cache */
+	/* Resize resample cache */
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
-	voice->src.outputSamples = (uint32_t) FAudio_ceil(
+	voice->src.resampleSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
-	voice->src.outputResampleCache = (float*) FAudio_malloc(
-		sizeof(float) *
-		voice->src.outputSamples *
-		voice->src.format.nChannels
+	FAudio_INTERNAL_ResizeResampleCache(
+		voice->audio,
+		voice->src.resampleSamples * voice->src.format.nChannels
 	);
 	return 0;
 }

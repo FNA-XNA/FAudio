@@ -118,8 +118,8 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 		voice->src.decode(
 			buffer,
 			voice->src.curBufferOffset,
-			voice->src.decodeCache[0] + decoded,
-			voice->src.decodeCache[1] + decoded,
+			voice->audio->decodeCache + decoded,
+			voice->audio->decodeCache + voice->src.decodeSamples + decoded,
 			endRead,
 			&voice->src.format
 		);
@@ -187,7 +187,10 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 					for (i = 0; i < voice->src.format.nChannels; i += 1)
 					{
 						FAudio_zero(
-							voice->src.decodeCache[i] + (decoded + endRead),
+							voice->audio->decodeCache + (
+								(i * voice->src.decodeSamples) +
+								(decoded + endRead)
+							),
 							(decoding - endRead) * sizeof(float)
 						);
 					}
@@ -212,7 +215,11 @@ void FAudio_INTERNAL_ResamplePCM(
 	/* Linear Resampler */
 	/* TODO: SSE */
 	uint32_t i, j;
-	float *dCache[2] = { voice->src.decodeCache[0], voice->src.decodeCache[1] };
+	float *dCache[2] =
+	{
+		voice->audio->decodeCache,
+		voice->audio->decodeCache + voice->src.decodeSamples
+	};
 	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
@@ -333,12 +340,12 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	mixed = 0;
-	resampleCache = voice->src.outputResampleCache;
-	while (mixed < voice->src.outputSamples && voice->src.bufferList != NULL)
+	resampleCache = voice->audio->resampleCache;
+	while (mixed < voice->src.resampleSamples && voice->src.bufferList != NULL)
 	{
 
 		/* Base decode size, int to fixed... */
-		toDecode = (voice->src.outputSamples - mixed) * voice->src.resampleStep;
+		toDecode = (voice->src.resampleSamples - mixed) * voice->src.resampleStep;
 		/* ... rounded up based on current offset... */
 		toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
 		/* ... fixed to int, truncating extra fraction from rounding. */
@@ -354,7 +361,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		/* ... undo step size, fixed to int. */
 		toResample /= voice->src.resampleStep;
 		/* FIXME: I feel like this should be an assert but I suck */
-		toResample = FAudio_min(toResample, voice->src.outputSamples - mixed);
+		toResample = FAudio_min(toResample, voice->src.resampleSamples - mixed);
 
 		/* Resample... */
 		if (voice->src.resampleStep == FIXED_ONE)
@@ -364,7 +371,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			for (j = 0; j < voice->src.format.nChannels; j += 1)
 			{
 				/* TODO: SSE */
-				*resampleCache++ = voice->src.decodeCache[j][i];
+				*resampleCache++ = *(voice->audio->decodeCache + (
+					(j * voice->src.decodeSamples) +
+					i
+				));
 			}
 		}
 		else
@@ -412,7 +422,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		FAudio_INTERNAL_FilterVoice(
 			&voice->filter,
 			voice->filterState,
-			voice->src.outputResampleCache,
+			voice->audio->resampleCache,
 			mixed,
 			voice->src.format.nChannels
 		);
@@ -441,7 +451,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			/* Include source/channel volumes in the mix! */
 			stream[j * oChan + co] = FAudio_clamp(
 				stream[j * oChan + co] + (
-					voice->src.outputResampleCache[
+					voice->audio->resampleCache[
 						j * voice->src.format.nChannels + ci
 					] *
 					voice->channelVolume[ci] *
@@ -486,7 +496,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		voice->mix.resampler,
 		voice->mix.inputCache,
 		voice->mix.inputSamples,
-		voice->mix.outputResampleCache,
+		voice->audio->resampleCache,
 		voice->mix.outputSamples
 	);
 
@@ -494,8 +504,8 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	for (i = 0; i < resampled; i += 1)
 	{
 		/* TODO: SSE */
-		voice->mix.outputResampleCache[i] = FAudio_clamp(
-			voice->mix.outputResampleCache[i] * voice->volume,
+		voice->audio->resampleCache[i] = FAudio_clamp(
+			voice->audio->resampleCache[i] * voice->volume,
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
@@ -510,7 +520,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		FAudio_INTERNAL_FilterVoice(
 			&voice->filter,
 			voice->filterState,
-			voice->mix.outputResampleCache,
+			voice->audio->resampleCache,
 			resampled,
 			voice->mix.inputChannels
 		);
@@ -538,7 +548,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		{
 			stream[j * oChan + co] = FAudio_clamp(
 				stream[j * oChan + co] + (
-					voice->mix.outputResampleCache[
+					voice->audio->resampleCache[
 						j * voice->mix.inputChannels + ci
 					] *
 					voice->channelVolume[ci] *
@@ -638,6 +648,30 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 			);
 		}
 		callback = callback->next;
+	}
+}
+
+void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t samples)
+{
+	if (samples > audio->decodeSamples)
+	{
+		audio->decodeSamples = samples;
+		audio->decodeCache = (float*) FAudio_realloc(
+			audio->decodeCache,
+			sizeof(float) * audio->decodeSamples
+		);
+	}
+}
+
+void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
+{
+	if (samples > audio->resampleSamples)
+	{
+		audio->resampleSamples = samples;
+		audio->resampleCache = (float*) FAudio_realloc(
+			audio->resampleCache,
+			sizeof(float) * audio->resampleSamples
+		);
 	}
 }
 

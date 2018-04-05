@@ -478,6 +478,11 @@ void* FAudio_malloc(size_t size)
 	return SDL_malloc(size);
 }
 
+void* FAudio_realloc(void* ptr, size_t size)
+{
+	return SDL_realloc(ptr, size);
+}
+
 void FAudio_free(void *ptr)
 {
 	SDL_free(ptr);

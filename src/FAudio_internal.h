@@ -100,6 +100,13 @@ struct FAudio
 	FAudioSourceVoiceEntry *sources;
 	FAudioEngineCallbackEntry *callbacks;
 	FAudioWaveFormatExtensible *mixFormat;
+
+	/* Temp storage for processing */
+	#define EXTRA_DECODE_PADDING 2
+	uint32_t decodeSamples;
+	uint32_t resampleSamples;
+	float *decodeCache; /* Deinterleaved PCM32F */
+	float *resampleCache; /* Interleaved PCM32F */
 };
 
 struct FAudioVoice
@@ -122,11 +129,8 @@ struct FAudioVoice
 		struct
 		{
 			/* Sample storage */
-			#define EXTRA_DECODE_PADDING 2
 			uint32_t decodeSamples;
-			float *decodeCache[2];
-			uint32_t outputSamples;
-			float *outputResampleCache;
+			uint32_t resampleSamples;
 
 			/* Resampler */
 			float resampleFreqRatio;
@@ -151,9 +155,8 @@ struct FAudioVoice
 		{
 			/* Sample storage */
 			uint32_t inputSamples;
-			float *inputCache;
 			uint32_t outputSamples;
-			float *outputResampleCache;
+			float *inputCache;
 			FAudioPlatformFixedRateSRC resampler;
 
 			/* Read-only */
@@ -177,6 +180,8 @@ struct FAudioVoice
 /* Internal Functions */
 
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
+void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
+void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
 
 #define DECODE_FUNC(type) \
 	extern void FAudio_INTERNAL_Decode##type( \
@@ -231,6 +236,7 @@ uint32_t FAudio_PlatformResample(
 /* stdlib Functions */
 
 void* FAudio_malloc(size_t size);
+void* FAudio_realloc(void* ptr, size_t size);
 void FAudio_free(void *ptr);
 void FAudio_zero(void *ptr, size_t size);
 void FAudio_memcpy(void *dst, const void *src, size_t size);
