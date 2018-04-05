@@ -205,8 +205,6 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	uint32_t i, refcount;
 	FACTSoundBank *sb;
 	FACTWaveBank *wb;
-	FACTCue *cue;
-	FACTWave *wave;
 
 	/* Stop the platform stream before freeing stuff! */
 	FAudio_StopEngine(pEngine->audio);
@@ -217,24 +215,12 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	sb = pEngine->sbList;
 	while (sb != NULL)
 	{
-		cue = sb->cueList;
-		while (cue != NULL)
-		{
-			FACTCue_Destroy(cue);
-			cue = sb->cueList;
-		}
 		FACTSoundBank_Destroy(sb);
 		sb = pEngine->sbList;
 	}
 	wb = pEngine->wbList;
 	while (wb != NULL)
 	{
-		wave = wb->waveList;
-		while (wave != NULL)
-		{
-			FACTWave_Destroy(wave);
-			wave = wb->waveList;
-		}
 		FACTWaveBank_Destroy(wb);
 		wb = pEngine->wbList;
 	}
@@ -840,26 +826,14 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 {
 	uint16_t i, j, k;
 	FACTSoundBank *prev, *sb = pSoundBank;
-	FACTCue *backup, *cue = pSoundBank->cueList;
+	FACTCue *cue;
 
-	/* Stop as many Cues as we can */
+	/* Synchronously destroys all cues that are associated */
+	cue = pSoundBank->cueList;
 	while (cue != NULL)
 	{
-		if (cue->managed)
-		{
-			backup = cue->next;
-			FACTCue_Destroy(cue);
-			cue = backup;
-		}
-		else
-		{
-			FACTCue_Stop(cue, FACT_FLAG_STOP_IMMEDIATE);
-
-			/* We use this to detect Cues deleted after the Bank */
-			cue->parentBank = NULL;
-
-			cue = cue->next;
-		}
+		FACTCue_Destroy(cue);
+		cue = pSoundBank->cueList;
 	}
 
 	if (pSoundBank->parentEngine != NULL)
@@ -979,17 +953,16 @@ uint32_t FACTSoundBank_GetState(
 uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
 	FACTWaveBank *wb, *prev;
-	FACTWave *wave = pWaveBank->waveList;
+	FACTWave *wave;
 
-	/* Stop as many Waves as we can */
+	/* Synchronously destroys any cues that are using the wavebank
+	 * FIXME: Destroys CUES? Ah hell
+	 */
+	wave = pWaveBank->waveList;
 	while (wave != NULL)
 	{
-		FACTWave_Stop(wave, FACT_FLAG_STOP_IMMEDIATE);
-
-		/* We use this to detect Waves deleted after the Bank */
-		wave->parentBank = NULL;
-
-		wave = wave->next;
+		FACTWave_Destroy(wave);
+		wave = pWaveBank->waveList;
 	}
 
 	if (pWaveBank->parentEngine != NULL)
