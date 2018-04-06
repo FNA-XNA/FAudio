@@ -361,8 +361,8 @@ struct FACTAudioEngine
 	FACTDSPPreset *dspPresets;
 
 	/* Engine references */
-	FACTSoundBank *sbList;
-	FACTWaveBank *wbList;
+	LinkedList *sbList;
+	LinkedList *wbList;
 	float *globalVariableValues;
 
 	/* FAudio references */
@@ -376,7 +376,6 @@ struct FACTSoundBank
 {
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
-	FACTSoundBank *next;
 	FACTCue *cueList;
 	uint8_t notifyOnDestroy;
 
@@ -404,7 +403,6 @@ struct FACTWaveBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	LinkedList *waveList;
-	FACTWaveBank *next;
 	uint8_t notifyOnDestroy;
 
 	/* Actual WaveBank information */

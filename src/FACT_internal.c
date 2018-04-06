@@ -54,6 +54,7 @@ void FACT_INTERNAL_GetNextWave(
 #endif
 	const char *wbName;
 	FACTWaveBank *wb;
+	LinkedList *list;
 	uint16_t wbTrack;
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
@@ -135,14 +136,15 @@ void FACT_INTERNAL_GetNextWave(
 		wbTrack = evt->wave.simple.track;
 	}
 	wbName = cue->parentBank->wavebankNames[wbIndex];
-	wb = cue->parentBank->parentEngine->wbList;
-	while (wb != NULL)
+	list = cue->parentBank->parentEngine->wbList;
+	while (list != NULL)
 	{
+		wb = (FACTWaveBank*) list->entry;
 		if (FAudio_strcmp(wbName, wb->name) == 0)
 		{
 			break;
 		}
-		wb = wb->next;
+		list = list->next;
 	}
 	FAudio_assert(wb != NULL);
 
@@ -324,6 +326,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	float max, next, weight;
 	const char *wbName;
 	FACTWaveBank *wb;
+	LinkedList *list;
 	FACTEvent *evt;
 	FACTEventInstance *evtInst;
 
@@ -422,14 +425,15 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			wbName = cue->parentBank->wavebankNames[
 				cue->variation->entries[i].simple.wavebank
 			];
-			wb = cue->parentBank->parentEngine->wbList;
-			while (wb != NULL)
+			list = cue->parentBank->parentEngine->wbList;
+			while (list != NULL)
 			{
+				wb = (FACTWaveBank*) list->entry;
 				if (FAudio_strcmp(wbName, wb->name) == 0)
 				{
 					break;
 				}
-				wb = wb->next;
+				list = list->next;
 			}
 			FAudio_assert(wb != NULL);
 
@@ -1109,7 +1113,7 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 {
 	FACTAudioEngineCallback *c = (FACTAudioEngineCallback*) callback;
 	FACTAudioEngine *engine = c->engine;
-	FACTSoundBank *sb;
+	LinkedList *list;
 	FACTCue *cue, *backup;
 	uint32_t timestamp;
 
@@ -1123,10 +1127,10 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 
 	FACT_INTERNAL_UpdateEngine(engine);
 
-	sb = engine->sbList;
-	while (sb != NULL)
+	list = engine->sbList;
+	while (list != NULL)
 	{
-		cue = sb->cueList;
+		cue = ((FACTSoundBank*) list)->cueList;
 		while (cue != NULL)
 		{
 			FACT_INTERNAL_UpdateCue(cue, timestamp);
@@ -1143,7 +1147,7 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 				cue = cue->next;
 			}
 		}
-		sb = sb->next;
+		list = list->next;
 	}
 }
 
@@ -1498,7 +1502,6 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	/* Finally. */
 	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
-	pEngine->sbList = NULL;
 	return 0;
 }
 
@@ -1733,7 +1736,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	size_t memsize;
 	uint16_t i, j, cur;
 	uint8_t *ptrBookmark;
-	FACTSoundBank *latest;
 
 	uint8_t *ptr = (uint8_t*) pvBuffer;
 	uint8_t *start = ptr;
@@ -1762,20 +1764,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb->cueList = NULL;
 
 	/* Add to the Engine SoundBank list */
-	if (pEngine->sbList == NULL)
-	{
-		pEngine->sbList = sb;
-	}
-	else
-	{
-		latest = pEngine->sbList;
-		while (latest->next != NULL)
-		{
-			latest = latest->next;
-		}
-		latest->next = sb;
-	}
-	sb->next = NULL;
+	LinkedList_AddEntry(&pEngine->sbList, sb);
 
 	cueSimpleCount = read_u16(&ptr);
 	cueComplexCount = read_u16(&ptr);
@@ -2166,7 +2155,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint16_t isStreaming,
 	FACTWaveBank **ppWaveBank
 ) {
-	FACTWaveBank *wb, *latest;
+	FACTWaveBank *wb;
 	size_t memsize;
 	uint32_t i;
 	FACTWaveBankHeader header;
@@ -2303,20 +2292,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	*/
 
 	/* Add to the Engine WaveBank list */
-	if (pEngine->wbList == NULL)
-	{
-		pEngine->wbList = wb;
-	}
-	else
-	{
-		latest = pEngine->wbList;
-		while (latest->next != NULL)
-		{
-			latest = latest->next;
-		}
-		latest->next = wb;
-	}
-	wb->next = NULL;
+	LinkedList_AddEntry(&pEngine->wbList, wb);
 
 	/* Finally. */
 	*ppWaveBank = wb;

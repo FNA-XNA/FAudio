@@ -207,8 +207,6 @@ uint32_t FACTAudioEngine_Initialize(
 uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 {
 	uint32_t i, refcount;
-	FACTSoundBank *sb;
-	FACTWaveBank *wb;
 
 	/* Stop the platform stream before freeing stuff! */
 	FAudio_StopEngine(pEngine->audio);
@@ -216,17 +214,13 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	/* This method destroys all existing cues, sound banks, and wave banks.
 	 * It blocks until all cues are destroyed.
 	 */
-	wb = pEngine->wbList;
-	while (wb != NULL)
+	while (pEngine->wbList != NULL)
 	{
-		FACTWaveBank_Destroy(wb);
-		wb = pEngine->wbList;
+		FACTWaveBank_Destroy((FACTWaveBank*) pEngine->wbList->entry);
 	}
-	sb = pEngine->sbList;
-	while (sb != NULL)
+	while (pEngine->sbList != NULL)
 	{
-		FACTSoundBank_Destroy(sb);
-		sb = pEngine->sbList;
+		FACTSoundBank_Destroy((FACTSoundBank*) pEngine->sbList->entry);
 	}
 
 	/* Category data */
@@ -281,11 +275,12 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 {
 	uint8_t i;
 	FACTCue *cue;
-	FACTSoundBank *sb = pEngine->sbList;
+	LinkedList *list;
 	FAudio_PlatformLockAudio(pEngine->audio);
-	while (sb != NULL)
+	list = pEngine->sbList;
+	while (list != NULL)
 	{
-		cue = sb->cueList;
+		cue = ((FACTSoundBank*) list->entry)->cueList;
 		while (cue != NULL)
 		{
 			if (cue->active & 0x02)
@@ -306,7 +301,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 			}
 			cue = cue->next;
 		}
-		sb = sb->next;
+		list = list->next;
 	}
 	FAudio_PlatformUnlockAudio(pEngine->audio);
 	return 0;
@@ -506,10 +501,10 @@ uint8_t FACT_INTERNAL_IsInCategory(
 
 #define ITERATE_CUES(action) \
 	FACTCue *cue; \
-	FACTSoundBank *sb = pEngine->sbList; \
-	while (sb != NULL) \
+	LinkedList *list = pEngine->sbList; \
+	while (list != NULL) \
 	{ \
-		cue = sb->cueList; \
+		cue = ((FACTSoundBank*) list->entry)->cueList; \
 		while (cue != NULL) \
 		{ \
 			if (	cue->active & 0x02 && \
@@ -523,7 +518,7 @@ uint8_t FACT_INTERNAL_IsInCategory(
 			} \
 			cue = cue->next; \
 		} \
-		sb = sb->next; \
+		list = list->next; \
 	}
 
 uint32_t FACTAudioEngine_Stop(
@@ -873,117 +868,94 @@ uint32_t FACTSoundBank_Stop(
 uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 {
 	uint16_t i, j, k;
-	FACTSoundBank *prev, *sb = pSoundBank;
-	FACTCue *cue;
 	FACTNotification note;
 
 	/* Synchronously destroys all cues that are associated */
-	cue = pSoundBank->cueList;
-	while (cue != NULL)
+	while (pSoundBank->cueList != NULL)
 	{
-		FACTCue_Destroy(cue);
-		cue = pSoundBank->cueList;
+		FACTCue_Destroy(pSoundBank->cueList);
 	}
 
 	if (pSoundBank->parentEngine != NULL)
 	{
 		/* Remove this SoundBank from the Engine list */
-		sb = pSoundBank->parentEngine->sbList;
-		prev = sb;
-		while (sb != NULL)
-		{
-			if (sb == pSoundBank)
-			{
-				if (sb == prev) /* First in list */
-				{
-					pSoundBank->parentEngine->sbList = sb->next;
-				}
-				else
-				{
-					prev->next = sb->next;
-				}
-				break;
-			}
-			prev = sb;
-			sb = sb->next;
-		}
-		FAudio_assert(sb != NULL && "Could not find SoundBank reference!");
+		LinkedList_RemoveEntry(&pSoundBank->parentEngine->sbList, pSoundBank);
 	}
 
 	/* SoundBank Name */
-	FAudio_free(sb->name);
+	FAudio_free(pSoundBank->name);
 
 	/* Cue data */
-	FAudio_free(sb->cues);
+	FAudio_free(pSoundBank->cues);
 
 	/* WaveBank Name data */
-	for (i = 0; i < sb->wavebankCount; i += 1)
+	for (i = 0; i < pSoundBank->wavebankCount; i += 1)
 	{
-		FAudio_free(sb->wavebankNames[i]);
+		FAudio_free(pSoundBank->wavebankNames[i]);
 	}
-	FAudio_free(sb->wavebankNames);
+	FAudio_free(pSoundBank->wavebankNames);
 
 	/* Sound data */
-	for (i = 0; i < sb->soundCount; i += 1)
+	for (i = 0; i < pSoundBank->soundCount; i += 1)
 	{
-		for (j = 0; j < sb->sounds[i].trackCount; j += 1)
+		for (j = 0; j < pSoundBank->sounds[i].trackCount; j += 1)
 		{
-			for (k = 0; k < sb->sounds[i].tracks[j].eventCount; k += 1)
+			for (k = 0; k < pSoundBank->sounds[i].tracks[j].eventCount; k += 1)
 			{
 				#define MATCH(t) \
-					sb->sounds[i].tracks[j].events[k].type == t
+					pSoundBank->sounds[i].tracks[j].events[k].type == t
 				if (	MATCH(FACTEVENT_PLAYWAVE) ||
 					MATCH(FACTEVENT_PLAYWAVETRACKVARIATION) ||
 					MATCH(FACTEVENT_PLAYWAVEEFFECTVARIATION) ||
 					MATCH(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION)	)
 				{
-					if (sb->sounds[i].tracks[j].events[k].wave.isComplex)
+					if (pSoundBank->sounds[i].tracks[j].events[k].wave.isComplex)
 					{
 						FAudio_free(
-							sb->sounds[i].tracks[j].events[k].wave.complex.tracks
+							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.tracks
 						);
 						FAudio_free(
-							sb->sounds[i].tracks[j].events[k].wave.complex.wavebanks
+							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.wavebanks
 						);
 						FAudio_free(
-							sb->sounds[i].tracks[j].events[k].wave.complex.weights
+							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.weights
 						);
 					}
 				}
 				#undef MATCH
 			}
-			FAudio_free(sb->sounds[i].tracks[j].events);
+			FAudio_free(pSoundBank->sounds[i].tracks[j].events);
 		}
-		FAudio_free(sb->sounds[i].tracks);
-		FAudio_free(sb->sounds[i].rpcCodes);
-		FAudio_free(sb->sounds[i].dspCodes);
+		FAudio_free(pSoundBank->sounds[i].tracks);
+		FAudio_free(pSoundBank->sounds[i].rpcCodes);
+		FAudio_free(pSoundBank->sounds[i].dspCodes);
 	}
-	FAudio_free(sb->sounds);
-	FAudio_free(sb->soundCodes);
+	FAudio_free(pSoundBank->sounds);
+	FAudio_free(pSoundBank->soundCodes);
 
 	/* Variation data */
-	for (i = 0; i < sb->variationCount; i += 1)
+	for (i = 0; i < pSoundBank->variationCount; i += 1)
 	{
-		FAudio_free(sb->variations[i].entries);
+		FAudio_free(pSoundBank->variations[i].entries);
 	}
-	FAudio_free(sb->variations);
-	FAudio_free(sb->variationCodes);
+	FAudio_free(pSoundBank->variations);
+	FAudio_free(pSoundBank->variationCodes);
 
 	/* Cue Name data */
-	for (i = 0; i < sb->cueCount; i += 1)
+	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
-		FAudio_free(sb->cueNames[i]);
+		FAudio_free(pSoundBank->cueNames[i]);
 	}
-	FAudio_free(sb->cueNames);
+	FAudio_free(pSoundBank->cueNames);
 
 	/* Finally. */
-	if (sb->notifyOnDestroy)
+	if (pSoundBank->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
-		note.soundBank.pSoundBank = sb;
-		sb->parentEngine->notificationCallback(&note);
+		note.soundBank.pSoundBank = pSoundBank;
+		pSoundBank->parentEngine->notificationCallback(&note);
 	}
-	FAudio_free(sb);
+	FAudio_free(pSoundBank);
 	return 0;
 }
 
@@ -1007,7 +979,6 @@ uint32_t FACTSoundBank_GetState(
 
 uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
-	FACTWaveBank *wb, *prev;
 	FACTWave *wave;
 	FACTNotification note;
 
@@ -1029,26 +1000,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	if (pWaveBank->parentEngine != NULL)
 	{
 		/* Remove this WaveBank from the Engine list */
-		wb = pWaveBank->parentEngine->wbList;
-		prev = wb;
-		while (wb != NULL)
-		{
-			if (wb == pWaveBank)
-			{
-				if (wb == prev) /* First in list */
-				{
-					pWaveBank->parentEngine->wbList = wb->next;
-				}
-				else
-				{
-					prev->next = wb->next;
-				}
-				break;
-			}
-			prev = wb;
-			wb = wb->next;
-		}
-		FAudio_assert(wb != NULL && "Could not find WaveBank reference!");
+		LinkedList_RemoveEntry(&pWaveBank->parentEngine->wbList, pWaveBank);
 	}
 
 	/* Free everything, finally. */
