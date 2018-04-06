@@ -403,7 +403,7 @@ struct FACTWaveBank
 {
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
-	FACTWave *waveList;
+	LinkedList *waveList;
 	FACTWaveBank *next;
 	uint8_t notifyOnDestroy;
 
@@ -423,7 +423,6 @@ struct FACTWave
 	/* Engine references */
 	FACTWaveBank *parentBank;
 	FACTCue *parentCue;
-	FACTWave *next;
 	uint16_t index;
 	uint8_t notifyOnDestroy;
 

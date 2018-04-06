@@ -1012,9 +1012,9 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FACTNotification note;
 
 	/* Synchronously destroys any cues that are using the wavebank */
-	wave = pWaveBank->waveList;
-	while (wave != NULL)
+	while (pWaveBank->waveList != NULL)
 	{
+		wave = (FACTWave*) pWaveBank->waveList->entry;
 		if (wave->parentCue != NULL)
 		{
 			/* Destroying this Cue destroys the Wave */
@@ -1024,7 +1024,6 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		{
 			FACTWave_Destroy(wave);
 		}
-		wave = pWaveBank->waveList;
 	}
 
 	if (pWaveBank->parentEngine != NULL)
@@ -1134,11 +1133,9 @@ uint32_t FACTWaveBank_Prepare(
 	FAudioVoiceSends sends;
 	FAudioSendDescriptor send;
 	FAudioWaveFormatEx format;
-	FACTWave *latest;
 	FACTWaveBankEntry *entry = &pWaveBank->entries[nWaveIndex];
 
 	*ppWave = (FACTWave*) FAudio_malloc(sizeof(FACTWave));
-	(*ppWave)->next = NULL;
 
 	/* Engine references */
 	(*ppWave)->parentBank = pWaveBank;
@@ -1258,19 +1255,7 @@ uint32_t FACTWaveBank_Prepare(
 	}
 
 	/* Add to the WaveBank Wave list */
-	if (pWaveBank->waveList == NULL)
-	{
-		pWaveBank->waveList = *ppWave;
-	}
-	else
-	{
-		latest = pWaveBank->waveList;
-		while (latest->next != NULL)
-		{
-			latest = latest->next;
-		}
-		latest->next = *ppWave;
-	}
+	LinkedList_AddEntry(&pWaveBank->waveList, *ppWave);
 
 	return 0;
 }
@@ -1300,14 +1285,16 @@ uint32_t FACTWaveBank_Stop(
 	uint16_t nWaveIndex,
 	uint32_t dwFlags
 ) {
-	FACTWave *wave = pWaveBank->waveList;
+	FACTWave *wave;
+	LinkedList *list = pWaveBank->waveList;
 	while (wave != NULL)
 	{
+		wave = (FACTWave*) list->entry;
 		if (wave->index == nWaveIndex)
 		{
 			FACTWave_Stop(wave, dwFlags);
 		}
-		wave = wave->next;
+		list = list->next;
 	}
 	return 0;
 }
@@ -1316,36 +1303,12 @@ uint32_t FACTWaveBank_Stop(
 
 uint32_t FACTWave_Destroy(FACTWave *pWave)
 {
-	FACTWave *wave, *prev;
 	FACTNotification note;
 
 	/* Stop before we start deleting everything */
 	FACTWave_Stop(pWave, FACT_FLAG_STOP_IMMEDIATE);
 
-	if (pWave->parentBank != NULL)
-	{
-		/* Remove this Wave from the WaveBank list */
-		wave = pWave->parentBank->waveList;
-		prev = wave;
-		while (wave != NULL)
-		{
-			if (wave == pWave)
-			{
-				if (wave == prev) /* First in list */
-				{
-					pWave->parentBank->waveList = wave->next;
-				}
-				else
-				{
-					prev->next = wave->next;
-				}
-				break;
-			}
-			prev = wave;
-			wave = wave->next;
-		}
-		FAudio_assert(wave != NULL && "Could not find Wave reference!");
-	}
+	LinkedList_RemoveEntry(&pWave->parentBank->waveList, pWave);
 
 	if (pWave->notifyOnDestroy)
 	{
