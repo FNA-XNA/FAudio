@@ -380,14 +380,14 @@ void FACTTool_Update()
 			if (ImGui::Button("Close AudioEngine"))
 			{
 				/* Destroy SoundBank windows... */
-				FACTSoundBank *sb = engines[i]->sbList;
-				while (sb != NULL)
+				LinkedList *list = engines[i]->sbList;
+				while (list != NULL)
 				{
 					for (size_t j = 0; j < soundBanks.size(); j += 1)
 					{
-						if (sb == soundBanks[j])
+						if (list->entry == soundBanks[j])
 						{
-							sb = sb->next;
+							list = list->next;
 							soundBanks.erase(soundBanks.begin() + j);
 							soundbankNames.erase(soundbankNames.begin() + j);
 							soundbankShows.erase(soundbankShows.begin() + j);
@@ -397,14 +397,14 @@ void FACTTool_Update()
 				}
 
 				/* Destroy WaveBank windows... */
-				FACTWaveBank *wb = engines[i]->wbList;
-				while (wb != NULL)
+				list = engines[i]->wbList;
+				while (list != NULL)
 				{
 					for (size_t j = 0; j < waveBanks.size(); j += 1)
 					{
-						if (wb == waveBanks[j])
+						if (list->entry == waveBanks[j])
 						{
-							wb = wb->next;
+							list = list->next;
 							waveBanks.erase(waveBanks.begin() + j);
 							wavebankNames.erase(wavebankNames.begin() + j);
 							wavebankShows.erase(wavebankShows.begin() + j);
