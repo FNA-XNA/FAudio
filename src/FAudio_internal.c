@@ -26,6 +26,53 @@
 
 #include "FAudio_internal.h"
 
+void LinkedList_AddEntry(LinkedList **start, void* toAdd)
+{
+	LinkedList *newEntry, *latest;
+	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
+	newEntry->entry = toAdd;
+	newEntry->next = NULL;
+	if (*start == NULL)
+	{
+		*start = newEntry;
+	}
+	else
+	{
+		latest = *start;
+		while (latest->next != NULL)
+		{
+			latest = latest->next;
+		}
+		latest->next = newEntry;
+	}
+}
+
+void LinkedList_RemoveEntry(LinkedList **start, void* toRemove)
+{
+	LinkedList *latest, *prev;
+	latest = *start;
+	prev = latest;
+	while (latest != NULL)
+	{
+		if (latest->entry == toRemove)
+		{
+			if (latest == prev) /* First in list */
+			{
+				*start = latest->next;
+			}
+			else
+			{
+				prev->next = latest->next;
+			}
+			FAudio_free(latest);
+			return;
+		}
+		prev = latest;
+		latest = latest->next;
+	}
+	FAudio_assert(0 && "LinkedList element not found!");
+}
+
 /* Resampling */
 
 /* Okay, so here's what all this fixed-point goo is for:
@@ -573,9 +620,10 @@ end:
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 {
 	uint32_t i, totalSamples;
-	FAudioSourceVoiceEntry *source;
-	FAudioSubmixVoiceEntry *submix;
-	FAudioEngineCallbackEntry *callback;
+	LinkedList *list;
+	FAudioSourceVoice *source;
+	FAudioSubmixVoice *submix;
+	FAudioEngineCallback *callback;
 
 	if (!audio->active)
 	{
@@ -583,43 +631,46 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	}
 
 	/* ProcessingPassStart callbacks */
-	callback = audio->callbacks;
-	while (callback != NULL)
+	list = audio->callbacks;
+	while (list != NULL)
 	{
-		if (callback->callback->OnProcessingPassStart != NULL)
+		callback = (FAudioEngineCallback*) list->entry;
+		if (callback->OnProcessingPassStart != NULL)
 		{
-			callback->callback->OnProcessingPassStart(
-				callback->callback
+			callback->OnProcessingPassStart(
+				callback
 			);
 		}
-		callback = callback->next;
+		list = list->next;
 	}
 
 	/* Writes to master will directly write to output */
 	audio->master->master.output = output;
 
 	/* Mix sources */
-	source = audio->sources;
-	while (source != NULL)
+	list = audio->sources;
+	while (list != NULL)
 	{
-		if (source->voice->src.active)
+		source = (FAudioSourceVoice*) list->entry;
+		if (source->src.active)
 		{
-			FAudio_INTERNAL_MixSource(source->voice);
+			FAudio_INTERNAL_MixSource(source);
 		}
-		source = source->next;
+		list = list->next;
 	}
 
 	/* Mix submixes, ordered by processing stage */
 	for (i = 0; i < audio->submixStages; i += 1)
 	{
-		submix = audio->submixes;
-		while (submix != NULL)
+		list = audio->submixes;
+		while (list != NULL)
 		{
-			if (submix->voice->mix.processingStage == i)
+			submix = (FAudioSubmixVoice*) list->entry;
+			if (submix->mix.processingStage == i)
 			{
-				FAudio_INTERNAL_MixSubmix(submix->voice);
+				FAudio_INTERNAL_MixSubmix(submix);
 			}
-			submix = submix->next;
+			list = list->next;
 		}
 	}
 
@@ -638,16 +689,17 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	/* TODO: Master effect chain processing */
 
 	/* OnProcessingPassEnd callbacks */
-	callback = audio->callbacks;
-	while (callback != NULL)
+	list = audio->callbacks;
+	while (list != NULL)
 	{
-		if (callback->callback->OnProcessingPassEnd != NULL)
+		callback = (FAudioEngineCallback*) list->entry;
+		if (callback->OnProcessingPassEnd != NULL)
 		{
-			callback->callback->OnProcessingPassEnd(
-				callback->callback
+			callback->OnProcessingPassEnd(
+				callback
 			);
 		}
-		callback = callback->next;
+		list = list->next;
 	}
 }
 

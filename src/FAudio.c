@@ -98,25 +98,7 @@ uint32_t FAudio_RegisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 ) {
-	FAudioEngineCallbackEntry *latest;
-	FAudioEngineCallbackEntry *entry = (FAudioEngineCallbackEntry*) FAudio_malloc(
-		sizeof(FAudioEngineCallbackEntry)
-	);
-	entry->callback = pCallback;
-	entry->next = NULL;
-	if (audio->callbacks == NULL)
-	{
-		audio->callbacks = entry;
-	}
-	else
-	{
-		latest = audio->callbacks;
-		while (latest->next != NULL)
-		{
-			latest = latest->next;
-		}
-		latest->next = entry;
-	}
+	LinkedList_AddEntry(&audio->callbacks, pCallback);
 	return 0;
 }
 
@@ -124,30 +106,7 @@ void FAudio_UnregisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 ) {
-	FAudioEngineCallbackEntry *entry, *prev;
-	if (audio->callbacks == NULL)
-	{
-		return;
-	}
-	entry = audio->callbacks;
-	prev = audio->callbacks;
-	while (entry != NULL)
-	{
-		if (entry->callback == pCallback)
-		{
-			if (entry == prev) /* First in list */
-			{
-				audio->callbacks = entry->next;
-			}
-			else
-			{
-				prev->next = entry->next;
-			}
-			FAudio_free(entry);
-			return;
-		}
-		entry = entry->next;
-	}
+	LinkedList_RemoveEntry(&audio->callbacks, pCallback);
 }
 
 uint32_t FAudio_CreateSourceVoice(
@@ -160,8 +119,6 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	FAudioSourceVoiceEntry *entry, *latest;
-
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
@@ -236,24 +193,7 @@ uint32_t FAudio_CreateSourceVoice(
 	);
 
 	/* Add to list, finally. */
-	entry = (FAudioSourceVoiceEntry*) FAudio_malloc(
-		sizeof(FAudioSourceVoiceEntry)
-	);
-	entry->voice = *ppSourceVoice;
-	entry->next = NULL;
-	if (audio->sources == NULL)
-	{
-		audio->sources = entry;
-	}
-	else
-	{
-		latest = audio->sources;
-		while (latest->next != NULL)
-		{
-			latest = latest->next;
-		}
-		latest->next = entry;
-	}
+	LinkedList_AddEntry(&audio->sources, *ppSourceVoice);
 	FAudio_AddRef(audio);
 	return 0;
 }
@@ -268,8 +208,6 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
-	FAudioSubmixVoiceEntry *entry, *latest;
-
 	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
 	(*ppSubmixVoice)->audio = audio;
@@ -310,24 +248,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	);
 
 	/* Add to list, finally. */
-	entry = (FAudioSubmixVoiceEntry*) FAudio_malloc(
-		sizeof(FAudioSubmixVoiceEntry)
-	);
-	entry->voice = *ppSubmixVoice;
-	entry->next = NULL;
-	if (audio->submixes == NULL)
-	{
-		audio->submixes = entry;
-	}
-	else
-	{
-		latest = audio->submixes;
-		while (latest->next != NULL)
-		{
-			latest = latest->next;
-		}
-		latest->next = entry;
-	}
+	LinkedList_AddEntry(&audio->submixes, ppSubmixVoice);
 	FAudio_AddRef(audio);
 	return 0;
 }
@@ -1070,62 +991,33 @@ void FAudioVoice_GetOutputMatrix(
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
 	uint32_t i;
-	FAudioSourceVoiceEntry *source, *srcPrev;
-	FAudioSubmixVoiceEntry *submix, *mixPrev;
+	LinkedList *list;
+	FAudioSubmixVoice *submix;
+
 	/* TODO: Lock, check for dependencies and fail if still in use */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
-		source = srcPrev = voice->audio->sources;
-		while (source != NULL)
-		{
-			if (source->voice == voice)
-			{
-				if (source == srcPrev)
-				{
-					voice->audio->sources = source->next;
-				}
-				else
-				{
-					srcPrev->next = source->next;
-				}
-				FAudio_free(source);
-				break;
-			}
-			srcPrev = source;
-			source = source->next;
-		}
+		LinkedList_RemoveEntry(&voice->audio->sources, voice);
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
-		submix = mixPrev = voice->audio->submixes;
-		while (submix != NULL)
-		{
-			if (submix->voice == voice)
-			{
-				if (submix == mixPrev)
-				{
-					voice->audio->submixes = submix->next;
-				}
-				else
-				{
-					mixPrev->next = submix->next;
-				}
-				FAudio_free(submix);
-				break;
-			}
-			mixPrev = submix;
-			submix = submix->next;
-		}
+		/* Remove submix from list */
+		LinkedList_RemoveEntry(&voice->audio->submixes, voice);
+
+		/* Check submix stage count */
 		voice->audio->submixStages = 0;
-		submix = voice->audio->submixes;
-		while (submix != NULL)
+		list = voice->audio->submixes;
+		while (list != NULL)
 		{
+			submix = (FAudioSubmixVoice*) list->entry;
 			voice->audio->submixStages = FAudio_max(
 				voice->audio->submixStages,
-				submix->voice->mix.processingStage
+				submix->mix.processingStage
 			);
-			submix = submix->next;
+			list = list->next;
 		}
+
+		/* Delete submix data */
 		FAudio_free(voice->mix.inputCache);
 		if (voice->mix.resampler != NULL)
 		{
@@ -1137,6 +1029,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		FAudio_PlatformQuit(voice->audio);
 		voice->audio->master = NULL;
 	}
+
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		FAudio_free(voice->sendCoefficients[i]);

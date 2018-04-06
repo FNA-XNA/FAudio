@@ -38,6 +38,17 @@
 #define inline __inline
 #endif
 
+/* Linked Lists */
+
+typedef struct LinkedList LinkedList;
+struct LinkedList
+{
+	void* entry;
+	LinkedList *next;
+};
+void LinkedList_AddEntry(LinkedList **start, void* toAdd);
+void LinkedList_RemoveEntry(LinkedList **start, void* toRemove);
+
 /* Internal FAudio Types */
 
 typedef enum FAudioVoiceType
@@ -46,27 +57,6 @@ typedef enum FAudioVoiceType
 	FAUDIO_VOICE_SUBMIX,
 	FAUDIO_VOICE_MASTER
 } FAudioVoiceType;
-
-typedef struct FAudioEngineCallbackEntry FAudioEngineCallbackEntry;
-struct FAudioEngineCallbackEntry
-{
-	FAudioEngineCallback *callback;
-	FAudioEngineCallbackEntry *next;
-};
-
-typedef struct FAudioSubmixVoiceEntry FAudioSubmixVoiceEntry;
-struct FAudioSubmixVoiceEntry
-{
-	FAudioSubmixVoice *voice;
-	FAudioSubmixVoiceEntry *next;
-};
-
-typedef struct FAudioSourceVoiceEntry FAudioSourceVoiceEntry;
-struct FAudioSourceVoiceEntry
-{
-	FAudioSourceVoice *voice;
-	FAudioSourceVoiceEntry *next;
-};
 
 typedef struct FAudioBufferEntry FAudioBufferEntry;
 struct FAudioBufferEntry
@@ -97,9 +87,9 @@ struct FAudio
 	uint32_t updateSize;
 	uint32_t submixStages;
 	FAudioMasteringVoice *master;
-	FAudioSubmixVoiceEntry *submixes;
-	FAudioSourceVoiceEntry *sources;
-	FAudioEngineCallbackEntry *callbacks;
+	LinkedList *submixes;
+	LinkedList *sources;
+	LinkedList *callbacks;
 	FAudioWaveFormatExtensible *mixFormat;
 
 	/* Temp storage for processing */
