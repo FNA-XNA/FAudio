@@ -1130,7 +1130,7 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 	list = engine->sbList;
 	while (list != NULL)
 	{
-		cue = ((FACTSoundBank*) list)->cueList;
+		cue = ((FACTSoundBank*) list->entry)->cueList;
 		while (cue != NULL)
 		{
 			FACT_INTERNAL_UpdateCue(cue, timestamp);
