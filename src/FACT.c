@@ -216,17 +216,17 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	/* This method destroys all existing cues, sound banks, and wave banks.
 	 * It blocks until all cues are destroyed.
 	 */
-	sb = pEngine->sbList;
-	while (sb != NULL)
-	{
-		FACTSoundBank_Destroy(sb);
-		sb = pEngine->sbList;
-	}
 	wb = pEngine->wbList;
 	while (wb != NULL)
 	{
 		FACTWaveBank_Destroy(wb);
 		wb = pEngine->wbList;
+	}
+	sb = pEngine->sbList;
+	while (sb != NULL)
+	{
+		FACTSoundBank_Destroy(sb);
+		sb = pEngine->sbList;
 	}
 
 	/* Category data */
