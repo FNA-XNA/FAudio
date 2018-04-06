@@ -1011,13 +1011,19 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FACTWave *wave;
 	FACTNotification note;
 
-	/* Synchronously destroys any cues that are using the wavebank
-	 * FIXME: Destroys CUES? Ah hell
-	 */
+	/* Synchronously destroys any cues that are using the wavebank */
 	wave = pWaveBank->waveList;
 	while (wave != NULL)
 	{
-		FACTWave_Destroy(wave);
+		if (wave->parentCue != NULL)
+		{
+			/* Destroying this Cue destroys the Wave */
+			FACTCue_Destroy(wave->parentCue);
+		}
+		else
+		{
+			FACTWave_Destroy(wave);
+		}
 		wave = pWaveBank->waveList;
 	}
 
@@ -1136,6 +1142,7 @@ uint32_t FACTWaveBank_Prepare(
 
 	/* Engine references */
 	(*ppWave)->parentBank = pWaveBank;
+	(*ppWave)->parentCue = NULL;
 	(*ppWave)->index = nWaveIndex;
 
 	/* Playback */

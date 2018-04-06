@@ -161,6 +161,7 @@ void FACT_INTERNAL_GetNextWave(
 		loopCount,
 		&trackInst->upcomingWave.wave
 	);
+	trackInst->upcomingWave.wave->parentCue = cue;
 #if 0 /* TODO: Implement reverb first! */
 	if (sound->dspCodeCount > 0) /* Never more than 1...? */
 	{
@@ -441,6 +442,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 				0,
 				&cue->playing.wave
 			);
+			cue->playing.wave->parentCue = cue;
 			cue->active = 0x01;
 		}
 	}
