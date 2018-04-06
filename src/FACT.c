@@ -1093,6 +1093,7 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->parentBank = pWaveBank;
 	(*ppWave)->parentCue = NULL;
 	(*ppWave)->index = nWaveIndex;
+	(*ppWave)->notifyOnDestroy = 0;
 
 	/* Playback */
 	(*ppWave)->state = FACT_STATE_PREPARED;

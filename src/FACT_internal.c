@@ -1762,6 +1762,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb = (FACTSoundBank*) FAudio_malloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
+	sb->notifyOnDestroy = 0;
 
 	/* Add to the Engine SoundBank list */
 	LinkedList_AddEntry(&pEngine->sbList, sb);
@@ -2174,6 +2175,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->parentEngine = pEngine;
 	wb->waveList = NULL;
 	wb->io = io;
+	wb->notifyOnDestroy = 0;
 
 	/* WaveBank Data */
 	io->seek(
