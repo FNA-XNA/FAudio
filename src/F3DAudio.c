@@ -28,6 +28,10 @@
 #include "FAudio_internal.h"
 
 #include <math.h> /* ONLY USE THIS FOR isnan! */
+#include <float.h> /* _isnan for MSVC 2010 */
+#ifndef isnan
+#define isnan(x) _isnan(x)
+#endif
 
 /* F3DAUDIO_HANDLE Structure */
 #define INSTANCE_SPEAKERMASK		*((uint32_t*)	&Instance[0])

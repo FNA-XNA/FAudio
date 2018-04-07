@@ -351,6 +351,8 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	uint32_t mixed;
 	uint32_t oChan;
 	FAudioVoice *out;
+	uint32_t outputRate;
+	double stepd;
 
 	/* Calculate the resample stepping value */
 	if (voice->src.resampleFreqRatio != voice->src.freqRatio)
@@ -358,10 +360,10 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		out = (voice->sends.SendCount == 0) ?
 			voice->audio->master : /* Barf */
 			voice->sends.pSends->pOutputVoice;
-		const uint32_t outputRate = (out->type == FAUDIO_VOICE_MASTER) ?
+		outputRate = (out->type == FAUDIO_VOICE_MASTER) ?
 			out->master.inputSampleRate :
 			out->mix.inputSampleRate;
-		const double stepd = (
+		stepd = (
 			voice->src.freqRatio *
 			(double) voice->src.format.nSamplesPerSec /
 			(double) outputRate
