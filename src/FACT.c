@@ -1240,7 +1240,7 @@ uint32_t FACTWaveBank_Stop(
 ) {
 	FACTWave *wave;
 	LinkedList *list = pWaveBank->waveList;
-	while (wave != NULL)
+	while (list != NULL)
 	{
 		wave = (FACTWave*) list->entry;
 		if (wave->index == nWaveIndex)
