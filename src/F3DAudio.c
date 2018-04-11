@@ -29,7 +29,7 @@
 
 #include <math.h> /* ONLY USE THIS FOR isnan! */
 #include <float.h> /* _isnan for MSVC 2010 */
-#ifndef isnan
+#if defined(_MSC_VER) && !defined(isnan)
 #define isnan(x) _isnan(x)
 #endif
 
