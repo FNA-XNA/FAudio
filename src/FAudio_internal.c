@@ -308,8 +308,6 @@ static void FAudio_INTERNAL_FilterVoice(
 	uint16_t numChannels)
 {
 	uint32_t j, ci;
-	FAudio_assert(filter->Type != 0xff);
-	FAudio_assert(filterState != NULL);
 
 	/* Apply a digital state-variable filter to the voice.
 	 * The difference equations of the filter are:
@@ -466,7 +464,7 @@ void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* TODO: Effects */
 
 	/* Filters */
-	if (voice->filter.Type != 0xff)
+	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
 		FAudio_INTERNAL_FilterVoice(
 			&voice->filter,
@@ -564,7 +562,7 @@ void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	/* TODO: Effects */
 
 	/* Filters */
-	if (voice->filter.Type != 0xff)
+	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
 		FAudio_INTERNAL_FilterVoice(
 			&voice->filter,

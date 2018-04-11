@@ -123,7 +123,10 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
-	(*ppSourceVoice)->filter.Type = (FAudioFilterType) 0xFF;
+	(*ppSourceVoice)->flags = Flags;
+	(*ppSourceVoice)->filter.Type = FAUDIO_DEFAULT_FILTER_TYPE;
+	(*ppSourceVoice)->filter.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+	(*ppSourceVoice)->filter.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 
 	/* Default Levels */
 	(*ppSourceVoice)->volume = 1.0f;
@@ -212,7 +215,10 @@ uint32_t FAudio_CreateSubmixVoice(
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
 	(*ppSubmixVoice)->audio = audio;
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
-	(*ppSubmixVoice)->filter.Type = (FAudioFilterType) 0xFF;
+	(*ppSubmixVoice)->flags = Flags;
+	(*ppSubmixVoice)->filter.Type = FAUDIO_DEFAULT_FILTER_TYPE;
+	(*ppSubmixVoice)->filter.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+	(*ppSubmixVoice)->filter.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 
 	/* Default Levels */
 	(*ppSubmixVoice)->volume = 1.0f;
@@ -269,7 +275,7 @@ uint32_t FAudio_CreateMasteringVoice(
 	FAudio_zero(*ppMasteringVoice, sizeof(FAudioMasteringVoice));
 	(*ppMasteringVoice)->audio = audio;
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
-	(*ppMasteringVoice)->filter.Type = (FAudioFilterType) 0xFF;
+	(*ppMasteringVoice)->flags = Flags;
 
 	/* Default Levels */
 	(*ppMasteringVoice)->volume = 1.0f;
@@ -787,6 +793,11 @@ uint32_t FAudioVoice_SetFilterParameters(
 		return 0;
 	}
 
+	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
+	{
+		return 0;
+	}
+
 	FAudio_memcpy(
 		&voice->filter,
 		pParameters,
@@ -829,6 +840,11 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(0 && "Output filters are not supported!");
+
+	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
+	{
+		return 0;
+	}
 	return 0;
 }
 
@@ -1204,6 +1220,11 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	if (voice->flags & FAUDIO_VOICE_NOPITCH)
+	{
+		return 0;
+	}
 
 	voice->src.freqRatio = FAudio_clamp(
 		Ratio,

@@ -1062,13 +1062,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 				active->tracks[i].rpcData.rpcPitch
 			)
 		);
-		if (active->sound->tracks[i].filter == 0xFF)
-		{
-			filterParams.Type = FAUDIO_DEFAULT_FILTER_TYPE;
-			filterParams.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
-			filterParams.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
-		}
-		else
+		if (active->sound->tracks[i].filter != 0xFF)
 		{
 			/* TODO: How are all the freq/QFactor values put together? */
 			filterParams.Type = (FAudioFilterType) active->sound->tracks[i].filter;
@@ -1082,12 +1076,12 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 				active->rpcData.rpcFilterQFactor +
 				active->tracks[i].rpcData.rpcFilterQFactor
 			);
+			FAudioVoice_SetFilterParameters(
+				active->tracks[i].activeWave.wave->voice,
+				&filterParams,
+				0
+			);
 		}
-		FAudioVoice_SetFilterParameters(
-			active->tracks[i].activeWave.wave->voice,
-			&filterParams,
-			0
-		);
 		/* TODO: Wave updates:
 		 * - ReverbSend (SetOutputMatrix on index 1, submix voice)
 		 * - Fade in/out
