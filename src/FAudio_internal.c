@@ -178,7 +178,7 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 			if (buffer->LoopCount > 0)
 			{
 				voice->src.curBufferOffset = buffer->LoopBegin;
-				if (buffer->LoopCount < 0xFF)
+				if (buffer->LoopCount < FAUDIO_LOOP_INFINITE)
 				{
 					buffer->LoopCount -= 1;
 				}
