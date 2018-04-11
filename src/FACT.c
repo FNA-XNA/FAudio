@@ -1482,7 +1482,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			/* FIXME: How is this different from Replace Oldest? */ \
 			while (tmp != NULL) \
 			{ \
-				if (match) \
+				if (	match && \
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
 					break; \
@@ -1494,7 +1495,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		{ \
 			while (tmp != NULL) \
 			{ \
-				if (match) \
+				if (	match && \
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
 					break; \
@@ -1507,8 +1509,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			max.maxf = FACTVOLUME_MAX; \
 			while (tmp != NULL) \
 			{ \
-				if (	match /*&&*/ \
-					/*FIXME: tmp->playing.sound.volume < max.maxf*/) \
+				if (	match && \
+					/*FIXME: tmp->playing.sound.volume < max.maxf &&*/ \
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
 					/* max.maxf = tmp->playing.sound.volume; */ \
@@ -1522,7 +1525,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			while (tmp != NULL) \
 			{ \
 				if (	match && \
-					tmp->playing.sound.sound->priority < max.maxi	) \
+					tmp->playing.sound.sound->priority < max.maxi && \
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
 					max.maxi = tmp->playing.sound.sound->priority; \
@@ -1536,14 +1540,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			{ \
 				FACT_INTERNAL_BeginFadeIn(pCue); \
 			} \
-			if (obj->fadeOutMS > 0) \
-			{ \
-				FACT_INTERNAL_BeginFadeOut(wnr); \
-			} \
-			else \
-			{ \
-				FACTCue_Stop(wnr, 0); \
-			} \
+			FACTCue_Stop(wnr, 0); \
 		}
 	if (data->instanceCount >= data->instanceLimit)
 	{
@@ -1599,12 +1596,19 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
 	uint8_t i;
 
-	/* There are two ways that a Cue might be stopped immediately:
+	if (pCue->state & FACT_STATE_STOPPED)
+	{
+		return 0;
+	}
+
+	/* There are three ways that a Cue might be stopped immediately:
 	 * 1. The program explicitly asks for it
 	 * 2. The Cue is paused and therefore we can't do fade/release effects
+	 * 3. The Cue is stopped "as authored" and has no fade effects
 	 */
 	if (	dwFlags & FACT_FLAG_STOP_IMMEDIATE ||
-		pCue->state & FACT_STATE_PAUSED	)
+		pCue->state & FACT_STATE_PAUSED	||
+		pCue->parentBank->cues[pCue->index].fadeOutMS == 0	)
 	{
 		pCue->start = 0;
 		pCue->elapsed = 0;
@@ -1649,6 +1653,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	}
 	else
 	{
+		FACT_INTERNAL_BeginFadeOut(pCue);
 		pCue->state |= FACT_STATE_STOPPING;
 	}
 	return 0;

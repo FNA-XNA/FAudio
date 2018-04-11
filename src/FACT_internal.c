@@ -1345,7 +1345,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		pEngine->categories[i].instanceLimit = read_u8(&ptr);
 		pEngine->categories[i].fadeInMS = read_u16(&ptr);
 		pEngine->categories[i].fadeOutMS = read_u16(&ptr);
-		pEngine->categories[i].maxInstanceBehavior = read_u8(&ptr);
+		pEngine->categories[i].maxInstanceBehavior = read_u8(&ptr) >> 3;
 		pEngine->categories[i].parentCategory = read_u16(&ptr);
 		pEngine->categories[i].volume = FACT_INTERNAL_CalculateAmplitudeRatio(
 			read_volbyte(&ptr)
@@ -2006,7 +2006,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		sb->cues[cur].instanceLimit = read_u8(&ptr);
 		sb->cues[cur].fadeInMS = read_u16(&ptr);
 		sb->cues[cur].fadeOutMS = read_u16(&ptr);
-		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr);
+		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr) >> 3;
 		sb->cues[cur].instanceCount = 0;
 
 		if (!(sb->cues[cur].flags & 0x04))
