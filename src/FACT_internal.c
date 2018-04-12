@@ -233,10 +233,10 @@ void FACT_INTERNAL_GetNextWave(
 	/* Volume Variation */
 	if (evt->wave.variationFlags & 0x2000)
 	{
-		const float rngVolume = track->volume + (
+		const float rngVolume = (
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxVolume - evt->wave.minVolume)
-		);
+		) + evt->wave.minVolume;
 		if (evtInst->loopCount < evt->wave.loopCount)
 		{
 			/* Variation on Loop */
@@ -250,14 +250,22 @@ void FACT_INTERNAL_GetNextWave(
 				}
 				else
 				{
-					trackInst->upcomingWave.baseVolume = rngVolume + sound->volume;
+					trackInst->upcomingWave.baseVolume = (
+						rngVolume +
+						sound->volume +
+						track->volume
+					);
 				}
 			}
 		}
 		else
 		{
 			/* Initial Volume Variation */
-			trackInst->upcomingWave.baseVolume = rngVolume + sound->volume;
+			trackInst->upcomingWave.baseVolume = (
+				rngVolume +
+				sound->volume +
+				track->volume
+			);
 		}
 	}
 	else
