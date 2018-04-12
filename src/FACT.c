@@ -1834,8 +1834,8 @@ uint32_t FACTCue_GetProperties(
 	if (pCue->playingVariation != NULL)
 	{
 		varProps->index = 0; /* TODO: Index of what...? */
-		/* TODO: This is just max - min right? */
-		varProps->weight = (
+		/* TODO: This is just max - min right? Also why u8 wtf */
+		varProps->weight = (uint8_t) (
 			pCue->playingVariation->maxWeight -
 			pCue->playingVariation->minWeight
 		);
