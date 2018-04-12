@@ -28,10 +28,6 @@
 #include "FACT3D.h"
 #include "FAudio_internal.h"
 
-/* Internal Constants */
-
-#define FACT_VOLUME_0 180
-
 /* Internal AudioEngine Types */
 
 typedef struct FACTAudioEngineCallback

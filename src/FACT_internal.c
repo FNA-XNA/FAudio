@@ -1845,7 +1845,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
 			sb->sounds[i].tracks = (FACTTrack*) FAudio_malloc(memsize);
 			FAudio_zero(sb->sounds[i].tracks, memsize);
-			sb->sounds[i].tracks[0].volume = FACT_VOLUME_0;
+			sb->sounds[i].tracks[0].volume = 0.0f;
 			sb->sounds[i].tracks[0].filter = 0xFF;
 			sb->sounds[i].tracks[0].eventCount = 1;
 			sb->sounds[i].tracks[0].events = (FACTEvent*) FAudio_malloc(
