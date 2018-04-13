@@ -100,14 +100,14 @@ void LinkedList_RemoveEntry(LinkedList **start, void* toRemove)
  * The Integer block works exactly like you'd expect.
  * The Fraction block is divided by the Integer's "One" value.
  * So, the above Fraction represented visually...
- *   1 << 32
- *   -------
  *   1 << 31
+ *   -------
+ *   1 << 32
  * ... which, simplified, is...
- *   1 << 1
- *   ------
  *   1 << 0
- * ... in other words, 2 / 1, or 1.5.
+ *   ------
+ *   1 << 1
+ * ... in other words, 1 / 2, or 0.5.
  */
 #define FIXED_PRECISION		32
 #define FIXED_ONE		(1LL << FIXED_PRECISION)
@@ -124,7 +124,7 @@ void LinkedList_RemoveEntry(LinkedList **start, void* toRemove)
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
 )
 
-uint32_t FAudio_INTERNAL_DecodeBuffers(
+static uint32_t FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
@@ -254,7 +254,7 @@ uint32_t FAudio_INTERNAL_DecodeBuffers(
 	return resetOffset;
 }
 
-void FAudio_INTERNAL_ResamplePCM(
+static void FAudio_INTERNAL_ResamplePCM(
 	FAudioSourceVoice *voice,
 	float **resampleCache,
 	uint64_t toResample
@@ -300,7 +300,7 @@ void FAudio_INTERNAL_ResamplePCM(
 	}
 }
 
-static void FAudio_INTERNAL_FilterVoice(
+static inline void FAudio_INTERNAL_FilterVoice(
 	const FAudioFilterParameters *filter,
 	FAudioFilterState *filterState,
 	float *samples,
@@ -335,7 +335,7 @@ static void FAudio_INTERNAL_FilterVoice(
 	}
 }
 
-void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
+static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
 	uint32_t i, j, co, ci;
@@ -524,7 +524,7 @@ end:
 	}
 }
 
-void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
+static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 {
 	uint32_t i, j, co, ci;
 	float *stream;
