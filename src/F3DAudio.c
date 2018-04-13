@@ -34,7 +34,14 @@
 
 
  // TODO: For development only. Remove afterwards.
-#define UNIMPLEMENTED() __debugbreak()
+#if defined(_MSC_VER)
+#define BREAK() __debugbreak()
+#else
+#include <assert.h>
+#define BREAK() assert(0)
+#endif
+
+#define UNIMPLEMENTED() BREAK()
 #define F3DAUDIO_DEBUG_PARAM_CHECKS 1
 #define F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE 0
 #define F3DAUDIO_DEBUG_PARAM_CHECKS_BREAKPOINTS 0
@@ -59,27 +66,27 @@
 // TODO: to be changed to something different after dev
 #if F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE
 #include <stdio.h>
-#define OutputDebugString(s) do { fprintf(stderr, "%s", s); fflush(stderr); } while(0) 
+#define OUTPUT_DEBUG_STRING(s) do { fprintf(stderr, "%s", s); fflush(stderr); } while(0)
 #else
-#define OutputDebugString(s) do {} while(0)
+#define OUTPUT_DEBUG_STRING(s) do {} while(0)
 #endif
 
 #if F3DAUDIO_DEBUG_PARAM_CHECKS_BREAKPOINTS
-#define STOP() __debugbreak()
+#define STOP() BREAK()
 #else
 #define STOP() do { return PARAM_CHECK_FAIL; } while(0)
 #endif
 #define PARAM_CHECK(cond, msg) do { \
         if (!(cond)) { \
-            OutputDebugString("Check failed: " #cond "\n"); \
-            OutputDebugString(msg); \
-            OutputDebugString("\n"); \
+            OUTPUT_DEBUG_STRING("Check failed: " #cond "\n"); \
+            OUTPUT_DEBUG_STRING(msg); \
+            OUTPUT_DEBUG_STRING("\n"); \
             STOP(); \
         } \
     } while(0)
 #else /* F3DAUDIO_DEBUG_PARAM_CHECKS */
 #define PARAM_CHECK(cond, msg) do {} while(0)
-#endif /* F3DAUDIO_DEBUG_PARAM_CHECKS */ 
+#endif /* F3DAUDIO_DEBUG_PARAM_CHECKS */
 
 #define POINTER_CHECK(p) PARAM_CHECK(p != NULL, "Pointer " #p " must be != NULL")
 
@@ -99,7 +106,6 @@
         PARAM_CHECK(FAudio_abs(VectorDot(u, v)) <= 1e-5, "Vector u and v have non-negligible dot product"); \
     } while(0)
 
-
 /*
  * VECTOR UTILITIES
  */
@@ -116,6 +122,7 @@ static F3DAUDIO_VECTOR VectorSub(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return Vec(u.x - v.x, u.y - v.y, u.z - v.z);
 }
 
+#if 0
 static F3DAUDIO_VECTOR VectorCross(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return Vec(u.y*v.z - u.z*v.y, u.z*v.x - u.x*v.z, u.x*v.y - u.y*v.x);
 }
@@ -123,6 +130,7 @@ static F3DAUDIO_VECTOR VectorCross(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
 static float VectorSquareLength(F3DAUDIO_VECTOR v) {
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
+#endif
 
 static float VectorLength(F3DAUDIO_VECTOR v) {
     return FAudio_sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -190,6 +198,7 @@ int F3DAudioCheckInitParams(
     return PARAM_CHECK_OK;
 }
 
+#if 0
 static uint32_t float_to_uint32(float x) {
     uint32_t res;
     FAudio_memcpy(&res, &x, sizeof(res));
@@ -201,6 +210,7 @@ static float uint32_to_float(uint32_t x) {
     FAudio_memcpy(&res, &x, sizeof(res));
     return res;
 }
+#endif
 
 void F3DAudioInitialize(
     uint32_t SpeakerChannelMask,
@@ -251,12 +261,12 @@ static float GetConeAttenuation(F3DAUDIO_CONE* pCone, F3DAUDIO_VECTOR pos, F3DAU
  * Listener:
  *  - if pCone is NULL use OrientFront for matrix and delay. WHen pCone isn't NULL, OrientFront is used for matrix, LPF (direct and reverb). What about delay??
  *  Must be orthonormal to OrientTop.
- *  - OrientTop: only for matrix and delay 
+ *  - OrientTop: only for matrix and delay
  *  - Position: does not affect velocity. In world units. Considering default speed 1 unit = 1 meter.
  *  - Velocity: used only for doppler calculations. wu/s.
  *  - "To be considered orthonormal, a pair of vectors must have a magnitude of 1 +- 1x10-5 and a dot product of 0 +- 1x10-5."
  *
- * Emitter: 
+ * Emitter:
  *  - pCone: only for single channel emitters. NULL means omnidirectional emitter. Non-NULL: used for matrix, LPF reverb and direct, and reverb.
  *  - OrientFront: MUST BE NORMALIZED when used. Must be orthonormal to OrientTop. Single channel: only used for emitter angle. Multi-channel or single with cones: used for matrix, LPF (direct and reverb) and reverb.
  *  - OrientTop: only used for multi-channel for matrix. Must be orthonormal to OrientFront.
@@ -273,7 +283,7 @@ static float GetConeAttenuation(F3DAUDIO_CONE* pCone, F3DAUDIO_VECTOR pos, F3DAU
  *  - CurveDistanceScaler: must be between FLT_MIN to FLT_MAX. Only for matrix, LPF (both) and reverb.
  *  - DopplerScaler: must be between 0.0f to FLT_MAX. Only for doppler calculations.
  *  - Remarks: cone only for single-emitter (doesnt make sense otherwise). Multi-point useful to avoid duplicate calculations like doppler (Adrien: implementation hint).
- * See the MSDN page for illustration of cone. 
+ * See the MSDN page for illustration of cone.
  */
 
 static int CheckCone(F3DAUDIO_CONE *pCone) {
@@ -292,7 +302,7 @@ static int CheckCone(F3DAUDIO_CONE *pCone) {
     return PARAM_CHECK_OK;
 }
 
-static int F3DAudioCheckCalculateParams(
+int F3DAudioCheckCalculateParams(
     const F3DAUDIO_HANDLE Instance,
     const F3DAUDIO_LISTENER *pListener,
     const F3DAUDIO_EMITTER *pEmitter,
@@ -415,12 +425,12 @@ static void CalculateMatrix(
  * Listener:
  *  - if pCone is NULL use OrientFront for matrix and delay. WHen pCone isn't NULL, OrientFront is used for matrix, LPF (direct and reverb). What about delay??
  *  Must be orthonormal to OrientTop.
- *  - OrientTop: only for matrix and delay 
+ *  - OrientTop: only for matrix and delay
  *  - Position: does not affect velocity. In world units. Considering default speed 1 unit = 1 meter.
  *  - Velocity: used only for doppler calculations. wu/s.
  *  - "To be considered orthonormal, a pair of vectors must have a magnitude of 1 +- 1x10-5 and a dot product of 0 +- 1x10-5."
  *
- * Emitter: 
+ * Emitter:
  *  - pCone: only for single channel emitters. NULL means omnidirectional emitter. Non-NULL: used for matrix, LPF reverb and direct, and reverb.
  *  - OrientFront: MUST BE NORMALIZED when used. Must be orthonormal to OrientTop. Single channel: only used for emitter angle. Multi-channel or single with cones: used for matrix, LPF (direct and reverb) and reverb.
  *  - OrientTop: only used for multi-channel for matrix. Must be orthonormal to OrientFront.
@@ -437,7 +447,7 @@ static void CalculateMatrix(
  *  - CurveDistanceScaler: must be between FLT_MIN to FLT_MAX. Only for matrix, LPF (both) and reverb.
  *  - DopplerScaler: must be between 0.0f to FLT_MAX. Only for doppler calculations.
  *  - Remarks: cone only for single-emitter (doesnt make sense otherwise). Multi-point useful to avoid duplicate calculations like doppler (Adrien: implementation hint).
- * See the MSDN page for illustration of cone. 
+ * See the MSDN page for illustration of cone.
  */
 
 void F3DAudioCalculate(
