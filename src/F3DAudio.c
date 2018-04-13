@@ -50,7 +50,6 @@
  * UTILITY MACROS
  */
 
-
 /* Adrien VS2010 doesn't define isnan (which is C99), so here it is. */
 #if defined(_MSC_VER) && !defined(isnan)
 #define isnan(x) _isnan(x)
@@ -98,12 +97,12 @@
     } while(0)
 
 #define VECTOR_NORMAL_CHECK(v) do { \
-        PARAM_CHECK(FAudio_abs(VectorLength(v) - 1.0) <= 1e-5, "Vector " #v " isn't normal"); \
+        PARAM_CHECK(FAudio_fabsf(VectorLength(v) - 1.0f) <= 1e-5f, "Vector " #v " isn't normal"); \
     } while(0)
 
 // To be considered orthonormal, a pair of vectors must have a magnitude of 1 +- 1x10-5 and a dot product of 0 +- 1x10-5.
 #define VECTOR_BASE_CHECK(u, v) do { \
-        PARAM_CHECK(FAudio_abs(VectorDot(u, v)) <= 1e-5, "Vector u and v have non-negligible dot product"); \
+        PARAM_CHECK(FAudio_fabsf(VectorDot(u, v)) <= 1e-5f, "Vector u and v have non-negligible dot product"); \
     } while(0)
 
 /*

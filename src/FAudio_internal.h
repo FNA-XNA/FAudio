@@ -240,10 +240,11 @@ double FAudio_log10(double x);
 double FAudio_sqrt(double x);
 double FAudio_acos(double x);
 double FAudio_ceil(double x);
-double FAudio_abs(double x);
+double FAudio_fabs(double x);
 
 float FAudio_sqrtf(float x);
 float FAudio_acosf(float x);
+float FAudio_fabsf(float x);
 
 uint32_t FAudio_timems();
 

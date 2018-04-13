@@ -543,7 +543,7 @@ double FAudio_ceil(double x)
 	return SDL_ceil(x);
 }
 
-double FAudio_abs(double x)
+double FAudio_fabs(double x)
 {
 	return SDL_fabs(x);
 }
@@ -556,6 +556,11 @@ float FAudio_sqrtf(float x)
 float FAudio_acosf(float x)
 {
 	return SDL_acosf(x);
+}
+
+float FAudio_fabsf(float x)
+{
+	return SDL_fabsf(x);
 }
 
 uint32_t FAudio_timems()
