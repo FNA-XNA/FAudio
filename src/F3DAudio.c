@@ -78,7 +78,6 @@ void F3DAudioCalculate(
 ) {
 	F3DAUDIO_VECTOR emitterToListener;
 	float scaledSpeedOfSound;
-	float projectedListenerVelocity, projectedEmitterVelocity;
 #if 0 /* TODO: F3DAUDIO_CALCULATE_MATRIX */
 	uint32_t i;
 	float *matrix = pDSPSettings->pMatrixCoefficients;
@@ -145,30 +144,33 @@ void F3DAudioCalculate(
 		{
 			scaledSpeedOfSound = INSTANCE_SPEEDOFSOUND / pEmitter->DopplerScaler;
 
-			projectedListenerVelocity = (
+			/* Project... */
+			pDSPSettings->ListenerVelocityComponent = (
 				(emitterToListener.x * pListener->Velocity.x) +
 				(emitterToListener.y * pListener->Velocity.y) +
 				(emitterToListener.z * pListener->Velocity.z)
 			) / pDSPSettings->EmitterToListenerDistance;
-			projectedEmitterVelocity = (
+			pDSPSettings->EmitterVelocityComponent = (
 				(emitterToListener.x * pEmitter->Velocity.x) +
 				(emitterToListener.y * pEmitter->Velocity.y) +
 				(emitterToListener.z * pEmitter->Velocity.z)
 			) / pDSPSettings->EmitterToListenerDistance;
 
-			projectedListenerVelocity = FAudio_min(
-				projectedListenerVelocity,
+			/* Clamp... */
+			pDSPSettings->ListenerVelocityComponent = FAudio_min(
+				pDSPSettings->ListenerVelocityComponent,
 				scaledSpeedOfSound
 			);
-			projectedEmitterVelocity = FAudio_min(
-				projectedEmitterVelocity,
+			pDSPSettings->EmitterVelocityComponent = FAudio_min(
+				pDSPSettings->EmitterVelocityComponent,
 				scaledSpeedOfSound
 			);
 
+			/* ... then Multiply. */
 			pDSPSettings->DopplerFactor = (
-				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * projectedListenerVelocity
+				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * pDSPSettings->ListenerVelocityComponent
 			) / (
-				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * projectedEmitterVelocity
+				INSTANCE_SPEEDOFSOUND - pEmitter->DopplerScaler * pDSPSettings->EmitterVelocityComponent
 			);
 			if (isnan(pDSPSettings->DopplerFactor))
 			{
@@ -182,9 +184,6 @@ void F3DAudioCalculate(
 				4.0f
 			);
 		}
-
-		/* TODO: EmitterVelocityComponent */
-		/* TODO: ListenerVelocityComponent */
 	}
 
 	/* OrientationAngle */
