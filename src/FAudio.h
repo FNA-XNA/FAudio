@@ -79,6 +79,8 @@ typedef uint32_t FAudioProcessor;
 
 /* Structures */
 
+#pragma pack(push, 1)
+
 typedef struct FAudioGUID
 {
 	uint32_t Data1;
@@ -87,7 +89,6 @@ typedef struct FAudioGUID
 	uint8_t Data4[8];
 } FAudioGUID;
 
-#pragma pack(push, 1)
 typedef struct FAudioWaveFormatEx
 {
 	uint16_t wFormatTag;
@@ -136,7 +137,6 @@ typedef struct FAudioADPCMWaveFormat
 	 * }
 	 */
 } FAudioADPCMWaveFormat;
-#pragma pack(pop)
 
 typedef struct FAudioDeviceDetails
 {
@@ -238,6 +238,8 @@ typedef struct FAudioDebugConfiguration
 	uint8_t LogFunctionName;
 	uint8_t LogTiming;
 } FAudioDebugConfiguration;
+
+#pragma pack(pop)
 
 /* Constants */
 

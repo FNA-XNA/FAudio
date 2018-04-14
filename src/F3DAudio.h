@@ -142,6 +142,8 @@ typedef uint8_t F3DAUDIO_HANDLE[F3DAUDIO_HANDLE_BYTESIZE];
 
 /* Structures */
 
+#pragma pack(push, 1)
+
 typedef struct F3DAUDIO_VECTOR
 {
 	float x;
@@ -218,6 +220,8 @@ typedef struct F3DAUDIO_DSP_SETTINGS
 	float EmitterVelocityComponent;
 	float ListenerVelocityComponent;
 } F3DAUDIO_DSP_SETTINGS;
+
+#pragma pack(pop)
 
 /* Functions */
 
