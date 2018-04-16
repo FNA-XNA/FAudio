@@ -31,8 +31,6 @@
 #include <float.h> /* Adrien: required for FLT_MIN/FLT_MAX */
 
 
-
-
  // TODO: For development only. Remove afterwards.
 #if defined(_MSC_VER)
 #define BREAK() __debugbreak()
@@ -57,6 +55,8 @@
 
 #define ARRAY_COUNT(x) (sizeof(x) / sizeof(x[0]))
 
+#define LERP(a, x, y) ((1.0f - a) * x + a * y)
+
 /*
  * PARAMETER CHECK MACROS
  */
@@ -65,7 +65,10 @@
 // TODO: to be changed to something different after dev
 #if F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE
 #include <stdio.h>
-#define OUTPUT_DEBUG_STRING(s) do { fprintf(stderr, "%s", s); fflush(stderr); } while(0)
+// #define OUTPUT_DEBUG_STRING(s) do { fprintf(stderr, "%s", s); fflush(stderr); } while(0)
+#pragma comment(lib, "Kernel32.lib")
+void __stdcall OutputDebugStringA(const char* lpOutputString);
+#define OUTPUT_DEBUG_STRING(s) do { OutputDebugStringA(s); } while(0)
 #else
 #define OUTPUT_DEBUG_STRING(s) do {} while(0)
 #endif
@@ -121,7 +124,10 @@ static F3DAUDIO_VECTOR VectorSub(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return Vec(u.x - v.x, u.y - v.y, u.z - v.z);
 }
 
-#if 0
+static F3DAUDIO_VECTOR VectorScale(F3DAUDIO_VECTOR u, float s) {
+    return Vec(u.x * s, u.y * s, u.z * s);
+}
+
 static F3DAUDIO_VECTOR VectorCross(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return Vec(u.y*v.z - u.z*v.y, u.z*v.x - u.x*v.z, u.x*v.y - u.y*v.x);
 }
@@ -129,7 +135,6 @@ static F3DAUDIO_VECTOR VectorCross(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
 static float VectorSquareLength(F3DAUDIO_VECTOR v) {
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
-#endif
 
 static float VectorLength(F3DAUDIO_VECTOR v) {
     return FAudio_sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -140,6 +145,7 @@ static float VectorDot(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
 }
 
 /* F3DAUDIO_HANDLE Structure */
+/* FIXME: may cause aliasing problems */
 #define SPEAKERMASK(Instance)       *((uint32_t*)   &Instance[0])
 #define SPEAKERCOUNT(Instance)      *((uint32_t*)   &Instance[4])
 #define UNKNOWN_PARAM(Instance)     *((uint32_t*)   &Instance[8])
@@ -148,13 +154,10 @@ static float VectorDot(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
 
 /* -Adrien
  * first 4 bytes = channel mask
- * next 4 = some kind of value derived from channel mask
- * next 4 = again
+ * next 4 = number of speakers in the configuration
+ * next 4 = bit 1 set if config has LFE speaker. bit 0 set if config has front center speaker.
  * next 4 = speed of sound as specified by user arguments
- * next 4 = speed of sound, minus some small epsilon. Perhaps a trick to not deal with denormals?
- *
- * I have no idea why they do this. I'll investigate further,
- * but I don't think that's too important for now.
+ * next 4 = speed of sound, minus 1 ULP. Why?
  * TODO: change to a proper struct?
  * ASK: do we care about maintaining strict binary compatibility with X3DAudio?
  */
@@ -187,7 +190,7 @@ int F3DAudioCheckInitParams(
             break;
         }
     }
-    /* Adrien: The docs don't clearly say this, but the debug dll DOES check it. */
+    /* Adrien: The docs don't clearly say this, but the debug dll does check it. */
     PARAM_CHECK(speakerMaskIsValid == 1, "SpeakerChannelMask is invalid. "
         "Needs to be one of MONO, STEREO, 2POINT1, QUAD, SURROUND, 4POINT1,"
         "5POINT1, 5POINT1_SURROUND, 7POINT1 or 7POINT1_SURROUND.");
@@ -250,12 +253,31 @@ void F3DAudioInitialize(
     ADJUSTED_SPEEDOFSOUND(Instance) = epsilonHack.f;
 }
 
-static float GetConeAttenuation(F3DAUDIO_CONE* pCone, F3DAUDIO_VECTOR pos, F3DAUDIO_VECTOR orient) {
-    return 1.0; // TODO
+#define CONE_NULL_DISTANCE_TOLERANCE 1e-7 /* Adrien: determined experimentally */
+static float ComputeConeParameter(
+    float distance,
+    float angle,
+    float innerHalfConeAngle,
+    float outerHalfConeAngle,
+    float innerParam,
+    float outerParam
+) {
+    if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= innerHalfConeAngle)
+    {
+        return innerParam;
+    }
+
+    if (angle <= outerHalfConeAngle)
+    {
+        float alpha = (angle - innerHalfConeAngle) / (outerHalfConeAngle - innerHalfConeAngle);
+        return LERP(alpha, innerParam, outerParam);
+    }
+
+    return outerParam;
 }
 
 /* Adrien: notes from MSDN
- * "The listener and emitter values must be valid. Floating-point specials (NaN, QNaN, +INF, -INF) can cause the entire audio output to go silent if introduced into a running audio graph."
+ * "The listener and emitter values must be valid. Floating-point specials (NaN, QNaN, +INF, -INF) can cause the entire audio output to go silent if introduced into a running audio graph." TODO: add paranoid checks
  *
  * Listener:
  *  - if pCone is NULL use OrientFront for matrix and delay. WHen pCone isn't NULL, OrientFront is used for matrix, LPF (direct and reverb). What about delay??
@@ -315,6 +337,11 @@ int F3DAudioCheckCalculateParams(
     POINTER_CHECK(pEmitter);
     POINTER_CHECK(pDSPSettings);
 
+    if (Flags & F3DAUDIO_CALCULATE_MATRIX)
+    {
+        POINTER_CHECK(pDSPSettings->pMatrixCoefficients);
+    }
+
     ChannelCount = SPEAKERCOUNT(Instance);
     PARAM_CHECK(pDSPSettings->DstChannelCount == ChannelCount, "Invalid channel count");
     PARAM_CHECK(pDSPSettings->SrcChannelCount == pEmitter->ChannelCount, "Invalid channel count");
@@ -369,13 +396,13 @@ static void CalculateMatrix(
     uint32_t Flags,
     const F3DAUDIO_LISTENER *pListener,
     const F3DAUDIO_EMITTER *pEmitter,
-    float* MatrixCoefficients,
     uint32_t SrcChannelCount,
-    uint32_t DstChannelCount
+    uint32_t DstChannelCount,
+    F3DAUDIO_VECTOR emitterToListener,
+    float eToLDistance,
+    float* MatrixCoefficients
 ) {
-    F3DAUDIO_VECTOR listenerToEmitter;
-    float attenuation;
-    float distance;
+    float attenuation = 1.0f;
 
     if (DstChannelCount > 1 || SrcChannelCount > 1)
     {
@@ -383,38 +410,113 @@ static void CalculateMatrix(
         return;
     }
 
-    // TODO: reuse from F3DAudioCalculate rather than recompute?
-    listenerToEmitter = VectorSub(pEmitter->Position, pListener->Position);
+    // TODO: Replace with distance curve calculation
+    if ((eToLDistance / pEmitter->CurveDistanceScaler) >= 1.0f)
+    {
+        attenuation = pEmitter->CurveDistanceScaler / eToLDistance;
+    }
 
-    distance = VectorLength(listenerToEmitter);
-    if ((distance / pEmitter->CurveDistanceScaler) >= 1.0f)
-    {
-        attenuation = pEmitter->CurveDistanceScaler / distance;
-    }
-    else
-    {
-        attenuation = 1.0f;
-    }
-    // TODO: triple check this...
-    // TODO: careful with angle calculations required by cones if distance is close to zero...
-    {
-        float emitterConeAttenuation = GetConeAttenuation(pEmitter->pCone, listenerToEmitter, pEmitter->OrientFront);
-        float listenerConeAttenuation = GetConeAttenuation(pListener->pCone, listenerToEmitter, pListener->OrientFront);
 
-        attenuation *= emitterConeAttenuation;
-        attenuation *= listenerConeAttenuation;
+    if (pListener->pCone)
+    {
+        /* Adrien: negate the dot product because we need listenerToEmitter in this case */
+        float angle = FAudio_acosf(-1.0f * VectorDot(pListener->OrientFront, emitterToListener) / eToLDistance);
+        float listenerConeParam = ComputeConeParameter(
+            eToLDistance,
+            angle,
+            pListener->pCone->InnerAngle / 2.0f,
+            pListener->pCone->OuterAngle / 2.0f,
+            pListener->pCone->InnerVolume,
+            pListener->pCone->OuterVolume
+        );
+        attenuation *= listenerConeParam;
     }
+
+    if (pEmitter->pCone)
+    {
+        float angle = FAudio_acosf(VectorDot(pEmitter->OrientFront, emitterToListener) / eToLDistance);
+        float emitterConeParam = ComputeConeParameter(
+            eToLDistance,
+            angle,
+            pEmitter->pCone->InnerAngle / 2.0f,
+            pEmitter->pCone->OuterAngle / 2.0f,
+            pEmitter->pCone->InnerVolume,
+            pEmitter->pCone->OuterVolume
+        );
+        attenuation *= emitterConeParam;
+    }
+
+    // TODO: diffuse
     MatrixCoefficients[0] = attenuation;
 
-    // Adrien: X3DAUDIO_CALCULATE_REDIRECT_TO_LFE / X3DAUDIO_CALCULATE_ZEROCENTER should be easy to implement.
-    if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
-    {
-        UNIMPLEMENTED();
-    }
 
     if (Flags & F3DAUDIO_CALCULATE_ZEROCENTER)
     {
+        // Fills the center channel with silence. This flag allows you to keep a 6-channel matrix so you do not have to remap the channels, but the center channel will be silent. This flag is only valid if you also set X3DAUDIO_CALCULATE_MATRIX.
         UNIMPLEMENTED();
+    }
+
+    if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
+    {
+         // Applies an equal mix of all source channels to a low frequency effect (LFE) destination channel. It only applies to matrix calculations with a source that does not have an LFE channel and a destination that does have an LFE channel. This flag is only valid if you also set X3DAUDIO_CALCULATE_MATRIX.
+        UNIMPLEMENTED();
+    }
+}
+
+/* DopplerPitchScalar
+ * Adapted from algorithm published as a part of the webaudio specification:
+ * https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-doppler-shift
+ * -Chad
+ */
+static void CalculateDoppler(
+    float SpeedOfSound,
+    const F3DAUDIO_LISTENER* pListener,
+    const F3DAUDIO_EMITTER* pEmitter,
+    F3DAUDIO_VECTOR emitterToListener,
+    float eToLDistance,
+    float* listenerVelocityComponent,
+    float* emitterVelocityComponent,
+    float* DopplerFactor
+) {
+    // FIXME: div by zero here if emitter and listener at same pos -Adrien
+    *DopplerFactor = 1.0f;
+    if (pEmitter->DopplerScaler > 0.0f)
+    {
+        float scaledSpeedOfSound;
+        scaledSpeedOfSound = SpeedOfSound / pEmitter->DopplerScaler;
+
+        /* Project... */
+        *listenerVelocityComponent =
+            VectorDot(emitterToListener, pListener->Velocity) / eToLDistance;
+        *emitterVelocityComponent =
+            VectorDot(emitterToListener, pEmitter->Velocity) / eToLDistance;
+
+        /* Clamp... */
+        *listenerVelocityComponent = FAudio_min(
+            *listenerVelocityComponent,
+            scaledSpeedOfSound
+        );
+        *emitterVelocityComponent = FAudio_min(
+            *emitterVelocityComponent,
+            scaledSpeedOfSound
+        );
+
+        *DopplerFactor = (
+            SpeedOfSound - pEmitter->DopplerScaler * *listenerVelocityComponent
+        ) / (
+            SpeedOfSound - pEmitter->DopplerScaler * *emitterVelocityComponent
+        );
+        if (isnan(*DopplerFactor))
+        {
+            *DopplerFactor = 1.0f;
+        }
+
+        /* Limit the pitch shifting to 2 octaves up and 1 octave down */
+        *DopplerFactor = FAudio_clamp(
+            *DopplerFactor,
+            0.5f,
+            4.0f
+        );
     }
 }
 
@@ -457,33 +559,33 @@ void F3DAudioCalculate(
     F3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
     F3DAUDIO_VECTOR emitterToListener;
-    uint32_t ChannelMask, ChannelCount;
+    float eToLDistance;
 
     /* Distance */
-    emitterToListener.x = pListener->Position.x - pEmitter->Position.x;
-    emitterToListener.y = pListener->Position.y - pEmitter->Position.y;
-    emitterToListener.z = pListener->Position.z - pEmitter->Position.z;
-    pDSPSettings->EmitterToListenerDistance = VectorLength(emitterToListener);
+    emitterToListener = VectorSub(pListener->Position, pEmitter->Position);
 
-    ChannelMask = SPEAKERMASK(Instance);
-    ChannelCount = SPEAKERCOUNT(Instance);
+    eToLDistance = VectorLength(emitterToListener);
+    pDSPSettings->EmitterToListenerDistance = eToLDistance;
+
     F3DAudioCheckCalculateParams(Instance, pListener, pEmitter, Flags, pDSPSettings);
 
     if (Flags & F3DAUDIO_CALCULATE_MATRIX)
     {
         CalculateMatrix(
-            ChannelMask,
+            SPEAKERMASK(Instance),
             Flags,
             pListener,
             pEmitter,
-            pDSPSettings->pMatrixCoefficients,
             pDSPSettings->SrcChannelCount,
-            pDSPSettings->DstChannelCount);
+            pDSPSettings->DstChannelCount,
+            emitterToListener,
+            eToLDistance,
+            pDSPSettings->pMatrixCoefficients
+        );
     }
 
     if (Flags & F3DAUDIO_CALCULATE_DELAY)
     {
-        //CalculateDelay(pDSPSettings->pDelayTimes, pDSPSettings->DstChannelCount);
         UNIMPLEMENTED();
     }
 
@@ -502,75 +604,27 @@ void F3DAudioCalculate(
         UNIMPLEMENTED();
     }
 
-    /* DopplerPitchScalar
-     * Adapted from algorithm published as a part of the webaudio specification:
-     * https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-doppler-shift
-     * -Chad
-     */
-
-     // Adrien: split into different func
     if (Flags & F3DAUDIO_CALCULATE_DOPPLER)
     {
-        // Adrien: div by zero problem here if emitter and listener at same pos...
-        pDSPSettings->DopplerFactor = 1.0f;
-        if (pEmitter->DopplerScaler > 0.0f)
-        {
-            float scaledSpeedOfSound;
-            scaledSpeedOfSound = SPEEDOFSOUND(Instance) / pEmitter->DopplerScaler;
+        CalculateDoppler(
+            SPEEDOFSOUND(Instance),
+            pListener,
+            pEmitter,
+            emitterToListener,
+            eToLDistance,
+            &pDSPSettings->ListenerVelocityComponent,
+            &pDSPSettings->EmitterVelocityComponent,
+            &pDSPSettings->DopplerFactor
+        );
 
-            /* Project... */
-            pDSPSettings->ListenerVelocityComponent = (
-                (emitterToListener.x * pListener->Velocity.x) +
-                (emitterToListener.y * pListener->Velocity.y) +
-                (emitterToListener.z * pListener->Velocity.z)
-                ) / pDSPSettings->EmitterToListenerDistance;
-            pDSPSettings->EmitterVelocityComponent = (
-                (emitterToListener.x * pEmitter->Velocity.x) +
-                (emitterToListener.y * pEmitter->Velocity.y) +
-                (emitterToListener.z * pEmitter->Velocity.z)
-                ) / pDSPSettings->EmitterToListenerDistance;
-
-            /* Clamp... */
-            pDSPSettings->ListenerVelocityComponent = FAudio_min(
-                pDSPSettings->ListenerVelocityComponent,
-                scaledSpeedOfSound
-            );
-            pDSPSettings->EmitterVelocityComponent = FAudio_min(
-+               pDSPSettings->EmitterVelocityComponent,
-                scaledSpeedOfSound
-            );
-
-            pDSPSettings->DopplerFactor = (
-                SPEEDOFSOUND(Instance) - pEmitter->DopplerScaler * pDSPSettings->ListenerVelocityComponent
-            ) / (
-                SPEEDOFSOUND(Instance) - pEmitter->DopplerScaler * pDSPSettings->EmitterVelocityComponent
-            );
-            if (isnan(pDSPSettings->DopplerFactor))
-            {
-                pDSPSettings->DopplerFactor = 1.0f;
-            }
-
-            /* Limit the pitch shifting to 2 octaves up and 1 octave down */
-            pDSPSettings->DopplerFactor = FAudio_clamp(
-                pDSPSettings->DopplerFactor,
-                0.5f,
-                4.0f
-            );
-        }
     }
 
     /* OrientationAngle */
-    /* As it is implemented, this needs to happen LAST, because it
-     * modifies the emitterToListener vector used elsewhere. */
     if (Flags & F3DAUDIO_CALCULATE_EMITTER_ANGLE)
     {
-        emitterToListener.x /= pDSPSettings->EmitterToListenerDistance;
-        emitterToListener.y /= pDSPSettings->EmitterToListenerDistance;
-        emitterToListener.z /= pDSPSettings->EmitterToListenerDistance;
+        /* Note: OrientFront is normalized. */
         pDSPSettings->EmitterToListenerAngle = FAudio_acosf(
-            (emitterToListener.x * pListener->OrientFront.x) +
-            (emitterToListener.y * pListener->OrientFront.y) +
-            (emitterToListener.z * pListener->OrientFront.z)
+            VectorDot(emitterToListener, pEmitter->OrientFront) / eToLDistance
         );
     }
 }
