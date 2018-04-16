@@ -257,19 +257,33 @@ void F3DAudioInitialize(
 static float ComputeConeParameter(
     float distance,
     float angle,
-    float innerHalfConeAngle,
-    float outerHalfConeAngle,
+    float innerAngle,
+    float outerAngle,
     float innerParam,
     float outerParam
 ) {
-    if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= innerHalfConeAngle)
+    float halfInnerAngle, halfOuterAngle;
+    /* Quote X3DAudio.h: "Set both cone angles to 0 or X3DAUDIO_2PI for omnidirectionality using only the outer or inner values respectively." */
+    if (innerAngle == 0.0f && outerAngle == 0.0f)
+    {
+        return outerParam;
+    }
+
+    if (innerAngle == F3DAUDIO_2PI && outerAngle == F3DAUDIO_2PI)
     {
         return innerParam;
     }
 
-    if (angle <= outerHalfConeAngle)
+    halfInnerAngle = innerAngle / 2.0f;
+    if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= halfInnerAngle)
     {
-        float alpha = (angle - innerHalfConeAngle) / (outerHalfConeAngle - innerHalfConeAngle);
+        return innerParam;
+    }
+
+    halfOuterAngle = outerAngle / 2.0f;
+    if (angle <= halfOuterAngle)
+    {
+        float alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
         return LERP(alpha, innerParam, outerParam);
     }
 
@@ -308,6 +322,11 @@ static float ComputeConeParameter(
  */
 
 static int CheckCone(F3DAUDIO_CONE *pCone) {
+    if (!pCone)
+    {
+        return PARAM_CHECK_OK;
+    }
+
     FLOAT_BETWEEN_CHECK(pCone->InnerAngle, 0.0f, F3DAUDIO_2PI);
     FLOAT_BETWEEN_CHECK(pCone->OuterAngle, pCone->InnerAngle, F3DAUDIO_2PI);
 
@@ -319,6 +338,25 @@ static int CheckCone(F3DAUDIO_CONE *pCone) {
 
     FLOAT_BETWEEN_CHECK(pCone->InnerReverb, 0.0f, 2.0f);
     FLOAT_BETWEEN_CHECK(pCone->OuterReverb, 0.0f, 2.0f);
+
+    return PARAM_CHECK_OK;
+}
+
+static int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve) {
+    F3DAUDIO_DISTANCE_CURVE_POINT *points;
+    uint32_t i;
+    if (!pCurve)
+    {
+        return PARAM_CHECK_OK;
+    }
+
+    points = pCurve->pPoints;
+    PARAM_CHECK(pCurve->PointCount >= 2, "Invalid number of points for curve");
+
+    for (i = 0; i < (pCurve->PointCount - 1); ++i)
+    {
+        PARAM_CHECK(points[i].Distance < points[i].Distance, "Curve points must be in strict ascending order");
+    }
 
     return PARAM_CHECK_OK;
 }
@@ -343,12 +381,12 @@ int F3DAudioCheckCalculateParams(
     }
 
     ChannelCount = SPEAKERCOUNT(Instance);
-    PARAM_CHECK(pDSPSettings->DstChannelCount == ChannelCount, "Invalid channel count");
-    PARAM_CHECK(pDSPSettings->SrcChannelCount == pEmitter->ChannelCount, "Invalid channel count");
+    PARAM_CHECK(pDSPSettings->DstChannelCount == ChannelCount, "Invalid channel count, DSP settings and speaker configuration must agree");
+    PARAM_CHECK(pDSPSettings->SrcChannelCount == pEmitter->ChannelCount, "Invalid channel count, DSP settings and emitter must agree");
 
     if (pListener->pCone)
     {
-        CheckCone(pListener->pCone);
+        PARAM_CHECK(CheckCone(pListener->pCone) == PARAM_CHECK_OK, "Invalid listener cone");
     }
     VECTOR_NORMAL_CHECK(pListener->OrientFront);
     VECTOR_NORMAL_CHECK(pListener->OrientTop);
@@ -357,7 +395,7 @@ int F3DAudioCheckCalculateParams(
     if (pEmitter->pCone)
     {
         VECTOR_NORMAL_CHECK(pEmitter->OrientFront);
-        CheckCone(pEmitter->pCone);
+        PARAM_CHECK(CheckCone(pEmitter->pCone) == PARAM_CHECK_OK, "Invalid emitter cone");
     }
     else if (Flags & F3DAUDIO_CALCULATE_EMITTER_ANGLE)
     {
@@ -384,9 +422,15 @@ int F3DAudioCheckCalculateParams(
             }
         }
     }
-    // TODO: validate curves
     FLOAT_BETWEEN_CHECK(pEmitter->CurveDistanceScaler, FLT_MIN, FLT_MAX);
     FLOAT_BETWEEN_CHECK(pEmitter->DopplerScaler, 0.0f, FLT_MAX);
+
+
+    PARAM_CHECK(CheckCurve(pEmitter->pVolumeCurve) == PARAM_CHECK_OK, "Invalid Volume curve");
+    PARAM_CHECK(CheckCurve(pEmitter->pLFECurve) == PARAM_CHECK_OK, "Invalid LFE curve");
+    PARAM_CHECK(CheckCurve(pEmitter->pLPFDirectCurve) == PARAM_CHECK_OK, "Invalid LPFDirect curve");
+    PARAM_CHECK(CheckCurve(pEmitter->pLPFReverbCurve) == PARAM_CHECK_OK, "Invalid LPFReverb curve");
+    PARAM_CHECK(CheckCurve(pEmitter->pReverbCurve) == PARAM_CHECK_OK, "Invalid Reverb curve");
 
     return PARAM_CHECK_OK;
 }
@@ -424,8 +468,8 @@ static void CalculateMatrix(
         float listenerConeParam = ComputeConeParameter(
             eToLDistance,
             angle,
-            pListener->pCone->InnerAngle / 2.0f,
-            pListener->pCone->OuterAngle / 2.0f,
+            pListener->pCone->InnerAngle,
+            pListener->pCone->OuterAngle,
             pListener->pCone->InnerVolume,
             pListener->pCone->OuterVolume
         );
@@ -438,8 +482,8 @@ static void CalculateMatrix(
         float emitterConeParam = ComputeConeParameter(
             eToLDistance,
             angle,
-            pEmitter->pCone->InnerAngle / 2.0f,
-            pEmitter->pCone->OuterAngle / 2.0f,
+            pEmitter->pCone->InnerAngle,
+            pEmitter->pCone->OuterAngle,
             pEmitter->pCone->InnerVolume,
             pEmitter->pCone->OuterVolume
         );
