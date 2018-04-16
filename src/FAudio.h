@@ -688,10 +688,6 @@ struct FAudioVoiceCallback
 	OnVoiceProcessingPassStartFunc OnVoiceProcessingPassStart;
 };
 
-/* Functions */
-
-FAUDIOAPI uint32_t FAudioCreateReverb(void **ppApo, uint32_t Flags);
-
 /* FAudio I/O API */
 
 typedef size_t (FAUDIOCALL * FAudio_readfunc)(

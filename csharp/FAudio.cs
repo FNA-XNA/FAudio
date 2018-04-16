@@ -697,13 +697,23 @@ public static class FAudio
 		public IntPtr OnVoiceProcessingPassStart; /* OnVoiceProcessingPassStartFunc */
 	}
 
-	/* Functions */
+	#endregion
 
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FAudioCreateReverb(
-		out IntPtr ppApo, /* void** */
-		uint Flags
-	);
+	#region FAudioFX API
+
+	/* TODO */
+
+	#endregion
+
+	#region FAPO API
+
+	/* TODO */
+
+	#endregion
+
+	#region FAPOBase API
+
+	/* TODO */
 
 	#endregion
 

@@ -19,7 +19,9 @@ CFLAGS += -g -Wall -pedantic -fpic -fPIC
 FAUDIOSRC = \
 	src/F3DAudio.c \
 	src/FACT3D.c \
+	src/FAPOBase.c \
 	src/FAudio.c \
+	src/FAudioFX.c \
 	src/FAudio_internal.c \
 	src/FACT.c \
 	src/FACT_internal.c \
