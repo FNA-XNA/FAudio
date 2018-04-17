@@ -33,6 +33,8 @@
 typedef struct FAudioFXVolumeMeter
 {
 	FAPOBaseParameters base;
+
+	/* TODO */
 } FAudioFXVolumeMeter;
 
 void FreeVolumeMeter(void* fapo)
@@ -54,6 +56,8 @@ uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 typedef struct FAudioFXReverb
 {
 	FAPOBaseParameters base;
+
+	/* TODO */
 } FAudioFXReverb;
 
 void FreeReverb(void* fapo)

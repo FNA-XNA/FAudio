@@ -25,6 +25,7 @@
  */
 
 #include "FAPOBase.h"
+#include "FAudio_internal.h"
 
 /* FAPOBase Interface */
 
@@ -82,6 +83,11 @@ uint32_t FAPOBase_GetRegistrationProperties(
 	FAPOBase *fapo,
 	FAPORegistrationProperties **ppRegistrationProperties
 ) {
+	FAudio_memcpy(
+		ppRegistrationProperties,
+		fapo->m_pRegistrationProperties,
+		sizeof(FAPORegistrationProperties)
+	);
 	return 0;
 }
 
@@ -91,6 +97,7 @@ uint32_t FAPOBase_IsInputFormatSupported(
 	const FAudioWaveFormatEx *pRequestedInputFormat,
 	FAudioWaveFormatEx **ppSupportedInputFormat
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -100,6 +107,7 @@ uint32_t FAPOBase_IsOutputFormatSupported(
 	const FAudioWaveFormatEx *pRequestedOutputFormat,
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -108,6 +116,7 @@ uint32_t FAPOBase_Initialize(
 	const void* pData,
 	uint32_t DataByteSize
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -122,11 +131,13 @@ uint32_t FAPOBase_LockForProcess(
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 ) {
+	/* TODO */
 	return 0;
 }
 
 void FAPOBase_UnlockForProcess(FAPOBase *fapo)
 {
+	/* TODO */
 }
 
 void FAPOBase_Process(
@@ -137,6 +148,7 @@ void FAPOBase_Process(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 ) {
+	/* TODO */
 }
 
 uint32_t FAPOBase_CalcInputFrames(FAPOBase *fapo, uint32_t OutputFrameCount)
@@ -154,6 +166,7 @@ uint32_t FAPOBase_ValidateFormatDefault(
 	FAudioWaveFormatEx *pFormat,
 	uint8_t fOverwrite
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -162,6 +175,7 @@ uint32_t FAPOBase_ValidateFormatPair(
 	FAudioWaveFormatEx *pRequestedFormat,
 	uint8_t fOverwrite
 ) {
+	/* TODO */
 	return 0;
 }
 
@@ -173,6 +187,7 @@ void FAPOBase_ProcessThru(
 	uint16_t OutputChannelCount,
 	uint8_t MixWithOutput
 ) {
+	/* TODO */
 }
 
 /* FAPOBaseParameters Interface */
@@ -188,6 +203,10 @@ void CreateFAPOBaseParameters(
 	ASSIGN_VT(SetParameters)
 	ASSIGN_VT(GetParameters)
 	#undef ASSIGN_VT
+
+	/* Public Virtual Functions */
+	fapoParameters->OnSetParameters = (OnSetParametersFunc)
+		FAPOBaseParameters_OnSetParameters;
 
 	/* Private Variables */
 	fapoParameters->m_pParameterBlocks = NULL; /* FIXME */
@@ -216,6 +235,7 @@ void FAPOBaseParameters_SetParameters(
 	const void* pParameters,
 	uint32_t ParameterByteSize
 ) {
+	/* TODO */
 }
 
 void FAPOBaseParameters_GetParameters(
@@ -223,18 +243,28 @@ void FAPOBaseParameters_GetParameters(
 	const void* pParameters,
 	uint32_t ParameterByteSize
 ) {
+	/* TODO */
+}
+
+void FAPOBaseParameters_OnSetParameters(
+	const void* parameters,
+	uint32_t parametersSize
+) {
 }
 
 uint8_t FAPOBaseParameters_ParametersChanged(FAPOBaseParameters *fapoParameters)
 {
+	/* TODO */
 	return 0;
 }
 
 uint8_t* FAPOBaseParameters_BeginProcess(FAPOBaseParameters *fapoParameters)
 {
+	/* TODO */
 	return NULL;
 }
 
 void FAPOBaseParameters_EndProcess(FAPOBaseParameters *fapoParameters)
 {
+	/* TODO */
 }

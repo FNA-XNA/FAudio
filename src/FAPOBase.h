@@ -164,12 +164,20 @@ FAPOAPI void FAPOBase_ProcessThru(
 
 /* FAPOBaseParameters Interface */
 
+typedef void (FAPOCALL * OnSetParametersFunc)(
+	const void* parameters,
+	uint32_t parametersSize
+);
+
 #pragma pack(push, 8)
 typedef struct FAPOBaseParameters
 {
 	/* Base Classes/Interfaces */
 	FAPOBase base;
 	FAPOParameters parameters;
+
+	/* Public Virtual Functions */
+	OnSetParametersFunc OnSetParameters;
 
 	/* Private Variables */
 	uint8_t *m_pParameterBlocks;
@@ -203,6 +211,11 @@ FAPOAPI void FAPOBaseParameters_GetParameters(
 	FAPOBaseParameters *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
+);
+
+FAPOAPI void FAPOBaseParameters_OnSetParameters(
+	const void* parameters,
+	uint32_t parametersSize
 );
 
 FAPOAPI uint8_t FAPOBaseParameters_ParametersChanged(FAPOBaseParameters *fapoParameters);
