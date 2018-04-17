@@ -139,12 +139,14 @@ FAPOAPI uint32_t FAPOBase_ValidateFormatDefault(
 );
 
 FAPOAPI uint32_t FAPOBase_ValidateFormatPair(
+	FAPOBase *fapo,
 	const FAudioWaveFormatEx *pSupportedFormat,
 	FAudioWaveFormatEx *pRequestedFormat,
 	uint8_t fOverwrite
 );
 
 FAPOAPI void FAPOBase_ProcessThru(
+	FAPOBase *fapo,
 	void* pInputBuffer,
 	float *pOutputBuffer,
 	uint32_t FrameCount,
@@ -155,13 +157,17 @@ FAPOAPI void FAPOBase_ProcessThru(
 
 /* FAPOBaseParameters Interface */
 
+#pragma pack(push, 8)
+
+typedef struct FAPOBaseParameters FAPOBaseParameters;
+
 typedef void (FAPOCALL * OnSetParametersFunc)(
+	FAPOBaseParameters *fapoParameters,
 	const void* parameters,
 	uint32_t parametersSize
 );
 
-#pragma pack(push, 8)
-typedef struct FAPOBaseParameters
+struct FAPOBaseParameters
 {
 	/* Base Classes/Interfaces */
 	FAPOBase base;
@@ -178,7 +184,8 @@ typedef struct FAPOBaseParameters
 	uint32_t m_uParameterBlockByteSize;
 	uint8_t m_fNewerResultsReady;
 	uint8_t m_fProducer;
-} FAPOBaseParameters;
+};
+
 #pragma pack(pop)
 
 FAPOAPI void CreateFAPOBaseParameters(
@@ -208,6 +215,7 @@ FAPOAPI void FAPOBaseParameters_GetParameters(
 );
 
 FAPOAPI void FAPOBaseParameters_OnSetParameters(
+	FAPOBaseParameters *fapoParameters,
 	const void* parameters,
 	uint32_t parametersSize
 );

@@ -96,7 +96,32 @@ uint32_t FAPOBase_IsInputFormatSupported(
 	const FAudioWaveFormatEx *pRequestedInputFormat,
 	FAudioWaveFormatEx **ppSupportedInputFormat
 ) {
-	/* TODO */
+	if (	pRequestedInputFormat->wFormatTag != FAPOBASE_DEFAULT_FORMAT_TAG ||
+		pRequestedInputFormat->nChannels < FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS ||
+		pRequestedInputFormat->nChannels > FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS ||
+		pRequestedInputFormat->nSamplesPerSec < FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE ||
+		pRequestedInputFormat->nSamplesPerSec > FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE ||
+		pRequestedInputFormat->wBitsPerSample != FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE	)
+	{
+		if (ppSupportedInputFormat != NULL)
+		{
+			(*ppSupportedInputFormat)->wFormatTag =
+				FAPOBASE_DEFAULT_FORMAT_TAG;
+			(*ppSupportedInputFormat)->nChannels = FAudio_clamp(
+				pRequestedInputFormat->nChannels,
+				FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS,
+				FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS
+			);
+			(*ppSupportedInputFormat)->nSamplesPerSec = FAudio_clamp(
+				pRequestedInputFormat->nSamplesPerSec,
+				FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE,
+				FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE
+			);
+			(*ppSupportedInputFormat)->wBitsPerSample =
+				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
+		}
+		return 1;
+	}
 	return 0;
 }
 
@@ -106,7 +131,32 @@ uint32_t FAPOBase_IsOutputFormatSupported(
 	const FAudioWaveFormatEx *pRequestedOutputFormat,
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 ) {
-	/* TODO */
+	if (	pRequestedOutputFormat->wFormatTag != FAPOBASE_DEFAULT_FORMAT_TAG ||
+		pRequestedOutputFormat->nChannels < FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS ||
+		pRequestedOutputFormat->nChannels > FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS ||
+		pRequestedOutputFormat->nSamplesPerSec < FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE ||
+		pRequestedOutputFormat->nSamplesPerSec > FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE ||
+		pRequestedOutputFormat->wBitsPerSample != FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE	)
+	{
+		if (ppSupportedOutputFormat != NULL)
+		{
+			(*ppSupportedOutputFormat)->wFormatTag =
+				FAPOBASE_DEFAULT_FORMAT_TAG;
+			(*ppSupportedOutputFormat)->nChannels = FAudio_clamp(
+				pRequestedOutputFormat->nChannels,
+				FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS,
+				FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS
+			);
+			(*ppSupportedOutputFormat)->nSamplesPerSec = FAudio_clamp(
+				pRequestedOutputFormat->nSamplesPerSec,
+				FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE,
+				FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE
+			);
+			(*ppSupportedOutputFormat)->wBitsPerSample =
+				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
+		}
+		return 1;
+	}
 	return 0;
 }
 
@@ -115,7 +165,6 @@ uint32_t FAPOBase_Initialize(
 	const void* pData,
 	uint32_t DataByteSize
 ) {
-	/* TODO */
 	return 0;
 }
 
@@ -154,20 +203,72 @@ uint32_t FAPOBase_ValidateFormatDefault(
 	FAudioWaveFormatEx *pFormat,
 	uint8_t fOverwrite
 ) {
-	/* TODO */
+	if (	pFormat->wFormatTag != FAPOBASE_DEFAULT_FORMAT_TAG ||
+		pFormat->nChannels < FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS ||
+		pFormat->nChannels > FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS ||
+		pFormat->nSamplesPerSec < FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE ||
+		pFormat->nSamplesPerSec > FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE ||
+		pFormat->wBitsPerSample != FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE	)
+	{
+		if (fOverwrite)
+		{
+			pFormat->wFormatTag =
+				FAPOBASE_DEFAULT_FORMAT_TAG;
+			pFormat->nChannels = FAudio_clamp(
+				pFormat->nChannels,
+				FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS,
+				FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS
+			);
+			pFormat->nSamplesPerSec = FAudio_clamp(
+				pFormat->nSamplesPerSec,
+				FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE,
+				FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE
+			);
+			pFormat->wBitsPerSample =
+				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
+		}
+		return 1;
+	}
 	return 0;
 }
 
 uint32_t FAPOBase_ValidateFormatPair(
+	FAPOBase *fapo,
 	const FAudioWaveFormatEx *pSupportedFormat,
 	FAudioWaveFormatEx *pRequestedFormat,
 	uint8_t fOverwrite
 ) {
-	/* TODO */
+	if (	pRequestedFormat->wFormatTag != FAPOBASE_DEFAULT_FORMAT_TAG ||
+		pRequestedFormat->nChannels < FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS ||
+		pRequestedFormat->nChannels > FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS ||
+		pRequestedFormat->nSamplesPerSec < FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE ||
+		pRequestedFormat->nSamplesPerSec > FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE ||
+		pRequestedFormat->wBitsPerSample != FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE	)
+	{
+		if (fOverwrite)
+		{
+			pRequestedFormat->wFormatTag =
+				FAPOBASE_DEFAULT_FORMAT_TAG;
+			pRequestedFormat->nChannels = FAudio_clamp(
+				pRequestedFormat->nChannels,
+				FAPOBASE_DEFAULT_FORMAT_MIN_CHANNELS,
+				FAPOBASE_DEFAULT_FORMAT_MAX_CHANNELS
+			);
+			pRequestedFormat->nSamplesPerSec = FAudio_clamp(
+				pRequestedFormat->nSamplesPerSec,
+				FAPOBASE_DEFAULT_FORMAT_MIN_FRAMERATE,
+				FAPOBASE_DEFAULT_FORMAT_MAX_FRAMERATE
+			);
+			pRequestedFormat->wBitsPerSample =
+				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
+		}
+		return 1;
+	}
 	return 0;
 }
 
 void FAPOBase_ProcessThru(
+	FAPOBase *fapo,
 	void* pInputBuffer,
 	float *pOutputBuffer,
 	uint32_t FrameCount,
@@ -230,7 +331,11 @@ void FAPOBaseParameters_SetParameters(
 
 	/* TODO */
 
-	fapoParameters->OnSetParameters(pParameters, ParameterByteSize);
+	fapoParameters->OnSetParameters(
+		fapoParameters,
+		pParameters,
+		ParameterByteSize
+	);
 }
 
 void FAPOBaseParameters_GetParameters(
@@ -242,6 +347,7 @@ void FAPOBaseParameters_GetParameters(
 }
 
 void FAPOBaseParameters_OnSetParameters(
+	FAPOBaseParameters *fapoParameters,
 	const void* parameters,
 	uint32_t parametersSize
 ) {
