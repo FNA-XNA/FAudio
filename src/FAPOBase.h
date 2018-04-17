@@ -122,15 +122,6 @@ FAPOAPI uint32_t FAPOBase_LockForProcess(
 
 FAPOAPI void FAPOBase_UnlockForProcess(FAPOBase *fapo);
 
-FAPOAPI void FAPOBase_Process(
-	FAPOBase *fapo,
-	uint32_t InputProcessParameterCount,
-	const FAPOProcessBufferParameters* pInputProcessParameters,
-	uint32_t OutputProcessParameterCount,
-	FAPOProcessBufferParameters* pOutputProcessParameters,
-	uint8_t IsEnabled
-);
-
 FAPOAPI uint32_t FAPOBase_CalcInputFrames(
 	FAPOBase *fapo,
 	uint32_t OutputFrameCount

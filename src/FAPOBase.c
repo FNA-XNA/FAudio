@@ -43,7 +43,6 @@ void CreateFAPOBase(
 	ASSIGN_VT(Reset)
 	ASSIGN_VT(LockForProcess)
 	ASSIGN_VT(UnlockForProcess)
-	ASSIGN_VT(Process)
 	ASSIGN_VT(CalcInputFrames)
 	ASSIGN_VT(CalcOutputFrames)
 	#undef ASSIGN_VT
@@ -137,17 +136,6 @@ uint32_t FAPOBase_LockForProcess(
 
 void FAPOBase_UnlockForProcess(FAPOBase *fapo)
 {
-	/* TODO */
-}
-
-void FAPOBase_Process(
-	FAPOBase *fapo,
-	uint32_t InputProcessParameterCount,
-	const FAPOProcessBufferParameters* pInputProcessParameters,
-	uint32_t OutputProcessParameterCount,
-	FAPOProcessBufferParameters* pOutputProcessParameters,
-	uint8_t IsEnabled
-) {
 	/* TODO */
 }
 

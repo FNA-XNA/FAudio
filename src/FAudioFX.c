@@ -37,7 +37,18 @@ typedef struct FAudioFXVolumeMeter
 	/* TODO */
 } FAudioFXVolumeMeter;
 
-void FreeVolumeMeter(void* fapo)
+void FAudioFXVolumeMeter_Process(
+	FAudioFXVolumeMeter *fapo,
+	uint32_t InputProcessParameterCount,
+	const FAPOProcessBufferParameters* pInputProcessParameters,
+	uint32_t OutputProcessParameterCount,
+	FAPOProcessBufferParameters* pOutputProcessParameters,
+	uint8_t IsEnabled
+) {
+	/* TODO */
+}
+
+void FAudioFXVolumeMeter_Free(void* fapo)
 {
 	FAudio_free(fapo);
 }
@@ -45,8 +56,16 @@ void FreeVolumeMeter(void* fapo)
 uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 {
 	FAudioFXVolumeMeter *result = FAudio_malloc(sizeof(FAudioFXVolumeMeter));
-	CreateFAPOBaseParameters(&result->base, NULL);
-	result->base.base.Destructor = FreeVolumeMeter;
+	CreateFAPOBaseParameters(
+		&result->base,
+		NULL, /* FIXME */
+		NULL, /* FIXME */
+		0, /* sizeof(FAudioFXVolumeMeterLevels), */
+		1
+	);
+	result->base.base.base.Process = (ProcessFunc)
+		FAudioFXVolumeMeter_Process;
+	result->base.base.Destructor = FAudioFXVolumeMeter_Free;
 	*ppApo = result;
 	return 0;
 }
@@ -60,16 +79,40 @@ typedef struct FAudioFXReverb
 	/* TODO */
 } FAudioFXReverb;
 
-void FreeReverb(void* fapo)
+void FAudioFXReverb_Process(
+	FAudioFXVolumeMeter *fapo,
+	uint32_t InputProcessParameterCount,
+	const FAPOProcessBufferParameters* pInputProcessParameters,
+	uint32_t OutputProcessParameterCount,
+	FAPOProcessBufferParameters* pOutputProcessParameters,
+	uint8_t IsEnabled
+) {
+	/* TODO */
+}
+
+void FAudioFXReverb_Free(void* fapo)
 {
+	FAudioFXReverb *reverb = (FAudioFXReverb*) fapo;
+	FAudio_free(reverb->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }
 
 uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 {
 	FAudioFXReverb *result = FAudio_malloc(sizeof(FAudioFXReverb));
-	CreateFAPOBaseParameters(&result->base, NULL);
-	result->base.base.Destructor = FreeReverb;
+	uint8_t *params = FAudio_malloc(
+		sizeof(FAudioFXReverbParameters) * 3
+	);
+	CreateFAPOBaseParameters(
+		&result->base,
+		NULL, /* FIXME */
+		params,
+		sizeof(FAudioFXReverbParameters),
+		0
+	);
+	result->base.base.base.Process = (ProcessFunc)
+		FAudioFXReverb_Process;
+	result->base.base.Destructor = FAudioFXReverb_Free;
 	*ppApo = result;
 	return 0;
 }
