@@ -149,6 +149,9 @@ typedef struct F3DAUDIO_VECTOR
 	float z;
 } F3DAUDIO_VECTOR;
 
+
+#pragma pack(push, 1)
+
 typedef struct F3DAUDIO_DISTANCE_CURVE_POINT
 {
 	float Distance;
@@ -251,6 +254,8 @@ F3DAUDIOAPI int F3DAudioCheckCalculateParams(
 	uint32_t Flags,
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 );
+
+#pragma pack(pop)
 
 #ifdef __cplusplus
 }

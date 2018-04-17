@@ -253,43 +253,6 @@ void F3DAudioInitialize(
     ADJUSTED_SPEEDOFSOUND(Instance) = epsilonHack.f;
 }
 
-#define CONE_NULL_DISTANCE_TOLERANCE 1e-7 /* Adrien: determined experimentally */
-static float ComputeConeParameter(
-    float distance,
-    float angle,
-    float innerAngle,
-    float outerAngle,
-    float innerParam,
-    float outerParam
-) {
-    float halfInnerAngle, halfOuterAngle;
-    /* Quote X3DAudio.h: "Set both cone angles to 0 or X3DAUDIO_2PI for omnidirectionality using only the outer or inner values respectively." */
-    if (innerAngle == 0.0f && outerAngle == 0.0f)
-    {
-        return outerParam;
-    }
-
-    if (innerAngle == F3DAUDIO_2PI && outerAngle == F3DAUDIO_2PI)
-    {
-        return innerParam;
-    }
-
-    halfInnerAngle = innerAngle / 2.0f;
-    if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= halfInnerAngle)
-    {
-        return innerParam;
-    }
-
-    halfOuterAngle = outerAngle / 2.0f;
-    if (angle <= halfOuterAngle)
-    {
-        float alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
-        return LERP(alpha, innerParam, outerParam);
-    }
-
-    return outerParam;
-}
-
 /* Adrien: notes from MSDN
  * "The listener and emitter values must be valid. Floating-point specials (NaN, QNaN, +INF, -INF) can cause the entire audio output to go silent if introduced into a running audio graph." TODO: add paranoid checks
  *
@@ -351,7 +314,14 @@ static int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve) {
     }
 
     points = pCurve->pPoints;
+    POINTER_CHECK(points);
     PARAM_CHECK(pCurve->PointCount >= 2, "Invalid number of points for curve");
+
+    for (i = 0; i < pCurve->PointCount; ++i) {
+        FLOAT_BETWEEN_CHECK(points[i].Distance, 0.0f, 1.0f);
+    }
+    PARAM_CHECK(points[0].Distance == 0.0f, "First point in the curve must be at distance 0.0f");
+    PARAM_CHECK(points[pCurve->PointCount - 1].Distance == 1.0f, "Last point in the curve must be at distance 1.0f");
 
     for (i = 0; i < (pCurve->PointCount - 1); ++i)
     {
@@ -435,6 +405,69 @@ int F3DAudioCheckCalculateParams(
     return PARAM_CHECK_OK;
 }
 
+static float FindCurveParam(
+    F3DAUDIO_DISTANCE_CURVE *pCurve,
+    float normalizedDistance
+) {
+    float alpha, val;
+    F3DAUDIO_DISTANCE_CURVE_POINT* points = pCurve->pPoints;
+    uint32_t n_points = pCurve->PointCount;
+    /* Adrien: by definition, the first point in the curve must be 0.0f */
+    size_t i = 1;
+    while (i < n_points && normalizedDistance >= points[i].Distance) {
+        ++i;
+    }
+    if (i == n_points) {
+        return points[n_points - 1].DSPSetting;
+    }
+
+    alpha = (points[i].Distance - normalizedDistance) / (points[i].Distance - points[i - 1].Distance);
+
+    val = LERP(alpha, points[i].DSPSetting, points[i - 1].DSPSetting);
+    return val;
+}
+
+#define CONE_NULL_DISTANCE_TOLERANCE 1e-7 /* Adrien: determined experimentally */
+static float ComputeConeParameter(
+    float distance,
+    float angle,
+    float innerAngle,
+    float outerAngle,
+    float innerParam,
+    float outerParam
+) {
+    float halfInnerAngle, halfOuterAngle;
+    /* Quote X3DAudio.h: "Set both cone angles to 0 or X3DAUDIO_2PI for omnidirectionality using only the outer or inner values respectively." */
+    if (innerAngle == 0.0f && outerAngle == 0.0f)
+    {
+        return outerParam;
+    }
+
+    if (innerAngle == F3DAUDIO_2PI && outerAngle == F3DAUDIO_2PI)
+    {
+        return innerParam;
+    }
+
+    halfInnerAngle = innerAngle / 2.0f;
+    if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= halfInnerAngle)
+    {
+        return innerParam;
+    }
+
+    halfOuterAngle = outerAngle / 2.0f;
+    if (angle <= halfOuterAngle)
+    {
+        float alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
+        return LERP(alpha, innerParam, outerParam);
+    }
+
+    return outerParam;
+}
+
+// X3DAudio.h declares one, but the default (if emitter has NULL) volume curve is a *computed* inverse law, while on the other hand a curve leads to a piecewise linear function.
+// static F3DAUDIO_DISTANCE_CURVE_POINT DefaultVolumeCurvePoints[] = { {0.0f, 1.0f}, {1.0f, 0.0f} };
+// static F3DAUDIO_DISTANCE_CURVE DefaultVolumeCurve = { DefaultVolumeCurvePoints, ARRAY_COUNT(DefaultVolumeCurvePoints) };
+
 static void CalculateMatrix(
     uint32_t ChannelMask,
     uint32_t Flags,
@@ -447,6 +480,7 @@ static void CalculateMatrix(
     float* MatrixCoefficients
 ) {
     float attenuation = 1.0f;
+    float LFEattenuation = 1.0f;
 
     if (DstChannelCount > 1 || SrcChannelCount > 1)
     {
@@ -454,12 +488,27 @@ static void CalculateMatrix(
         return;
     }
 
-    // TODO: Replace with distance curve calculation
-    if ((eToLDistance / pEmitter->CurveDistanceScaler) >= 1.0f)
+    if (pEmitter->pVolumeCurve)
     {
-        attenuation = pEmitter->CurveDistanceScaler / eToLDistance;
+        float nd = eToLDistance / pEmitter->CurveDistanceScaler;
+        float val = FindCurveParam(pEmitter->pVolumeCurve, nd);
+        attenuation *= val;
+    }
+    else
+    {
+        if ((eToLDistance / pEmitter->CurveDistanceScaler) >= 1.0f)
+        {
+            attenuation = pEmitter->CurveDistanceScaler / eToLDistance;
+        }
     }
 
+    if (pEmitter->pLFECurve) {
+        UNIMPLEMENTED();
+    }
+    else
+    {
+        // TODO;
+    }
 
     if (pListener->pCone)
     {
