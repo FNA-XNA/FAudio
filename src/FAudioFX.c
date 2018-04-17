@@ -61,7 +61,10 @@ void FAudioFXVolumeMeter_Free(void* fapo)
 
 uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 {
+	/* Allocate... */
 	FAudioFXVolumeMeter *result = FAudio_malloc(sizeof(FAudioFXVolumeMeter));
+
+	/* Initialize... */
 	CreateFAPOBaseParameters(
 		&result->base,
 		NULL, /* FIXME */
@@ -69,9 +72,13 @@ uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 		0, /* sizeof(FAudioFXVolumeMeterLevels), */
 		1
 	);
+
+	/* Function table... */
 	result->base.base.base.Process = (ProcessFunc)
 		FAudioFXVolumeMeter_Process;
 	result->base.base.Destructor = FAudioFXVolumeMeter_Free;
+
+	/* Finally. */
 	*ppApo = result;
 	return 0;
 }
@@ -111,10 +118,13 @@ void FAudioFXReverb_Free(void* fapo)
 
 uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 {
+	/* Allocate... */
 	FAudioFXReverb *result = FAudio_malloc(sizeof(FAudioFXReverb));
 	uint8_t *params = FAudio_malloc(
 		sizeof(FAudioFXReverbParameters) * 3
 	);
+
+	/* Initialize... */
 	CreateFAPOBaseParameters(
 		&result->base,
 		NULL, /* FIXME */
@@ -122,9 +132,13 @@ uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 		sizeof(FAudioFXReverbParameters),
 		0
 	);
+
+	/* Function table... */
 	result->base.base.base.Process = (ProcessFunc)
 		FAudioFXReverb_Process;
 	result->base.base.Destructor = FAudioFXReverb_Free;
+
+	/* Finally. */
 	*ppApo = result;
 	return 0;
 }
