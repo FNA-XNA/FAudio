@@ -194,7 +194,10 @@ void FAPOBase_ProcessThru(
 
 void CreateFAPOBaseParameters(
 	FAPOBaseParameters *fapoParameters,
-	const FAPORegistrationProperties *pRegistrationProperties
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer
 ) {
 	/* Base Classes/Interfaces */
 	CreateFAPOBase(&fapoParameters->base, pRegistrationProperties);
@@ -209,13 +212,13 @@ void CreateFAPOBaseParameters(
 		FAPOBaseParameters_OnSetParameters;
 
 	/* Private Variables */
-	fapoParameters->m_pParameterBlocks = NULL; /* FIXME */
-	fapoParameters->m_pCurrentParameters = NULL; /* FIXME */
-	fapoParameters->m_pCurrentParametersInternal = NULL; /* FIXME */
-	fapoParameters->m_uCurrentParametersIndex = 0; /* FIXME */
-	fapoParameters->m_uParameterBlockByteSize = 0; /* FIXME */
-	fapoParameters->m_fNewerResultsReady = 0; /* FIXME */
-	fapoParameters->m_fProducer = 0; /* FIXME */
+	fapoParameters->m_pParameterBlocks = pParameterBlocks;
+	fapoParameters->m_pCurrentParameters = pParameterBlocks;
+	fapoParameters->m_pCurrentParametersInternal = NULL;
+	fapoParameters->m_uCurrentParametersIndex = 0;
+	fapoParameters->m_uParameterBlockByteSize = uParameterBlockByteSize;
+	fapoParameters->m_fNewerResultsReady = 0;
+	fapoParameters->m_fProducer = fProducer;
 }
 
 int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters)
@@ -236,6 +239,8 @@ void FAPOBaseParameters_SetParameters(
 	uint32_t ParameterByteSize
 ) {
 	/* TODO */
+
+	fapoParameters->OnSetParameters(pParameters, ParameterByteSize);
 }
 
 void FAPOBaseParameters_GetParameters(

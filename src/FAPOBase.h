@@ -192,7 +192,10 @@ typedef struct FAPOBaseParameters
 
 FAPOAPI void CreateFAPOBaseParameters(
 	FAPOBaseParameters *fapoParameters,
-	const FAPORegistrationProperties *pRegistrationProperties
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer
 );
 
 FAPOAPI int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters);
