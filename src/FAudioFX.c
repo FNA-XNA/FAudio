@@ -45,7 +45,13 @@ void FAudioFXVolumeMeter_Process(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 ) {
+	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
+		FAPOBaseParameters_BeginProcess(&fapo->base);
+
 	/* TODO */
+	(void) levels;
+
+	FAPOBaseParameters_EndProcess(&fapo->base);
 }
 
 void FAudioFXVolumeMeter_Free(void* fapo)
@@ -87,7 +93,13 @@ void FAudioFXReverb_Process(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 ) {
+	FAudioFXReverbParameters *params = (FAudioFXReverbParameters*)
+		FAPOBaseParameters_BeginProcess(&fapo->base);
+
 	/* TODO */
+	(void) params;
+
+	FAPOBaseParameters_EndProcess(&fapo->base);
 }
 
 void FAudioFXReverb_Free(void* fapo)
