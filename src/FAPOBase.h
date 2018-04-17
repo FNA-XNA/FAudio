@@ -29,6 +29,10 @@
 
 #include "FAPO.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Constants */
 
 #define FAPOBASE_DEFAULT_FORMAT_TAG		3 /* IEEE_FLOAT */
@@ -69,45 +73,45 @@ typedef struct FAPOBase
 } FAPOBase;
 #pragma pack(pop)
 
-void CreateFAPOBase(
+FAPOAPI void CreateFAPOBase(
 	FAPOBase *fapo,
 	const FAPORegistrationProperties *pRegistrationProperties
 );
 
-int32_t FAPOBase_AddRef(FAPOBase *fapo);
+FAPOAPI int32_t FAPOBase_AddRef(FAPOBase *fapo);
 
-int32_t FAPOBase_Release(FAPOBase *fapo);
+FAPOAPI int32_t FAPOBase_Release(FAPOBase *fapo);
 
 /* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
-uint32_t FAPOBase_GetRegistrationProperties(
+FAPOAPI uint32_t FAPOBase_GetRegistrationProperties(
 	FAPOBase *fapo,
 	FAPORegistrationProperties **ppRegistrationProperties
 );
 
-uint32_t FAPOBase_IsInputFormatSupported(
+FAPOAPI uint32_t FAPOBase_IsInputFormatSupported(
 	FAPOBase *fapo,
 	const FAudioWaveFormatEx *pOutputFormat,
 	const FAudioWaveFormatEx *pRequestedInputFormat,
 	FAudioWaveFormatEx **ppSupportedInputFormat
 );
 
-uint32_t FAPOBase_IsOutputFormatSupported(
+FAPOAPI uint32_t FAPOBase_IsOutputFormatSupported(
 	FAPOBase *fapo,
 	const FAudioWaveFormatEx *pInputFormat,
 	const FAudioWaveFormatEx *pRequestedOutputFormat,
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 );
 
-uint32_t FAPOBase_Initialize(
+FAPOAPI uint32_t FAPOBase_Initialize(
 	FAPOBase *fapo,
 	const void* pData,
 	uint32_t DataByteSize
 );
 
-void FAPOBase_Reset(FAPOBase *fapo);
+FAPOAPI void FAPOBase_Reset(FAPOBase *fapo);
 
-uint32_t FAPOBase_LockForProcess(
+FAPOAPI uint32_t FAPOBase_LockForProcess(
 	FAPOBase *fapo,
 	uint32_t InputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pInputLockedParameters,
@@ -115,9 +119,9 @@ uint32_t FAPOBase_LockForProcess(
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 );
 
-void FAPOBase_UnlockForProcess(FAPOBase *fapo);
+FAPOAPI void FAPOBase_UnlockForProcess(FAPOBase *fapo);
 
-void FAPOBase_Process(
+FAPOAPI void FAPOBase_Process(
 	FAPOBase *fapo,
 	uint32_t InputProcessParameterCount,
 	const FAPOProcessBufferParameters* pInputProcessParameters,
@@ -126,23 +130,29 @@ void FAPOBase_Process(
 	uint8_t IsEnabled
 );
 
-uint32_t FAPOBase_CalcInputFrames(FAPOBase *fapo, uint32_t OutputFrameCount);
+FAPOAPI uint32_t FAPOBase_CalcInputFrames(
+	FAPOBase *fapo,
+	uint32_t OutputFrameCount
+);
 
-uint32_t FAPOBase_CalcOutputFrames(FAPOBase *fapo, uint32_t InputFrameCount);
+FAPOAPI uint32_t FAPOBase_CalcOutputFrames(
+	FAPOBase *fapo,
+	uint32_t InputFrameCount
+);
 
-uint32_t FAPOBase_ValidateFormatDefault(
+FAPOAPI uint32_t FAPOBase_ValidateFormatDefault(
 	FAPOBase *fapo,
 	FAudioWaveFormatEx *pFormat,
 	uint8_t fOverwrite
 );
 
-uint32_t FAPOBase_ValidateFormatPair(
+FAPOAPI uint32_t FAPOBase_ValidateFormatPair(
 	const FAudioWaveFormatEx *pSupportedFormat,
 	FAudioWaveFormatEx *pRequestedFormat,
 	uint8_t fOverwrite
 );
 
-void FAPOBase_ProcessThru(
+FAPOAPI void FAPOBase_ProcessThru(
 	void* pInputBuffer,
 	float *pOutputBuffer,
 	uint32_t FrameCount,
@@ -171,33 +181,37 @@ typedef struct FAPOBaseParameters
 } FAPOBaseParameters;
 #pragma pack(pop)
 
-void CreateFAPOBaseParameters(
+FAPOAPI void CreateFAPOBaseParameters(
 	FAPOBaseParameters *fapoParameters,
 	const FAPORegistrationProperties *pRegistrationProperties
 );
 
-int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters);
+FAPOAPI int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters);
 
-int32_t FAPOBaseParameters_Release(FAPOBaseParameters *fapoParameters);
+FAPOAPI int32_t FAPOBaseParameters_Release(FAPOBaseParameters *fapoParameters);
 
 /* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
-void FAPOBaseParameters_SetParameters(
+FAPOAPI void FAPOBaseParameters_SetParameters(
 	FAPOBaseParameters *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
 
-void FAPOBaseParameters_GetParameters(
+FAPOAPI void FAPOBaseParameters_GetParameters(
 	FAPOBaseParameters *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
 
-uint8_t FAPOBaseParameters_ParametersChanged(FAPOBaseParameters *fapoParameters);
+FAPOAPI uint8_t FAPOBaseParameters_ParametersChanged(FAPOBaseParameters *fapoParameters);
 
-uint8_t* FAPOBaseParameters_BeginProcess(FAPOBaseParameters *fapoParameters);
+FAPOAPI uint8_t* FAPOBaseParameters_BeginProcess(FAPOBaseParameters *fapoParameters);
 
-void FAPOBaseParameters_EndProcess(FAPOBaseParameters *fapoParameters);
+FAPOAPI void FAPOBaseParameters_EndProcess(FAPOBaseParameters *fapoParameters);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* FAPOBASE_H */

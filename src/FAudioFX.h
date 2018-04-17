@@ -29,6 +29,10 @@
 
 #include "FAudio.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Structures */
 
 #pragma pack(push, 1)
@@ -213,13 +217,17 @@ typedef struct FAudioFXReverbI3DL2Parameters
 
 /* Functions */
 
-uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags);
+FAUDIOAPI uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags);
 
-uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags);
+FAUDIOAPI uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags);
 
-void ReverbConvertI3DL2ToNative(
+FAUDIOAPI void ReverbConvertI3DL2ToNative(
 	const FAudioFXReverbI3DL2Parameters *pI3DL2,
 	FAudioFXReverbParameters *pNative
 );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* FAUDIOFX_H */

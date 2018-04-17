@@ -29,6 +29,13 @@
 
 #include "FAudio.h"
 
+#define FAPOAPI FAUDIOAPI
+#define FAPOCALL FAUDIOCALL
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Enumerations */
 
 typedef enum FAPOBufferFlags
@@ -91,41 +98,41 @@ typedef struct FAPOProcessBufferParameters
 
 typedef struct FAPO FAPO;
 
-typedef uint32_t (FAUDIOCALL * GetRegistrationPropertiesFunc)(
+typedef uint32_t (FAPOCALL * GetRegistrationPropertiesFunc)(
 	FAPO *fapo,
 	FAPORegistrationProperties **ppRegistrationProperties
 );
-typedef uint32_t (FAUDIOCALL * IsInputFormatSupportedFunc)(
+typedef uint32_t (FAPOCALL * IsInputFormatSupportedFunc)(
 	FAPO *fapo,
 	const FAudioWaveFormatEx *pOutputFormat,
 	const FAudioWaveFormatEx *pRequestedInputFormat,
 	FAudioWaveFormatEx **ppSupportedInputFormat
 );
-typedef uint32_t (FAUDIOCALL * IsOutputFormatSupportedFunc)(
+typedef uint32_t (FAPOCALL * IsOutputFormatSupportedFunc)(
 	FAPO *fapo,
 	const FAudioWaveFormatEx *pInputFormat,
 	const FAudioWaveFormatEx *pRequestedOutputFormat,
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 );
-typedef uint32_t (FAUDIOCALL * InitializeFunc)(
+typedef uint32_t (FAPOCALL * InitializeFunc)(
 	FAPO *fapo,
 	const void* pData,
 	uint32_t DataByteSize
 );
-typedef void (FAUDIOCALL * ResetFunc)(
+typedef void (FAPOCALL * ResetFunc)(
 	FAPO *fapo
 );
-typedef uint32_t (FAUDIOCALL * LockForProcessFunc)(
+typedef uint32_t (FAPOCALL * LockForProcessFunc)(
 	FAPO *fapo,
 	uint32_t InputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pInputLockedParameters,
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 );
-typedef void (FAUDIOCALL * UnlockForProcessFunc)(
+typedef void (FAPOCALL * UnlockForProcessFunc)(
 	FAPO *fapo
 );
-typedef void (FAUDIOCALL * ProcessFunc)(
+typedef void (FAPOCALL * ProcessFunc)(
 	FAPO *fapo,
 	uint32_t InputProcessParameterCount,
 	const FAPOProcessBufferParameters* pInputProcessParameters,
@@ -133,11 +140,11 @@ typedef void (FAUDIOCALL * ProcessFunc)(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 );
-typedef uint32_t (FAUDIOCALL * CalcInputFramesFunc)(
+typedef uint32_t (FAPOCALL * CalcInputFramesFunc)(
 	FAPO *fapo,
 	uint32_t OutputFrameCount
 );
-typedef uint32_t (FAUDIOCALL * CalcOutputFramesFunc)(
+typedef uint32_t (FAPOCALL * CalcOutputFramesFunc)(
 	FAPO *fapo,
 	uint32_t InputFrameCount
 );
@@ -160,12 +167,12 @@ struct FAPO
 
 typedef struct FAPOParameters FAPOParameters;
 
-typedef void (FAUDIOCALL * SetParametersFunc)(
+typedef void (FAPOCALL * SetParametersFunc)(
 	FAPOParameters *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
-typedef void (FAUDIOCALL * GetParametersFunc)(
+typedef void (FAPOCALL * GetParametersFunc)(
 	FAPOParameters *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
@@ -176,5 +183,9 @@ struct FAPOParameters
 	SetParametersFunc SetParameters;
 	GetParametersFunc GetParameters;
 };
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* FAPO_H */
