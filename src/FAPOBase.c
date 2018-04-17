@@ -32,16 +32,48 @@ void CreateFAPOBase(
 	FAPOBase *fapo,
 	const FAPORegistrationProperties *pRegistrationProperties
 ) {
+	/* Base Classes/Interfaces */
+	#define ASSIGN_VT(name) \
+		fapo->base.name = (name##Func) FAPOBase_##name;
+	ASSIGN_VT(GetRegistrationProperties)
+	ASSIGN_VT(IsInputFormatSupported)
+	ASSIGN_VT(IsOutputFormatSupported)
+	ASSIGN_VT(Initialize)
+	ASSIGN_VT(Reset)
+	ASSIGN_VT(LockForProcess)
+	ASSIGN_VT(UnlockForProcess)
+	ASSIGN_VT(Process)
+	ASSIGN_VT(CalcInputFrames)
+	ASSIGN_VT(CalcOutputFrames)
+	#undef ASSIGN_VT
+
+	/* Private Variables */
+	fapo->m_pRegistrationProperties = pRegistrationProperties; /* FIXME */
+	fapo->m_pfnMatrixMixFunction = NULL; /* FIXME */
+	fapo->m_pfl32MatrixCoefficients = NULL; /* FIXME */
+	fapo->m_nSrcFormatType = 0; /* FIXME */
+	fapo->m_fIsScalarMatrix = 0; /* FIXME: */
+	fapo->m_fIsLocked = 0;
+
+	/* Protected Variables */
+	fapo->m_lReferenceCount = 1;
 }
 
 int32_t FAPOBase_AddRef(FAPOBase *fapo)
 {
-	return 0;
+	fapo->m_lReferenceCount += 1;
+	return fapo->m_lReferenceCount;
 }
 
 int32_t FAPOBase_Release(FAPOBase *fapo)
 {
-	return 0;
+	fapo->m_lReferenceCount -= 1;
+	if (fapo->m_lReferenceCount == 0)
+	{
+		fapo->Destructor(fapo);
+		return 0;
+	}
+	return fapo->m_lReferenceCount;
 }
 
 /* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
@@ -149,16 +181,32 @@ void CreateFAPOBaseParameters(
 	FAPOBaseParameters *fapoParameters,
 	const FAPORegistrationProperties *pRegistrationProperties
 ) {
+	/* Base Classes/Interfaces */
+	CreateFAPOBase(&fapoParameters->base, pRegistrationProperties);
+	#define ASSIGN_VT(name) \
+		fapoParameters->parameters.name = (name##Func) FAPOBaseParameters_##name;
+	ASSIGN_VT(SetParameters)
+	ASSIGN_VT(GetParameters)
+	#undef ASSIGN_VT
+
+	/* Private Variables */
+	fapoParameters->m_pParameterBlocks = NULL; /* FIXME */
+	fapoParameters->m_pCurrentParameters = NULL; /* FIXME */
+	fapoParameters->m_pCurrentParametersInternal = NULL; /* FIXME */
+	fapoParameters->m_uCurrentParametersIndex = 0; /* FIXME */
+	fapoParameters->m_uParameterBlockByteSize = 0; /* FIXME */
+	fapoParameters->m_fNewerResultsReady = 0; /* FIXME */
+	fapoParameters->m_fProducer = 0; /* FIXME */
 }
 
 int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters)
 {
-	return 0;
+	return FAPOBase_AddRef(&fapoParameters->base);
 }
 
 int32_t FAPOBaseParameters_Release(FAPOBaseParameters *fapoParameters)
 {
-	return 0;
+	return FAPOBase_Release(&fapoParameters->base);
 }
 
 /* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */

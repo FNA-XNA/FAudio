@@ -28,13 +28,45 @@
 #include "FAPOBase.h"
 #include "FAudio_internal.h"
 
+/* Volume Meter Implementation */
+
+typedef struct FAudioFXVolumeMeter
+{
+	FAPOBaseParameters base;
+} FAudioFXVolumeMeter;
+
+void FreeVolumeMeter(void* fapo)
+{
+	FAudio_free(fapo);
+}
+
 uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 {
+	FAudioFXVolumeMeter *result = FAudio_malloc(sizeof(FAudioFXVolumeMeter));
+	CreateFAPOBaseParameters(&result->base, NULL);
+	result->base.base.Destructor = FreeVolumeMeter;
+	*ppApo = result;
 	return 0;
+}
+
+/* Reverb Implementation */
+
+typedef struct FAudioFXReverb
+{
+	FAPOBaseParameters base;
+} FAudioFXReverb;
+
+void FreeReverb(void* fapo)
+{
+	FAudio_free(fapo);
 }
 
 uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 {
+	FAudioFXReverb *result = FAudio_malloc(sizeof(FAudioFXReverb));
+	CreateFAPOBaseParameters(&result->base, NULL);
+	result->base.base.Destructor = FreeReverb;
+	*ppApo = result;
 	return 0;
 }
 

@@ -59,6 +59,7 @@ typedef struct FAPOBase
 {
 	/* Base Classes/Interfaces */
 	FAPO base;
+	void (FAPOCALL *Destructor)(void*);
 
 	/* Private Variables */
 	const FAPORegistrationProperties *m_pRegistrationProperties;
