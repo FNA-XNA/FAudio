@@ -238,6 +238,8 @@ void FAPOBaseParameters_SetParameters(
 	const void* pParameters,
 	uint32_t ParameterByteSize
 ) {
+	FAudio_assert(!fapoParameters->m_fProducer);
+
 	/* TODO */
 
 	fapoParameters->OnSetParameters(pParameters, ParameterByteSize);
