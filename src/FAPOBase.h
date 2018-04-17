@@ -69,7 +69,8 @@ typedef struct FAPOBase
 } FAPOBase;
 #pragma pack(pop)
 
-FAPOBase* CreateFAPOBase(
+void CreateFAPOBase(
+	FAPOBase *fapo,
 	const FAPORegistrationProperties *pRegistrationProperties
 );
 
@@ -156,7 +157,7 @@ void FAPOBase_ProcessThru(
 typedef struct FAPOBaseParameters
 {
 	/* Base Classes/Interfaces */
-	FAPOBase *base;
+	FAPOBase base;
 	FAPOParameters parameters;
 
 	/* Private Variables */
@@ -170,7 +171,8 @@ typedef struct FAPOBaseParameters
 } FAPOBaseParameters;
 #pragma pack(pop)
 
-FAPOBaseParameters* CreateFAPOBaseParameters(
+void CreateFAPOBaseParameters(
+	FAPOBaseParameters *fapoParameters,
 	const FAPORegistrationProperties *pRegistrationProperties
 );
 

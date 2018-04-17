@@ -28,10 +28,10 @@
 
 /* FAPOBase Interface */
 
-FAPOBase* CreateFAPOBase(
+void CreateFAPOBase(
+	FAPOBase *fapo,
 	const FAPORegistrationProperties *pRegistrationProperties
 ) {
-	return NULL;
 }
 
 int32_t FAPOBase_AddRef(FAPOBase *fapo)
@@ -145,10 +145,10 @@ void FAPOBase_ProcessThru(
 
 /* FAPOBaseParameters Interface */
 
-FAPOBaseParameters* CreateFAPOBaseParameters(
+void CreateFAPOBaseParameters(
+	FAPOBaseParameters *fapoParameters,
 	const FAPORegistrationProperties *pRegistrationProperties
 ) {
-	return NULL;
 }
 
 int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters)
