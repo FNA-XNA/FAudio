@@ -62,7 +62,9 @@ void FAudioFXVolumeMeter_Free(void* fapo)
 uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 {
 	/* Allocate... */
-	FAudioFXVolumeMeter *result = FAudio_malloc(sizeof(FAudioFXVolumeMeter));
+	FAudioFXVolumeMeter *result = (FAudioFXVolumeMeter*) FAudio_malloc(
+		sizeof(FAudioFXVolumeMeter)
+	);
 
 	/* Initialize... */
 	CreateFAPOBaseParameters(
@@ -119,8 +121,8 @@ void FAudioFXReverb_Free(void* fapo)
 uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 {
 	/* Allocate... */
-	FAudioFXReverb *result = FAudio_malloc(sizeof(FAudioFXReverb));
-	uint8_t *params = FAudio_malloc(
+	FAudioFXReverb *result = (FAudioFXReverb*) FAudio_malloc(sizeof(FAudioFXReverb));
+	uint8_t *params = (uint8_t*) FAudio_malloc(
 		sizeof(FAudioFXReverbParameters) * 3
 	);
 
