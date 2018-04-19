@@ -108,7 +108,13 @@ struct FAudioVoice
 
 	FAudioVoiceSends sends;
 	float **sendCoefficients;
-	FAudioEffectChain effects;
+	struct
+	{
+		uint32_t count;
+		FAudioEffectDescriptor *desc;
+		void **parameters;
+		uint32_t *parameterSizes;
+	} effects;
 	FAudioFilterParameters filter;
 	FAudioFilterState *filterState;
 

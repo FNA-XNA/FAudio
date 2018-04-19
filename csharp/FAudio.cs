@@ -468,6 +468,7 @@ public static class FAudio
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudioVoice_GetEffectParameters(
 		IntPtr voice, /* FAudioVoice* */
+		uint EffectIndex,
 		IntPtr pParameters, /* void* */
 		uint ParametersByteSize
 	);

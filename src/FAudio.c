@@ -24,6 +24,7 @@
  *
  */
 
+#include "FAPOBase.h"
 #include "FAudio_internal.h"
 
 /* FAudio Interface */
@@ -701,27 +702,46 @@ uint32_t FAudioVoice_SetEffectChain(
 	FAudioVoice *voice,
 	const FAudioEffectChain *pEffectChain
 ) {
-	/* FIXME: This is lazy... */
-	if (voice->effects.pEffectDescriptors != NULL)
-	{
-		FAudio_free(voice->effects.pEffectDescriptors);
-	}
+	uint32_t i;
+
+	/* FIXME: Rules for changing effect chain are pretty complicated... */
+	FAudio_assert(voice->effects.count == 0);
 
 	if (pEffectChain == NULL)
 	{
-		FAudio_zero(&voice->effects, sizeof(FAudioEffectChain));
+		FAudio_zero(&voice->effects, sizeof(voice->effects));
 	}
 	else
 	{
-		voice->effects.EffectCount = pEffectChain->EffectCount;
-		voice->effects.pEffectDescriptors = (FAudioEffectDescriptor*) FAudio_malloc(
+		voice->effects.count = pEffectChain->EffectCount;
+		voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
 			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
 		);
 		FAudio_memcpy(
-			voice->effects.pEffectDescriptors,
+			voice->effects.desc,
 			pEffectChain->pEffectDescriptors,
 			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
 		);
+		voice->effects.parameters = (void**) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(void*)
+		);
+		FAudio_zero(
+			voice->effects.parameters,
+			pEffectChain->EffectCount * sizeof(void*)
+		);
+		voice->effects.parameterSizes = (uint32_t*) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(uint32_t)
+		);
+		FAudio_zero(
+			voice->effects.parameterSizes,
+			pEffectChain->EffectCount * sizeof(uint32_t)
+		);
+		for (i = 0; i < pEffectChain->EffectCount; i += 1)
+		{
+			FAPOBase_AddRef(
+				(FAPOBase*) voice->effects.desc[i].pEffect
+			);
+		}
 	}
 	return 0;
 }
@@ -733,7 +753,7 @@ uint32_t FAudioVoice_EnableEffect(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	voice->effects.pEffectDescriptors[EffectIndex].InitialState = 1;
+	voice->effects.desc[EffectIndex].InitialState = 1;
 	return 0;
 }
 
@@ -744,7 +764,7 @@ uint32_t FAudioVoice_DisableEffect(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	voice->effects.pEffectDescriptors[EffectIndex].InitialState = 0;
+	voice->effects.desc[EffectIndex].InitialState = 0;
 	return 0;
 }
 
@@ -753,7 +773,7 @@ void FAudioVoice_GetEffectState(
 	uint32_t EffectIndex,
 	uint8_t *pEnabled
 ) {
-	*pEnabled = voice->effects.pEffectDescriptors[EffectIndex].InitialState;
+	*pEnabled = voice->effects.desc[EffectIndex].InitialState;
 }
 
 uint32_t FAudioVoice_SetEffectParameters(
@@ -763,17 +783,37 @@ uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t ParametersByteSize,
 	uint32_t OperationSet
 ) {
-	/* TODO: XAPO */
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+	if (voice->effects.parameters[EffectIndex] == NULL)
+	{
+		voice->effects.parameters[EffectIndex] = FAudio_malloc(
+			ParametersByteSize
+		);
+	}
+	if (voice->effects.parameterSizes[EffectIndex] < ParametersByteSize)
+	{
+		voice->effects.parameters[EffectIndex] = FAudio_realloc(
+			voice->effects.parameters[EffectIndex],
+			ParametersByteSize
+		);
+	}
+	FAudio_memcpy(
+		voice->effects.parameters[EffectIndex],
+		pParameters,
+		ParametersByteSize
+	);
 	return 0;
 }
 
 uint32_t FAudioVoice_GetEffectParameters(
 	FAudioVoice *voice,
+	uint32_t EffectIndex,
 	void *pParameters,
 	uint32_t ParametersByteSize
 ) {
-	/* TODO: XAPO */
+	FAPOBaseParameters *fapo = (FAPOBaseParameters*)
+		voice->effects.desc[EffectIndex].pEffect;
+	fapo->parameters.GetParameters(fapo, pParameters, ParametersByteSize);
 	return 0;
 }
 
@@ -1058,9 +1098,17 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	{
 		FAudio_free(voice->sends.pSends);
 	}
-	if (voice->effects.pEffectDescriptors != NULL)
+	if (voice->effects.desc != NULL)
 	{
-		FAudio_free(voice->effects.pEffectDescriptors);
+		for (i = 0; i < voice->effects.count; i += 1)
+		{
+			FAPOBase_Release(
+				(FAPOBase*) voice->effects.desc[i].pEffect
+			);
+		}
+		FAudio_free(voice->effects.parameters);
+		FAudio_free(voice->effects.parameterSizes);
+		FAudio_free(voice->effects.desc);
 	}
 	if (voice->filterState != NULL)
 	{

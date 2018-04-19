@@ -502,6 +502,7 @@ FAUDIOAPI uint32_t FAudioVoice_SetEffectParameters(
 
 FAUDIOAPI uint32_t FAudioVoice_GetEffectParameters(
 	FAudioVoice *voice,
+	uint32_t EffectIndex,
 	void *pParameters,
 	uint32_t ParametersByteSize
 );
