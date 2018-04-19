@@ -335,6 +335,36 @@ static inline void FAudio_INTERNAL_FilterVoice(
 	}
 }
 
+static inline void FAudio_INTERNAL_ProcessEffectChain(FAudioVoice *voice)
+{
+	uint32_t i;
+	FAPOBaseParameters *fapo;
+	for (i = 0; i < voice->effects.count; i += 1)
+	{
+		fapo = (FAPOBaseParameters*) voice->effects.desc[i].pEffect;
+		if (voice->effects.parameterUpdates[i])
+		{
+			fapo->parameters.SetParameters(
+				fapo,
+				voice->effects.parameters[i],
+				voice->effects.parameterSizes[i]
+			);
+		}
+		/* TODO: Effect Processing
+		fapo->base.base.LockForProcess(fapo, 0, NULL, 0, NULL);
+		fapo->base.base.Process(
+			fapo,
+			0,
+			NULL,
+			0,
+			NULL,
+			voice->effects.desc[i].InitialState
+		);
+		fapo->base.base.UnlockForProcess(fapo);
+		*/
+	}
+}
+
 static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
@@ -461,8 +491,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		goto end;
 	}
 
-	/* TODO: Effects */
-
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
@@ -474,6 +502,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->src.format.nChannels
 		);
 	}
+
+	/* Process effect chain */
+	FAudio_INTERNAL_ProcessEffectChain(voice);
 
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -559,8 +590,6 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 	resampled /= voice->mix.inputChannels;
 
-	/* TODO: Effects */
-
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
@@ -572,6 +601,9 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->mix.inputChannels
 		);
 	}
+
+	/* Process effect chain */
+	FAudio_INTERNAL_ProcessEffectChain(voice);
 
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -686,7 +718,8 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		);
 	}
 
-	/* TODO: Master effect chain processing */
+	/* Process master effect chain */
+	FAudio_INTERNAL_ProcessEffectChain(audio->master);
 
 	/* OnProcessingPassEnd callbacks */
 	list = audio->callbacks;

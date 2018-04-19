@@ -25,6 +25,7 @@
  */
 
 #include "FAudio.h"
+#include "FAPOBase.h"
 
 #ifdef FAUDIO_UNKNOWN_PLATFORM
 #include <assert.h>
@@ -114,6 +115,7 @@ struct FAudioVoice
 		FAudioEffectDescriptor *desc;
 		void **parameters;
 		uint32_t *parameterSizes;
+		uint8_t *parameterUpdates;
 	} effects;
 	FAudioFilterParameters filter;
 	FAudioFilterState *filterState;

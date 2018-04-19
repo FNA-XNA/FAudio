@@ -25,7 +25,6 @@
  */
 
 #include "FAudioFX.h"
-#include "FAPOBase.h"
 #include "FAudio_internal.h"
 
 /* Volume Meter Implementation */

@@ -24,7 +24,6 @@
  *
  */
 
-#include "FAPOBase.h"
 #include "FAudio_internal.h"
 
 /* FAudio Interface */
@@ -736,6 +735,13 @@ uint32_t FAudioVoice_SetEffectChain(
 			voice->effects.parameterSizes,
 			pEffectChain->EffectCount * sizeof(uint32_t)
 		);
+		voice->effects.parameterUpdates = (uint8_t*) FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(uint8_t)
+		);
+		FAudio_zero(
+			voice->effects.parameterUpdates,
+			pEffectChain->EffectCount * sizeof(uint8_t)
+		);
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
 			FAPOBase_AddRef(
@@ -797,6 +803,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 			ParametersByteSize
 		);
 	}
+	voice->effects.parameterUpdates[EffectIndex] = 1;
 	FAudio_memcpy(
 		voice->effects.parameters[EffectIndex],
 		pParameters,
@@ -1108,6 +1115,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		}
 		FAudio_free(voice->effects.parameters);
 		FAudio_free(voice->effects.parameterSizes);
+		FAudio_free(voice->effects.parameterUpdates);
 		FAudio_free(voice->effects.desc);
 	}
 	if (voice->filterState != NULL)
