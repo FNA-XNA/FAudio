@@ -349,6 +349,7 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(FAudioVoice *voice)
 				voice->effects.parameters[i],
 				voice->effects.parameterSizes[i]
 			);
+			voice->effects.parameterUpdates[i] = 0;
 		}
 		/* TODO: Effect Processing
 		fapo->base.base.LockForProcess(fapo, 0, NULL, 0, NULL);
