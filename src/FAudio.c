@@ -712,6 +712,15 @@ uint32_t FAudioVoice_SetEffectChain(
 	}
 	else
 	{
+		for (i = 0; i < pEffectChain->EffectCount; i += 1)
+		{
+			/* TODO: Validation is done by calling
+			 * IsOutputFormatSupported and GetRegistrationPropertiesFunc
+			 */
+			FAPOBase_AddRef(
+				(FAPOBase*) voice->effects.desc[i].pEffect
+			);
+		}
 		voice->effects.count = pEffectChain->EffectCount;
 		voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
 			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
@@ -742,12 +751,6 @@ uint32_t FAudioVoice_SetEffectChain(
 			voice->effects.parameterUpdates,
 			pEffectChain->EffectCount * sizeof(uint8_t)
 		);
-		for (i = 0; i < pEffectChain->EffectCount; i += 1)
-		{
-			FAPOBase_AddRef(
-				(FAPOBase*) voice->effects.desc[i].pEffect
-			);
-		}
 	}
 	return 0;
 }
