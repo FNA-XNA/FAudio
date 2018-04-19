@@ -24,6 +24,7 @@
  *
  */
 
+#include "FAudioFX.h"
 #include "FACT_internal.h"
 
 /* AudioEngine implementation */
@@ -198,7 +199,8 @@ uint32_t FACTAudioEngine_Initialize(
 			&reverbChain
 		);
 
-		/* TODO: Release reverbDesc.pEffect */
+		/* We can release now, the submix owns this! */
+		FAPOBase_Release(reverbDesc.pEffect);
 	}
 #endif
 	return 0;
