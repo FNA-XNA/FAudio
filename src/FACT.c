@@ -190,7 +190,7 @@ uint32_t FACTAudioEngine_Initialize(
 		FAudio_CreateSubmixVoice(
 			pEngine->audio,
 			&pEngine->reverbVoice,
-			masterDetails.InputChannels,
+			1, /* Reverb will be omnidirectional */
 			masterDetails.InputSampleRate,
 			0,
 			0,
