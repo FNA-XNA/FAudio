@@ -99,41 +99,41 @@ typedef struct FAPOProcessBufferParameters
 typedef struct FAPO FAPO;
 
 typedef uint32_t (FAPOCALL * GetRegistrationPropertiesFunc)(
-	FAPO *fapo,
+	void* fapo,
 	FAPORegistrationProperties **ppRegistrationProperties
 );
 typedef uint32_t (FAPOCALL * IsInputFormatSupportedFunc)(
-	FAPO *fapo,
+	void* fapo,
 	const FAudioWaveFormatEx *pOutputFormat,
 	const FAudioWaveFormatEx *pRequestedInputFormat,
 	FAudioWaveFormatEx **ppSupportedInputFormat
 );
 typedef uint32_t (FAPOCALL * IsOutputFormatSupportedFunc)(
-	FAPO *fapo,
+	void* fapo,
 	const FAudioWaveFormatEx *pInputFormat,
 	const FAudioWaveFormatEx *pRequestedOutputFormat,
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 );
 typedef uint32_t (FAPOCALL * InitializeFunc)(
-	FAPO *fapo,
+	void* fapo,
 	const void* pData,
 	uint32_t DataByteSize
 );
 typedef void (FAPOCALL * ResetFunc)(
-	FAPO *fapo
+	void* fapo
 );
 typedef uint32_t (FAPOCALL * LockForProcessFunc)(
-	FAPO *fapo,
+	void* fapo,
 	uint32_t InputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pInputLockedParameters,
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 );
 typedef void (FAPOCALL * UnlockForProcessFunc)(
-	FAPO *fapo
+	void* fapo
 );
 typedef void (FAPOCALL * ProcessFunc)(
-	FAPO *fapo,
+	void* fapo,
 	uint32_t InputProcessParameterCount,
 	const FAPOProcessBufferParameters* pInputProcessParameters,
 	uint32_t OutputProcessParameterCount,
@@ -141,11 +141,11 @@ typedef void (FAPOCALL * ProcessFunc)(
 	uint8_t IsEnabled
 );
 typedef uint32_t (FAPOCALL * CalcInputFramesFunc)(
-	FAPO *fapo,
+	void* fapo,
 	uint32_t OutputFrameCount
 );
 typedef uint32_t (FAPOCALL * CalcOutputFramesFunc)(
-	FAPO *fapo,
+	void* fapo,
 	uint32_t InputFrameCount
 );
 
@@ -168,12 +168,12 @@ struct FAPO
 typedef struct FAPOParameters FAPOParameters;
 
 typedef void (FAPOCALL * SetParametersFunc)(
-	FAPOParameters *fapoParameters,
+	void* fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
 typedef void (FAPOCALL * GetParametersFunc)(
-	FAPOParameters *fapoParameters,
+	void* fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
