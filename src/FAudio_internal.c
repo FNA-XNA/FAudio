@@ -335,10 +335,38 @@ static inline void FAudio_INTERNAL_FilterVoice(
 	}
 }
 
-static inline void FAudio_INTERNAL_ProcessEffectChain(FAudioVoice *voice)
-{
+static inline void FAudio_INTERNAL_ProcessEffectChain(
+	FAudioVoice *voice,
+	uint32_t channels,
+	uint32_t sampleRate,
+	float *buffer,
+	uint32_t samples
+) {
 	uint32_t i;
 	FAPOBaseParameters *fapo;
+	FAudioWaveFormatEx fmt;
+	FAPOLockForProcessBufferParameters lockParams;
+	FAPOProcessBufferParameters params;
+
+	/* FIXME: This always assumes in-place processing is supported */
+
+	/* Lock in formats that the APO will expect for processing */
+	fmt.wFormatTag = 3;
+	fmt.nChannels = channels;
+	fmt.nSamplesPerSec = sampleRate;
+	fmt.nAvgBytesPerSec = sampleRate * channels * 4;
+	fmt.nBlockAlign = 4;
+	fmt.wBitsPerSample = 32;
+	fmt.cbSize = 0;
+	lockParams.pFormat = &fmt;
+	lockParams.MaxFrameCount = samples;
+
+	/* Set up the buffer to be written into */
+	params.pBuffer = buffer;
+	params.BufferFlags = FAPO_BUFFER_VALID;
+	params.ValidFrameCount = samples;
+
+	/* Update parameters, process! */
 	for (i = 0; i < voice->effects.count; i += 1)
 	{
 		fapo = (FAPOBaseParameters*) voice->effects.desc[i].pEffect;
@@ -351,18 +379,22 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(FAudioVoice *voice)
 			);
 			voice->effects.parameterUpdates[i] = 0;
 		}
-		/* TODO: Effect Processing
-		fapo->base.base.LockForProcess(fapo, 0, NULL, 0, NULL);
+		fapo->base.base.LockForProcess(
+			fapo,
+			1,
+			&lockParams,
+			1,
+			&lockParams
+		);
 		fapo->base.base.Process(
 			fapo,
-			0,
-			NULL,
-			0,
-			NULL,
+			1,
+			&params,
+			1,
+			&params,
 			voice->effects.desc[i].InitialState
 		);
 		fapo->base.base.UnlockForProcess(fapo);
-		*/
 	}
 }
 
@@ -505,7 +537,16 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Process effect chain */
-	FAudio_INTERNAL_ProcessEffectChain(voice);
+	if (voice->effects.count > 0)
+	{
+		FAudio_INTERNAL_ProcessEffectChain(
+			voice,
+			voice->src.format.nChannels,
+			voice->src.format.nSamplesPerSec,
+			voice->audio->resampleCache,
+			mixed
+		);
+	}
 
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -604,7 +645,16 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Process effect chain */
-	FAudio_INTERNAL_ProcessEffectChain(voice);
+	if (voice->effects.count > 0)
+	{
+		FAudio_INTERNAL_ProcessEffectChain(
+			voice,
+			voice->mix.inputChannels,
+			voice->mix.inputSampleRate,
+			voice->audio->resampleCache,
+			resampled
+		);
+	}
 
 	/* Send float cache to sends */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -720,7 +770,16 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	}
 
 	/* Process master effect chain */
-	FAudio_INTERNAL_ProcessEffectChain(audio->master);
+	if (audio->master->effects.count > 0)
+	{
+		FAudio_INTERNAL_ProcessEffectChain(
+			audio->master,
+			audio->master->master.inputChannels,
+			audio->master->master.inputSampleRate,
+			output,
+			audio->updateSize
+		);
+	}
 
 	/* OnProcessingPassEnd callbacks */
 	list = audio->callbacks;

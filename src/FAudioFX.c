@@ -29,6 +29,32 @@
 
 /* Volume Meter Implementation */
 
+static FAPORegistrationProperties VolumeMeterProperties =
+{
+	.FriendlyName =
+	{
+		'V', 'o', 'l', 'u', 'm', 'e', 'M', 'e', 't', 'e', 'r', '\0'
+	},
+	.CopyrightInfo =
+	{
+		'C', 'o', 'p', 'y', 'r', 'i', 'g', 'h', 't', ' ', '(', 'c', ')',
+		'E', 't', 'h', 'a', 'n', ' ', 'L', 'e', 'e', '\0'
+	},
+	.MajorVersion = 0,
+	.MinorVersion = 0,
+	.Flags = (
+		FAPO_FLAG_FRAMERATE_MUST_MATCH |
+		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
+		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
+		FAPO_FLAG_INPLACE_SUPPORTED |
+		FAPO_FLAG_INPLACE_REQUIRED
+	),
+	.MinInputBufferCount = 1,
+	.MaxInputBufferCount = 1,
+	.MinOutputBufferCount = 1,
+	.MaxOutputBufferCount = 1
+};
+
 typedef struct FAudioFXVolumeMeter
 {
 	FAPOBaseParameters base;
@@ -68,7 +94,7 @@ uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 	/* Initialize... */
 	CreateFAPOBaseParameters(
 		&result->base,
-		NULL, /* FIXME */
+		&VolumeMeterProperties,
 		NULL, /* FIXME */
 		0, /* sizeof(FAudioFXVolumeMeterLevels), */
 		1
@@ -85,6 +111,30 @@ uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 }
 
 /* Reverb Implementation */
+
+static FAPORegistrationProperties ReverbProperties =
+{
+	.FriendlyName =
+	{
+		'R', 'e', 'v', 'e', 'r', 'b', '\0'
+	},
+	.CopyrightInfo = {
+		'C', 'o', 'p', 'y', 'r', 'i', 'g', 'h', 't', ' ', '(', 'c', ')',
+		'E', 't', 'h', 'a', 'n', ' ', 'L', 'e', 'e', '\0'
+	},
+	.MajorVersion = 0,
+	.MinorVersion = 0,
+	.Flags = (
+		FAPO_FLAG_FRAMERATE_MUST_MATCH |
+		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
+		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
+		FAPO_FLAG_INPLACE_SUPPORTED
+	),
+	.MinInputBufferCount = 1,
+	.MaxInputBufferCount = 1,
+	.MinOutputBufferCount = 1,
+	.MaxOutputBufferCount = 1
+};
 
 typedef struct FAudioFXReverb
 {
@@ -128,7 +178,7 @@ uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 	/* Initialize... */
 	CreateFAPOBaseParameters(
 		&result->base,
-		NULL, /* FIXME */
+		&ReverbProperties,
 		params,
 		sizeof(FAudioFXReverbParameters),
 		0
