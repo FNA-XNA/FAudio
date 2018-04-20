@@ -569,17 +569,18 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		for (ci = 0; ci < voice->src.format.nChannels; ci += 1)
 		{
 			/* Include source/channel volumes in the mix! */
+			stream[j * oChan + co] += (
+				voice->audio->resampleCache[
+					j * voice->src.format.nChannels + ci
+				] *
+				voice->channelVolume[ci] *
+				voice->volume *
+				voice->sendCoefficients[i][
+					co * voice->src.format.nChannels + ci
+				]
+			);
 			stream[j * oChan + co] = FAudio_clamp(
-				stream[j * oChan + co] + (
-					voice->audio->resampleCache[
-						j * voice->src.format.nChannels + ci
-					] *
-					voice->channelVolume[ci] *
-					voice->volume *
-					voice->sendCoefficients[i][
-						co * voice->src.format.nChannels + ci
-					]
-				),
+				stream[j * oChan + co],
 				-FAUDIO_MAX_VOLUME_LEVEL,
 				FAUDIO_MAX_VOLUME_LEVEL
 			);
@@ -624,8 +625,9 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	for (i = 0; i < resampled; i += 1)
 	{
 		/* TODO: SSE */
+		voice->audio->resampleCache[i] *= voice->volume;
 		voice->audio->resampleCache[i] = FAudio_clamp(
-			voice->audio->resampleCache[i] * voice->volume,
+			voice->audio->resampleCache[i],
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
@@ -676,16 +678,17 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		for (co = 0; co < oChan; co += 1)
 		for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
 		{
+			stream[j * oChan + co] += (
+				voice->audio->resampleCache[
+					j * voice->mix.inputChannels + ci
+				] *
+				voice->channelVolume[ci] *
+				voice->sendCoefficients[i][
+					co * voice->mix.inputChannels + ci
+				]
+			);
 			stream[j * oChan + co] = FAudio_clamp(
-				stream[j * oChan + co] + (
-					voice->audio->resampleCache[
-						j * voice->mix.inputChannels + ci
-					] *
-					voice->channelVolume[ci] *
-					voice->sendCoefficients[i][
-						co * voice->mix.inputChannels + ci
-					]
-				),
+				stream[j * oChan + co],
 				-FAUDIO_MAX_VOLUME_LEVEL,
 				FAUDIO_MAX_VOLUME_LEVEL
 			);
