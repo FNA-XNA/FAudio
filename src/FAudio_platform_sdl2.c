@@ -558,6 +558,11 @@ float FAudio_acosf(float x)
 	return SDL_acosf(x);
 }
 
+float FAudio_atan2f(float y, float x)
+{
+	return SDL_atan2f(y, x);
+}
+
 float FAudio_fabsf(float x)
 {
 	return SDL_fabsf(x);

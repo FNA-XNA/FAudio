@@ -244,6 +244,7 @@ double FAudio_fabs(double x);
 
 float FAudio_sqrtf(float x);
 float FAudio_acosf(float x);
+float FAudio_atan2f(float y, float x);
 float FAudio_fabsf(float x);
 
 uint32_t FAudio_timems();

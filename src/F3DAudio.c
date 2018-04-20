@@ -30,16 +30,9 @@
 #include <math.h> /* ONLY USE THIS FOR isnan! */
 #include <float.h> /* Adrien: required for FLT_MIN/FLT_MAX */
 
+/* Set to 1 to use more complex, closer to X3DAudio (but also more *wrong* in terms of 3D audio maths...) behaviour emulation. */
+#define F3DAUDIO_HIGH_ACCURACY 0
 
- // TODO: For development only. Remove afterwards.
-#if defined(_MSC_VER)
-#define BREAK() __debugbreak()
-#else
-#include <assert.h>
-#define BREAK() assert(0)
-#endif
-
-#define UNIMPLEMENTED() BREAK()
 #define F3DAUDIO_DEBUG_PARAM_CHECKS 1
 #define F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE 0
 #define F3DAUDIO_DEBUG_PARAM_CHECKS_BREAKPOINTS 0
@@ -47,6 +40,15 @@
 /*
  * UTILITY MACROS
  */
+
+ // TODO: For development only. Remove afterwards.
+#define UNIMPLEMENTED() BREAK()
+
+#if defined(_MSC_VER)
+#define BREAK() __debugbreak()
+#else
+#define BREAK() SDL_assert(0)
+#endif
 
 /* Adrien VS2010 doesn't define isnan (which is C99), so here it is. */
 #if defined(_MSC_VER) && !defined(isnan)
@@ -64,26 +66,32 @@
 #if F3DAUDIO_DEBUG_PARAM_CHECKS
 // TODO: to be changed to something different after dev
 #if F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE
-#include <stdio.h>
-// #define OUTPUT_DEBUG_STRING(s) do { fprintf(stderr, "%s", s); fflush(stderr); } while(0)
+
+#if defined(_MSC_VER)
 #pragma comment(lib, "Kernel32.lib")
 void __stdcall OutputDebugStringA(const char* lpOutputString);
 #define OUTPUT_DEBUG_STRING(s) do { OutputDebugStringA(s); } while(0)
-#else
+#else /* _MSC_VER */
+#include <stdio.h>
+#define OUTPUT_DEBUG_STRING(s) do { fprintf(stderr, "%s", s); fflush(stderr); } while(0)
+#endif /* _MSC_VER */
+
+#else /* F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE */
+
 #define OUTPUT_DEBUG_STRING(s) do {} while(0)
-#endif
+#endif /* F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE */
 
 #if F3DAUDIO_DEBUG_PARAM_CHECKS_BREAKPOINTS
-#define STOP() BREAK()
+#define CHECK_FAILED() BREAK()
 #else
-#define STOP() do { return PARAM_CHECK_FAIL; } while(0)
+#define CHECK_FAILED() do { return PARAM_CHECK_FAIL; } while(0)
 #endif
 #define PARAM_CHECK(cond, msg) do { \
         if (!(cond)) { \
             OUTPUT_DEBUG_STRING("Check failed: " #cond "\n"); \
             OUTPUT_DEBUG_STRING(msg); \
             OUTPUT_DEBUG_STRING("\n"); \
-            STOP(); \
+            CHECK_FAILED(); \
         } \
     } while(0)
 #else /* F3DAUDIO_DEBUG_PARAM_CHECKS */
@@ -95,10 +103,11 @@ void __stdcall OutputDebugStringA(const char* lpOutputString);
 #define FLOAT_VALID_CHECK(f) PARAM_CHECK(!isnan(f) && !isinf(f), "Float is either NaN or Infinity")
 
 #define FLOAT_BETWEEN_CHECK(f, a, b) do { \
-    PARAM_CHECK(f >= a, "Value" #f " is too low"); \
-    PARAM_CHECK(f <= b, "Value" #f " is too big"); \
+        PARAM_CHECK(f >= a, "Value" #f " is too low"); \
+        PARAM_CHECK(f <= b, "Value" #f " is too big"); \
     } while(0)
 
+// TODO: switch to square length (to save CPU)
 #define VECTOR_NORMAL_CHECK(v) do { \
         PARAM_CHECK(FAudio_fabsf(VectorLength(v) - 1.0f) <= 1e-5f, "Vector " #v " isn't normal"); \
     } while(0)
@@ -140,27 +149,69 @@ static float VectorLength(F3DAUDIO_VECTOR v) {
     return FAudio_sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
+static F3DAUDIO_VECTOR VectorNormalize(F3DAUDIO_VECTOR v, float* norm) {
+    F3DAUDIO_VECTOR res;
+    *norm = VectorLength(v);
+    res.x = v.x / *norm;
+    res.y = v.y / *norm;
+    res.z = v.z / *norm;
+    return res;
+}
+
 static float VectorDot(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return u.x*v.x + u.y*v.y + u.z*v.z;
 }
 
-/* F3DAUDIO_HANDLE Structure */
-/* FIXME: may cause aliasing problems */
-#define SPEAKERMASK(Instance)       *((uint32_t*)   &Instance[0])
-#define SPEAKERCOUNT(Instance)      *((uint32_t*)   &Instance[4])
-#define UNKNOWN_PARAM(Instance)     *((uint32_t*)   &Instance[8])
-#define SPEEDOFSOUND(Instance)      *((float*)  &Instance[12])
-#define ADJUSTED_SPEEDOFSOUND(Instance) *((float*)  &Instance[16])
+/*
+ * Generic utility functions
+ */
+static uint32_t float_to_uint32(float x) {
+    uint32_t res;
+    FAudio_memcpy(&res, &x, sizeof(res));
+    return res;
+}
 
-/* -Adrien
+static float uint32_to_float(uint32_t x) {
+    float res;
+    FAudio_memcpy(&res, &x, sizeof(res));
+    return res;
+}
+
+// TODO: remove.
+uint32_t popcount_naive(uint32_t bits) {
+    uint32_t count = 0;
+    while (bits != 0)
+    {
+        count += bits & 1;
+        bits >>= 1;
+    }
+    return count;
+}
+
+uint32_t popcount(uint32_t bits) {
+    uint32_t naive = popcount_naive(bits);
+    uint32_t count = 0;
+    while (bits) {
+        count += 1;
+        bits &= bits - 1;
+    }
+    SDL_assert(naive == count);
+    return count;
+}
+
+/* Adrien:
  * first 4 bytes = channel mask
  * next 4 = number of speakers in the configuration
- * next 4 = bit 1 set if config has LFE speaker. bit 0 set if config has front center speaker.
+ * next 4 = bit 1 set if config has LFE speaker. bit 0 set if config has front center speaker. Alternative theory: this is the index
  * next 4 = speed of sound as specified by user arguments
- * next 4 = speed of sound, minus 1 ULP. Why?
- * TODO: change to a proper struct?
- * ASK: do we care about maintaining strict binary compatibility with X3DAudio?
+ * next 4 = speed of sound, minus 1 ULP. Not sure how X3DAudio uses this.
  */
+/* TODO: may cause aliasing problems */
+#define SPEAKERMASK(Instance)       *((uint32_t*)   &Instance[0])
+#define SPEAKERCOUNT(Instance)      *((uint32_t*)   &Instance[4])
+#define SPEAKER_LF_INDEX(Instance)     *((uint32_t*)   &Instance[8])
+#define SPEEDOFSOUND(Instance)      *((float*)  &Instance[12])
+#define ADJUSTED_SPEEDOFSOUND(Instance) *((float*)  &Instance[16])
 
 int F3DAudioCheckInitParams(
     uint32_t SpeakerChannelMask,
@@ -200,57 +251,34 @@ int F3DAudioCheckInitParams(
     return PARAM_CHECK_OK;
 }
 
-#if 0
-static uint32_t float_to_uint32(float x) {
-    uint32_t res;
-    FAudio_memcpy(&res, &x, sizeof(res));
-    return res;
-}
-
-static float uint32_to_float(uint32_t x) {
-    float res;
-    FAudio_memcpy(&res, &x, sizeof(res));
-    return res;
-}
-#endif
-
 void F3DAudioInitialize(
     uint32_t SpeakerChannelMask,
     float SpeedOfSound,
     F3DAUDIO_HANDLE Instance
 ) {
-    union
-    {
-        float f;
-        uint32_t i;
-    } epsilonHack;
-
-    uint8_t speakerCount = 0;
-
+    uint32_t punnedSpeedOfSound;
     if (!F3DAudioCheckInitParams(SpeakerChannelMask, SpeedOfSound, Instance))
     {
         return;
     }
 
-    /* Required by MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/microsoft.directx_sdk.x3daudio.x3daudioinitialize(v=vs.85).aspx */
-
     SPEAKERMASK(Instance) = SpeakerChannelMask;
-    while (SpeakerChannelMask != 0)
-    {
-        speakerCount += SpeakerChannelMask & 1;
-        SpeakerChannelMask >>= 1;
+    SPEAKERCOUNT(Instance) = popcount(SpeakerChannelMask);
+
+    SPEAKER_LF_INDEX(Instance) = 0xFFFFFFFF;
+    if (SpeakerChannelMask & SPEAKER_LOW_FREQUENCY) {
+        if (SpeakerChannelMask & SPEAKER_FRONT_CENTER) {
+            SPEAKER_LF_INDEX(Instance) = 3;
+        } else {
+            SPEAKER_LF_INDEX(Instance) = 2;
+        }
     }
-    SPEAKERCOUNT(Instance) = speakerCount;
-    UNKNOWN_PARAM(Instance) = 0xFFFFFFFF; /* lolwut */
+
     SPEEDOFSOUND(Instance) = SpeedOfSound;
 
-    /* Adrien: AFAIK the portable way to do type punning is through memcpy */
-    /* "Convert" raw float to int... */
-    epsilonHack.f = SpeedOfSound;
-    /* ... Subtract epsilon value... */
-    epsilonHack.i -= 1;
-    /* ... Convert back to float. */
-    ADJUSTED_SPEEDOFSOUND(Instance) = epsilonHack.f;
+    punnedSpeedOfSound = float_to_uint32(SpeedOfSound);
+    punnedSpeedOfSound -= 1;
+    ADJUSTED_SPEEDOFSOUND(Instance) = uint32_to_float(punnedSpeedOfSound);
 }
 
 /* Adrien: notes from MSDN
@@ -349,6 +377,11 @@ int F3DAudioCheckCalculateParams(
     {
         POINTER_CHECK(pDSPSettings->pMatrixCoefficients);
     }
+    if (Flags & F3DAUDIO_CALCULATE_ZEROCENTER)
+    {
+        int hasCenter = SPEAKERMASK(Instance) & SPEAKER_FRONT_CENTER;
+        PARAM_CHECK(hasCenter, "F3DAUDIO_CALCULATE_ZEROCENTER is only valid for matrix calculations with a format that has a center channel");
+    }
 
     ChannelCount = SPEAKERCOUNT(Instance);
     PARAM_CHECK(pDSPSettings->DstChannelCount == ChannelCount, "Invalid channel count, DSP settings and speaker configuration must agree");
@@ -394,7 +427,6 @@ int F3DAudioCheckCalculateParams(
     }
     FLOAT_BETWEEN_CHECK(pEmitter->CurveDistanceScaler, FLT_MIN, FLT_MAX);
     FLOAT_BETWEEN_CHECK(pEmitter->DopplerScaler, 0.0f, FLT_MAX);
-
 
     PARAM_CHECK(CheckCurve(pEmitter->pVolumeCurve) == PARAM_CHECK_OK, "Invalid Volume curve");
     PARAM_CHECK(CheckCurve(pEmitter->pLFECurve) == PARAM_CHECK_OK, "Invalid LFE curve");
@@ -458,15 +490,243 @@ static float ComputeConeParameter(
     if (angle <= halfOuterAngle)
     {
         float alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
+
+        /* Adrien: Sooo... This is awkward. MSDN doesn't say anything, but X3DAudio.h says that this should be lerped. However in practice the behaviour of X3DAudio isn't a lerp at all. It's easy to see with big InnerAngle / OuterAngle values. If we want accurate emulation, we'll need to either find what formula they use, or use a more advanced interpolation, like tricubic.
+        */
         return LERP(alpha, innerParam, outerParam);
     }
 
     return outerParam;
 }
 
-// X3DAudio.h declares one, but the default (if emitter has NULL) volume curve is a *computed* inverse law, while on the other hand a curve leads to a piecewise linear function.
-// static F3DAUDIO_DISTANCE_CURVE_POINT DefaultVolumeCurvePoints[] = { {0.0f, 1.0f}, {1.0f, 0.0f} };
-// static F3DAUDIO_DISTANCE_CURVE DefaultVolumeCurve = { DefaultVolumeCurvePoints, ARRAY_COUNT(DefaultVolumeCurvePoints) };
+/* Adrien: X3DAudio.h declares something like this, but the default (if emitter has NULL) volume curve is a *computed* inverse law, while on the other hand a curve leads to a piecewise linear function. So a "default curve" like this is pointless, not sure what X3DAudio does with it...
+ */
+#if 0
+static F3DAUDIO_DISTANCE_CURVE_POINT DefaultVolumeCurvePoints[] = { {0.0f, 1.0f}, {1.0f, 0.0f} };
+static F3DAUDIO_DISTANCE_CURVE DefaultVolumeCurve = { DefaultVolumeCurvePoints, ARRAY_COUNT(DefaultVolumeCurvePoints) };
+#endif
+
+/* Adrien: here we declare the azimuths of every speaker for every speaker configuration, ordered by increasing angle, as well as the index to which they map in the final matrix for their respective configuration. It had to be reverse engineered by looking at the data from various X3DAudioCalculate() matrix results for the various speaker configurations; *in particular*, the azimuths are different from the ones in F3DAudio.h (and X3DAudio.h) for SPEAKER_STEREO (which is declared has having front L and R speakers in the bit mask, but in fact has L and R *side* speakers). LF speakers are deliberately not included in the SpeakerInfo list, rather, we store the index into a separate field (with a -1 sentinel value if it has no LF speaker).  */
+typedef struct {
+    float azimuth;
+    uint32_t matrixIdx;
+} SpeakerInfo;
+
+typedef struct {
+    uint32_t configMask;
+    const SpeakerInfo *speakers;
+    uint32_t numNonLFSpeakers; /* not strictly necessary because it can be inferred from the SpeakerCount field of the F3DAUDIO_HANDLE, but makes code much cleaner and less error prone */
+    uint32_t LFSpeakerIdx;
+} ConfigInfo;
+
+/* Adrien: it is absolutely necessary that these are stored in increasing, *positive* azimuth order (i.e. all angles between [0; 2PI]), as we'll do a linear interval search during CalculateMatrix. */
+
+// TODO(Adrien): Quadruple check and test this because there's a high chance I might have fckd up here
+
+#define SPEAKER_AZIMUTH_CENTER                (F3DAUDIO_PI *  0.0f       )
+#define SPEAKER_AZIMUTH_FRONT_RIGHT_OF_CENTER (F3DAUDIO_PI *  1.0f / 8.0f)
+#define SPEAKER_AZIMUTH_FRONT_RIGHT           (F3DAUDIO_PI *  1.0f / 4.0f)
+#define SPEAKER_AZIMUTH_SIDE_RIGHT            (F3DAUDIO_PI *  1.0f / 2.0f)
+#define SPEAKER_AZIMUTH_BACK_RIGHT            (F3DAUDIO_PI *  3.0f / 4.0f)
+#define SPEAKER_AZIMUTH_BACK_CENTER           (F3DAUDIO_PI *  1.0f       )
+#define SPEAKER_AZIMUTH_BACK_LEFT             (F3DAUDIO_PI *  5.0f / 4.0f)
+#define SPEAKER_AZIMUTH_SIDE_LEFT             (F3DAUDIO_PI *  3.0f / 2.0f)
+#define SPEAKER_AZIMUTH_FRONT_LEFT            (F3DAUDIO_PI *  7.0f / 4.0f)
+#define SPEAKER_AZIMUTH_FRONT_LEFT_OF_CENTER  (F3DAUDIO_PI * 15.0f / 8.0f)
+
+const SpeakerInfo kMonoConfigSpeakers[] = {
+    {     SPEAKER_AZIMUTH_CENTER, 0 },
+};
+const SpeakerInfo kStereoConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_SIDE_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_SIDE_LEFT , 0 },
+};
+const SpeakerInfo k2Point1ConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_SIDE_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_SIDE_LEFT,  0 },
+};
+const SpeakerInfo kSurroundConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_CENTER     , 2 },
+    { SPEAKER_AZIMUTH_FRONT_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_BACK_CENTER, 3 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,  0 },
+};
+const SpeakerInfo kQuadConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_FRONT_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_BACK_RIGHT,  3 },
+    { SPEAKER_AZIMUTH_BACK_LEFT,   2 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,  0 },
+};
+const SpeakerInfo k4Point1ConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_FRONT_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_BACK_RIGHT,  4 },
+    { SPEAKER_AZIMUTH_BACK_LEFT,   3 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,  0 },
+};
+const SpeakerInfo k5Point1ConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_CENTER,      2 },
+    { SPEAKER_AZIMUTH_FRONT_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_BACK_RIGHT,  5 },
+    { SPEAKER_AZIMUTH_BACK_LEFT,   4 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,  0 },
+};
+const SpeakerInfo k7Point1ConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_CENTER,                2 },
+    { SPEAKER_AZIMUTH_FRONT_RIGHT_OF_CENTER, 7 },
+    { SPEAKER_AZIMUTH_FRONT_RIGHT,           1 },
+    { SPEAKER_AZIMUTH_BACK_RIGHT,            5 },
+    { SPEAKER_AZIMUTH_BACK_LEFT,             4 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,            0 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT_OF_CENTER,  6 },
+};
+const SpeakerInfo k5Point1SurroundConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_CENTER,      2 },
+    { SPEAKER_AZIMUTH_FRONT_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_SIDE_RIGHT,  5 },
+    { SPEAKER_AZIMUTH_SIDE_LEFT ,  4 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,  0 },
+};
+const SpeakerInfo k7Point1SurroundConfigSpeakers[] = {
+    { SPEAKER_AZIMUTH_CENTER,      2 },
+    { SPEAKER_AZIMUTH_FRONT_RIGHT, 1 },
+    { SPEAKER_AZIMUTH_SIDE_RIGHT,  7 },
+    { SPEAKER_AZIMUTH_BACK_RIGHT,  5 },
+    { SPEAKER_AZIMUTH_BACK_LEFT,   4 },
+    { SPEAKER_AZIMUTH_SIDE_LEFT ,  6 },
+    { SPEAKER_AZIMUTH_FRONT_LEFT,  0 },
+};
+
+/* Adrien: hmmm... with that organization, the index of the LF speaker into the matrix array strangely looks *exactly* like the mystery field in the F3DAUDIO_HANDLE!! */
+const ConfigInfo kSpeakersConfigInfo[] = {
+    { SPEAKER_MONO,             kMonoConfigSpeakers,            ARRAY_COUNT(kMonoConfigSpeakers),            -1 },
+    { SPEAKER_STEREO,           kStereoConfigSpeakers,          ARRAY_COUNT(kStereoConfigSpeakers),          -1 },
+    { SPEAKER_2POINT1,          k2Point1ConfigSpeakers,         ARRAY_COUNT(k2Point1ConfigSpeakers),          2 },
+    { SPEAKER_SURROUND,         kSurroundConfigSpeakers,        ARRAY_COUNT(kSurroundConfigSpeakers),        -1 },
+    { SPEAKER_QUAD,             kQuadConfigSpeakers,            ARRAY_COUNT(kQuadConfigSpeakers),            -1 },
+    { SPEAKER_4POINT1,          k4Point1ConfigSpeakers,         ARRAY_COUNT(k4Point1ConfigSpeakers),          2 },
+    { SPEAKER_5POINT1,          k5Point1ConfigSpeakers,         ARRAY_COUNT(k5Point1ConfigSpeakers),          3 },
+    { SPEAKER_7POINT1,          k7Point1ConfigSpeakers,         ARRAY_COUNT(k7Point1ConfigSpeakers),          3 },
+    { SPEAKER_5POINT1_SURROUND, k5Point1SurroundConfigSpeakers, ARRAY_COUNT(k5Point1SurroundConfigSpeakers),  3 },
+    { SPEAKER_7POINT1_SURROUND, k7Point1SurroundConfigSpeakers, ARRAY_COUNT(k7Point1SurroundConfigSpeakers),  3 },
+};
+
+/* Adrien: this function does some sanity checks on the config info tables. It should only be enabled to validate the tables after adjusting them. */
+// TODO: migrate to a "one-time check" for dev builds only. Doesn't need to be inside CalculateMatrix.
+static int CheckConfigurations() {
+    int i;
+    for (i = 0; i < ARRAY_COUNT(kSpeakersConfigInfo); ++i) {
+        const ConfigInfo* curCfg = &kSpeakersConfigInfo[i];
+        uint32_t nTotalSpeakers = popcount(curCfg->configMask);
+        int hasLF = (curCfg->configMask & SPEAKER_LOW_FREQUENCY) ? 1 : 0;
+        uint32_t expectedAzimuthsCount = nTotalSpeakers - hasLF;
+        uint32_t i, s, expectedSum;
+
+        if (expectedAzimuthsCount != curCfg->numNonLFSpeakers) {
+            BREAK();
+        }
+        if (hasLF && curCfg->LFSpeakerIdx == -1) {
+            BREAK();
+        }
+
+        for (i = 0; i < curCfg->numNonLFSpeakers - 1; ++i) {
+            if (curCfg->speakers[i].azimuth >= curCfg->speakers[i+1].azimuth) {
+                BREAK();
+            }
+        }
+
+        /* This is an easy way to check that all indices are accounted for, and that there's no duplicate. */
+        expectedSum = nTotalSpeakers * (nTotalSpeakers + 1) / 2;
+        s = 0;
+        for (i = 0; i < curCfg->numNonLFSpeakers; ++i) {
+            s += (curCfg->speakers[i].matrixIdx + 1);
+        }
+        if (hasLF) {
+            s += (curCfg->LFSpeakerIdx + 1);
+        }
+        if (s != expectedSum) {
+            BREAK();
+        }
+    }
+
+    return 1;
+}
+
+/* A simple linear search is OK for 10 elements. */
+static const ConfigInfo* GetConfigInfo(uint32_t speakerConfigMask) {
+    uint32_t i;
+    for (i = 0; i < ARRAY_COUNT(kSpeakersConfigInfo); ++i)
+    {
+        if (kSpeakersConfigInfo[i].configMask == speakerConfigMask) {
+            return &kSpeakersConfigInfo[i];
+        }
+    }
+    // TODO: this should never happen. maybe assert in debug builds?
+    return NULL;
+}
+
+/* Given a speaker mask, this function finds azimuths of the two closest speakers for a given emitter azimuth (in the basis of the emitter) */
+static void FindSpeakerAzimuths(const ConfigInfo* config, float emitterAzimuth, int skipCenter, const SpeakerInfo **speakerInfo)
+{
+    uint32_t i, nexti;
+    float a0, a1;
+    if (!config)
+    {
+        // TODO: assert
+        // return 0;
+    }
+
+    for (i = 0; i < config->numNonLFSpeakers; ++i)
+    {
+        a0 = config->speakers[i].azimuth;
+        nexti = (i + 1) % config->numNonLFSpeakers;
+        a1 = config->speakers[nexti].azimuth;
+        if (a0 < a1)
+        {
+            if (emitterAzimuth >= a0 && emitterAzimuth < a1)
+            {
+                break;
+            }
+        }
+        else
+        {
+            if (emitterAzimuth >= a0 || emitterAzimuth < a1)
+            {
+                break;
+            }
+        }
+    }
+    SDL_assert(emitterAzimuth >= a0 || emitterAzimuth < a1);
+
+    if (skipCenter)
+    {
+        if (a0 == 0.0f)
+        {
+            if (i == 0)
+            {
+                i = config->numNonLFSpeakers - 1;
+            }
+            else
+            {
+                i -= 1;
+            }
+        }
+        else if (a1 == 0.0f)
+        {
+            nexti += 1;
+            if (nexti >= config->numNonLFSpeakers)
+            {
+                nexti -= config->numNonLFSpeakers;
+            }
+        }
+    }
+    speakerInfo[0] = &config->speakers[i];
+    speakerInfo[1] = &config->speakers[nexti];
+}
+
+/* Constants for the "diffusion" step (the part where we attribute the attenuations to the various speakers). If the emitter to listener distance is less than the "null-distance", we spread equally over all speakers. Above the "non-null distance", we used the regular calculation. Between the two, it seems that X3DAudio does an "InnerRadius"-like calculation, spreading most of the signal towards the closest two speakers, but distributing some of it equally to the others. These constants have been determined roughly, using trial and error. */
+// TODO: investigate whether the behaviour is truly InnerRadius-like
+#define DIFFUSION_NULL_DISTANCE_DISK_RADIUS 1e-7f
+#define DIFFUSION_NON_NULL_DISTANCE_DISK_RADIUS 4e-7f
 
 static void CalculateMatrix(
     uint32_t ChannelMask,
@@ -479,10 +739,12 @@ static void CalculateMatrix(
     float eToLDistance,
     float* MatrixCoefficients
 ) {
+    const ConfigInfo* curConfig = GetConfigInfo(ChannelMask);
     float attenuation = 1.0f;
     float LFEattenuation = 1.0f;
 
-    if (DstChannelCount > 1 || SrcChannelCount > 1)
+    // TODO: Handle this.
+    if (SrcChannelCount > 1)
     {
         UNIMPLEMENTED();
         return;
@@ -513,7 +775,9 @@ static void CalculateMatrix(
     if (pListener->pCone)
     {
         /* Adrien: negate the dot product because we need listenerToEmitter in this case */
+        /* Here the angle might be NaN or infinite if distance == 0... ComputeConeParameter *does* check for this special case. */
         float angle = FAudio_acosf(-1.0f * VectorDot(pListener->OrientFront, emitterToListener) / eToLDistance);
+
         float listenerConeParam = ComputeConeParameter(
             eToLDistance,
             angle,
@@ -527,7 +791,9 @@ static void CalculateMatrix(
 
     if (pEmitter->pCone)
     {
+        /* Here the angle might be NaN or infinite if distance == 0... ComputeConeParameter *does* check for this special case. */
         float angle = FAudio_acosf(VectorDot(pEmitter->OrientFront, emitterToListener) / eToLDistance);
+
         float emitterConeParam = ComputeConeParameter(
             eToLDistance,
             angle,
@@ -539,14 +805,82 @@ static void CalculateMatrix(
         attenuation *= emitterConeParam;
     }
 
-    // TODO: diffuse
-    MatrixCoefficients[0] = attenuation;
+    if (DstChannelCount == 1)
+    {
+        MatrixCoefficients[0] = attenuation;
+    }
+    else if (eToLDistance <= DIFFUSION_NULL_DISTANCE_DISK_RADIUS)
+    {
+        // TODO: handle ZEROCENTER and REDIRECT TO LFE
+        float equalAttenuation = attenuation / DstChannelCount;
+        uint32_t i;
+        for (i = 0; i < DstChannelCount; ++i) {
+            MatrixCoefficients[i] = equalAttenuation;
+        }
+    }
+    else
+    {
+        // TODO: InnerAngle / InnerRadius here.
+        // TODO: change emitterToListener to listenerToEmitter everywhere else
+        F3DAUDIO_VECTOR listenerToEmitter = VectorScale(emitterToListener, -1.0f);
+        F3DAUDIO_VECTOR projTopVec, projPlane, orientRight;
+        float elevation = VectorDot(pListener->OrientTop, listenerToEmitter);
+        float radialDistance;
+        float x, y;
+        float emitterAzimuth;
+        const SpeakerInfo* infos[2];
+        int skipCenter = (Flags & F3DAUDIO_CALCULATE_ZEROCENTER) ? 1 : 0;
+        float a0, a1, val;
+        uint32_t i0, i1;
 
+        projTopVec = VectorScale(pListener->OrientTop, elevation);
+        /* projPlane is the projection of the listenerToEmitter vector, that is, the coordinates of emitter in the listener basis, onto the plane defined by the normal vector OrientTop */
+        projPlane = VectorSub(listenerToEmitter, projTopVec);
+        radialDistance = VectorLength(projPlane);
+
+        // TODO: 50% chance of a sign error here...
+        /* Remember here that the coordinate system is Left-Handed. */
+        orientRight = VectorCross(pListener->OrientTop, pListener->OrientFront);
+
+        x = VectorDot(pListener->OrientFront, projPlane);
+        y = VectorDot(orientRight, projPlane);
+
+        /* Having checked for "small distances" before, our atan2f should be well-conditioned. (That is, projPlane has non-zero length) */
+        emitterAzimuth = FAudio_atan2f(y, x);
+        if (emitterAzimuth < 0.0f) {
+            emitterAzimuth += F3DAUDIO_2PI;
+        }
+
+        FindSpeakerAzimuths(curConfig, emitterAzimuth, skipCenter, infos);
+        a0 = infos[0]->azimuth;
+        a1 = infos[1]->azimuth;
+        if (a0 > a1)
+        {
+            if (emitterAzimuth >= a0)
+            {
+                emitterAzimuth -= F3DAUDIO_2PI;
+            }
+            a0 -= F3DAUDIO_2PI;
+            val = (emitterAzimuth - a0) / (a1 - a0 + F3DAUDIO_2PI);
+        }
+        val = (emitterAzimuth - a0) / (a1 - a0);
+
+        i0 = infos[0]->matrixIdx;
+        i1 = infos[1]->matrixIdx;
+
+        FAudio_zero(MatrixCoefficients, sizeof(float) * SrcChannelCount * DstChannelCount);
+
+        // TODO multi emitters.
+        // for (int iEm = 0; iEm < SrcChannelCount; ++iEm) {
+        MatrixCoefficients[i0] = (1.0f - val) * attenuation;
+        MatrixCoefficients[i1] = (       val) * attenuation;
+        // }
+    }
 
     if (Flags & F3DAUDIO_CALCULATE_ZEROCENTER)
     {
         // Fills the center channel with silence. This flag allows you to keep a 6-channel matrix so you do not have to remap the channels, but the center channel will be silent. This flag is only valid if you also set X3DAUDIO_CALCULATE_MATRIX.
-        UNIMPLEMENTED();
+        //UNIMPLEMENTED();
     }
 
     if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
@@ -571,7 +905,7 @@ static void CalculateDoppler(
     float* emitterVelocityComponent,
     float* DopplerFactor
 ) {
-    // FIXME: div by zero here if emitter and listener at same pos -Adrien
+    // TODO: div by zero here if emitter and listener at same pos -Adrien
     *DopplerFactor = 1.0f;
     if (pEmitter->DopplerScaler > 0.0f)
     {
@@ -651,13 +985,15 @@ void F3DAudioCalculate(
     uint32_t Flags,
     F3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
-    F3DAUDIO_VECTOR emitterToListener;
-    float eToLDistance;
+    F3DAUDIO_VECTOR emitterToListener, normalizedEToL;
+    float eToLDistance, dummy;
 
     /* Distance */
     emitterToListener = VectorSub(pListener->Position, pEmitter->Position);
-
+    normalizedEToL = VectorNormalize(emitterToListener, &dummy);
     eToLDistance = VectorLength(emitterToListener);
+
+
     pDSPSettings->EmitterToListenerDistance = eToLDistance;
 
     F3DAudioCheckCalculateParams(Instance, pListener, pEmitter, Flags, pDSPSettings);
@@ -719,5 +1055,60 @@ void F3DAudioCalculate(
         pDSPSettings->EmitterToListenerAngle = FAudio_acosf(
             VectorDot(emitterToListener, pEmitter->OrientFront) / eToLDistance
         );
+    }
+}
+
+void F3DAudioInternalChecks() {
+    if (!CheckConfigurations())
+    {
+        BREAK();
+    }
+
+    {
+        const ConfigInfo* config = GetConfigInfo(SPEAKER_5POINT1);
+        float emitterAzimuth = 0.0f;
+        int skipCenter = 0;
+        const SpeakerInfo* infos[2];
+        float a0, a1, ea;
+        uint32_t i;
+        float dummy = 0.0f;
+        struct {
+            float azimuth;
+            float a0;
+            float a1;
+        } kTestAzimuths[] = {
+            { F3DAUDIO_PI * 13.0f / 8.0f, SPEAKER_AZIMUTH_BACK_LEFT, SPEAKER_AZIMUTH_FRONT_LEFT },
+            { F3DAUDIO_PI *  7.0f / 4.0f, SPEAKER_AZIMUTH_FRONT_LEFT, SPEAKER_AZIMUTH_CENTER },
+            { F3DAUDIO_PI * 15.0f / 8.0f, SPEAKER_AZIMUTH_FRONT_LEFT, SPEAKER_AZIMUTH_CENTER },
+            {                       0.0f, SPEAKER_AZIMUTH_CENTER, SPEAKER_AZIMUTH_FRONT_RIGHT },
+            { F3DAUDIO_PI *  1.0f / 8.0f, SPEAKER_AZIMUTH_CENTER, SPEAKER_AZIMUTH_FRONT_RIGHT },
+            { F3DAUDIO_PI *  1.0f / 4.0f, SPEAKER_AZIMUTH_FRONT_RIGHT, SPEAKER_AZIMUTH_BACK_RIGHT },
+            { F3DAUDIO_PI *  3.0f / 8.0f, SPEAKER_AZIMUTH_FRONT_RIGHT, SPEAKER_AZIMUTH_BACK_RIGHT },
+            { F3DAUDIO_PI *  1.0f / 2.0f, SPEAKER_AZIMUTH_FRONT_RIGHT, SPEAKER_AZIMUTH_BACK_RIGHT },
+            { F3DAUDIO_PI *  3.0f / 4.0f, SPEAKER_AZIMUTH_BACK_RIGHT, SPEAKER_AZIMUTH_BACK_LEFT  },
+            { F3DAUDIO_PI               , SPEAKER_AZIMUTH_BACK_RIGHT, SPEAKER_AZIMUTH_BACK_LEFT  },
+            { F3DAUDIO_PI *  5.0f / 4.0f, SPEAKER_AZIMUTH_BACK_LEFT, SPEAKER_AZIMUTH_FRONT_LEFT  },
+        };
+        // const SpeakerInfo* kExpectedInfos[][2] = {
+        //     {},
+        // };
+
+        for (i = 0; i < ARRAY_COUNT(kTestAzimuths); ++i) {
+            emitterAzimuth = kTestAzimuths[i].azimuth;
+            FindSpeakerAzimuths(config, emitterAzimuth, skipCenter, infos);
+
+            a0 = infos[0]->azimuth;
+            a1 = infos[1]->azimuth;
+            ea = emitterAzimuth;
+
+            if (a0 != kTestAzimuths[i].a0) {
+                BREAK();
+            }
+            if (a1 != kTestAzimuths[i].a1) {
+                BREAK();
+            }
+
+            dummy += 1.0f;
+        }
     }
 }

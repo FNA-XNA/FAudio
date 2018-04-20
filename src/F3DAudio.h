@@ -255,6 +255,8 @@ F3DAUDIOAPI int F3DAudioCheckCalculateParams(
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 );
 
+F3DAUDIOAPI void F3DAudioInternalChecks();
+
 #pragma pack(pop)
 
 #ifdef __cplusplus
