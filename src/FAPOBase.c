@@ -179,13 +179,39 @@ uint32_t FAPOBase_LockForProcess(
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 ) {
-	/* TODO */
+	/* Verify parameter counts... */
+	if (	InputLockedParameterCount < fapo->m_pRegistrationProperties->MinInputBufferCount ||
+		InputLockedParameterCount > fapo->m_pRegistrationProperties->MaxInputBufferCount ||
+		OutputLockedParameterCount < fapo->m_pRegistrationProperties->MinOutputBufferCount ||
+		OutputLockedParameterCount > fapo->m_pRegistrationProperties->MaxOutputBufferCount	)
+	{
+		return 1;
+	}
+
+
+	/* Validate input/output formats */
+	#define VERIFY_FORMAT_FLAG(flag, prop) \
+		if (	(fapo->m_pRegistrationProperties->Flags & flag) && \
+			(pInputLockedParameters->pFormat->prop != pOutputLockedParameters->pFormat->prop)	) \
+		{ \
+			return 1; \
+		}
+	VERIFY_FORMAT_FLAG(FAPO_FLAG_CHANNELS_MUST_MATCH, nChannels)
+	VERIFY_FORMAT_FLAG(FAPO_FLAG_FRAMERATE_MUST_MATCH, nSamplesPerSec)
+	VERIFY_FORMAT_FLAG(FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH, wBitsPerSample)
+	#undef VERIFY_FORMAT_FLAG
+	if (	(fapo->m_pRegistrationProperties->Flags & FAPO_FLAG_BUFFERCOUNT_MUST_MATCH) &&
+		(InputLockedParameterCount != OutputLockedParameterCount)	)
+	{
+		return 1;
+	}
+	fapo->m_fIsLocked = 1;
 	return 0;
 }
 
 void FAPOBase_UnlockForProcess(FAPOBase *fapo)
 {
-	/* TODO */
+	fapo->m_fIsLocked = 0;
 }
 
 uint32_t FAPOBase_CalcInputFrames(FAPOBase *fapo, uint32_t OutputFrameCount)
@@ -276,7 +302,43 @@ void FAPOBase_ProcessThru(
 	uint16_t OutputChannelCount,
 	uint8_t MixWithOutput
 ) {
-	/* TODO */
+	uint32_t i, co, ci;
+	float *input = pInputBuffer;
+
+	if (MixWithOutput)
+	{
+		/* TODO: SSE */
+		for (i = 0; i < FrameCount; i += 1)
+		for (co = 0; co < OutputChannelCount; co += 1)
+		for (ci = 0; ci < InputChannelCount; ci += 1)
+		{
+			/* Add, don't overwrite! */
+			pOutputBuffer[i * OutputChannelCount + co] +=
+				input[i * InputChannelCount + ci];
+			pOutputBuffer[i * OutputChannelCount + co] = FAudio_clamp(
+				pOutputBuffer[i * OutputChannelCount + co],
+				-FAUDIO_MAX_VOLUME_LEVEL,
+				FAUDIO_MAX_VOLUME_LEVEL
+			);
+		}
+	}
+	else
+	{
+		/* TODO: SSE */
+		for (i = 0; i < FrameCount; i += 1)
+		for (co = 0; co < OutputChannelCount; co += 1)
+		for (ci = 0; ci < InputChannelCount; ci += 1)
+		{
+			/* Overwrite, don't add! */
+			pOutputBuffer[i * OutputChannelCount + co] =
+				input[i * InputChannelCount + ci];
+			pOutputBuffer[i * OutputChannelCount + co] = FAudio_clamp(
+				pOutputBuffer[i * OutputChannelCount + co],
+				-FAUDIO_MAX_VOLUME_LEVEL,
+				FAUDIO_MAX_VOLUME_LEVEL
+			);
+		}
+	}
 }
 
 /* FAPOBaseParameters Interface */
