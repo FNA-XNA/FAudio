@@ -821,7 +821,7 @@ uint32_t FAudioVoice_GetEffectParameters(
 	void *pParameters,
 	uint32_t ParametersByteSize
 ) {
-	FAPOBaseParameters *fapo = (FAPOBaseParameters*)
+	FAPOParametersBase *fapo = (FAPOParametersBase*)
 		voice->effects.desc[EffectIndex].pEffect;
 	fapo->parameters.GetParameters(fapo, pParameters, ParametersByteSize);
 	return 0;

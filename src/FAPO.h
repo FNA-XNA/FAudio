@@ -174,7 +174,7 @@ typedef void (FAPOCALL * SetParametersFunc)(
 );
 typedef void (FAPOCALL * GetParametersFunc)(
 	void* fapoParameters,
-	const void* pParameters,
+	void* pParameters,
 	uint32_t ParameterByteSize
 );
 

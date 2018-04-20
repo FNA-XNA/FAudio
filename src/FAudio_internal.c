@@ -343,7 +343,7 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(
 	uint32_t samples
 ) {
 	uint32_t i;
-	FAPOBaseParameters *fapo;
+	FAPOParametersBase *fapo;
 	FAudioWaveFormatEx fmt;
 	FAPOLockForProcessBufferParameters lockParams;
 	FAPOProcessBufferParameters params;
@@ -369,7 +369,7 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(
 	/* Update parameters, process! */
 	for (i = 0; i < voice->effects.count; i += 1)
 	{
-		fapo = (FAPOBaseParameters*) voice->effects.desc[i].pEffect;
+		fapo = (FAPOParametersBase*) voice->effects.desc[i].pEffect;
 		if (voice->effects.parameterUpdates[i])
 		{
 			fapo->parameters.SetParameters(

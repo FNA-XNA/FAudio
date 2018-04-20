@@ -341,10 +341,10 @@ void FAPOBase_ProcessThru(
 	}
 }
 
-/* FAPOBaseParameters Interface */
+/* FAPOParametersBase Interface */
 
-void CreateFAPOBaseParameters(
-	FAPOBaseParameters *fapoParameters,
+void CreateFAPOParametersBase(
+	FAPOParametersBase *fapoParameters,
 	const FAPORegistrationProperties *pRegistrationProperties,
 	uint8_t *pParameterBlocks,
 	uint32_t uParameterBlockByteSize,
@@ -353,14 +353,14 @@ void CreateFAPOBaseParameters(
 	/* Base Classes/Interfaces */
 	CreateFAPOBase(&fapoParameters->base, pRegistrationProperties);
 	#define ASSIGN_VT(name) \
-		fapoParameters->parameters.name = (name##Func) FAPOBaseParameters_##name;
+		fapoParameters->parameters.name = (name##Func) FAPOParametersBase_##name;
 	ASSIGN_VT(SetParameters)
 	ASSIGN_VT(GetParameters)
 	#undef ASSIGN_VT
 
 	/* Public Virtual Functions */
 	fapoParameters->OnSetParameters = (OnSetParametersFunc)
-		FAPOBaseParameters_OnSetParameters;
+		FAPOParametersBase_OnSetParameters;
 
 	/* Private Variables */
 	fapoParameters->m_pParameterBlocks = pParameterBlocks;
@@ -372,20 +372,20 @@ void CreateFAPOBaseParameters(
 	fapoParameters->m_fProducer = fProducer;
 }
 
-int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters)
+int32_t FAPOParametersBase_AddRef(FAPOParametersBase *fapoParameters)
 {
 	return FAPOBase_AddRef(&fapoParameters->base);
 }
 
-int32_t FAPOBaseParameters_Release(FAPOBaseParameters *fapoParameters)
+int32_t FAPOParametersBase_Release(FAPOParametersBase *fapoParameters)
 {
 	return FAPOBase_Release(&fapoParameters->base);
 }
 
 /* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
-void FAPOBaseParameters_SetParameters(
-	FAPOBaseParameters *fapoParameters,
+void FAPOParametersBase_SetParameters(
+	FAPOParametersBase *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 ) {
@@ -400,34 +400,34 @@ void FAPOBaseParameters_SetParameters(
 	);
 }
 
-void FAPOBaseParameters_GetParameters(
-	FAPOBaseParameters *fapoParameters,
-	const void* pParameters,
+void FAPOParametersBase_GetParameters(
+	FAPOParametersBase *fapoParameters,
+	void* pParameters,
 	uint32_t ParameterByteSize
 ) {
 	/* TODO */
 }
 
-void FAPOBaseParameters_OnSetParameters(
-	FAPOBaseParameters *fapoParameters,
+void FAPOParametersBase_OnSetParameters(
+	FAPOParametersBase *fapoParameters,
 	const void* parameters,
 	uint32_t parametersSize
 ) {
 }
 
-uint8_t FAPOBaseParameters_ParametersChanged(FAPOBaseParameters *fapoParameters)
+uint8_t FAPOParametersBase_ParametersChanged(FAPOParametersBase *fapoParameters)
 {
 	/* TODO */
 	return 0;
 }
 
-uint8_t* FAPOBaseParameters_BeginProcess(FAPOBaseParameters *fapoParameters)
+uint8_t* FAPOParametersBase_BeginProcess(FAPOParametersBase *fapoParameters)
 {
 	/* TODO */
 	return NULL;
 }
 
-void FAPOBaseParameters_EndProcess(FAPOBaseParameters *fapoParameters)
+void FAPOParametersBase_EndProcess(FAPOParametersBase *fapoParameters)
 {
 	/* TODO */
 }

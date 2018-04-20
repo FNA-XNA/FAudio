@@ -57,7 +57,7 @@ static FAPORegistrationProperties VolumeMeterProperties =
 
 typedef struct FAudioFXVolumeMeter
 {
-	FAPOBaseParameters base;
+	FAPOParametersBase base;
 
 	/* TODO */
 } FAudioFXVolumeMeter;
@@ -71,12 +71,12 @@ void FAudioFXVolumeMeter_Process(
 	uint8_t IsEnabled
 ) {
 	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
-		FAPOBaseParameters_BeginProcess(&fapo->base);
+		FAPOParametersBase_BeginProcess(&fapo->base);
 
 	/* TODO */
 	(void) levels;
 
-	FAPOBaseParameters_EndProcess(&fapo->base);
+	FAPOParametersBase_EndProcess(&fapo->base);
 }
 
 void FAudioFXVolumeMeter_Free(void* fapo)
@@ -92,7 +92,7 @@ uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 	);
 
 	/* Initialize... */
-	CreateFAPOBaseParameters(
+	CreateFAPOParametersBase(
 		&result->base,
 		&VolumeMeterProperties,
 		NULL, /* FIXME */
@@ -138,7 +138,7 @@ static FAPORegistrationProperties ReverbProperties =
 
 typedef struct FAudioFXReverb
 {
-	FAPOBaseParameters base;
+	FAPOParametersBase base;
 
 	/* TODO */
 } FAudioFXReverb;
@@ -152,12 +152,12 @@ void FAudioFXReverb_Process(
 	uint8_t IsEnabled
 ) {
 	FAudioFXReverbParameters *params = (FAudioFXReverbParameters*)
-		FAPOBaseParameters_BeginProcess(&fapo->base);
+		FAPOParametersBase_BeginProcess(&fapo->base);
 
 	/* TODO */
 	(void) params;
 
-	FAPOBaseParameters_EndProcess(&fapo->base);
+	FAPOParametersBase_EndProcess(&fapo->base);
 }
 
 void FAudioFXReverb_Free(void* fapo)
@@ -176,7 +176,7 @@ uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 	);
 
 	/* Initialize... */
-	CreateFAPOBaseParameters(
+	CreateFAPOParametersBase(
 		&result->base,
 		&ReverbProperties,
 		params,

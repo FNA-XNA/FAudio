@@ -155,19 +155,19 @@ FAPOAPI void FAPOBase_ProcessThru(
 	uint8_t MixWithOutput
 );
 
-/* FAPOBaseParameters Interface */
+/* FAPOParametersBase Interface */
 
 #pragma pack(push, 8)
 
-typedef struct FAPOBaseParameters FAPOBaseParameters;
+typedef struct FAPOParametersBase FAPOParametersBase;
 
 typedef void (FAPOCALL * OnSetParametersFunc)(
-	FAPOBaseParameters *fapoParameters,
+	FAPOParametersBase *fapoParameters,
 	const void* parameters,
 	uint32_t parametersSize
 );
 
-struct FAPOBaseParameters
+struct FAPOParametersBase
 {
 	/* Base Classes/Interfaces */
 	FAPOBase base;
@@ -188,43 +188,43 @@ struct FAPOBaseParameters
 
 #pragma pack(pop)
 
-FAPOAPI void CreateFAPOBaseParameters(
-	FAPOBaseParameters *fapoParameters,
+FAPOAPI void CreateFAPOParametersBase(
+	FAPOParametersBase *fapoParameters,
 	const FAPORegistrationProperties *pRegistrationProperties,
 	uint8_t *pParameterBlocks,
 	uint32_t uParameterBlockByteSize,
 	uint8_t fProducer
 );
 
-FAPOAPI int32_t FAPOBaseParameters_AddRef(FAPOBaseParameters *fapoParameters);
+FAPOAPI int32_t FAPOParametersBase_AddRef(FAPOParametersBase *fapoParameters);
 
-FAPOAPI int32_t FAPOBaseParameters_Release(FAPOBaseParameters *fapoParameters);
+FAPOAPI int32_t FAPOParametersBase_Release(FAPOParametersBase *fapoParameters);
 
 /* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
-FAPOAPI void FAPOBaseParameters_SetParameters(
-	FAPOBaseParameters *fapoParameters,
+FAPOAPI void FAPOParametersBase_SetParameters(
+	FAPOParametersBase *fapoParameters,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
 
-FAPOAPI void FAPOBaseParameters_GetParameters(
-	FAPOBaseParameters *fapoParameters,
-	const void* pParameters,
+FAPOAPI void FAPOParametersBase_GetParameters(
+	FAPOParametersBase *fapoParameters,
+	void* pParameters,
 	uint32_t ParameterByteSize
 );
 
-FAPOAPI void FAPOBaseParameters_OnSetParameters(
-	FAPOBaseParameters *fapoParameters,
+FAPOAPI void FAPOParametersBase_OnSetParameters(
+	FAPOParametersBase *fapoParameters,
 	const void* parameters,
 	uint32_t parametersSize
 );
 
-FAPOAPI uint8_t FAPOBaseParameters_ParametersChanged(FAPOBaseParameters *fapoParameters);
+FAPOAPI uint8_t FAPOParametersBase_ParametersChanged(FAPOParametersBase *fapoParameters);
 
-FAPOAPI uint8_t* FAPOBaseParameters_BeginProcess(FAPOBaseParameters *fapoParameters);
+FAPOAPI uint8_t* FAPOParametersBase_BeginProcess(FAPOParametersBase *fapoParameters);
 
-FAPOAPI void FAPOBaseParameters_EndProcess(FAPOBaseParameters *fapoParameters);
+FAPOAPI void FAPOParametersBase_EndProcess(FAPOParametersBase *fapoParameters);
 
 #ifdef __cplusplus
 }
