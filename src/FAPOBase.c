@@ -365,7 +365,7 @@ void CreateFAPOParametersBase(
 	/* Private Variables */
 	fapoParameters->m_pParameterBlocks = pParameterBlocks;
 	fapoParameters->m_pCurrentParameters = pParameterBlocks;
-	fapoParameters->m_pCurrentParametersInternal = NULL;
+	fapoParameters->m_pCurrentParametersInternal = pParameterBlocks;
 	fapoParameters->m_uCurrentParametersIndex = 0;
 	fapoParameters->m_uParameterBlockByteSize = uParameterBlockByteSize;
 	fapoParameters->m_fNewerResultsReady = 0;
@@ -391,10 +391,27 @@ void FAPOParametersBase_SetParameters(
 ) {
 	FAudio_assert(!fapoParameters->m_fProducer);
 
-	/* TODO */
-
+	/* User callback for validation */
 	fapoParameters->OnSetParameters(
 		fapoParameters,
+		pParameters,
+		ParameterByteSize
+	);
+
+	/* Increment parameter block index... */
+	fapoParameters->m_uCurrentParametersIndex += 1;
+	if (fapoParameters->m_uCurrentParametersIndex == 3)
+	{
+		fapoParameters->m_uCurrentParametersIndex = 0;
+	}
+	fapoParameters->m_pCurrentParametersInternal = fapoParameters->m_pParameterBlocks + (
+		fapoParameters->m_uParameterBlockByteSize *
+		fapoParameters->m_uCurrentParametersIndex
+	);
+
+	/* Copy to what will eventually be the next parameter update */
+	FAudio_memcpy(
+		fapoParameters->m_pCurrentParametersInternal,
 		pParameters,
 		ParameterByteSize
 	);
@@ -405,7 +422,12 @@ void FAPOParametersBase_GetParameters(
 	void* pParameters,
 	uint32_t ParameterByteSize
 ) {
-	/* TODO */
+	/* Copy what's current as of the last Process */
+	FAudio_memcpy(
+		pParameters,
+		fapoParameters->m_pCurrentParameters,
+		ParameterByteSize
+	);
 }
 
 void FAPOParametersBase_OnSetParameters(
@@ -417,17 +439,18 @@ void FAPOParametersBase_OnSetParameters(
 
 uint8_t FAPOParametersBase_ParametersChanged(FAPOParametersBase *fapoParameters)
 {
-	/* TODO */
-	return 0;
+	/* Internal will get updated when SetParameters is called */
+	return fapoParameters->m_pCurrentParametersInternal != fapoParameters->m_pCurrentParameters;
 }
 
 uint8_t* FAPOParametersBase_BeginProcess(FAPOParametersBase *fapoParameters)
 {
-	/* TODO */
-	return NULL;
+	/* Set the latest block as "current", this is what Process will use now */
+	fapoParameters->m_pCurrentParameters = fapoParameters->m_pCurrentParametersInternal;
+	return fapoParameters->m_pCurrentParameters;
 }
 
 void FAPOParametersBase_EndProcess(FAPOParametersBase *fapoParameters)
 {
-	/* TODO */
+	/* I'm 100% sure my parameter block increment is wrong... */
 }
