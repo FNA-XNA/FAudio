@@ -53,7 +53,7 @@ void FACT_INTERNAL_GetNextWave(
 	FAudioVoiceSends reverbSends;
 #endif
 	const char *wbName;
-	FACTWaveBank *wb;
+	FACTWaveBank *wb = NULL;
 	LinkedList *list;
 	uint16_t wbTrack;
 	uint8_t wbIndex;
@@ -333,7 +333,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	uint16_t i, j;
 	float max, next, weight;
 	const char *wbName;
-	FACTWaveBank *wb;
+	FACTWaveBank *wb = NULL;
 	LinkedList *list;
 	FACTEvent *evt;
 	FACTEventInstance *evtInst;
