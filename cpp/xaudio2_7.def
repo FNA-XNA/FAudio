@@ -1,0 +1,7 @@
+LIBRARY   XAudio2_7
+EXPORTS  
+	DllCanUnloadNow PRIVATE
+	DllGetClassObject PRIVATE
+	DllRegisterServer PRIVATE
+	DllUnregisterServer  PRIVATE
+   

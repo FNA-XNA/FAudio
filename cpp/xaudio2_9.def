@@ -1,0 +1,4 @@
+LIBRARY   XAudio2_9  
+EXPORTS  
+	XAudio2Create   @1  
+   
