@@ -33,11 +33,16 @@ uint32_t FAudioCreate(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
+	FAudio_Construct(ppFAudio);
+	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
+	return 0;
+}
+
+uint32_t FAudio_Construct(FAudio **ppFAudio) {
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
 	(*ppFAudio)->refcount = 1;
-	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
 	return 0;
 }
 
