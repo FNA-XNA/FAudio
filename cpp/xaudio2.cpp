@@ -67,7 +67,7 @@ static void FAUDIOCALL OnVoiceProcessingPassStart(FAudioVoiceCallback *callback,
 	reinterpret_cast<FAudioVoiceCppCallback *>(callback)->com->OnVoiceProcessingPassStart(BytesRequired);
 }
 
-FAudioVoiceCallback *wrap_voice_callback(IXAudio2VoiceCallback *com_interface) {
+FAudioVoiceCppCallback *wrap_voice_callback(IXAudio2VoiceCallback *com_interface) {
 	if (com_interface == NULL) {
 		return NULL;
 	}
@@ -82,7 +82,7 @@ FAudioVoiceCallback *wrap_voice_callback(IXAudio2VoiceCallback *com_interface) {
 	cb->callbacks.OnVoiceProcessingPassStart = OnVoiceProcessingPassStart;
 	cb->com = com_interface;
 
-	return reinterpret_cast<FAudioVoiceCallback *>(cb);
+	return cb;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -155,12 +155,12 @@ public:
 		IXAudio2VoiceCallback* pCallback,
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
-		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, wrap_voice_callback(pCallback), pSendList, pEffectChain);
+		voice_callback = wrap_voice_callback(pCallback);
+		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), pSendList, pEffectChain);
 		
 		// shady af
 		format = pSourceFormat->wFormatTag;
 		nBlockAlign = pSourceFormat->nBlockAlign;
-
 	}
 
 	// IXAudio2Voice
@@ -272,7 +272,11 @@ public:
 
 	X2METHOD(void) DestroyVoice() {
 		FAudioVoice_DestroyVoice(faudio_voice);
-		// XXX free?
+		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
+		if (voice_callback) {
+			delete voice_callback;
+		}
+		delete this;
 	}
 
 	// IXAudio2SourceVoice
@@ -334,6 +338,8 @@ public:
 
 private:
 	FAudioSourceVoice *faudio_voice;
+	FAudioVoiceCppCallback *voice_callback;
+
 	uint16_t format;
 	uint16_t nBlockAlign;
 };
@@ -465,7 +471,8 @@ public:
 
 	X2METHOD(void) DestroyVoice() {
 		FAudioVoice_DestroyVoice(faudio_voice);
-		// XXX free?
+		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
+		delete this;
 	}
 
 private:
@@ -613,7 +620,8 @@ public:
 
 	X2METHOD(void) DestroyVoice() {
 		FAudioVoice_DestroyVoice(faudio_voice);
-		// XXX free?
+		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
+		delete this;
 	}
 
 	// IXAudio2MasteringVoice
