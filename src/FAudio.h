@@ -378,6 +378,8 @@ FAUDIOAPI uint32_t FAudioCreate(
 	FAudioProcessor XAudio2Processor
 );
 
+FAUDIOAPI uint32_t FAudio_Construct(FAudio **ppFAudio);	/* Only for COM interopability - not needed anywhere else */
+
 FAUDIOAPI uint32_t FAudio_AddRef(FAudio *audio);
 
 FAUDIOAPI uint32_t FAudio_Release(FAudio *audio);
