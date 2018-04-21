@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\faudio_hack.cpp" />
     <ClCompile Include="..\xaudio2.cpp" />
   </ItemGroup>
   <ItemGroup>

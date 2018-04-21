@@ -29,8 +29,6 @@ bool operator==(const IID &a, const IID &b) {
 		   a.Data4[7] == b.Data4[7];
 }
 
-uint32_t FAudioCreate_NoInit(FAudio **ppFAudio); 
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // IXAudio2VoiceCallback
@@ -583,7 +581,7 @@ private:
 class XAudio2Impl : public IXAudio2 {
 public:
 	XAudio2Impl() {
-		FAudioCreate_NoInit(&faudio);
+		FAudio_Construct(&faudio);
 	}
 
 	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor) {
@@ -607,16 +605,14 @@ public:
 	}
 
 	X2METHOD(ULONG) AddRef() {
-		// FIXME: FAudio_AddRef should probably just return the refcount ...
-		FAudio_AddRef(faudio);
-		// return faudio->refcount;
-		return 1;
+		return FAudio_AddRef(faudio);
 	}
 
 	X2METHOD(ULONG) Release() {
-		// FIXME: FAudio_AddRef should probably just return the refcount ...
-		// ULONG refcount = faudio->refcount - 1;
-		FAudio_Release(faudio);
+		ULONG refcount = FAudio_Release(faudio);
+		if (refcount == 0) {
+			delete this;
+		}
 		return 1;
 	}
 

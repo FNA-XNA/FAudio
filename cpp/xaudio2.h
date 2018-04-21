@@ -6,7 +6,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #ifdef FAUDIOCPP_EXPORTS
-#define FAUDIOCPP_API  __declspec(dllexport) HRESULT __stdcall
+#define FAUDIOCPP_API  HRESULT __stdcall
 #else
 #define FAUDIOCPP_API __declspec(dllimport) HRESULT __stdcall
 #endif
