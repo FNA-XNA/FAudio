@@ -159,6 +159,13 @@ public:
 	X2METHOD(void) OnVoiceError (void* pBufferContext, HRESULT Error) = 0;
 };
 
+class IXAudio2EngineCallback {
+public:
+	X2METHOD(void) OnProcessingPassStart () = 0;
+	X2METHOD(void) OnProcessingPassEnd () = 0;
+	X2METHOD(void) OnCriticalError (HRESULT Error) = 0;
+};
+
 class IXAudio2 : public IUnknown {
 public:
 #if (XAUDIO2_VERSION <= 7)

@@ -87,6 +87,61 @@ FAudioVoiceCallback *wrap_voice_callback(IXAudio2VoiceCallback *com_interface) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// IXAudio2EngineCallback
+//
+
+struct FAudioCppEngineCallback {
+	FAudioEngineCallback callbacks;
+	IXAudio2EngineCallback *com;
+
+	FAudioCppEngineCallback *prev, *next;
+};
+
+static void FAUDIOCALL OnCriticalError(FAudioEngineCallback *callback, uint32_t Error) {
+	reinterpret_cast<FAudioCppEngineCallback *>(callback)->com->OnCriticalError(Error);
+}
+
+static void FAUDIOCALL OnProcessingPassEnd(FAudioEngineCallback *callback) {
+	reinterpret_cast<FAudioCppEngineCallback *>(callback)->com->OnProcessingPassEnd();
+}
+
+static void FAUDIOCALL OnProcessingPassStart(FAudioEngineCallback *callback) {
+	reinterpret_cast<FAudioCppEngineCallback *>(callback)->com->OnProcessingPassStart();
+}
+
+static FAudioCppEngineCallback *wrap_engine_callback(IXAudio2EngineCallback *com_interface) {
+	if (com_interface == NULL) {
+		return NULL;
+	}
+
+	FAudioCppEngineCallback *cb = new FAudioCppEngineCallback();
+	cb->callbacks.OnCriticalError = OnCriticalError;
+	cb->callbacks.OnProcessingPassEnd = OnProcessingPassEnd;
+	cb->callbacks.OnProcessingPassStart = OnProcessingPassStart;
+	cb->com = com_interface;
+	cb->prev = NULL;
+	cb->next = NULL;
+
+	return cb;
+}
+
+static FAudioCppEngineCallback *find_and_remove_engine_callback(FAudioCppEngineCallback *list, IXAudio2EngineCallback *com) {
+	FAudioCppEngineCallback *last = list;
+
+	for (FAudioCppEngineCallback *it = list->next; it != NULL; it = it->next) {
+		if (it->com == com) {
+			last->next = it->next;
+			return it;
+		}
+
+		last = it;
+	}
+
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // IXAudio2SourceVoice implementation
 //
 
@@ -580,11 +635,11 @@ private:
 
 class XAudio2Impl : public IXAudio2 {
 public:
-	XAudio2Impl() {
+	XAudio2Impl() : callback_list({0}) {
 		FAudio_Construct(&faudio);
 	}
 
-	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor) {
+	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor) : callback_list({0}) {
 		FAudioCreate(&faudio, Flags, XAudio2Processor);
 	}
 
@@ -633,12 +688,22 @@ public:
 #endif // XAUDIO2_VERSION <= 7
 
 	X2METHOD(HRESULT) RegisterForCallbacks(IXAudio2EngineCallback* pCallback) {
-		// FIXME
-		return S_OK;
+		FAudioCppEngineCallback *cb = wrap_engine_callback(pCallback);
+		cb->next = callback_list.next;
+		callback_list.next = cb;
+
+		return FAudio_RegisterForCallbacks(faudio, reinterpret_cast<FAudioEngineCallback *>(cb));
 	}
 
 	X2METHOD(void) UnregisterForCallbacks(IXAudio2EngineCallback* pCallback) {
-		// FIXME
+		FAudioCppEngineCallback *cb = find_and_remove_engine_callback(&callback_list, pCallback);
+
+		if (cb == NULL) {
+			return;
+		}
+
+		FAudio_UnregisterForCallbacks(faudio, reinterpret_cast<FAudioEngineCallback *>(cb));
+		delete cb;
 	}
 
 	X2METHOD(HRESULT) CreateSourceVoice(
@@ -715,6 +780,7 @@ public:
 
 private:
 	FAudio *faudio;
+	FAudioCppEngineCallback	callback_list;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
