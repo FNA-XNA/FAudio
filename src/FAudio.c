@@ -44,12 +44,13 @@ uint32_t FAudioCreate(
 uint32_t FAudio_AddRef(FAudio *audio)
 {
 	audio->refcount += 1;
-	return 0;
+	return audio->refcount;
 }
 
 uint32_t FAudio_Release(FAudio *audio)
 {
 	audio->refcount -= 1;
+	uint32_t refcount = audio->refcount;
 	if (audio->refcount == 0)
 	{
 		FAudio_StopEngine(audio);
@@ -58,7 +59,7 @@ uint32_t FAudio_Release(FAudio *audio)
 		FAudio_free(audio);
 		FAudio_PlatformRelease();
 	}
-	return 0;
+	return refcount;
 }
 
 uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount)
