@@ -1206,7 +1206,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	/* Go through each buffer, send an event for each one before deleting */
 	while (entry != NULL)
 	{
-		if (voice->src.callback->OnBufferEnd != NULL)
+		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
 		{
 			voice->src.callback->OnBufferEnd(
 				voice->src.callback,
