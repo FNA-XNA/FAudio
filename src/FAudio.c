@@ -1186,7 +1186,6 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* "LoopBegin/LoopLength must be zero if LoopCount is 0" */
 	if (pBuffer->LoopCount == 0 && (loopBegin > 0 || loopLength > 0))
 	{
-FAudio_assert(0);
 		return 1;
 	}
 
@@ -1196,7 +1195,6 @@ FAudio_assert(0);
 		/* "PlayBegin must be zero as well" */
 		if (playBegin > 0)
 		{
-FAudio_assert(0);
 			return 1;
 		}
 
@@ -1222,7 +1220,6 @@ FAudio_assert(0);
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
 		if (loopBegin >= (playBegin + playLength))
 		{
-FAudio_assert(0);
 			return 1;
 		}
 
@@ -1238,7 +1235,6 @@ FAudio_assert(0);
 		if (	(loopBegin + loopLength) <= playBegin ||
 			(loopBegin + loopLength) > (playBegin + playLength)	)
 		{
-FAudio_assert(0);
 			return 1;
 		}
 	}
