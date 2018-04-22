@@ -1171,12 +1171,98 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA
 ) {
+	uint32_t adpcmMask;
+	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 	FAudio_assert(pBufferWMA == NULL);
 
+	/* Start off with whatever they just sent us... */
+	playBegin = pBuffer->PlayBegin;
+	playLength = pBuffer->PlayLength;
+	loopBegin = pBuffer->LoopBegin;
+	loopLength = pBuffer->LoopLength;
+
+	/* "LoopBegin/LoopLength must be zero if LoopCount is 0" */
+	if (pBuffer->LoopCount == 0 && (loopBegin > 0 || loopLength > 0))
+	{
+FAudio_assert(0);
+		return 1;
+	}
+
+	/* PlayLength Default */
+	if (playLength == 0)
+	{
+		/* "PlayBegin must be zero as well" */
+		if (playBegin > 0)
+		{
+FAudio_assert(0);
+			return 1;
+		}
+
+		if (voice->src.format.wFormatTag == 2)
+		{
+			playLength = (
+				pBuffer->AudioBytes /
+				voice->src.format.nBlockAlign *
+				(((voice->src.format.nBlockAlign / voice->src.format.nChannels) - 6) * 2)
+			);
+		}
+		else
+		{
+			playLength = (
+				pBuffer->AudioBytes /
+				voice->src.format.nBlockAlign
+			);
+		}
+	}
+
+	if (pBuffer->LoopCount > 0)
+	{
+		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
+		if (loopBegin >= (playBegin + playLength))
+		{
+FAudio_assert(0);
+			return 1;
+		}
+
+		/* LoopLength Default */
+		if (loopLength == 0)
+		{
+			loopLength = playBegin + playLength - loopBegin;
+		}
+
+		/* "The value of LoopBegin + LoopLength must be greater than PlayBegin
+		 * and less than PlayBegin + PlayLength"
+		 */
+		if (	(loopBegin + loopLength) <= playBegin ||
+			(loopBegin + loopLength) > (playBegin + playLength)	)
+		{
+FAudio_assert(0);
+			return 1;
+		}
+	}
+
+	/* For ADPCM, round down to the nearest sample block size */
+	if (voice->src.format.wFormatTag == 2)
+	{
+		adpcmMask = ((voice->src.format.nBlockAlign / voice->src.format.nChannels) - 6) * 2;
+		adpcmMask -= 1;
+		playBegin &= ~adpcmMask;
+		playLength &= ~adpcmMask;
+		loopBegin &= ~adpcmMask;
+		loopLength &= ~adpcmMask;
+	}
+
+	/* Allocate, now that we have valid input */
 	entry = (FAudioBufferEntry*) FAudio_malloc(sizeof(FAudioBufferEntry));
 	FAudio_memcpy(&entry->buffer, pBuffer, sizeof(FAudioBuffer));
+	entry->buffer.PlayBegin = playBegin;
+	entry->buffer.PlayLength = playLength;
+	entry->buffer.LoopBegin = loopBegin;
+	entry->buffer.LoopLength = loopLength;
+
+	/* Submit! */
 	entry->next = NULL;
 	if (voice->src.bufferList == NULL)
 	{
