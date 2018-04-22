@@ -38,7 +38,8 @@ uint32_t FAudioCreate(
 	return 0;
 }
 
-uint32_t FAudio_Construct(FAudio **ppFAudio) {
+uint32_t FAudio_Construct(FAudio **ppFAudio)
+{
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
