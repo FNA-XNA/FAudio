@@ -154,7 +154,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 
 		/* Check for end-of-buffer */
 		end = (buffer->LoopCount > 0) ?
-			buffer->LoopLength :
+			(buffer->LoopBegin + buffer->LoopLength) :
 			buffer->PlayLength;
 		endRead = FAudio_min(
 			end - voice->src.curBufferOffset,
