@@ -965,13 +965,19 @@ uint32_t FACTSoundBank_GetState(
 	FACTSoundBank *pSoundBank,
 	uint32_t *pdwState
 ) {
-	/* FIXME: Is there more to this than just checking INUSE? */
 	uint16_t i;
+	if (pSoundBank == NULL)
+	{
+		*pdwState = 0;
+		return 0;
+	}
+	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
 		if (pSoundBank->cues[i].instanceCount > 0)
 		{
-			return FACT_STATE_INUSE;
+			*pdwState |= FACT_STATE_INUSE;
+			return 0;
 		}
 	}
 	return 0;
@@ -1024,13 +1030,19 @@ uint32_t FACTWaveBank_GetState(
 	FACTWaveBank *pWaveBank,
 	uint32_t *pdwState
 ) {
-	/* FIXME: Is there more to this than just checking INUSE? */
 	uint32_t i;
+	if (pWaveBank == NULL)
+	{
+		*pdwState = 0;
+		return 0;
+	}
+	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pWaveBank->entryCount; i += 1)
 	{
 		if (pWaveBank->entryRefs[i] > 0)
 		{
-			return FACT_STATE_INUSE;
+			*pdwState |= FACT_STATE_INUSE;
+			return 0;
 		}
 	}
 	return 0;
