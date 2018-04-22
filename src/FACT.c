@@ -1192,7 +1192,7 @@ uint32_t FACTWaveBank_Prepare(
 		{
 			(*ppWave)->streamSize = (
 				format.wfx.nSamplesPerSec /
-				(((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2) *
+				format.wSamplesPerBlock *
 				format.wfx.nBlockAlign
 			);
 		}
@@ -1222,7 +1222,7 @@ uint32_t FACTWaveBank_Prepare(
 			buffer.PlayLength = (
 				buffer.PlayLength /
 				format.wfx.nBlockAlign *
-				(((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2)
+				format.wSamplesPerBlock
 			);
 		}
 		buffer.LoopBegin = entry->LoopRegion.dwStartSample;
