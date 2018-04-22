@@ -164,15 +164,13 @@ FAUDIOAPI void XNA_PlaySong(stb_vorbis *song)
 	format.wFormatTag = 1;
 	format.nChannels = activeSongInfo.channels;
 	format.nSamplesPerSec = activeSongInfo.sample_rate;
-	format.nAvgBytesPerSec = 0; /* FIXME */
-	format.nBlockAlign = 0; /* FIXME */
-	format.wBitsPerSample = 16;
+	format.wBitsPerSample = sizeof(int16_t) * 8;
+	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
+	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 	format.cbSize = 0;
 
 	/* Allocate decode cache */
-	songCache = (uint8_t*) FAudio_malloc(
-		format.nSamplesPerSec * format.nChannels * sizeof(int16_t)
-	);
+	songCache = (uint8_t*) FAudio_malloc(format.nAvgBytesPerSec);
 
 	/* Init voice */
 	FAudio_zero(&callbacks, sizeof(FAudioVoiceCallback));
