@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FAudio", "..\..\visualc\FAu
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XAudio2_9", "XAudio2_9.vcxproj", "{C4BE973A-0412-44D2-A5DB-F9B05EAB6EED}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "X3DAudio1_7", "X3DAudio1_7.vcxproj", "{EAC29019-EB87-434C-9E41-75A499941AD5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -39,6 +41,14 @@ Global
 		{C4BE973A-0412-44D2-A5DB-F9B05EAB6EED}.Release|x64.Build.0 = Release|x64
 		{C4BE973A-0412-44D2-A5DB-F9B05EAB6EED}.Release|x86.ActiveCfg = Release|Win32
 		{C4BE973A-0412-44D2-A5DB-F9B05EAB6EED}.Release|x86.Build.0 = Release|Win32
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Debug|x64.ActiveCfg = Debug|x64
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Debug|x64.Build.0 = Debug|x64
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Debug|x86.ActiveCfg = Debug|Win32
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Debug|x86.Build.0 = Debug|Win32
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Release|x64.ActiveCfg = Release|x64
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Release|x64.Build.0 = Release|x64
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Release|x86.ActiveCfg = Release|Win32
+		{EAC29019-EB87-434C-9E41-75A499941AD5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
