@@ -183,6 +183,18 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
 	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
 
+	/* Filters */
+	if (Flags & FAUDIO_VOICE_USEFILTER)
+	{
+		(*ppSourceVoice)->filterState = (FAudioFilterState*) FAudio_malloc(
+			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format.nChannels
+		);
+		FAudio_zero(
+			(*ppSourceVoice)->filterState,
+			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format.nChannels
+		);
+	}
+
 	/* Sample Storage */
 	(*ppSourceVoice)->src.decodeSamples = (uint32_t) FAudio_ceil(
 		audio->updateSize *
@@ -237,6 +249,18 @@ uint32_t FAudio_CreateSubmixVoice(
 	/* Sends/Effects */
 	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
+
+	/* Filters */
+	if (Flags & FAUDIO_VOICE_USEFILTER)
+	{
+		(*ppSubmixVoice)->filterState = (FAudioFilterState*) FAudio_malloc(
+			sizeof(FAudioFilterState) * InputChannels
+		);
+		FAudio_zero(
+			(*ppSubmixVoice)->filterState,
+			sizeof(FAudioFilterState) * InputChannels
+		);
+	}
 
 	/* Sample Storage */
 	(*ppSubmixVoice)->mix.inputSamples = (uint32_t) FAudio_ceil(
@@ -832,7 +856,6 @@ uint32_t FAudioVoice_SetFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
-	uint32_t channels;
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	/* MSDN: "This method is usable only on source and submix voices and
@@ -853,20 +876,6 @@ uint32_t FAudioVoice_SetFilterParameters(
 		pParameters,
 		sizeof(FAudioFilterParameters)
 	);
-
-	if (voice->filterState == NULL)
-	{
-		channels = (voice->type == FAUDIO_VOICE_SUBMIX) ?
-			voice->mix.inputChannels :
-			voice->src.format.nChannels;
-		voice->filterState = (FAudioFilterState *) FAudio_malloc(
-			sizeof(FAudioFilterState) * channels
-		);
-		FAudio_zero(
-			voice->filterState,
-			sizeof(FAudioFilterState) * channels
-		);
-	}
 
 	return 0;
 }
