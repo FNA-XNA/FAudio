@@ -1098,7 +1098,7 @@ uint32_t FACTWaveBank_Prepare(
 	FAudioBuffer buffer;
 	FAudioVoiceSends sends;
 	FAudioSendDescriptor send;
-	FAudioWaveFormatEx format;
+	FAudioADPCMWaveFormat format;
 	FACTWaveBankEntry *entry = &pWaveBank->entries[nWaveIndex];
 
 	*ppWave = (FACTWave*) FAudio_malloc(sizeof(FACTWave));
@@ -1133,16 +1133,27 @@ uint32_t FACTWaveBank_Prepare(
 	send.pOutputVoice = pWaveBank->parentEngine->master;
 	sends.SendCount = 1;
 	sends.pSends = &send;
-	format.wFormatTag = entry->Format.wFormatTag;
-	format.nChannels = entry->Format.nChannels;
-	format.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	format.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.nChannels;
-	format.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
-	if (format.wFormatTag == 0)
+	format.wfx.wFormatTag = entry->Format.wFormatTag;
+	format.wfx.nChannels = entry->Format.nChannels;
+	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
+	format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
+	format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
+	if (format.wfx.wFormatTag == 0)
 	{
-		format.wFormatTag = 1; /* PCM */
+		format.wfx.wFormatTag = 1; /* PCM */
+		format.wfx.cbSize = 0;
 	}
-	else if (format.wFormatTag != 2) /* Includes 0x1 - XMA, 0x3 - WMA */
+	else if (format.wfx.wFormatTag == 2)
+	{
+		format.wfx.cbSize = (
+			sizeof(FAudioADPCMWaveFormat) -
+			sizeof(FAudioWaveFormatEx)
+		);
+		format.wSamplesPerBlock = (
+			((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2
+		);
+	}
+	else /* Includes 0x1 - XMA, 0x3 - WMA */
 	{
 		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
@@ -1159,7 +1170,7 @@ uint32_t FACTWaveBank_Prepare(
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
-		&format,
+		&format.wfx,
 		0,
 		4.0f,
 		(FAudioVoiceCallback*) &(*ppWave)->callback,
@@ -1169,20 +1180,20 @@ uint32_t FACTWaveBank_Prepare(
 	if (pWaveBank->streaming)
 	{
 		/* Init stream cache info */
-		if (format.wFormatTag == 1)
+		if (format.wfx.wFormatTag == 1)
 		{
 			(*ppWave)->streamSize = (
-				format.nSamplesPerSec *
-				format.nChannels *
-				(format.wBitsPerSample / 8)
+				format.wfx.nSamplesPerSec *
+				format.wfx.nChannels *
+				(format.wfx.wBitsPerSample / 8)
 			);
 		}
-		else if (format.wFormatTag == 2)
+		else if (format.wfx.wFormatTag == 2)
 		{
 			(*ppWave)->streamSize = (
-				format.nSamplesPerSec /
-				(((format.nBlockAlign / format.nChannels) - 6) * 2) *
-				format.nBlockAlign
+				format.wfx.nSamplesPerSec /
+				(((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2) *
+				format.wfx.nBlockAlign
 			);
 		}
 		(*ppWave)->streamCache = (uint8_t*) FAudio_malloc((*ppWave)->streamSize);
@@ -1201,17 +1212,17 @@ uint32_t FACTWaveBank_Prepare(
 		);
 		buffer.PlayBegin = (*ppWave)->initialPosition;
 		buffer.PlayLength = entry->PlayRegion.dwLength;
-		if (format.wFormatTag == 1)
+		if (format.wfx.wFormatTag == 1)
 		{
-			buffer.PlayLength /= format.wBitsPerSample / 8;
-			buffer.PlayLength /= format.nChannels;
+			buffer.PlayLength /= format.wfx.wBitsPerSample / 8;
+			buffer.PlayLength /= format.wfx.nChannels;
 		}
-		else if (format.wFormatTag == 2)
+		else if (format.wfx.wFormatTag == 2)
 		{
 			buffer.PlayLength = (
 				buffer.PlayLength /
-				format.nBlockAlign *
-				(((format.nBlockAlign / format.nChannels) - 6) * 2)
+				format.wfx.nBlockAlign *
+				(((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2)
 			);
 		}
 		buffer.LoopBegin = entry->LoopRegion.dwStartSample;
