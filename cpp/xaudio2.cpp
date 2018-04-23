@@ -1,34 +1,5 @@
 #include "xaudio2.h"
 
-#define S_OK 0
-#define S_FALSE 1
-#define E_NOTIMPL 80004001
-#define E_NOINTERFACE 80004002
-#define E_OUTOFMEMORY 0x8007000E
-#define CLASS_E_NOAGGREGATION 0x80040110
-#define CLASS_E_CLASSNOTAVAILABLE 0x80040111
-
-const IID IID_IUnknown = { 0x00000000, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
-const IID IID_IClassFactory = { 0x00000001, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
-const IID IID_IXAudio2 = { 0x8bcf1f58, 0x9fe7, 0x4583, {0x8a, 0xc6, 0xe2, 0xad, 0xc4, 0x65, 0xc8, 0xbb }};
-
-const IID CLSID_XAudio2_6 = { 0x3eda9b49, 0x2085, 0x498b, {0x9b, 0xb2, 0x39, 0xa6, 0x77, 0x84, 0x93, 0xde }};
-const IID CLSID_XAudio2_7 = { 0x5a508685, 0xa254, 0x4fba, {0x9b, 0x82, 0x9a, 0x24, 0xb0, 0x03, 0x06, 0xaf }};
-
-bool operator==(const IID &a, const IID &b) {
-	return a.Data1 == b.Data1 &&
-		   a.Data2 == b.Data2 &&
-		   a.Data3 == b.Data3 &&
-		   a.Data4[0] == b.Data4[0] &&
-		   a.Data4[1] == b.Data4[1] &&
-		   a.Data4[2] == b.Data4[2] &&
-		   a.Data4[3] == b.Data4[3] &&
-		   a.Data4[4] == b.Data4[4] &&
-		   a.Data4[5] == b.Data4[5] &&
-		   a.Data4[6] == b.Data4[6] &&
-		   a.Data4[7] == b.Data4[7];
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // IXAudio2VoiceCallback
@@ -793,71 +764,12 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// XAudio2Factory: fun COM stuff
-//
-
-class XAudio2Factory : public IClassFactory {
-public:
-	X2METHOD(HRESULT) QueryInterface(REFIID riid, void** ppvInterface) {
-		if ((riid == IID_IUnknown) || (riid == IID_IClassFactory)) {
-			*ppvInterface = static_cast<IClassFactory *>(this);
-		} else {
-			*ppvInterface = NULL;
-			return E_NOINTERFACE;
-		}
-		
-		reinterpret_cast<IUnknown *>(*ppvInterface)->AddRef();
-
-		return S_OK;
-	}
-
-	X2METHOD(ULONG) AddRef() {
-		// FIXME: locking
-		return ++refcount;
-	}
-
-	X2METHOD(ULONG) Release() {
-		// FIXME: locking
-		long rc = --refcount;
-	
-		if (rc == 0) {
-			delete this;
-		}
-
-		return rc;
-	}
-
-	X2METHOD(HRESULT) CreateInstance(IUnknown *pUnkOuter, REFIID riid, void **ppvObject) {
-		if (pUnkOuter != NULL) {
-			return CLASS_E_NOAGGREGATION;
-		}
-		
-		if (!(riid == IID_IXAudio2)) {
-			*ppvObject = NULL;
-			return E_NOINTERFACE;
-		}
-
-		XAudio2Impl *xaudio2 = new XAudio2Impl();
-		if (xaudio2 == NULL) {
-			return E_OUTOFMEMORY;
-		}
-
-		return xaudio2->QueryInterface(riid, ppvObject);
-	}
-
-	X2METHOD(HRESULT) LockServer(BOOL fLock) {
-		return E_NOTIMPL;
-	}
-
-private:
-	long refcount;
-};
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
 // Create function
 //
+
+IUnknown *CreateXAudio2Internal(void) {
+	return new XAudio2Impl();
+}
 
 FAUDIOCPP_API XAudio2Create(
 	IXAudio2          **ppXAudio2,
@@ -869,35 +781,3 @@ FAUDIOCPP_API XAudio2Create(
 	return S_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// DLL functions
-//
-
-FAUDIOCPP_API DllCanUnloadNow() {
-	return S_FALSE;
-}
-
-FAUDIOCPP_API DllGetClassObject(
-	REFCLSID rclsid,
-	REFIID   riid,
-	LPVOID   *ppv) {
-
-	if (rclsid == CLSID_XAudio2_6 || rclsid == CLSID_XAudio2_7) {
-		XAudio2Factory *factory = new XAudio2Factory();
-		if (!factory) {
-			return E_OUTOFMEMORY;
-		}
-		return factory->QueryInterface(riid, ppv);
-	}
-
-	return CLASS_E_CLASSNOTAVAILABLE;
-}
-
-FAUDIOCPP_API DllRegisterServer() {
-	return S_OK;
-}
-
-FAUDIOCPP_API DllUnregisterServer() {
-	return S_OK;
-}

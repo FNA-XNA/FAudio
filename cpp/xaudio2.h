@@ -15,21 +15,7 @@ extern "C" {
 #define XAUDIO2_VERSION 7
 #endif
 
-#include <FAudio.h>
-
-typedef uint32_t HRESULT;
-typedef uint32_t UINT32;
-typedef unsigned long ULONG;
-typedef wchar_t WHCAR;
-typedef const WHCAR *LPCWSTR;
-typedef int BOOL;
-typedef unsigned long DWORD;
-typedef void *LPVOID;
-
-typedef FAudioGUID GUID;
-typedef GUID IID;
-#define REFIID const IID &
-#define REFCLSID const IID &
+#include "com_utils.h"
 
 typedef FAudioProcessor XAUDIO2_PROCESSOR;
 typedef FAudioDeviceDetails XAUDIO2_DEVICE_DETAILS;
@@ -52,13 +38,6 @@ class IXAudio2MasteringVoice;
 class IXAudio2VoiceCallback;
 
 #define X2METHOD(rtype)		virtual rtype __stdcall 
-
-class IUnknown {
-public:
-	X2METHOD(HRESULT) QueryInterface(REFIID riid, void** ppvInterface) = 0;		// FIXME: void * was REFIID
-	X2METHOD(ULONG) AddRef() = 0;
-	X2METHOD(ULONG) Release() = 0;
-};
 
 class IXAudio2Voice  {
 public:
@@ -226,16 +205,6 @@ public:
 	X2METHOD(void) SetDebugConfiguration(
 		const XAUDIO2_DEBUG_CONFIGURATION* pDebugConfiguration,
 		void* pReserved = NULL) = 0;
-};
-
-class IClassFactory : public IUnknown {
-public:
-	X2METHOD(HRESULT) CreateInstance(
-		IUnknown *pUnkOuter,
-		REFIID riid,
-		void **ppvObject) = 0;
-
-	X2METHOD(HRESULT) LockServer(BOOL fLock) = 0;
 };
 
 

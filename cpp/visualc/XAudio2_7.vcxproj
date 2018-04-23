@@ -19,9 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\com_utils.cpp" />
     <ClCompile Include="..\xaudio2.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\com_utils.h" />
     <ClInclude Include="..\xaudio2.h" />
   </ItemGroup>
   <ItemGroup>
