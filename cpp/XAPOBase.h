@@ -8,8 +8,8 @@ typedef FAPORegistrationProperties XAPO_REGISTRATION_PROPERTIES;
 
 class CXAPOBase : public IXAPO {
 protected:
-	// for CXAPOParametersBase
-	CXAPOBase() {}
+	// for CXAPOParametersBase and other derived classes that wrap FAPO structs
+	CXAPOBase(FAPOBase *base);
 
 public:
 	CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties);
@@ -57,11 +57,14 @@ protected:
 	BOOL IsLocked();
 
 protected:
-	FAPOParametersBase fapo_base;
-
+	FAPOBase *fapo_base;
+	bool	 own_fapo_base;
 };
 
 class CXAPOParametersBase : public CXAPOBase, public IXAPOParameters {
+protected:
+	// for derived classes that wrap FAPO structs
+	CXAPOParametersBase(FAPOParametersBase *param_base);
 public:
 	CXAPOParametersBase(
 		const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties, 
@@ -82,6 +85,10 @@ public:
 	BOOL ParametersChanged();
 	BYTE* BeginProcess();
 	void EndProcess();
+
+private:
+	FAPOParametersBase *fapo_param_base;
+	bool own_fapo_param_base;
 
 };
 

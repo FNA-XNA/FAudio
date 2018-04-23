@@ -1,19 +1,26 @@
 #include "com_utils.h"
 
+const IID IID_IUnknown = { 0x00000000, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
+const IID IID_IClassFactory = { 0x00000001, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
+const IID IID_IXAudio2 = { 0x8bcf1f58, 0x9fe7, 0x4583, {0x8a, 0xc6, 0xe2, 0xad, 0xc4, 0x65, 0xc8, 0xbb }};
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Class Factory: fun COM stuff
 //
 
-IUnknown *CreateXAudio2Internal(void);
+typedef void *(*FACTORY_FUNC)(void);
+void *CreateXAudio2Internal(void);
+void *CreateAudioVolumeMeterInternal(void);
+void *CreateAudioReverbInternal(void);
 
-class XAudio2Factory : public IClassFactory {
+template <REFIID fact_iid, FACTORY_FUNC fact_creator>
+class ClassFactory : public IClassFactory {
 public:
 	FACOM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppvInterface) {
 		if ((riid == IID_IUnknown) || (riid == IID_IClassFactory)) {
 			*ppvInterface = static_cast<IClassFactory *>(this);
-		}
-		else {
+		} else {
 			*ppvInterface = NULL;
 			return E_NOINTERFACE;
 		}
@@ -44,10 +51,10 @@ public:
 			return CLASS_E_NOAGGREGATION;
 		}
 
-		IUnknown *obj = NULL;
+		void *obj = NULL;
 
-		if (riid == IID_IXAudio2) {
-			obj = CreateXAudio2Internal();
+		if (riid == fact_iid) {
+			obj = fact_creator();
 		} else {
 			*ppvObject = NULL;
 			return E_NOINTERFACE;
@@ -57,7 +64,7 @@ public:
 			return E_OUTOFMEMORY;
 		}
 
-		return obj->QueryInterface(riid, ppvObject);
+		return reinterpret_cast<IUnknown *>(obj)->QueryInterface(riid, ppvObject);
 	}
 
 	FACOM_METHOD(HRESULT) LockServer(BOOL fLock) {
@@ -78,15 +85,24 @@ HRESULT __stdcall DllCanUnloadNow() {
 }
 
 HRESULT __stdcall DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv) {
+	IClassFactory *factory = NULL;
+
 	if (rclsid == CLSID_XAudio2_6 || rclsid == CLSID_XAudio2_7) {
-		XAudio2Factory *factory = new XAudio2Factory();
-		if (!factory) {
-			return E_OUTOFMEMORY;
-		}
-		return factory->QueryInterface(riid, ppv);
+		factory = new ClassFactory<IID_IXAudio2, CreateXAudio2Internal>();
+	} else if (rclsid == CLSID_AudioVolumeMeter) {
+		factory = new ClassFactory<IID_IUnknown, CreateAudioVolumeMeterInternal>();
+	} else if (rclsid == CLSID_AudioReverb) {
+		factory = new ClassFactory<IID_IUnknown, CreateAudioReverbInternal>();
+	} else {
+		return CLASS_E_CLASSNOTAVAILABLE;
 	}
 
-	return CLASS_E_CLASSNOTAVAILABLE;
+	if (!factory) {
+		return E_OUTOFMEMORY;
+	}
+
+	return factory->QueryInterface(riid, ppv);
+
 }
 
 HRESULT __stdcall DllRegisterServer() {

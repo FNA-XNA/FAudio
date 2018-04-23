@@ -1,6 +1,10 @@
 #ifndef FACT_CPP_FAUDIO_COM_H
 #define FACT_CPP_FAUDIO_COM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <FAudio.h>
 
 // common windows types
@@ -50,12 +54,16 @@ inline bool operator==(const IID &a, const IID &b) {
 		a.Data4[7] == b.Data4[7];
 }
 
-static const IID IID_IUnknown = { 0x00000000, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
-static const IID IID_IClassFactory = { 0x00000001, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
-static const IID IID_IXAudio2 = { 0x8bcf1f58, 0x9fe7, 0x4583, {0x8a, 0xc6, 0xe2, 0xad, 0xc4, 0x65, 0xc8, 0xbb }};
+extern const IID IID_IUnknown;
+extern const IID IID_IClassFactory;
+extern const IID IID_IXAudio2;
 
 static const IID CLSID_XAudio2_6 = { 0x3eda9b49, 0x2085, 0x498b, {0x9b, 0xb2, 0x39, 0xa6, 0x77, 0x84, 0x93, 0xde }};
 static const IID CLSID_XAudio2_7 = { 0x5a508685, 0xa254, 0x4fba, {0x9b, 0x82, 0x9a, 0x24, 0xb0, 0x03, 0x06, 0xaf }};
+
+static const IID CLSID_AudioVolumeMeter = { 0xcac1105f, 0x619b, 0x4d04, { 0x83, 0x1a, 0x44, 0xe1, 0xcb, 0xf1, 0x2d, 0x57 } };
+static const IID CLSID_AudioReverb = { 0x6a93130e, 0x1d53, 0x41d1, { 0xa9, 0xcf, 0xe7, 0x58, 0x80, 0x0b, 0xb1, 0x79 } };
+
 
 // quality of life macro's
 #define FACOM_METHOD(rtype)		virtual rtype __stdcall 
@@ -78,6 +86,8 @@ public:
 	FACOM_METHOD(HRESULT) LockServer(BOOL fLock) = 0;
 };
 
-
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif // FACT_CPP_FAUDIO_COM_H

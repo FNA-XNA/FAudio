@@ -21,13 +21,21 @@
   <ItemGroup>
     <ClCompile Include="..\com_utils.cpp" />
     <ClCompile Include="..\xaudio2.cpp" />
+    <ClCompile Include="..\XAudio2fx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\com_utils.h" />
+    <ClInclude Include="..\XAPO.h" />
     <ClInclude Include="..\xaudio2.h" />
+    <ClInclude Include="..\XAudio2fx.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\xaudio2_7.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="XAPOBase.vcxproj">
+      <Project>{d1e0eb55-2b90-40a1-b864-0b7a36bf79b7}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9F5164EA-DC2B-4370-8C3C-DF449413A625}</ProjectGuid>
@@ -86,6 +94,7 @@
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;..\..\..\SDL2\include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;Debug;..\..\..\SDL2\lib\x86</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
+    <IntDir>$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -95,6 +104,7 @@
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;..\..\..\SDL2\include</IncludePath>
     <TargetName>$(ProjectName)</TargetName>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;Release;..\..\..\SDL2\lib\x86</LibraryPath>
+    <IntDir>$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

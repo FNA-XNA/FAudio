@@ -2,7 +2,7 @@
 #define FACT_CPP_XAPO_H
 
 #include "com_utils.h"
-#include "FAPO.h"
+#include <FAPO.h>
 
 typedef FAPORegistrationProperties XAPO_REGISTRATION_PROPERTIES;
 typedef FAPOLockForProcessBufferParameters XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS;
