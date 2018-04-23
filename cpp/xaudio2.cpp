@@ -128,10 +128,6 @@ public:
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		voice_callback = wrap_voice_callback(pCallback);
 		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), pSendList, pEffectChain);
-		
-		// shady af
-		format = pSourceFormat->wFormatTag;
-		nBlockAlign = pSourceFormat->nBlockAlign;
 	}
 
 	// IXAudio2Voice
@@ -262,16 +258,6 @@ public:
 	X2METHOD(HRESULT) SubmitSourceBuffer(
 		const XAUDIO2_BUFFER* pBuffer,
 		const XAUDIO2_BUFFER_WMA* pBufferWMA = NULL) {
-		
-		// quick hack
-		if (pBuffer && pBuffer->PlayBegin == 0 && pBuffer->PlayLength == 0) {
-			if (format == 1 /* PCM */ || format == 3 /* Float */) {
-				((XAUDIO2_BUFFER *)pBuffer)->PlayLength = pBuffer->AudioBytes / nBlockAlign;
-			} else if (format == 2 /* ADPCM */) {
-				((XAUDIO2_BUFFER *)pBuffer)->PlayLength = pBuffer->AudioBytes;
-			}
-		}
-
 		return FAudioSourceVoice_SubmitSourceBuffer(faudio_voice, pBuffer, pBufferWMA);
 	}
 
@@ -310,9 +296,6 @@ public:
 private:
 	FAudioSourceVoice *faudio_voice;
 	FAudioVoiceCppCallback *voice_callback;
-
-	uint16_t format;
-	uint16_t nBlockAlign;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
