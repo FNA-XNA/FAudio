@@ -834,9 +834,7 @@ void FAudio_INTERNAL_DecodeMonoPCM8(
 	FAudioWaveFormatEx *UNUSED2
 ) {
 	uint32_t i;
-	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
-		buffer->PlayBegin + curOffset
-	);
+	const int8_t *buf = ((int8_t*) buffer->pAudioData) + curOffset;
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
@@ -853,9 +851,7 @@ void FAudio_INTERNAL_DecodeStereoPCM8(
 	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
-	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
-		(buffer->PlayBegin + curOffset) * 2
-	);
+	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (curOffset * 2);
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
@@ -875,9 +871,7 @@ void FAudio_INTERNAL_DecodeMonoPCM16(
 	FAudioWaveFormatEx *UNUSED2
 ) {
 	uint32_t i;
-	const int16_t *buf = ((int16_t*) buffer->pAudioData) + (
-		buffer->PlayBegin + curOffset
-	);
+	const int16_t *buf = ((int16_t*) buffer->pAudioData) + curOffset;
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
@@ -894,9 +888,7 @@ void FAudio_INTERNAL_DecodeStereoPCM16(
 	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
-	const int16_t *buf = ((int16_t*) buffer->pAudioData) + (
-		(buffer->PlayBegin + curOffset) * 2
-	);
+	const int16_t *buf = ((int16_t*) buffer->pAudioData) + (curOffset * 2);
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
@@ -915,9 +907,7 @@ void FAudio_INTERNAL_DecodeMonoPCM32F(
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED2
 ) {
-	const float *buf = ((float*) buffer->pAudioData) + (
-		buffer->PlayBegin + curOffset
-	);
+	const float *buf = ((float*) buffer->pAudioData) + curOffset;
 	FAudio_memcpy(
 		decodeCache,
 		buf,
@@ -934,9 +924,7 @@ void FAudio_INTERNAL_DecodeStereoPCM32F(
 	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
-	const float *buf = ((float*) buffer->pAudioData) + (
-		(buffer->PlayBegin + curOffset) * 2
-	);
+	const float *buf = ((float*) buffer->pAudioData) + (curOffset * 2);
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
