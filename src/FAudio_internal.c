@@ -814,6 +814,25 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 	}
 }
 
+static const float MATRIX_DEFAULTS[8][8][64] =
+{
+	#include "matrix_defaults.inl"
+};
+
+void FAudio_INTERNAL_SetDefaultMatrix(
+	float *matrix,
+	uint32_t srcChannels,
+	uint32_t dstChannels
+) {
+	FAudio_assert(srcChannels > 0 && srcChannels < 9);
+	FAudio_assert(dstChannels > 0 && dstChannels < 9);
+	FAudio_memcpy(
+		matrix,
+		MATRIX_DEFAULTS[srcChannels][dstChannels],
+		srcChannels * dstChannels * sizeof(float)
+	);
+}
+
 /* PCM Decoding */
 
 void FAudio_INTERNAL_DecodePCM8(

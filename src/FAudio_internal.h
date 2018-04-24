@@ -180,6 +180,11 @@ struct FAudioVoice
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
+void FAudio_INTERNAL_SetDefaultMatrix(
+	float *matrix,
+	uint32_t srcChannels,
+	uint32_t dstChannels
+);
 
 #define DECODE_FUNC(type) \
 	extern void FAudio_INTERNAL_Decode##type( \
