@@ -303,7 +303,7 @@ void FAPOBase_ProcessThru(
 	uint8_t MixWithOutput
 ) {
 	uint32_t i, co, ci;
-	float *input = pInputBuffer;
+	float *input = (float*) pInputBuffer;
 
 	if (MixWithOutput)
 	{
