@@ -165,7 +165,9 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 		voice->src.decode(
 			buffer,
 			voice->src.curBufferOffset,
-			voice->audio->decodeCache + (decoded * voice->src.format.nChannels),
+			voice->audio->decodeCache + (
+				decoded * voice->src.format.nChannels
+			),
 			endRead,
 			&voice->src.format
 		);
@@ -235,9 +237,9 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 							(decoded + endRead) *
 							voice->src.format.nChannels
 						),
-						(decoding - endRead) * (
-							voice->src.format.nChannels *
-							sizeof(float)
+						sizeof(float) * (
+							(decoding - endRead) *
+							voice->src.format.nChannels
 						)
 					);
 				}
