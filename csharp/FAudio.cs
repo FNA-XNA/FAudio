@@ -303,7 +303,7 @@ public static class FAudio
 	/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudioCreate(
-		out IntPtr ppFudio, /* FAudio** */
+		out IntPtr ppFAudio, /* FAudio** */
 		uint Flags,
 		uint XAudio2Processor /* FAudioProcessor */
 	);
