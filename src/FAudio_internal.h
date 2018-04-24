@@ -69,8 +69,7 @@ struct FAudioBufferEntry
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 );
@@ -186,8 +185,7 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
 	extern void FAudio_INTERNAL_Decode##type( \
 		FAudioBuffer *buffer, \
 		uint32_t curOffset, \
-		float *decodeCacheL, \
-		float *decodeCacheR, \
+		float *decodeCache, \
 		uint32_t samples, \
 		FAudioWaveFormatEx *format \
 	);

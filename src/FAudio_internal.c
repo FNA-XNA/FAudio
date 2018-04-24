@@ -128,7 +128,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
-	uint32_t i, end, endRead, decoding, decoded = 0, resetOffset = 0;
+	uint32_t end, endRead, decoding, decoded = 0, resetOffset = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
@@ -165,8 +165,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 		voice->src.decode(
 			buffer,
 			voice->src.curBufferOffset,
-			voice->audio->decodeCache + decoded,
-			voice->audio->decodeCache + voice->src.decodeSamples + decoded,
+			voice->audio->decodeCache + (decoded * voice->src.format.nChannels),
 			endRead,
 			&voice->src.format
 		);
@@ -231,16 +230,16 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 					buffer = NULL;
 
 					/* FIXME: I keep going past the buffer so fuck it */
-					for (i = 0; i < voice->src.format.nChannels; i += 1)
-					{
-						FAudio_zero(
-							voice->audio->decodeCache + (
-								(i * voice->src.decodeSamples) +
-								(decoded + endRead)
-							),
-							(decoding - endRead) * sizeof(float)
-						);
-					}
+					FAudio_zero(
+						voice->audio->decodeCache + (
+							(decoded + endRead) *
+							voice->src.format.nChannels
+						),
+						(decoding - endRead) * (
+							voice->src.format.nChannels *
+							sizeof(float)
+						)
+					);
 				}
 			}
 		}
@@ -262,11 +261,7 @@ static void FAudio_INTERNAL_ResamplePCM(
 	/* Linear Resampler */
 	/* TODO: SSE */
 	uint32_t i, j;
-	float *dCache[2] =
-	{
-		voice->audio->decodeCache,
-		voice->audio->decodeCache + voice->src.decodeSamples
-	};
+	float *dCache = voice->audio->decodeCache;
 	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
@@ -274,8 +269,8 @@ static void FAudio_INTERNAL_ResamplePCM(
 		{
 			/* lerp, then convert to float value */
 			*(*resampleCache)++ = (float) (
-				dCache[j][0] +
-				(dCache[j][1] - dCache[j][0]) *
+				dCache[j] +
+				(dCache[j + voice->src.format.nChannels] - dCache[j]) *
 				FIXED_TO_DOUBLE(cur)
 			);
 		}
@@ -288,10 +283,7 @@ static void FAudio_INTERNAL_ResamplePCM(
 		 * Sometimes this will be 0 until cur accumulates
 		 * enough steps, especially for "slow" rates.
 		 */
-		for (j = 0; j < voice->src.format.nChannels; j += 1)
-		{
-			dCache[j] += cur >> FIXED_PRECISION;
-		}
+		dCache += (cur >> FIXED_PRECISION) * voice->src.format.nChannels;
 
 		/* Now that any integer has been added, drop it.
 		 * The offset pointer will preserve the total.
@@ -477,15 +469,12 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		if (voice->src.resampleStep == FIXED_ONE)
 		{
 			/* Actually, just copy directly... */
-			for (i = 0; i < toResample; i += 1)
-			for (j = 0; j < voice->src.format.nChannels; j += 1)
-			{
-				/* TODO: SSE */
-				*resampleCache++ = *(voice->audio->decodeCache + (
-					(j * voice->src.decodeSamples) +
-					i
-				));
-			}
+			FAudio_memcpy(
+				resampleCache,
+				voice->audio->decodeCache,
+				toResample * voice->src.format.nChannels * sizeof(float)
+			);
+			resampleCache += toResample * voice->src.format.nChannels;
 		}
 		else
 		{
@@ -829,7 +818,6 @@ void FAudio_INTERNAL_DecodeMonoPCM8(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED1,
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED2
 ) {
@@ -845,18 +833,17 @@ void FAudio_INTERNAL_DecodeMonoPCM8(
 void FAudio_INTERNAL_DecodeStereoPCM8(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
 	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (curOffset * 2);
+	samples *= 2;
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
-		*decodeCacheL++ = *buf++ / 128.0f;
-		*decodeCacheR++ = *buf++ / 128.0f;
+		*decodeCache++ = *buf++ / 128.0f;
 	}
 }
 
@@ -866,7 +853,6 @@ void FAudio_INTERNAL_DecodeMonoPCM16(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED1,
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED2
 ) {
@@ -882,18 +868,18 @@ void FAudio_INTERNAL_DecodeMonoPCM16(
 void FAudio_INTERNAL_DecodeStereoPCM16(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED
 ) {
 	uint32_t i;
 	const int16_t *buf = ((int16_t*) buffer->pAudioData) + (curOffset * 2);
+	samples *= 2;
 	for (i = 0; i < samples; i += 1)
 	{
 		/* TODO: SSE */
-		*decodeCacheL++ = *buf++ / 32768.0f;
-		*decodeCacheR++ = *buf++ / 32768.0f;
+		*decodeCache++ = *buf++ / 32768.0f;
+		*decodeCache++ = *buf++ / 32768.0f;
 	}
 }
 
@@ -903,7 +889,6 @@ void FAudio_INTERNAL_DecodeMonoPCM32F(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED1,
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED2
 ) {
@@ -918,19 +903,16 @@ void FAudio_INTERNAL_DecodeMonoPCM32F(
 void FAudio_INTERNAL_DecodeStereoPCM32F(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *UNUSED
 ) {
-	uint32_t i;
 	const float *buf = ((float*) buffer->pAudioData) + (curOffset * 2);
-	for (i = 0; i < samples; i += 1)
-	{
-		/* TODO: SSE */
-		*decodeCacheL++ = *buf++;
-		*decodeCacheR++ = *buf++;
-	}
+	FAudio_memcpy(
+		decodeCache,
+		buf,
+		sizeof(float) * samples * 2
+	);
 }
 
 /* MSADPCM Decoding */
@@ -1087,7 +1069,6 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 ) {
@@ -1135,8 +1116,7 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 ) {
@@ -1174,8 +1154,8 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		/* TODO: SSE */
 		for (i = 0, off = midOffset * 2; i < copy; i += 1)
 		{
-			*decodeCacheL++ = blockCache[off++] / 32768.0f;
-			*decodeCacheR++ = blockCache[off++] / 32768.0f;
+			*decodeCache++ = blockCache[off++] / 32768.0f;
+			*decodeCache++ = blockCache[off++] / 32768.0f;
 		}
 		samples -= copy;
 		midOffset = 0;
