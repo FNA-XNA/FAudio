@@ -33,9 +33,12 @@
 /* Set to 1 to use more complex, closer to X3DAudio (but also more *wrong* in terms of 3D audio maths...) behaviour emulation. */
 #define F3DAUDIO_HIGH_ACCURACY 0
 
+#define F3DAUDIO_OUTPUT_CHECK 1
+
 #define F3DAUDIO_DEBUG_PARAM_CHECKS 1
 #define F3DAUDIO_DEBUG_PARAM_CHECKS_VERBOSE 0
 #define F3DAUDIO_DEBUG_PARAM_CHECKS_BREAKPOINTS 0
+
 
 /*
  * UTILITY MACROS
@@ -281,37 +284,6 @@ void F3DAudioInitialize(
     ADJUSTED_SPEEDOFSOUND(Instance) = uint32_to_float(punnedSpeedOfSound);
 }
 
-/* Adrien: notes from MSDN
- * "The listener and emitter values must be valid. Floating-point specials (NaN, QNaN, +INF, -INF) can cause the entire audio output to go silent if introduced into a running audio graph." TODO: add paranoid checks
- *
- * Listener:
- *  - if pCone is NULL use OrientFront for matrix and delay. WHen pCone isn't NULL, OrientFront is used for matrix, LPF (direct and reverb). What about delay??
- *  Must be orthonormal to OrientTop.
- *  - OrientTop: only for matrix and delay
- *  - Position: does not affect velocity. In world units. Considering default speed 1 unit = 1 meter.
- *  - Velocity: used only for doppler calculations. wu/s.
- *  - "To be considered orthonormal, a pair of vectors must have a magnitude of 1 +- 1x10-5 and a dot product of 0 +- 1x10-5."
- *
- * Emitter:
- *  - pCone: only for single channel emitters. NULL means omnidirectional emitter. Non-NULL: used for matrix, LPF reverb and direct, and reverb.
- *  - OrientFront: MUST BE NORMALIZED when used. Must be orthonormal to OrientTop. Single channel: only used for emitter angle. Multi-channel or single with cones: used for matrix, LPF (direct and reverb) and reverb.
- *  - OrientTop: only used for multi-channel for matrix. Must be orthonormal to OrientFront.
- *  - Pos/Velocity: same as Listener.
- *  - InnerRadius: must be between 0.0f and MAX_FLT. If 0, no inner radius used, but innerradiusangle may still be used.
- *  - InnerRadiusAngle: must be between 0.0f and X3DAUDIO_PI/4.0.
- *  - ChannelCount: number of emitters.
- *  - ChannelRadius: distance of emitters from center pos. Only used when ChannelCount >1 for matrix calculations.
- *  - pChannelAzimuths: table of channel azimuths. 2PI means LFE. LFE channels are placed in the center and only respect pLFEcurve, not pVolumeCurve. Can be NULL if ChannelCount = 1, otherwise must have ChannelCount elements. All values between 0 and 2Pi. USed for matrix calculations only.
- *  - pVolumeCurve/pLFECurve: only for matrix, for their respective channels. Default: if <= CurveDistanceScaler, no attenuation. Above is CurveDistanceScaler/distance attenuation. (Adrien: why does this mention and inverse SQUARE law then?)
- *  - pLPFDirectCurve: default curve: [0.0f, 1.0f], [1.0f, 0.75f]
- *  - pLPFReverbCurve: default curve: [0.0f, 0.75f], [1.0f, 0.75f]
- *  - pReverbCurve: default curve:  [0.0f, 1.0f], [1.0f, 0.0f].
- *  - CurveDistanceScaler: must be between FLT_MIN to FLT_MAX. Only for matrix, LPF (both) and reverb.
- *  - DopplerScaler: must be between 0.0f to FLT_MAX. Only for doppler calculations.
- *  - Remarks: cone only for single-emitter (doesnt make sense otherwise). Multi-point useful to avoid duplicate calculations like doppler (Adrien: implementation hint).
- * See the MSDN page for illustration of cone.
- */
-
 static int CheckCone(F3DAUDIO_CONE *pCone) {
     if (!pCone)
     {
@@ -379,8 +351,16 @@ int F3DAudioCheckCalculateParams(
     }
     if (Flags & F3DAUDIO_CALCULATE_ZEROCENTER)
     {
-        int hasCenter = SPEAKERMASK(Instance) & SPEAKER_FRONT_CENTER;
-        PARAM_CHECK(hasCenter, "F3DAUDIO_CALCULATE_ZEROCENTER is only valid for matrix calculations with a format that has a center channel");
+        uint32_t isCalculateMatrix = (Flags & F3DAUDIO_CALCULATE_MATRIX);
+        uint32_t hasCenter = SPEAKERMASK(Instance) & SPEAKER_FRONT_CENTER;
+        PARAM_CHECK(isCalculateMatrix && hasCenter, "F3DAUDIO_CALCULATE_ZEROCENTER is only valid for matrix calculations with an output format that has a center channel");
+    }
+
+    if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
+    {
+        uint32_t isCalculateMatrix = (Flags & F3DAUDIO_CALCULATE_MATRIX);
+        uint32_t hasLF = SPEAKERMASK(Instance) & SPEAKER_LOW_FREQUENCY;
+        PARAM_CHECK(isCalculateMatrix && hasLF, "F3DAUDIO_CALCULATE_REDIRECT_TO_LFE is only valid for matrix calculations with an output format that has a low-frequency channel");
     }
 
     ChannelCount = SPEAKERCOUNT(Instance);
@@ -421,7 +401,12 @@ int F3DAudioCheckCalculateParams(
         {
             for (i = 0; i < pEmitter->ChannelCount; ++i)
             {
-                FLOAT_BETWEEN_CHECK(pEmitter->pChannelAzimuths[i], 0.0f, F3DAUDIO_2PI);
+                float currentAzimuth = pEmitter->pChannelAzimuths[i];
+                FLOAT_BETWEEN_CHECK(currentAzimuth, 0.0f, F3DAUDIO_2PI);
+                if (currentAzimuth == F3DAUDIO_2PI)
+                {
+                    PARAM_CHECK(!(Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE), "F3DAUDIO_CALCULATE_REDIRECT_TO_LFE valid only for matrix calculations with emitters that have no LFE channel");
+                }
             }
         }
     }
@@ -519,9 +504,7 @@ typedef struct {
     uint32_t LFSpeakerIdx;
 } ConfigInfo;
 
-/* Adrien: it is absolutely necessary that these are stored in increasing, *positive* azimuth order (i.e. all angles between [0; 2PI]), as we'll do a linear interval search during CalculateMatrix. */
-
-// TODO(Adrien): Quadruple check and test this because there's a high chance I might have fckd up here
+/* Adrien: it is absolutely necessary that these are stored in increasing, *positive* azimuth order (i.e. all angles between [0; 2PI]), as we'll do a linear interval search inside FindSpeakerAzimuths. */
 
 #define SPEAKER_AZIMUTH_CENTER                (F3DAUDIO_PI *  0.0f       )
 #define SPEAKER_AZIMUTH_FRONT_RIGHT_OF_CENTER (F3DAUDIO_PI *  1.0f / 8.0f)
@@ -611,7 +594,6 @@ const ConfigInfo kSpeakersConfigInfo[] = {
 };
 
 /* Adrien: this function does some sanity checks on the config info tables. It should only be enabled to validate the tables after adjusting them. */
-// TODO: migrate to a "one-time check" for dev builds only. Doesn't need to be inside CalculateMatrix.
 static int CheckConfigurations() {
     int i;
     for (i = 0; i < ARRAY_COUNT(kSpeakersConfigInfo); ++i) {
@@ -724,7 +706,9 @@ static void FindSpeakerAzimuths(const ConfigInfo* config, float emitterAzimuth, 
 }
 
 /* Constants for the "diffusion" step (the part where we attribute the attenuations to the various speakers). If the emitter to listener distance is less than the "null-distance", we spread equally over all speakers. Above the "non-null distance", we used the regular calculation. Between the two, it seems that X3DAudio does an "InnerRadius"-like calculation, spreading most of the signal towards the closest two speakers, but distributing some of it equally to the others. These constants have been determined roughly, using trial and error. */
+
 // TODO: investigate whether the behaviour is truly InnerRadius-like
+// NOTE: confirmed. Even with 0 innerradius, there's always a cylinder of radius NON_NULL_DISTANCE pointing towards listener->Top that diffuses to all channels.
 #define DIFFUSION_NULL_DISTANCE_DISK_RADIUS 1e-7f
 #define DIFFUSION_NON_NULL_DISTANCE_DISK_RADIUS 4e-7f
 
@@ -809,13 +793,34 @@ static void CalculateMatrix(
     {
         MatrixCoefficients[0] = attenuation;
     }
+    // TODO: this needs to be removed and factored into an InnerRadius behaviour
     else if (eToLDistance <= DIFFUSION_NULL_DISTANCE_DISK_RADIUS)
     {
-        // TODO: handle ZEROCENTER and REDIRECT TO LFE
-        float equalAttenuation = attenuation / DstChannelCount;
-        uint32_t i;
-        for (i = 0; i < DstChannelCount; ++i) {
+        // TODO handle NON_NULL_DISTANCE
+        // TODO: handle REDIRECT TO LFE
+        uint32_t i, centerChannelIdx = -1;
+        uint32_t nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
+        float equalAttenuation;
+
+        if ((Flags & F3DAUDIO_CALCULATE_ZEROCENTER))
+        {
+            nChannelsToDiffuseTo -= 1;
+            SDL_assert(curConfig->speakers[0].azimuth == SPEAKER_AZIMUTH_CENTER);
+            centerChannelIdx = curConfig->speakers[0].matrixIdx;
+        }
+        equalAttenuation = attenuation / nChannelsToDiffuseTo;
+        for (i = 0; i < DstChannelCount; ++i)
+        {
+            if (i == centerChannelIdx || i == curConfig->LFSpeakerIdx)
+            {
+                continue;
+            }
             MatrixCoefficients[i] = equalAttenuation;
+        }
+        if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
+        {
+            SDL_assert(curConfig->LFSpeakerIdx != -1);
+            MatrixCoefficients[curConfig->LFSpeakerIdx] = attenuation;
         }
     }
     else
@@ -861,7 +866,6 @@ static void CalculateMatrix(
                 emitterAzimuth -= F3DAUDIO_2PI;
             }
             a0 -= F3DAUDIO_2PI;
-            val = (emitterAzimuth - a0) / (a1 - a0 + F3DAUDIO_2PI);
         }
         val = (emitterAzimuth - a0) / (a1 - a0);
 
@@ -870,24 +874,24 @@ static void CalculateMatrix(
 
         FAudio_zero(MatrixCoefficients, sizeof(float) * SrcChannelCount * DstChannelCount);
 
+        // TODO Clamp in release, assert in debug
         // TODO multi emitters.
         // for (int iEm = 0; iEm < SrcChannelCount; ++iEm) {
         MatrixCoefficients[i0] = (1.0f - val) * attenuation;
         MatrixCoefficients[i1] = (       val) * attenuation;
         // }
+
+
+        if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
+        {
+            SDL_assert(curConfig->LFSpeakerIdx != -1);
+
+            MatrixCoefficients[curConfig->LFSpeakerIdx] = attenuation;
+        }
     }
 
-    if (Flags & F3DAUDIO_CALCULATE_ZEROCENTER)
-    {
-        // Fills the center channel with silence. This flag allows you to keep a 6-channel matrix so you do not have to remap the channels, but the center channel will be silent. This flag is only valid if you also set X3DAUDIO_CALCULATE_MATRIX.
-        //UNIMPLEMENTED();
-    }
-
-    if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
-    {
-         // Applies an equal mix of all source channels to a low frequency effect (LFE) destination channel. It only applies to matrix calculations with a source that does not have an LFE channel and a destination that does have an LFE channel. This flag is only valid if you also set X3DAUDIO_CALCULATE_MATRIX.
-        UNIMPLEMENTED();
-    }
+    // TODO: add post check to valide values
+    // (sum < 1, all values > 0, no Inf / NaN..
 }
 
 /* DopplerPitchScalar
@@ -946,37 +950,6 @@ static void CalculateDoppler(
         );
     }
 }
-
-/* Adrien: notes from MSDN
- * "The listener and emitter values must be valid. Floating-point specials (NaN, QNaN, +INF, -INF) can cause the entire audio output to go silent if introduced into a running audio graph."
- *
- * Listener:
- *  - if pCone is NULL use OrientFront for matrix and delay. WHen pCone isn't NULL, OrientFront is used for matrix, LPF (direct and reverb). What about delay??
- *  Must be orthonormal to OrientTop.
- *  - OrientTop: only for matrix and delay
- *  - Position: does not affect velocity. In world units. Considering default speed 1 unit = 1 meter.
- *  - Velocity: used only for doppler calculations. wu/s.
- *  - "To be considered orthonormal, a pair of vectors must have a magnitude of 1 +- 1x10-5 and a dot product of 0 +- 1x10-5."
- *
- * Emitter:
- *  - pCone: only for single channel emitters. NULL means omnidirectional emitter. Non-NULL: used for matrix, LPF reverb and direct, and reverb.
- *  - OrientFront: MUST BE NORMALIZED when used. Must be orthonormal to OrientTop. Single channel: only used for emitter angle. Multi-channel or single with cones: used for matrix, LPF (direct and reverb) and reverb.
- *  - OrientTop: only used for multi-channel for matrix. Must be orthonormal to OrientFront.
- *  - Pos/Velocity: same as Listener.
- *  - InnerRadius: must be between 0.0f and MAX_FLT. If 0, no inner radius used, but innerradiusangle may still be used.
- *  - InnerRadiusAngle: must be between 0.0f and X3DAUDIO_PI/4.0.
- *  - ChannelCount: number of emitters.
- *  - ChannelRadius: distance of emitters from center pos. Only used when ChannelCount >1 for matrix calculations.
- *  - pChannelAzimuths: table of channel azimuths. 2PI means LFE. LFE channels are placed in the center and only respect pLFEcurve, not pVolumeCurve. Can be NULL if ChannelCount = 1, otherwise must have ChannelCount elements. All values between 0 and 2Pi. USed for matrix calculations only.
- *  - pVolumeCurve/pLFECurve: only for matrix, for their respective channels. Default: if <= CurveDistanceScaler, no attenuation. Above is CurveDistanceScaler/distance attenuation. (Adrien: why does this mention and inverse SQUARE law then?)
- *  - pLPFDirectCurve: default curve: [0.0f, 1.0f], [1.0f, 0.75f]
- *  - pLPFReverbCurve: default curve: [0.0f, 0.75f], [1.0f, 0.75f]
- *  - pReverbCurve: default curve:  [0.0f, 1.0f], [1.0f, 0.0f].
- *  - CurveDistanceScaler: must be between FLT_MIN to FLT_MAX. Only for matrix, LPF (both) and reverb.
- *  - DopplerScaler: must be between 0.0f to FLT_MAX. Only for doppler calculations.
- *  - Remarks: cone only for single-emitter (doesnt make sense otherwise). Multi-point useful to avoid duplicate calculations like doppler (Adrien: implementation hint).
- * See the MSDN page for illustration of cone.
- */
 
 void F3DAudioCalculate(
     const F3DAUDIO_HANDLE Instance,
@@ -1058,6 +1031,8 @@ void F3DAudioCalculate(
     }
 }
 
+
+// TODO: Move internal checks to an external test driver.
 void F3DAudioInternalChecks() {
     if (!CheckConfigurations())
     {
