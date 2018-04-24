@@ -155,18 +155,9 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.bufferList = NULL;
 	if (pSourceFormat->wFormatTag == 1)
 	{
-		if (pSourceFormat->nChannels == 2)
-		{
-			(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
-				FAudio_INTERNAL_DecodeStereoPCM16 :
-				FAudio_INTERNAL_DecodeStereoPCM8;
-		}
-		else
-		{
-			(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
-				FAudio_INTERNAL_DecodeMonoPCM16 :
-				FAudio_INTERNAL_DecodeMonoPCM8;
-		}
+		(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
+			FAudio_INTERNAL_DecodePCM16 :
+			FAudio_INTERNAL_DecodePCM8;
 	}
 	else if (pSourceFormat->wFormatTag == 2)
 	{
@@ -176,9 +167,7 @@ uint32_t FAudio_CreateSourceVoice(
 	}
 	else if (pSourceFormat->wFormatTag == 3)
 	{
-		(*ppSourceVoice)->src.decode = (pSourceFormat->nChannels == 2) ?
-			FAudio_INTERNAL_DecodeStereoPCM32F :
-			FAudio_INTERNAL_DecodeMonoPCM32F;
+		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
 	}
 	else
 	{
