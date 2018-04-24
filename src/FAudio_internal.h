@@ -92,12 +92,12 @@ struct FAudio
 	LinkedList *callbacks;
 	FAudioWaveFormatExtensible *mixFormat;
 
-	/* Temp storage for processing */
+	/* Temp storage for processing, interleaved PCM32F */
 	#define EXTRA_DECODE_PADDING 2
 	uint32_t decodeSamples;
 	uint32_t resampleSamples;
-	float *decodeCache; /* Deinterleaved PCM32F */
-	float *resampleCache; /* Interleaved PCM32F */
+	float *decodeCache;
+	float *resampleCache;
 };
 
 struct FAudioVoice
