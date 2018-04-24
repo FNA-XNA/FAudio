@@ -828,7 +828,7 @@ void FAudio_INTERNAL_SetDefaultMatrix(
 	FAudio_assert(dstChannels > 0 && dstChannels < 9);
 	FAudio_memcpy(
 		matrix,
-		MATRIX_DEFAULTS[srcChannels][dstChannels],
+		MATRIX_DEFAULTS[srcChannels - 1][dstChannels - 1],
 		srcChannels * dstChannels * sizeof(float)
 	);
 }
