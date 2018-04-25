@@ -271,7 +271,7 @@ public:
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputMatrix(faudio_voice, ((XAudio2SourceVoiceImpl *) pDestinationVoice)->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
+		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
 	X2METHOD(void) GetOutputMatrix(
@@ -280,7 +280,7 @@ public:
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) {
 		TRACE_FUNC();
-		FAudioVoice_GetOutputMatrix(faudio_voice, ((XAudio2SourceVoiceImpl *)pDestinationVoice)->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
+		FAudioVoice_GetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
 	}
 
 	X2METHOD(void) DestroyVoice() {
@@ -350,7 +350,6 @@ public:
 	}
 
 private:
-	FAudioSourceVoice *faudio_voice;
 	FAudioVoiceCppCallback *voice_callback;
 };
 
@@ -486,7 +485,7 @@ public:
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputMatrix(faudio_voice, ((XAudio2SubmixVoiceImpl *)pDestinationVoice)->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
+		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
 	X2METHOD(void) GetOutputMatrix(
@@ -495,7 +494,7 @@ public:
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) {
 		TRACE_FUNC();
-		FAudioVoice_GetOutputMatrix(faudio_voice, ((XAudio2SubmixVoiceImpl *)pDestinationVoice)->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
+		FAudioVoice_GetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
 	}
 
 	X2METHOD(void) DestroyVoice() {
@@ -506,7 +505,6 @@ public:
 	}
 
 private:
-	FAudioSourceVoice *faudio_voice;
 };
 
 
@@ -656,7 +654,7 @@ public:
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputMatrix(faudio_voice, ((XAudio2MasteringVoiceImpl *)pDestinationVoice)->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
+		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
 	X2METHOD(void) GetOutputMatrix(
@@ -665,7 +663,7 @@ public:
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) {
 		TRACE_FUNC();
-		FAudioVoice_GetOutputMatrix(faudio_voice, ((XAudio2MasteringVoiceImpl *)pDestinationVoice)->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
+		FAudioVoice_GetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
 	}
 
 	X2METHOD(void) DestroyVoice() {
@@ -684,7 +682,6 @@ public:
 #endif
 
 private:
-	FAudioSourceVoice *faudio_voice;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

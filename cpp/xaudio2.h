@@ -92,6 +92,11 @@ public:
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) = 0;
 	X2METHOD(void) DestroyVoice() = 0;
+
+public:
+	// not the ideal solution but the cleanest way I known to get to the common FAudioVoice object
+	// from a IXAudioVoice pointer to any derived class (without changing the vtable)
+	FAudioVoice *faudio_voice;
 };
 
 class IXAudio2SourceVoice : public IXAudio2Voice {
