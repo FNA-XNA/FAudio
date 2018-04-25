@@ -25,6 +25,7 @@ static void trace_msg(const char *msg, ...) {
 
 #else
 #define TRACE_FUNC()
+#define TRACE_PARAM(f, ...)
 #endif // TRACING_ENABLE
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -184,6 +185,7 @@ public:
 		IXAudio2VoiceCallback* pCallback,
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
+		TRACE_PARAMS("Format=%d; nChannels=%d; nSamplesPerSec=%d", pSourceFormat->wFormatTag, pSourceFormat->nChannels, pSourceFormat->nSamplesPerSec);
 		voice_callback = wrap_voice_callback(pCallback);
 		voice_sends = unwrap_voice_sends(pSendList);
 		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), voice_sends, NULL);
@@ -304,7 +306,7 @@ public:
 		UINT32 DestinationChannels,
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
-		TRACE_FUNC();
+		TRACE_PARAMS("this = %x; pDestinationVoice = %x; SourceChannels = %d; DestinationChannels = %d", this, pDestinationVoice, SourceChannels, DestinationChannels);
 		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
@@ -566,7 +568,7 @@ public:
 		UINT32 Flags,
 		UINT32 DeviceIndex,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
-		TRACE_FUNC();
+		TRACE_PARAMS("InputChannels = %d; InputSampleRate = %d; Flags = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, pEffectChain);
 		voice_sends = NULL;
 		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, DeviceIndex, NULL);
 	}
