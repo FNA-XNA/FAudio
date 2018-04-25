@@ -812,7 +812,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	}
 	else
 	{
-		FAudio_assert(DestinationChannels == voice->mix.inputChannels);
+		FAudio_assert(DestinationChannels == pDestinationVoice->mix.inputChannels);
 	}
 
 	/* Set the matrix values, finally */
