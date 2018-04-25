@@ -126,6 +126,8 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
+	uint32_t i;
+
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
@@ -137,8 +139,13 @@ uint32_t FAudio_CreateSourceVoice(
 
 	/* Default Levels */
 	(*ppSourceVoice)->volume = 1.0f;
-	(*ppSourceVoice)->channelVolume[0] = 1.0f;
-	(*ppSourceVoice)->channelVolume[1] = 1.0f;
+	(*ppSourceVoice)->channelVolume = (float*) FAudio_malloc(
+		sizeof(float) * pSourceFormat->nChannels
+	);
+	for (i = 0; i < pSourceFormat->nChannels; i += 1)
+	{
+		(*ppSourceVoice)->channelVolume[i] = 1.0f;
+	}
 
 	/* Source Properties */
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
@@ -219,6 +226,8 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioVoiceSends *pSendList,
 	const FAudioEffectChain *pEffectChain
 ) {
+	uint32_t i;
+
 	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
 	(*ppSubmixVoice)->audio = audio;
@@ -230,8 +239,13 @@ uint32_t FAudio_CreateSubmixVoice(
 
 	/* Default Levels */
 	(*ppSubmixVoice)->volume = 1.0f;
-	(*ppSubmixVoice)->channelVolume[0] = 1.0f;
-	(*ppSubmixVoice)->channelVolume[1] = 1.0f;
+	(*ppSubmixVoice)->channelVolume = (float*) FAudio_malloc(
+		sizeof(float) * InputChannels
+	);
+	for (i = 0; i < InputChannels; i += 1)
+	{
+		(*ppSubmixVoice)->channelVolume[i] = 1.0f;
+	}
 
 	/* Submix Properties */
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
@@ -299,8 +313,6 @@ uint32_t FAudio_CreateMasteringVoice(
 
 	/* Default Levels */
 	(*ppMasteringVoice)->volume = 1.0f;
-	(*ppMasteringVoice)->channelVolume[0] = 1.0f;
-	(*ppMasteringVoice)->channelVolume[1] = 1.0f;
 
 	/* Sends/Effects */
 	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
@@ -468,7 +480,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 	);
 
 	/* Allocate/Reset default output matrix */
-	FAudio_assert(inChannels > 0 && inChannels < 3);
 	voice->sendCoefficients = (float**) FAudio_malloc(
 		sizeof(float*) * pSendList->SendCount
 	);
@@ -482,7 +493,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 		{
 			outChannels = pSendList->pSends[i].pOutputVoice->mix.inputChannels;
 		}
-		FAudio_assert(outChannels > 0 && outChannels < 9);
 		voice->sendCoefficients[i] = (float*) FAudio_malloc(
 			sizeof(float) * inChannels * outChannels
 		);
@@ -742,7 +752,6 @@ uint32_t FAudioVoice_SetChannelVolumes(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_assert(Channels > 0 && Channels < 3);
 	FAudio_memcpy(
 		voice->channelVolume,
 		pVolumes,
@@ -756,7 +765,6 @@ void FAudioVoice_GetChannelVolumes(
 	uint32_t Channels,
 	float *pVolumes
 ) {
-	FAudio_assert(Channels > 0 && Channels < 3);
 	FAudio_memcpy(
 		pVolumes,
 		voice->channelVolume,
@@ -931,6 +939,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	if (voice->filterState != NULL)
 	{
 		FAudio_free(voice->filterState);
+	}
+	if (voice->channelVolume != NULL)
+	{
+		FAudio_free(voice->channelVolume);
 	}
 	FAudio_Release(voice->audio);
 	FAudio_free(voice);

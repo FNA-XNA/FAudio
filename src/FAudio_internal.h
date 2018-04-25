@@ -120,7 +120,7 @@ struct FAudioVoice
 	FAudioFilterState *filterState;
 
 	float volume;
-	float channelVolume[2]; /* Assuming stereo input */
+	float *channelVolume;
 
 	union
 	{
