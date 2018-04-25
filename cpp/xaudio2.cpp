@@ -140,6 +140,37 @@ static FAudioCppEngineCallback *find_and_remove_engine_callback(FAudioCppEngineC
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// XAUDIO2_VOICE_SENDS / XAUDIO2_SEND_DESCRIPTOR => FAudio
+//
+
+static FAudioVoiceSends *unwrap_voice_sends(const XAUDIO2_VOICE_SENDS *x_sends) {
+	if (x_sends == NULL) {
+		return NULL;
+	}
+	TRACE_PARAMS("SendCount = %d", x_sends->SendCount);
+
+	FAudioVoiceSends *f_sends = new FAudioVoiceSends();
+	f_sends->SendCount = x_sends->SendCount;
+	f_sends->pSends = new FAudioSendDescriptor[f_sends->SendCount];
+
+	for (uint32_t i = 0; i < f_sends->SendCount; ++i) {
+		f_sends->pSends[i].Flags = x_sends->pSends[i].Flags;
+		f_sends->pSends[i].pOutputVoice = x_sends->pSends[i].pOutputVoice->faudio_voice;
+		TRACE_PARAMS("x : %x => f : %x", f_sends->pSends[i].pOutputVoice, x_sends->pSends[i].pOutputVoice);
+	}
+
+	return f_sends;
+}
+
+static void free_voice_sends(FAudioVoiceSends *f_sends) {
+	if (f_sends != NULL) {
+		delete[] f_sends->pSends;
+		delete f_sends;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // IXAudio2SourceVoice implementation
 //
 
@@ -154,7 +185,8 @@ public:
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		voice_callback = wrap_voice_callback(pCallback);
-		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), pSendList, pEffectChain);
+		voice_sends = unwrap_voice_sends(pSendList);
+		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), voice_sends, NULL);
 		TRACE_FUNC();
 	}
 
@@ -166,7 +198,9 @@ public:
 
 	X2METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS* pSendList) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputVoices(faudio_voice, pSendList);
+		free_voice_sends(voice_sends);
+		voice_sends = unwrap_voice_sends(pSendList);
+		return FAudioVoice_SetOutputVoices(faudio_voice, voice_sends);
 	}
 
 	X2METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
@@ -290,6 +324,7 @@ public:
 		if (voice_callback) {
 			delete voice_callback;
 		}
+		free_voice_sends(voice_sends);
 		delete this;
 	}
 
@@ -351,6 +386,7 @@ public:
 
 private:
 	FAudioVoiceCppCallback *voice_callback;
+	FAudioVoiceSends *voice_sends;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -369,7 +405,8 @@ public:
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_PARAMS("InputChannels = %d; InputSampleRate = %d; Flags = %d; ProcessingState = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, ProcessingStage, pEffectChain);
-		FAudio_CreateSubmixVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, ProcessingStage, pSendList, pEffectChain);
+		voice_sends = unwrap_voice_sends(pSendList);
+		FAudio_CreateSubmixVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, ProcessingStage, voice_sends, NULL);	// FIXME
 	}
 
 	// IXAudio2Voice
@@ -380,7 +417,9 @@ public:
 
 	X2METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS* pSendList) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputVoices(faudio_voice, pSendList);
+		free_voice_sends(voice_sends);
+		voice_sends = unwrap_voice_sends(pSendList);
+		return FAudioVoice_SetOutputVoices(faudio_voice, voice_sends);
 	}
 
 	X2METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
@@ -392,14 +431,16 @@ public:
 		UINT32 EffectIndex,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
+		return S_OK;		// FIXME
+		// return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	X2METHOD(HRESULT) DisableEffect(
 		UINT32 EffectIndex,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
+		return S_OK;		// FIXME
+		// return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	X2METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL* pEnabled) {
@@ -417,7 +458,8 @@ public:
 		UINT32 ParametersByteSize,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_SetEffectParameters(faudio_voice, EffectIndex, pParameters, ParametersByteSize, OperationSet);
+		return S_OK;	// FIXME
+		// return FAudioVoice_SetEffectParameters(faudio_voice, EffectIndex, pParameters, ParametersByteSize, OperationSet);
 	}
 
 	X2METHOD(HRESULT) GetEffectParameters(
@@ -505,6 +547,7 @@ public:
 	}
 
 private:
+	FAudioVoiceSends *voice_sends;
 };
 
 
@@ -524,7 +567,8 @@ public:
 		UINT32 DeviceIndex,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_FUNC();
-		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, DeviceIndex, pEffectChain);
+		voice_sends = NULL;
+		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, DeviceIndex, NULL);
 	}
 #else
 	XAudio2MasteringVoiceImpl(
@@ -549,7 +593,9 @@ public:
 
 	X2METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS* pSendList) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputVoices(faudio_voice, pSendList);
+		free_voice_sends(voice_sends);
+		voice_sends = unwrap_voice_sends(pSendList);
+		return FAudioVoice_SetOutputVoices(faudio_voice, voice_sends);
 	}
 
 	X2METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
@@ -682,6 +728,7 @@ public:
 #endif
 
 private:
+	FAudioVoiceSends *voice_sends;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -805,7 +852,7 @@ public:
 		UINT32 DeviceIndex = 0,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain = NULL) {
 		TRACE_PARAMS("InputChannels = %d InputSampleRate = %d", InputChannels, InputSampleRate);
-		*ppMasteringVoice = new XAudio2MasteringVoiceImpl(faudio, InputChannels, InputSampleRate, Flags, DeviceIndex, pEffectChain);
+		*ppMasteringVoice = new XAudio2MasteringVoiceImpl(faudio, InputChannels, InputSampleRate, Flags, DeviceIndex, NULL);	// FIXME
 		return S_OK;
 	}
 #else
