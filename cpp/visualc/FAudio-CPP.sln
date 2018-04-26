@@ -4,14 +4,26 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XAudio2_7", "XAudio2_7.vcxproj", "{9F5164EA-DC2B-4370-8C3C-DF449413A625}"
+	ProjectSection(ProjectDependencies) = postProject
+		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2} = {90A103EF-E403-47D4-BBBB-0F206B9FA7F2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FAudio", "..\..\visualc\FAudio.vcxproj", "{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XAudio2_9", "XAudio2_9.vcxproj", "{C4BE973A-0412-44D2-A5DB-F9B05EAB6EED}"
+	ProjectSection(ProjectDependencies) = postProject
+		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2} = {90A103EF-E403-47D4-BBBB-0F206B9FA7F2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "X3DAudio1_7", "X3DAudio1_7.vcxproj", "{EAC29019-EB87-434C-9E41-75A499941AD5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2} = {90A103EF-E403-47D4-BBBB-0F206B9FA7F2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XAPOBase", "XAPOBase.vcxproj", "{D1E0EB55-2B90-40A1-B864-0B7A36BF79B7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2} = {90A103EF-E403-47D4-BBBB-0F206B9FA7F2}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +41,10 @@ Global
 		{9F5164EA-DC2B-4370-8C3C-DF449413A625}.Release|x64.Build.0 = Release|x64
 		{9F5164EA-DC2B-4370-8C3C-DF449413A625}.Release|x86.ActiveCfg = Release|Win32
 		{9F5164EA-DC2B-4370-8C3C-DF449413A625}.Release|x86.Build.0 = Release|Win32
-		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Debug|x64.ActiveCfg = Debug|Win32
+		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Debug|x64.ActiveCfg = Debug|x64
 		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Debug|x86.ActiveCfg = Debug|Win32
 		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Debug|x86.Build.0 = Debug|Win32
-		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Release|x64.ActiveCfg = Release|Win32
+		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Release|x64.ActiveCfg = Release|x64
 		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Release|x86.ActiveCfg = Release|Win32
 		{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}.Release|x86.Build.0 = Release|Win32
 		{C4BE973A-0412-44D2-A5DB-F9B05EAB6EED}.Debug|x64.ActiveCfg = Debug|x64
