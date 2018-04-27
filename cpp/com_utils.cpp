@@ -80,11 +80,11 @@ private:
 // COM DLL interface functions
 //
 
-HRESULT __stdcall DllCanUnloadNow() {
+extern "C" HRESULT __stdcall DllCanUnloadNow() {
 	return S_FALSE;
 }
 
-HRESULT __stdcall DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv) {
+extern "C" HRESULT __stdcall DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv) {
 	IClassFactory *factory = NULL;
 
 	if (rclsid == CLSID_XAudio2_6 || rclsid == CLSID_XAudio2_7) {
@@ -105,10 +105,10 @@ HRESULT __stdcall DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv) {
 
 }
 
-HRESULT __stdcall DllRegisterServer() {
+extern "C" HRESULT __stdcall DllRegisterServer() {
 	return S_OK;
 }
 
-HRESULT __stdcall DllUnregisterServer() {
+extern "C" HRESULT __stdcall DllUnregisterServer() {
 	return S_OK;
 }

@@ -90,7 +90,7 @@ public:
 		UINT32 Channels, 
 		const float* pVolumes,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetChannelVolumes (UINT32 Channels, _Out_writes_(Channels) float* pVolumes) = 0;
+	X2METHOD(void) GetChannelVolumes (UINT32 Channels, float* pVolumes) = 0;
 	X2METHOD(HRESULT) SetOutputMatrix (
 		IXAudio2Voice* pDestinationVoice,
 		UINT32 SourceChannels, 

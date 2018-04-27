@@ -8,7 +8,7 @@
 
 #define TRACE_FILE	"c:/temp/faudio_cpp.txt"
 #define TRACE_FUNC()	do { trace_msg(__FUNCTION__); } while (0)
-#define TRACE_PARAMS(f,...) do {trace_msg("%s: "##f, __FUNCTION__, __VA_ARGS__);} while (0)
+#define TRACE_PARAMS(f,...) do {trace_msg("%s: " # f, __FUNCTION__, __VA_ARGS__);} while (0)
 
 static void trace_msg(const char *msg, ...) {
 	va_list args;
@@ -93,7 +93,7 @@ struct FAudioCppEngineCallback {
 	FAudioEngineCallback callbacks;
 	IXAudio2EngineCallback *com;
 
-	FAudioCppEngineCallback *prev, *next;
+	FAudioCppEngineCallback *next;
 };
 
 static void FAUDIOCALL OnCriticalError(FAudioEngineCallback *callback, uint32_t Error) {
@@ -118,7 +118,6 @@ static FAudioCppEngineCallback *wrap_engine_callback(IXAudio2EngineCallback *com
 	cb->callbacks.OnProcessingPassEnd = OnProcessingPassEnd;
 	cb->callbacks.OnProcessingPassStart = OnProcessingPassStart;
 	cb->com = com_interface;
-	cb->prev = NULL;
 	cb->next = NULL;
 
 	return cb;
@@ -740,11 +739,15 @@ private:
 
 class XAudio2Impl : public IXAudio2 {
 public:
-	XAudio2Impl() : callback_list({0}) {
+	XAudio2Impl() {
+		callback_list.com = NULL;
+		callback_list.next = NULL;
 		FAudio_Construct(&faudio);
 	}
 
-	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor) : callback_list({0}) {
+	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor) {
+		callback_list.com = NULL;
+		callback_list.next = NULL;
 		FAudioCreate(&faudio, Flags, XAudio2Processor);
 	}
 
