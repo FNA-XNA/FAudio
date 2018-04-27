@@ -3,33 +3,8 @@
 
 #include <FAPOBase.h>
 
-#define TRACING_ENABLE
-
-#ifdef TRACING_ENABLE
-#include <stdio.h>
-#include <stdarg.h>
-
-#define TRACE_FILE	"c:/temp/faudio_cpp.txt"
-#define TRACE_FUNC()	do { trace_msg(__FUNCTION__); } while (0)
-#define TRACE_PARAMS(f,...) do {trace_msg("%s: " # f, __FUNCTION__, __VA_ARGS__);} while (0)
-
-static void trace_msg(const char *msg, ...) {
-	va_list args;
-	va_start(args, msg);
-
-	FILE *fp = fopen(TRACE_FILE, "a");
-	if (fp) {
-		vfprintf(fp, msg, args);
-		fputc('\n', fp);
-		fclose(fp);
-	}
-	va_end(args);
-}
-
-#else
-#define TRACE_FUNC()
-#define TRACE_PARAM(f, ...)
-#endif // TRACING_ENABLE
+//#define TRACING_ENABLE
+#include "trace.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -150,7 +125,7 @@ static FAudioVoiceSends *unwrap_voice_sends(const XAUDIO2_VOICE_SENDS *x_sends) 
 	if (x_sends == NULL) {
 		return NULL;
 	}
-	TRACE_PARAMS("SendCount = %d", x_sends->SendCount);
+	TRACE_MSG("SendCount = %d", x_sends->SendCount);
 
 	FAudioVoiceSends *f_sends = new FAudioVoiceSends;
 	f_sends->SendCount = x_sends->SendCount;
@@ -159,7 +134,7 @@ static FAudioVoiceSends *unwrap_voice_sends(const XAUDIO2_VOICE_SENDS *x_sends) 
 	for (uint32_t i = 0; i < f_sends->SendCount; ++i) {
 		f_sends->pSends[i].Flags = x_sends->pSends[i].Flags;
 		f_sends->pSends[i].pOutputVoice = x_sends->pSends[i].pOutputVoice->faudio_voice;
-		TRACE_PARAMS("x : %x => f : %x", f_sends->pSends[i].pOutputVoice, x_sends->pSends[i].pOutputVoice);
+		TRACE_MSG("x : %x => f : %x", f_sends->pSends[i].pOutputVoice, x_sends->pSends[i].pOutputVoice);
 	}
 
 	return f_sends;
@@ -260,7 +235,7 @@ static void *wrap_xapo_effect(IUnknown *xapo) {
 	xapo->QueryInterface(IID_IXAPO, (void **) &f_effect->xapo);
 	xapo->QueryInterface(IID_IXAPOParameters, (void **) &f_effect->xapo_params);
 
-	TRACE_PARAMS("IXAPO: %x; IXAPOParameters: %x", f_effect->xapo, f_effect->xapo_params);
+	TRACE_MSG("IXAPO: %x; IXAPOParameters: %x", f_effect->xapo, f_effect->xapo_params);
 
 	f_effect->fapo.base.base.GetRegistrationProperties = GetRegistrationProperties;
 	f_effect->fapo.base.base.IsInputFormatSupported = IsInputFormatSupported;
@@ -278,7 +253,7 @@ static void *wrap_xapo_effect(IUnknown *xapo) {
 
 	f_effect->fapo.base.Destructor = Destructor;
 
-	TRACE_PARAMS("end");
+	TRACE_MSG("end");
 
 	return f_effect;
 }
@@ -288,7 +263,7 @@ static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain)
 		return NULL;
 	}
 
-	TRACE_PARAMS("EffectCount = %d", x_chain->EffectCount);
+	TRACE_MSG("EffectCount = %d", x_chain->EffectCount);
 
 	FAudioEffectChain *f_chain = new FAudioEffectChain;
 	f_chain->EffectCount = x_chain->EffectCount;
@@ -325,8 +300,8 @@ public:
 		IXAudio2VoiceCallback* pCallback,
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
-		TRACE_PARAMS("Format=%d; nChannels=%d; nSamplesPerSec=%d", pSourceFormat->wFormatTag, pSourceFormat->nChannels, pSourceFormat->nSamplesPerSec);
-		TRACE_PARAMS("Sends = %d", pSendList ? pSendList->SendCount : -1);
+		TRACE_MSG("Format=%d; nChannels=%d; nSamplesPerSec=%d", pSourceFormat->wFormatTag, pSourceFormat->nChannels, pSourceFormat->nSamplesPerSec);
+		TRACE_MSG("Sends = %d", pSendList ? pSendList->SendCount : -1);
 		voice_callback = wrap_voice_callback(pCallback);
 		voice_sends = unwrap_voice_sends(pSendList);
 		effect_chain = wrap_effect_chain(pEffectChain);
@@ -449,7 +424,7 @@ public:
 		UINT32 DestinationChannels,
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
-		TRACE_PARAMS("this = %x; pDestinationVoice = %x; SourceChannels = %d; DestinationChannels = %d", this, pDestinationVoice, SourceChannels, DestinationChannels);
+		TRACE_MSG("this = %x; pDestinationVoice = %x; SourceChannels = %d; DestinationChannels = %d", this, pDestinationVoice, SourceChannels, DestinationChannels);
 		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
@@ -550,7 +525,7 @@ public:
 		UINT32 ProcessingStage,
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
-		TRACE_PARAMS("InputChannels = %d; InputSampleRate = %d; Flags = %d; ProcessingState = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, ProcessingStage, pEffectChain);
+		TRACE_MSG("InputChannels = %d; InputSampleRate = %d; Flags = %d; ProcessingState = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, ProcessingStage, pEffectChain);
 		voice_sends = unwrap_voice_sends(pSendList);
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateSubmixVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, ProcessingStage, voice_sends, effect_chain);
@@ -713,7 +688,7 @@ public:
 		UINT32 Flags,
 		UINT32 DeviceIndex,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
-		TRACE_PARAMS("InputChannels = %d; InputSampleRate = %d; Flags = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, pEffectChain);
+		TRACE_MSG("InputChannels = %d; InputSampleRate = %d; Flags = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, pEffectChain);
 		voice_sends = NULL;
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, DeviceIndex, effect_chain);
@@ -1007,7 +982,7 @@ public:
 		UINT32 Flags = 0,
 		UINT32 DeviceIndex = 0,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain = NULL) {
-		TRACE_PARAMS("InputChannels = %d InputSampleRate = %d", InputChannels, InputSampleRate);
+		TRACE_MSG("InputChannels = %d InputSampleRate = %d", InputChannels, InputSampleRate);
 		*ppMasteringVoice = new XAudio2MasteringVoiceImpl(faudio, InputChannels, InputSampleRate, Flags, DeviceIndex, NULL);	// FIXME
 		return S_OK;
 	}
