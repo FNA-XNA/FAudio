@@ -1,4 +1,7 @@
 #include "xaudio2.h"
+#include "XAPO.h"
+
+#include <FAPOBase.h>
 
 #define TRACING_ENABLE
 
@@ -149,7 +152,7 @@ static FAudioVoiceSends *unwrap_voice_sends(const XAUDIO2_VOICE_SENDS *x_sends) 
 	}
 	TRACE_PARAMS("SendCount = %d", x_sends->SendCount);
 
-	FAudioVoiceSends *f_sends = new FAudioVoiceSends();
+	FAudioVoiceSends *f_sends = new FAudioVoiceSends;
 	f_sends->SendCount = x_sends->SendCount;
 	f_sends->pSends = new FAudioSendDescriptor[f_sends->SendCount];
 
@@ -171,6 +174,144 @@ static void free_voice_sends(FAudioVoiceSends *f_sends) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// XAUDIO2_EFFECT_CHAIN / XAUDIO2_EFFECT_DESCRIPTOR => FAudio
+//
+
+struct FAPOCppParametersBase {
+	FAPOParametersBase fapo;
+	IXAPO *xapo;
+	IXAPOParameters *xapo_params;
+};
+
+static uint32_t FAPOCALL GetRegistrationProperties(void* fapo, FAPORegistrationProperties **ppRegistrationProperties) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->GetRegistrationProperties(ppRegistrationProperties);
+}
+
+static uint32_t FAPOCALL IsInputFormatSupported(void* fapo, const FAudioWaveFormatEx *pOutputFormat, const FAudioWaveFormatEx *pRequestedInputFormat, FAudioWaveFormatEx **ppSupportedInputFormat) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->IsInputFormatSupported(pOutputFormat, pRequestedInputFormat, ppSupportedInputFormat);
+}
+
+static uint32_t FAPOCALL IsOutputFormatSupported(void* fapo, const FAudioWaveFormatEx *pInputFormat, const FAudioWaveFormatEx *pRequestedOutputFormat, FAudioWaveFormatEx **ppSupportedOutputFormat) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->IsOutputFormatSupported(pInputFormat, pRequestedOutputFormat, ppSupportedOutputFormat);
+}
+
+static uint32_t FAPOCALL Initialize(void* fapo, const void* pData, uint32_t DataByteSize) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->Initialize(pData, DataByteSize);
+}
+
+static void  FAPOCALL Reset(void* fapo) {
+	TRACE_FUNC();
+	reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->Reset();
+}
+
+static uint32_t FAPOCALL LockForProcess(void* fapo, uint32_t InputLockedParameterCount, const FAPOLockForProcessBufferParameters *pInputLockedParameters, uint32_t OutputLockedParameterCount, const FAPOLockForProcessBufferParameters *pOutputLockedParameters) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->LockForProcess(InputLockedParameterCount, pInputLockedParameters, OutputLockedParameterCount, pOutputLockedParameters);
+}
+
+static void  FAPOCALL UnlockForProcess(void* fapo) {
+	TRACE_FUNC();
+	reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->UnlockForProcess();
+}
+
+static void  FAPOCALL Process(void* fapo, uint32_t InputProcessParameterCount, const FAPOProcessBufferParameters* pInputProcessParameters, uint32_t OutputProcessParameterCount, FAPOProcessBufferParameters* pOutputProcessParameters, uint8_t IsEnabled) {
+	TRACE_FUNC();
+	reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->Process(InputProcessParameterCount, pInputProcessParameters, OutputProcessParameterCount, pOutputProcessParameters, IsEnabled);
+}
+
+static uint32_t FAPOCALL CalcInputFrames(void* fapo, uint32_t OutputFrameCount) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->CalcInputFrames(OutputFrameCount);
+}
+
+static uint32_t FAPOCALL CalcOutputFrames(void* fapo, uint32_t InputFrameCount) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo->CalcOutputFrames(InputFrameCount);
+}
+
+static void FAPOCALL SetParameters(void* fapoParameters, const void* pParameters, uint32_t ParameterByteSize) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapoParameters)->xapo_params->SetParameters(pParameters, ParameterByteSize);
+}
+
+static void FAPOCALL GetParameters(void* fapoParameters, void* pParameters, uint32_t ParameterByteSize) {
+	TRACE_FUNC();
+	return reinterpret_cast<FAPOCppParametersBase *>(fapoParameters)->xapo_params->GetParameters(pParameters, ParameterByteSize);
+}
+
+static void FAPOCALL Destructor(void *fapo) {
+	TRACE_FUNC();
+	delete reinterpret_cast<FAPOCppParametersBase *>(fapo);
+}
+
+static void *wrap_xapo_effect(IUnknown *xapo) {
+	if (xapo == NULL) {
+		return NULL;
+	}
+
+	TRACE_FUNC();
+
+	// FIXME: assumes that all effects are derived from CXAPOParametersBase
+	FAPOCppParametersBase *f_effect = new FAPOCppParametersBase;
+	xapo->QueryInterface(IID_IXAPO, (void **) &f_effect->xapo);
+	xapo->QueryInterface(IID_IXAPOParameters, (void **) &f_effect->xapo_params);
+
+	TRACE_PARAMS("IXAPO: %x; IXAPOParameters: %x", f_effect->xapo, f_effect->xapo_params);
+
+	f_effect->fapo.base.base.GetRegistrationProperties = GetRegistrationProperties;
+	f_effect->fapo.base.base.IsInputFormatSupported = IsInputFormatSupported;
+	f_effect->fapo.base.base.IsOutputFormatSupported = IsOutputFormatSupported;
+	f_effect->fapo.base.base.Initialize = Initialize;
+	f_effect->fapo.base.base.Reset = Reset;
+	f_effect->fapo.base.base.LockForProcess = LockForProcess;
+	f_effect->fapo.base.base.UnlockForProcess = UnlockForProcess;
+	f_effect->fapo.base.base.Process = Process;
+	f_effect->fapo.base.base.CalcInputFrames = CalcInputFrames;
+	f_effect->fapo.base.base.CalcOutputFrames = CalcOutputFrames;
+
+	f_effect->fapo.parameters.GetParameters = GetParameters;
+	f_effect->fapo.parameters.SetParameters = SetParameters;
+
+	f_effect->fapo.base.Destructor = Destructor;
+
+	TRACE_PARAMS("end");
+
+	return f_effect;
+}
+
+static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain) {
+	if (x_chain == NULL) {
+		return NULL;
+	}
+
+	TRACE_PARAMS("EffectCount = %d", x_chain->EffectCount);
+
+	FAudioEffectChain *f_chain = new FAudioEffectChain;
+	f_chain->EffectCount = x_chain->EffectCount;
+	f_chain->pEffectDescriptors = new FAudioEffectDescriptor[f_chain->EffectCount];
+
+	for (uint32_t i = 0; i < f_chain->EffectCount; ++i) {
+		f_chain->pEffectDescriptors[i].InitialState = x_chain->pEffectDescriptors[i].InitialState;
+		f_chain->pEffectDescriptors[i].OutputChannels = x_chain->pEffectDescriptors[i].OutputChannel;
+		f_chain->pEffectDescriptors[i].pEffect = wrap_xapo_effect(x_chain->pEffectDescriptors[i].pEffect);
+	}
+
+	return f_chain;
+}
+
+static void free_effect_chain(FAudioEffectChain *f_chain) {
+	if (f_chain != NULL) {
+		delete[] f_chain->pEffectDescriptors;
+		delete f_chain;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // IXAudio2SourceVoice implementation
 //
 
@@ -185,10 +326,11 @@ public:
 		const XAUDIO2_VOICE_SENDS* pSendList,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_PARAMS("Format=%d; nChannels=%d; nSamplesPerSec=%d", pSourceFormat->wFormatTag, pSourceFormat->nChannels, pSourceFormat->nSamplesPerSec);
+		TRACE_PARAMS("Sends = %d", pSendList ? pSendList->SendCount : -1);
 		voice_callback = wrap_voice_callback(pCallback);
 		voice_sends = unwrap_voice_sends(pSendList);
-		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), voice_sends, NULL);
-		TRACE_FUNC();
+		effect_chain = wrap_effect_chain(pEffectChain);
+		FAudio_CreateSourceVoice(faudio, &faudio_voice, pSourceFormat, Flags, MaxFrequencyRatio, reinterpret_cast<FAudioVoiceCallback *>(voice_callback), voice_sends, effect_chain);
 	}
 
 	// IXAudio2Voice
@@ -206,7 +348,9 @@ public:
 
 	X2METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_FUNC();
-		return FAudioVoice_SetEffectChain(faudio_voice, pEffectChain);
+		free_effect_chain(effect_chain);
+		effect_chain = wrap_effect_chain(pEffectChain);
+		return FAudioVoice_SetEffectChain(faudio_voice, effect_chain);
 	}
 
 	X2METHOD(HRESULT) EnableEffect(
@@ -388,6 +532,7 @@ public:
 private:
 	FAudioVoiceCppCallback *voice_callback;
 	FAudioVoiceSends *voice_sends;
+	FAudioEffectChain *effect_chain;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -407,7 +552,8 @@ public:
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_PARAMS("InputChannels = %d; InputSampleRate = %d; Flags = %d; ProcessingState = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, ProcessingStage, pEffectChain);
 		voice_sends = unwrap_voice_sends(pSendList);
-		FAudio_CreateSubmixVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, ProcessingStage, voice_sends, NULL);	// FIXME
+		effect_chain = wrap_effect_chain(pEffectChain);
+		FAudio_CreateSubmixVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, ProcessingStage, voice_sends, effect_chain);
 	}
 
 	// IXAudio2Voice
@@ -425,23 +571,23 @@ public:
 
 	X2METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_FUNC();
-		return FAudioVoice_SetEffectChain(faudio_voice, pEffectChain);
+		free_effect_chain(effect_chain);
+		effect_chain = wrap_effect_chain(pEffectChain);
+		return FAudioVoice_SetEffectChain(faudio_voice, effect_chain);
 	}
 
 	X2METHOD(HRESULT) EnableEffect(
 		UINT32 EffectIndex,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return S_OK;		// FIXME
-		// return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
+		return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	X2METHOD(HRESULT) DisableEffect(
 		UINT32 EffectIndex,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return S_OK;		// FIXME
-		// return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
+		return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	X2METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL* pEnabled) {
@@ -459,8 +605,7 @@ public:
 		UINT32 ParametersByteSize,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return S_OK;	// FIXME
-		// return FAudioVoice_SetEffectParameters(faudio_voice, EffectIndex, pParameters, ParametersByteSize, OperationSet);
+		return FAudioVoice_SetEffectParameters(faudio_voice, EffectIndex, pParameters, ParametersByteSize, OperationSet);
 	}
 
 	X2METHOD(HRESULT) GetEffectParameters(
@@ -549,6 +694,7 @@ public:
 
 private:
 	FAudioVoiceSends *voice_sends;
+	FAudioEffectChain *effect_chain;
 };
 
 
@@ -569,7 +715,8 @@ public:
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_PARAMS("InputChannels = %d; InputSampleRate = %d; Flags = %d; EffectChain = %x", InputChannels, InputSampleRate, Flags, pEffectChain);
 		voice_sends = NULL;
-		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, DeviceIndex, NULL);
+		effect_chain = wrap_effect_chain(pEffectChain);
+		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, DeviceIndex, effect_chain);
 	}
 #else
 	XAudio2MasteringVoiceImpl(
@@ -582,7 +729,8 @@ public:
 		int StreamCategory) {
 		TRACE_FUNC();
 		// FIXME device index
-		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, 0, pEffectChain);
+		effect_chain = wrap_effect_chain(pEffectChain);
+		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, 0, effect_chain);
 	}
 #endif
 
@@ -601,7 +749,9 @@ public:
 
 	X2METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN* pEffectChain) {
 		TRACE_FUNC();
-		return FAudioVoice_SetEffectChain(faudio_voice, pEffectChain);
+		free_effect_chain(effect_chain);
+		effect_chain = wrap_effect_chain(pEffectChain);
+		return FAudioVoice_SetEffectChain(faudio_voice, effect_chain);
 	}
 
 	X2METHOD(HRESULT) EnableEffect(
@@ -730,6 +880,7 @@ public:
 
 private:
 	FAudioVoiceSends *voice_sends;
+	FAudioEffectChain *effect_chain;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

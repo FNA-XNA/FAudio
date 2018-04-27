@@ -20,7 +20,6 @@ extern "C" {
 typedef FAudioProcessor XAUDIO2_PROCESSOR;
 typedef FAudioDeviceDetails XAUDIO2_DEVICE_DETAILS;
 typedef FAudioWaveFormatEx WAVEFORMATEX;
-typedef FAudioEffectChain XAUDIO2_EFFECT_CHAIN;
 typedef FAudioPerformanceData XAUDIO2_PERFORMANCE_DATA;
 typedef FAudioDebugConfiguration XAUDIO2_DEBUG_CONFIGURATION;
 
@@ -47,6 +46,16 @@ typedef struct XAUDIO2_VOICE_SENDS {
 	XAUDIO2_SEND_DESCRIPTOR *pSends;
 } XAUDIO2_VOICE_SENDS;
 
+typedef struct XAUDIO2_EFFECT_DESCRIPTOR {
+	IUnknown *pEffect;
+	BOOL InitialState;
+	UINT32  OutputChannel;
+} XAUDIO2_EFFECT_DESCRIPTOR;
+
+typedef struct XAUDIO2_EFFECT_CHAIN {
+	UINT32 EffectCount;
+	XAUDIO2_EFFECT_DESCRIPTOR *pEffectDescriptors;
+} XAUDIO2_EFFECT_CHAIN;
 
 #define X2METHOD(rtype)		virtual rtype __stdcall 
 
