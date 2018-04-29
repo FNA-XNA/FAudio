@@ -30,11 +30,11 @@
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{EAC29019-EB87-434C-9E41-75A499941AD5}</ProjectGuid>
+    <ProjectGuid>{BE261501-F148-4AA1-A8CE-B0E05E05771A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>FAudioCPP</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>X3DAudio1_7</ProjectName>
+    <ProjectName>X3DAudio1_5</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -113,7 +113,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>X3DAUDIO_VERSION=7;WIN32;_DEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>X3DAUDIO_VERSION=5;WIN32;_DEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,7 +127,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>X3DAUDIO_VERSION=7;_DEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>X3DAUDIO_VERSION=5;_DEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,7 +143,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>X3DAUDIO_VERSION=7;WIN32;NDEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>X3DAUDIO_VERSION=5;WIN32;NDEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -162,7 +162,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>X3DAUDIO_VERSION=7;NDEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>X3DAUDIO_VERSION=5;NDEBUG;_WINDOWS;_USRDLL;FAUDIOCPP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
