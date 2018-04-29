@@ -2,8 +2,9 @@
 #include "XAPO.h"
 
 #include <FAPOBase.h>
+#include <FAudio_internal.h>
 
-//#define TRACING_ENABLE
+#define TRACING_ENABLE
 #include "trace.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -41,7 +42,11 @@ static void FAUDIOCALL OnVoiceProcessingPassEnd(FAudioVoiceCallback *callback) {
 }
 	
 static void FAUDIOCALL OnVoiceProcessingPassStart(FAudioVoiceCallback *callback, uint32_t BytesRequired) {
+#if XAUDIO2_VERSION >= 1
 	reinterpret_cast<FAudioVoiceCppCallback *>(callback)->com->OnVoiceProcessingPassStart(BytesRequired);
+#else
+	reinterpret_cast<FAudioVoiceCppCallback *>(callback)->com->OnVoiceProcessingPassStart();
+#endif // XAUDIO2_VERSION >= 1
 }
 
 FAudioVoiceCppCallback *wrap_voice_callback(IXAudio2VoiceCallback *com_interface) {
@@ -132,9 +137,13 @@ static FAudioVoiceSends *unwrap_voice_sends(const XAUDIO2_VOICE_SENDS *x_sends) 
 	f_sends->pSends = new FAudioSendDescriptor[f_sends->SendCount];
 
 	for (uint32_t i = 0; i < f_sends->SendCount; ++i) {
+#if XAUDIO2_VERSION >= 4
 		f_sends->pSends[i].Flags = x_sends->pSends[i].Flags;
 		f_sends->pSends[i].pOutputVoice = x_sends->pSends[i].pOutputVoice->faudio_voice;
-		TRACE_MSG("x : %x => f : %x", f_sends->pSends[i].pOutputVoice, x_sends->pSends[i].pOutputVoice);
+#else
+		f_sends->pSends[i].Flags = 0;
+		f_sends->pSends[i].pOutputVoice = x_sends->pSends[i]->faudio_voice;
+#endif // XAUDIO2_VERSION >= 4
 	}
 
 	return f_sends;
@@ -311,7 +320,16 @@ public:
 	// IXAudio2Voice
 	X2METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS* pVoiceDetails) {
 		TRACE_FUNC();
+#if XAUDIO2_VERSION <= 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
+#else
+		FAudioVoiceDetails fDetails;
+		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
+		pVoiceDetails->CreationFlags = fDetails.CreationFlags;
+		pVoiceDetails->ActiveFlags = fDetails.CreationFlags;
+		pVoiceDetails->InputChannels = fDetails.InputChannels;
+		pVoiceDetails->InputSampleRate = fDetails.InputSampleRate;
+#endif
 	}
 
 	X2METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS* pSendList) {
@@ -380,6 +398,7 @@ public:
 		FAudioVoice_GetFilterParameters(faudio_voice, pParameters);
 	}
 
+#if XAUDIO2_VERSION >= 4
 	X2METHOD(HRESULT) SetOutputFilterParameters(
 		IXAudio2Voice* pDestinationVoice,
 		const XAUDIO2_FILTER_PARAMETERS* pParameters,
@@ -394,6 +413,7 @@ public:
 		TRACE_FUNC();
 		FAudioVoice_GetOutputFilterParameters(faudio_voice, ((XAudio2SourceVoiceImpl *)pDestinationVoice)->faudio_voice, pParameters);
 	}
+#endif // XAUDIO2_VERSION >= 4
 
 	X2METHOD(HRESULT) SetVolume(float Volume, UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
@@ -428,13 +448,20 @@ public:
 		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
+#if XAUDIO2_VERSION >= 1
 	X2METHOD(void) GetOutputMatrix(
+#else
+	X2METHOD(HRESULT) GetOutputMatrix (
+#endif
 		IXAudio2Voice* pDestinationVoice,
 		UINT32 SourceChannels,
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) {
 		TRACE_FUNC();
 		FAudioVoice_GetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
+#if XAUDIO2_VERSION < 1
+		return S_OK;
+#endif // XAUDIO2_VERSION < 1
 	}
 
 	X2METHOD(void) DestroyVoice() {
@@ -445,6 +472,7 @@ public:
 			delete voice_callback;
 		}
 		free_voice_sends(voice_sends);
+		free_effect_chain(effect_chain);
 		delete this;
 	}
 
@@ -486,6 +514,7 @@ public:
 #else
 	X2METHOD(void) GetState(XAUDIO2_VOICE_STATE* pVoiceState, UINT32 Flags = 0) {
 #endif
+		TRACE_FUNC();
 		FAudioSourceVoice_GetState(faudio_voice, pVoiceState);
 	}
 
@@ -499,10 +528,12 @@ public:
 		FAudioSourceVoice_GetFrequencyRatio(faudio_voice, pRatio);
 	}
 
+#if XAUDIO2_VERSION >= 4
 	X2METHOD(HRESULT) SetSourceSampleRate(UINT32 NewSourceSampleRate) {
 		TRACE_FUNC();
 		return FAudioSourceVoice_SetSourceSampleRate(faudio_voice, NewSourceSampleRate);
 	}
+#endif // XAUDIO2_VERSION >= 4
 
 private:
 	FAudioVoiceCppCallback *voice_callback;
@@ -534,7 +565,16 @@ public:
 	// IXAudio2Voice
 	X2METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS* pVoiceDetails) {
 		TRACE_FUNC();
+#if XAUDIO2_VERSION <= 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
+#else
+		FAudioVoiceDetails fDetails;
+		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
+		pVoiceDetails->CreationFlags = fDetails.CreationFlags;
+		pVoiceDetails->ActiveFlags = fDetails.CreationFlags;
+		pVoiceDetails->InputChannels = fDetails.InputChannels;
+		pVoiceDetails->InputSampleRate = fDetails.InputSampleRate;
+#endif
 	}
 
 	X2METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS* pSendList) {
@@ -603,6 +643,7 @@ public:
 		FAudioVoice_GetFilterParameters(faudio_voice, pParameters);
 	}
 
+#if XAUDIO2_VERSION >= 4
 	X2METHOD(HRESULT) SetOutputFilterParameters(
 		IXAudio2Voice* pDestinationVoice,
 		const XAUDIO2_FILTER_PARAMETERS* pParameters,
@@ -617,6 +658,7 @@ public:
 		TRACE_FUNC();
 		FAudioVoice_GetOutputFilterParameters(faudio_voice, ((XAudio2SubmixVoiceImpl *)pDestinationVoice)->faudio_voice, pParameters);
 	}
+#endif // XAUDIO2_VERSION >= 4
 
 	X2METHOD(HRESULT) SetVolume(float Volume, UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
@@ -651,19 +693,28 @@ public:
 		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
+#if XAUDIO2_VERSION >= 1
 	X2METHOD(void) GetOutputMatrix(
+#else
+	X2METHOD(HRESULT) GetOutputMatrix (
+#endif
 		IXAudio2Voice* pDestinationVoice,
 		UINT32 SourceChannels,
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) {
 		TRACE_FUNC();
 		FAudioVoice_GetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
+#if XAUDIO2_VERSION < 1
+		return S_OK;
+#endif // XAUDIO2_VERSION < 1
 	}
 
 	X2METHOD(void) DestroyVoice() {
+		TRACE_FUNC();
 		FAudioVoice_DestroyVoice(faudio_voice);
 		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
-		TRACE_FUNC();
+		free_voice_sends(voice_sends);
+		free_effect_chain(effect_chain);
 		delete this;
 	}
 
@@ -706,13 +757,23 @@ public:
 		// FIXME device index
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, 0, effect_chain);
+		channel_mask = faudio->mixFormat->dwChannelMask;
 	}
 #endif
 
 	// IXAudio2Voice
 	X2METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS* pVoiceDetails) {
 		TRACE_FUNC();
+#if XAUDIO2_VERSION <= 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
+#else
+		FAudioVoiceDetails fDetails;
+		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
+		pVoiceDetails->CreationFlags = fDetails.CreationFlags;
+		pVoiceDetails->ActiveFlags = fDetails.CreationFlags;
+		pVoiceDetails->InputChannels = fDetails.InputChannels;
+		pVoiceDetails->InputSampleRate = fDetails.InputSampleRate;
+#endif
 	}
 
 	X2METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS* pSendList) {
@@ -781,6 +842,7 @@ public:
 		FAudioVoice_GetFilterParameters(faudio_voice, pParameters);
 	}
 
+#if XAUDIO2_VERSION >= 4
 	X2METHOD(HRESULT) SetOutputFilterParameters(
 		IXAudio2Voice* pDestinationVoice,
 		const XAUDIO2_FILTER_PARAMETERS* pParameters,
@@ -795,6 +857,7 @@ public:
 		TRACE_FUNC();
 		FAudioVoice_GetOutputFilterParameters(faudio_voice, ((XAudio2MasteringVoiceImpl *)pDestinationVoice)->faudio_voice, pParameters);
 	}
+#endif // XAUDIO2_VERSION >= 4
 
 	X2METHOD(HRESULT) SetVolume(float Volume, UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
@@ -829,26 +892,35 @@ public:
 		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
+#if XAUDIO2_VERSION >= 1
 	X2METHOD(void) GetOutputMatrix(
+#else
+	X2METHOD(HRESULT) GetOutputMatrix (
+#endif
 		IXAudio2Voice* pDestinationVoice,
 		UINT32 SourceChannels,
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) {
 		TRACE_FUNC();
 		FAudioVoice_GetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix);
+#if XAUDIO2_VERSION < 1
+		return S_OK;
+#endif // XAUDIO2_VERSION < 1
 	}
 
 	X2METHOD(void) DestroyVoice() {
+		TRACE_FUNC();
 		FAudioVoice_DestroyVoice(faudio_voice);
 		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
-		TRACE_FUNC();
+		free_voice_sends(voice_sends);
+		free_effect_chain(effect_chain);
 		delete this;
 	}
 
 	// IXAudio2MasteringVoice
-#if (XAUDIO2_VERSION >= 8)
+#if XAUDIO2_VERSION >= 8
 	X2METHOD(HRESULT) GetChannelMask(DWORD* pChannelmask) {
-		// FIXME
+		*pChannelmask = channel_mask;
 		return S_OK;
 	}
 #endif
@@ -856,6 +928,10 @@ public:
 private:
 	FAudioVoiceSends *voice_sends;
 	FAudioEffectChain *effect_chain;
+
+#if XAUDIO2_VERSION >= 8
+	uint32_t channel_mask;
+#endif
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -983,7 +1059,7 @@ public:
 		UINT32 DeviceIndex = 0,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain = NULL) {
 		TRACE_MSG("InputChannels = %d InputSampleRate = %d", InputChannels, InputSampleRate);
-		*ppMasteringVoice = new XAudio2MasteringVoiceImpl(faudio, InputChannels, InputSampleRate, Flags, DeviceIndex, NULL);	// FIXME
+		*ppMasteringVoice = new XAudio2MasteringVoiceImpl(faudio, InputChannels, InputSampleRate, Flags, DeviceIndex, pEffectChain);
 		return S_OK;
 	}
 #else
@@ -1017,7 +1093,26 @@ public:
 
 	X2METHOD(void) GetPerformanceData(XAUDIO2_PERFORMANCE_DATA* pPerfData) {
 		TRACE_FUNC();
+#if XAUDIO2_VERSION >= 3
 		FAudio_GetPerformanceData(faudio, pPerfData);
+#else
+		FAudioPerformanceData fPerfData;
+		FAudio_GetPerformanceData(faudio, &fPerfData);
+
+		pPerfData->AudioCyclesSinceLastQuery = fPerfData.AudioCyclesSinceLastQuery;
+		pPerfData->TotalCyclesSinceLastQuery = fPerfData.TotalCyclesSinceLastQuery;
+		pPerfData->MinimumCyclesPerQuantum = fPerfData.MinimumCyclesPerQuantum;
+		pPerfData->MaximumCyclesPerQuantum = fPerfData.MaximumCyclesPerQuantum;
+		pPerfData->MemoryUsageInBytes = fPerfData.MemoryUsageInBytes;
+		pPerfData->CurrentLatencyInSamples = fPerfData.CurrentLatencyInSamples;
+		pPerfData->GlitchesSinceEngineStarted = fPerfData.GlitchesSinceEngineStarted;
+		pPerfData->ActiveSourceVoiceCount = fPerfData.ActiveSourceVoiceCount;
+		pPerfData->TotalSourceVoiceCount = fPerfData.TotalSourceVoiceCount;
+		pPerfData->ActiveSubmixVoiceCount = fPerfData.ActiveSubmixVoiceCount;
+		pPerfData->TotalSubmixVoiceCount = fPerfData.ActiveSubmixVoiceCount;
+		pPerfData->ActiveXmaSourceVoices = fPerfData.ActiveXmaSourceVoices;
+		pPerfData->ActiveXmaStreams = fPerfData.ActiveXmaStreams;
+#endif // XAUDIO2_VERSION >= 3
 	}
 
 	X2METHOD(void) SetDebugConfiguration(
@@ -1042,6 +1137,8 @@ void *CreateXAudio2Internal() {
 	return new XAudio2Impl();
 }
 
+#if XAUDIO2_VERSION >= 8
+
 FAUDIOCPP_API XAudio2Create(
 	IXAudio2          **ppXAudio2,
 	UINT32            Flags,
@@ -1051,4 +1148,6 @@ FAUDIOCPP_API XAudio2Create(
 	*ppXAudio2 = new XAudio2Impl(Flags, FAUDIO_DEFAULT_PROCESSOR);
 	return S_OK;
 }
+
+#endif // XAUDIO2_VERSION >= 8
 

@@ -1,0 +1,52 @@
+#!/bin/bash
+
+if [ -z "$WINEPREFIX" ]; then
+	echo "Please set WINEPREFIX before running this script"	
+	exit 1
+fi
+
+# FIXME: support both 32-bit and 64-bit Wine
+wine_path=$(wine winepath -u 'C:\windows\syswow64' 2>>/dev/null)
+dll_path=$(pwd)
+
+function install_dll {
+	src_name=$1
+	dst_name=$2
+	
+	# update registry
+	log=$(wine reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v $dst_name /d native /f 2>>/dev/null)
+
+	if [ $? -ne 0 ]; then
+		echo "Failed to update registry for $dst_name"
+		exit 1
+	fi
+
+	# link dll
+	ln -sf "$dll_path/$src_name.dll" "$wine_path/$dst_name.dll"
+
+	if [ $? -ne 0 ]; then
+		echo "Failed to create link for $dst_name"
+		exit 1
+	fi
+
+	echo "$dst_name: done"
+}
+
+install_dll xaudio2_0 xaudio2_0
+install_dll xaudio2_1 xaudio2_1
+install_dll xaudio2_2 xaudio2_2
+install_dll xaudio2_3 xaudio2_3
+install_dll xaudio2_4 xaudio2_4
+install_dll xaudio2_5 xaudio2_5
+install_dll xaudio2_6 xaudio2_6
+install_dll xaudio2_7 xaudio2_7
+install_dll xaudio2_8 xaudio2_8
+install_dll xaudio2_9 xaudio2_9
+
+install_dll x3daudio x3daudio1_3
+install_dll x3daudio x3daudio1_4
+install_dll x3daudio x3daudio1_5
+install_dll x3daudio x3daudio1_6
+install_dll x3daudio x3daudio1_7
+
+ln -sf "$dll_path/../libFAudio.dll" "$wine_path/libFAudio.dll"

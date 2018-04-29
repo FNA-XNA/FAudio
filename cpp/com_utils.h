@@ -41,7 +41,8 @@ typedef GUID IID;
 #define REFCLSID const IID &
 
 inline bool operator==(const IID &a, const IID &b) {
-	return a.Data1 == b.Data1 &&
+	return
+		a.Data1 == b.Data1 &&
 		a.Data2 == b.Data2 &&
 		a.Data3 == b.Data3 &&
 		a.Data4[0] == b.Data4[0] &&
@@ -58,16 +59,20 @@ extern const IID IID_IUnknown;
 extern const IID IID_IClassFactory;
 extern const IID IID_IXAudio2;
 
-static const IID IID_IXAPO = { 0xA90BC001, 0xE897, 0xE897, {0x55, 0xE4, 0x9E, 0x47, 0x00, 0x00, 0x00, 0x00 } };
-static const IID IID_IXAPOParameters = { 0xA90BC001, 0xE897, 0xE897, {0x55, 0xE4, 0x9E, 0x47, 0x00, 0x00, 0x00, 0x01 } };
+extern const IID IID_IXAPO;
+extern const IID IID_IXAPOParameters;
 
+extern const IID CLSID_XAudio2_0;
+extern const IID CLSID_XAudio2_1;
+extern const IID CLSID_XAudio2_2;
+extern const IID CLSID_XAudio2_3;
+extern const IID CLSID_XAudio2_4;
+extern const IID CLSID_XAudio2_5;
+extern const IID CLSID_XAudio2_6;
+extern const IID CLSID_XAudio2_7;
 
-static const IID CLSID_XAudio2_6 = { 0x3eda9b49, 0x2085, 0x498b, {0x9b, 0xb2, 0x39, 0xa6, 0x77, 0x84, 0x93, 0xde }};
-static const IID CLSID_XAudio2_7 = { 0x5a508685, 0xa254, 0x4fba, {0x9b, 0x82, 0x9a, 0x24, 0xb0, 0x03, 0x06, 0xaf }};
-
-static const IID CLSID_AudioVolumeMeter = { 0xcac1105f, 0x619b, 0x4d04, { 0x83, 0x1a, 0x44, 0xe1, 0xcb, 0xf1, 0x2d, 0x57 } };
-static const IID CLSID_AudioReverb = { 0x6a93130e, 0x1d53, 0x41d1, { 0xa9, 0xcf, 0xe7, 0x58, 0x80, 0x0b, 0xb1, 0x79 } };
-
+extern const IID CLSID_AudioVolumeMeter;
+extern const IID CLSID_AudioReverb;
 
 // quality of life macro's
 #define FACOM_METHOD(rtype)		virtual rtype __stdcall 
