@@ -749,7 +749,7 @@ static void CalculateMatrix(
     }
 
     if (pEmitter->pLFECurve) {
-        UNIMPLEMENTED();
+        // UNIMPLEMENTED();
     }
     else
     {
@@ -843,7 +843,6 @@ static void CalculateMatrix(
         projPlane = VectorSub(listenerToEmitter, projTopVec);
         radialDistance = VectorLength(projPlane);
 
-        // TODO: 50% chance of a sign error here...
         /* Remember here that the coordinate system is Left-Handed. */
         orientRight = VectorCross(pListener->OrientTop, pListener->OrientFront);
 
@@ -855,6 +854,7 @@ static void CalculateMatrix(
         if (emitterAzimuth < 0.0f) {
             emitterAzimuth += F3DAUDIO_2PI;
         }
+        // TODO: sprinkle asserts
 
         FindSpeakerAzimuths(curConfig, emitterAzimuth, skipCenter, infos);
         a0 = infos[0]->azimuth;
@@ -867,6 +867,7 @@ static void CalculateMatrix(
             }
             a0 -= F3DAUDIO_2PI;
         }
+        SDL_assert(emitterAzimuth >= a0 && emitterAzimuth <= a1);
         val = (emitterAzimuth - a0) / (a1 - a0);
 
         i0 = infos[0]->matrixIdx;
