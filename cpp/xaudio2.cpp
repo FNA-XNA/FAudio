@@ -445,7 +445,8 @@ public:
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_MSG("this = %x; pDestinationVoice = %x; SourceChannels = %d; DestinationChannels = %d", this, pDestinationVoice, SourceChannels, DestinationChannels);
-		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
+		FAudioVoice *dest = (pDestinationVoice) ? pDestinationVoice->faudio_voice : NULL;
+		return FAudioVoice_SetOutputMatrix(faudio_voice, dest, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
 #if XAUDIO2_VERSION >= 1
@@ -690,7 +691,8 @@ public:
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
+		FAudioVoice *dest = (pDestinationVoice) ? pDestinationVoice->faudio_voice : NULL;
+		return FAudioVoice_SetOutputMatrix(faudio_voice, dest, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
 #if XAUDIO2_VERSION >= 1
@@ -889,7 +891,8 @@ public:
 		const float* pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) {
 		TRACE_FUNC();
-		return FAudioVoice_SetOutputMatrix(faudio_voice, pDestinationVoice->faudio_voice, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
+		FAudioVoice *dest = (pDestinationVoice) ? pDestinationVoice->faudio_voice : NULL;
+		return FAudioVoice_SetOutputMatrix(faudio_voice, dest, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
 	}
 
 #if XAUDIO2_VERSION >= 1
