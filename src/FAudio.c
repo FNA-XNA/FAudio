@@ -550,7 +550,7 @@ uint32_t FAudioVoice_SetEffectChain(
 			 * IsOutputFormatSupported and GetRegistrationPropertiesFunc
 			 */
 			FAPOBase_AddRef(
-				(FAPOBase*) voice->effects.desc[i].pEffect
+				(FAPOBase*) pEffectChain->pEffectDescriptors[i].pEffect
 			);
 		}
 		voice->effects.count = pEffectChain->EffectCount;
