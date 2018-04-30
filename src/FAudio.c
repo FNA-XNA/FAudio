@@ -630,6 +630,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 		voice->effects.parameters[EffectIndex] = FAudio_malloc(
 			ParametersByteSize
 		);
+		voice->effects.parameterSizes[EffectIndex] = ParametersByteSize;
 	}
 	if (voice->effects.parameterSizes[EffectIndex] < ParametersByteSize)
 	{
@@ -637,6 +638,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 			voice->effects.parameters[EffectIndex],
 			ParametersByteSize
 		);
+		voice->effects.parameterSizes[EffectIndex] = ParametersByteSize;
 	}
 	voice->effects.parameterUpdates[EffectIndex] = 1;
 	FAudio_memcpy(
