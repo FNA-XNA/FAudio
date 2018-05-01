@@ -4,11 +4,8 @@
 
 class XAudio2VolumeMeter : public CXAPOParametersBase {
 public:
-	XAudio2VolumeMeter(UINT32 Flags) : XAudio2VolumeMeter() {
-		FAudioCreateVolumeMeter(&fapo_object, Flags);
-	}
-
-	XAudio2VolumeMeter() : CXAPOParametersBase(reinterpret_cast<FAPOParametersBase *>(fapo_object)) {
+	XAudio2VolumeMeter(void *object) : fapo_object(object),
+									   CXAPOParametersBase(reinterpret_cast<FAPOParametersBase *>(object)) {
 	}
 
 	FACOM_METHOD(void) Process(
@@ -32,11 +29,8 @@ private:
 
 class XAudio2Reverb : public CXAPOParametersBase {
 public:
-	XAudio2Reverb(UINT32 Flags) : XAudio2Reverb() {
-		FAudioCreateReverb(&fapo_object, Flags);
-	}
-
-	XAudio2Reverb() : CXAPOParametersBase(reinterpret_cast<FAPOParametersBase *>(fapo_object)) {
+	XAudio2Reverb(void *object) : fapo_object(object),
+								  CXAPOParametersBase(reinterpret_cast<FAPOParametersBase *>(object)) {
 	}
 
 	FACOM_METHOD(void) Process(
@@ -66,9 +60,13 @@ private:
 //
 
 void *CreateAudioVolumeMeterInternal() {
-	return new XAudio2VolumeMeter(0);
+	void *fapo_object = NULL;
+	FAudioCreateVolumeMeter(&fapo_object, 0);
+	return new XAudio2VolumeMeter(fapo_object);
 }
 
 void *CreateAudioReverbInternal() {
-	return new XAudio2Reverb(0);
+	void *fapo_object = NULL;
+	FAudioCreateReverb(&fapo_object, 0);
+	return new XAudio2Reverb(fapo_object);
 }
