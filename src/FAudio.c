@@ -55,8 +55,9 @@ uint32_t FAudio_AddRef(FAudio *audio)
 
 uint32_t FAudio_Release(FAudio *audio)
 {
+	uint32_t refcount;
 	audio->refcount -= 1;
-	uint32_t refcount = audio->refcount;
+	refcount = audio->refcount;
 	if (audio->refcount == 0)
 	{
 		FAudio_StopEngine(audio);
