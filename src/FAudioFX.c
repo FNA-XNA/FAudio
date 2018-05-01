@@ -28,31 +28,31 @@
 #include "FAudio_internal.h"
 
 /* Volume Meter Implementation */
-
 static FAPORegistrationProperties VolumeMeterProperties =
 {
-	.FriendlyName =
+	/* .clsid = */ {0},
+	/* .FriendlyName = */
 	{
 		'V', 'o', 'l', 'u', 'm', 'e', 'M', 'e', 't', 'e', 'r', '\0'
 	},
-	.CopyrightInfo =
+	/*.CopyrightInfo = */
 	{
 		'C', 'o', 'p', 'y', 'r', 'i', 'g', 'h', 't', ' ', '(', 'c', ')',
 		'E', 't', 'h', 'a', 'n', ' ', 'L', 'e', 'e', '\0'
 	},
-	.MajorVersion = 0,
-	.MinorVersion = 0,
-	.Flags = (
+	/*.MajorVersion = */ 0,
+	/*.MinorVersion = */ 0,
+	/*.Flags = */(
 		FAPO_FLAG_FRAMERATE_MUST_MATCH |
 		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
 		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
 		FAPO_FLAG_INPLACE_SUPPORTED |
 		FAPO_FLAG_INPLACE_REQUIRED
 	),
-	.MinInputBufferCount = 1,
-	.MaxInputBufferCount = 1,
-	.MinOutputBufferCount = 1,
-	.MaxOutputBufferCount = 1
+	/*.MinInputBufferCount = */ 1,
+	/*.MaxInputBufferCount = */  1,
+	/*.MinOutputBufferCount = */ 1,
+	/*.MaxOutputBufferCount =*/ 1
 };
 
 typedef struct FAudioFXVolumeMeter
@@ -114,26 +114,27 @@ uint32_t FAudioCreateVolumeMeter(void** ppApo, uint32_t Flags)
 
 static FAPORegistrationProperties ReverbProperties =
 {
-	.FriendlyName =
+	/* .clsid = */ {0},
+	/*.FriendlyName = */
 	{
 		'R', 'e', 'v', 'e', 'r', 'b', '\0'
 	},
-	.CopyrightInfo = {
+	/*.CopyrightInfo = */ {
 		'C', 'o', 'p', 'y', 'r', 'i', 'g', 'h', 't', ' ', '(', 'c', ')',
 		'E', 't', 'h', 'a', 'n', ' ', 'L', 'e', 'e', '\0'
 	},
-	.MajorVersion = 0,
-	.MinorVersion = 0,
-	.Flags = (
+	/*.MajorVersion = */ 0,
+	/*.MinorVersion = */ 0,
+	/*.Flags = */ (
 		FAPO_FLAG_FRAMERATE_MUST_MATCH |
 		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
 		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
 		FAPO_FLAG_INPLACE_SUPPORTED
 	),
-	.MinInputBufferCount = 1,
-	.MaxInputBufferCount = 1,
-	.MinOutputBufferCount = 1,
-	.MaxOutputBufferCount = 1
+	/*.MinInputBufferCount = */ 1,
+	/*.MaxInputBufferCount = */ 1,
+	/*.MinOutputBufferCount = */ 1,
+	/*.MaxOutputBufferCount = */ 1
 };
 
 typedef struct FAudioFXReverb
