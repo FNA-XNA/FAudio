@@ -731,6 +731,10 @@ private:
 // IXAudio2MasteringVoice implementation
 //
 
+#if (XAUDIO2_VERSION >= 8)
+uint32_t device_index_from_device_id(FAudio *faudio, LPCWSTR deviceId);
+#endif // (XAUDIO2_VERSION >= 8)
+
 class XAudio2MasteringVoiceImpl : public IXAudio2MasteringVoice {
 public:
 #if (XAUDIO2_VERSION <= 7)
@@ -756,9 +760,15 @@ public:
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain,
 		int StreamCategory) {
 		TRACE_FUNC();
-		// FIXME device index
+		
+		uint32_t device_index = 0;
+
+		if (szDeviceId != NULL) {
+			device_index = device_index_from_device_id(faudio, szDeviceId);
+		}
+
 		effect_chain = wrap_effect_chain(pEffectChain);
-		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, 0, effect_chain);
+		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, device_index, effect_chain);
 		channel_mask = faudio->mixFormat->dwChannelMask;
 	}
 #endif
