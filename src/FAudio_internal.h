@@ -242,6 +242,8 @@ double FAudio_acos(double x);
 double FAudio_ceil(double x);
 double FAudio_fabs(double x);
 
+float FAudio_cosf(float x);
+float FAudio_sinf(float x);
 float FAudio_sqrtf(float x);
 float FAudio_acosf(float x);
 float FAudio_atan2f(float y, float x);

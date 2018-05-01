@@ -132,6 +132,10 @@ static F3DAUDIO_VECTOR Vec(float x, float y, float z) {
     return res;
 }
 
+static F3DAUDIO_VECTOR VectorAdd(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
+    return Vec(u.x + v.x, u.y + v.y, u.z + v.z);
+}
+
 static F3DAUDIO_VECTOR VectorSub(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return Vec(u.x - v.x, u.y - v.y, u.z - v.z);
 }
@@ -164,6 +168,12 @@ static F3DAUDIO_VECTOR VectorNormalize(F3DAUDIO_VECTOR v, float* norm) {
 static float VectorDot(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v) {
     return u.x*v.x + u.y*v.y + u.z*v.z;
 }
+
+typedef struct {
+    F3DAUDIO_VECTOR front;
+    F3DAUDIO_VECTOR right;
+    F3DAUDIO_VECTOR top;
+} F3DAUDIO_BASIS;
 
 /*
  * Generic utility functions
@@ -422,26 +432,39 @@ int F3DAudioCheckCalculateParams(
     return PARAM_CHECK_OK;
 }
 
-static float FindCurveParam(
-    F3DAUDIO_DISTANCE_CURVE *pCurve,
-    float normalizedDistance
+static float GetDistanceAttenuation(
+    float normalizedDistance,
+    F3DAUDIO_DISTANCE_CURVE *pCurve
 ) {
-    float alpha, val;
-    F3DAUDIO_DISTANCE_CURVE_POINT* points = pCurve->pPoints;
-    uint32_t n_points = pCurve->PointCount;
-    /* Adrien: by definition, the first point in the curve must be 0.0f */
-    size_t i = 1;
-    while (i < n_points && normalizedDistance >= points[i].Distance) {
-        ++i;
-    }
-    if (i == n_points) {
-        return points[n_points - 1].DSPSetting;
-    }
+    float res;
+    if (pCurve)
+    {
+        float alpha;
+        F3DAUDIO_DISTANCE_CURVE_POINT* points = pCurve->pPoints;
+        uint32_t n_points = pCurve->PointCount;
+        /* Adrien: by definition, the first point in the curve must be 0.0f */
+        size_t i = 1;
+        while (i < n_points && normalizedDistance >= points[i].Distance) {
+            ++i;
+        }
+        if (i == n_points) {
+            res = points[n_points - 1].DSPSetting;
+        }
+        else
+        {
+            alpha = (points[i].Distance - normalizedDistance) / (points[i].Distance - points[i - 1].Distance);
 
-    alpha = (points[i].Distance - normalizedDistance) / (points[i].Distance - points[i - 1].Distance);
-
-    val = LERP(alpha, points[i].DSPSetting, points[i - 1].DSPSetting);
-    return val;
+            res = LERP(alpha, points[i].DSPSetting, points[i - 1].DSPSetting);
+        }
+    }
+    else
+    {
+        res = 1.0f;
+        if (normalizedDistance >= 1.0f){
+            res /= normalizedDistance;
+        }
+    }
+    return res;
 }
 
 #define CONE_NULL_DISTANCE_TOLERANCE 1e-7 /* Adrien: determined experimentally */
@@ -705,13 +728,270 @@ static void FindSpeakerAzimuths(const ConfigInfo* config, float emitterAzimuth, 
     speakerInfo[1] = &config->speakers[nexti];
 }
 
-/* Constants for the "diffusion" step (the part where we attribute the attenuations to the various speakers). If the emitter to listener distance is less than the "null-distance", we spread equally over all speakers. Above the "non-null distance", we used the regular calculation. Between the two, it seems that X3DAudio does an "InnerRadius"-like calculation, spreading most of the signal towards the closest two speakers, but distributing some of it equally to the others. These constants have been determined roughly, using trial and error. */
-
+/* Constants for the "diffusion" step (the part where we attribute the attenuations to the various speakers). If the emitter to listener distance is less than the "null-distance", we spread equally over all speakers. Above the "non-null distance", we use the regular calculation. Between the two, it seems that X3DAudio does an "InnerRadius"-like calculation, spreading most of the signal towards the closest two speakers, but distributing some of it equally to the others. These constants have been determined roughly, using trial and error. */
 // TODO: investigate whether the behaviour is truly InnerRadius-like
 // NOTE: confirmed. Even with 0 innerradius, there's always a cylinder of radius NON_NULL_DISTANCE pointing towards listener->Top that diffuses to all channels.
+// TODO: determine the values with more accuracy?
 #define DIFFUSION_NULL_DISTANCE_DISK_RADIUS 1e-7f
 #define DIFFUSION_NON_NULL_DISTANCE_DISK_RADIUS 4e-7f
 
+enum {
+    DIFFUSION_SPEAKERS_ALL = 0,
+    DIFFUSION_SPEAKERS_MATCHING = 1,
+    DIFFUSION_SPEAKERS_OPPOSITE = 2
+};
+
+/* Adrien: determined experimentally; this is the midpoint value, i.e. the value at 0.5 for the matching speakers, used for the standard diffusion curve. Note: it is SUSPICIOUSLY close to 1/sqrt(2), but I haven't figured out why. */
+#define DIFFUSION_LERP_MIDPOINT_VALUE 0.707107f
+
+static void ComputeInnerRadiusDiffusionFactors(float radialDistance, float InnerRadius, float *diffusionFactors)
+{
+    float actualInnerRadius = InnerRadius;
+    float normalizedRadialDist;
+    float a, ms, os;
+
+    SDL_assert(diffusionFactors);
+
+    if (actualInnerRadius < DIFFUSION_NON_NULL_DISTANCE_DISK_RADIUS)
+    {
+        actualInnerRadius = DIFFUSION_NON_NULL_DISTANCE_DISK_RADIUS;
+    }
+
+    normalizedRadialDist = radialDistance / actualInnerRadius;
+
+    if (radialDistance <= DIFFUSION_NULL_DISTANCE_DISK_RADIUS) {
+        a = 1.0f;
+        ms = 0.0f;
+        os = 0.0f;
+    }
+    else if (normalizedRadialDist <= 0.5f)
+    {
+        /* Note (Adrien): determined experimentally that this is indeed a linear law, with extremely high confidence. */
+        a = 1.0f - 2.0f * normalizedRadialDist;
+        /* Note (Adrien): lerping here is an approximation. TODO: high accuracy version. Having stared at the curves long enough, I'm pretty sure this is a quadratic, but trying to polyfit with numpy didn't give nice, round polynomial coefficients... */
+        ms = LERP(2.0f * normalizedRadialDist, 0.0f, DIFFUSION_LERP_MIDPOINT_VALUE);
+        os = 1.0f - a - ms;
+    }
+    else if (normalizedRadialDist <= 1.0f)
+    {
+        a = 0.0f;
+        /* Note (Adrien): similarly, this is a lerp based on the midpoint value; the real, high-accuracy curve also looks like a quadratic. */
+        ms = LERP(2.0f * (normalizedRadialDist - 0.5f), DIFFUSION_LERP_MIDPOINT_VALUE, 1.0f);
+        os = 1.0f - a - ms;
+    }
+    else
+    {
+        a = 0.0f;
+        ms = 1.0f;
+        os = 0.0f;
+    }
+    diffusionFactors[DIFFUSION_SPEAKERS_ALL] = a;
+    diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] = ms;
+    diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] = os;
+}
+
+static void ComputeEmitterChannelCoefficients(
+    const ConfigInfo *curConfig,
+    const F3DAUDIO_BASIS *listenerBasis,
+    float innerRadius,
+    F3DAUDIO_VECTOR channelPosition,
+    float attenuation,
+    uint32_t flags,
+    uint32_t currentChannel,
+    uint32_t numSrcChannels,
+    float *pMatrixCoefficients
+) {
+    float elevation, radialDistance;
+    F3DAUDIO_VECTOR projTopVec, projPlane;
+    int skipCenter = (flags & F3DAUDIO_CALCULATE_ZEROCENTER) ? 1 : 0;
+    float diffusionFactors[3] = { 0.0f };
+
+    float x, y;
+    float emitterAzimuth;
+
+    elevation = VectorDot(listenerBasis->top, channelPosition);
+
+    projTopVec = VectorScale(listenerBasis->top, elevation);
+    projPlane = VectorSub(channelPosition, projTopVec);
+    radialDistance = VectorLength(projPlane);
+
+    ComputeInnerRadiusDiffusionFactors(radialDistance, innerRadius, diffusionFactors);
+
+    if (diffusionFactors[DIFFUSION_SPEAKERS_ALL] > 0.0f)
+    {
+        uint32_t iS, centerChannelIdx = -1;
+        uint32_t nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
+        float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_ALL] * attenuation;
+        float energyPerChannel;
+
+        if (skipCenter) {
+            nChannelsToDiffuseTo -= 1;
+            SDL_assert(curConfig->speakers[0].azimuth == SPEAKER_AZIMUTH_CENTER);
+            centerChannelIdx = curConfig->speakers[0].matrixIdx;
+        }
+
+        energyPerChannel = totalEnergy / nChannelsToDiffuseTo;
+
+        for (iS = 0; iS < curConfig->numNonLFSpeakers; ++iS)
+        {
+            uint32_t curSpeakerIdx = curConfig->speakers[iS].matrixIdx;
+            if (skipCenter && iS == centerChannelIdx)
+            {
+                continue;
+            }
+
+            pMatrixCoefficients[curSpeakerIdx * numSrcChannels + currentChannel] = energyPerChannel;
+        }
+    }
+
+    if (diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] > 0.0f)
+    {
+        const SpeakerInfo* infos[2];
+        float a0, a1, val;
+        uint32_t i0, i1;
+        float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] * attenuation;
+
+        x = VectorDot(listenerBasis->front, projPlane);
+        y = VectorDot(listenerBasis->right, projPlane);
+
+        /* Now, a critical point: we shouldn't be sending sound to matching speakers when x and y are close to 0. That's the contract we get from ComputeInnerRadiusDiffusionFactors, which checks that we're not too close to the zero distance. This allows the atan2 calculation to give good results. */
+
+        emitterAzimuth = FAudio_atan2f(y, x);
+        /* atan2 returns between -PI and PI, but we want between 0 and 2PI */
+        if (emitterAzimuth < 0.0f) {
+            emitterAzimuth += F3DAUDIO_2PI;
+        }
+
+        FindSpeakerAzimuths(curConfig, emitterAzimuth, skipCenter, infos);
+        a0 = infos[0]->azimuth;
+        a1 = infos[1]->azimuth;
+        /* The following code is necessary to handle the singularity in 0 == 2PI.
+         * It'll give us a nice, well ordered interval.
+         */
+        if (a0 > a1)
+        {
+            if (emitterAzimuth >= a0)
+            {
+                emitterAzimuth -= F3DAUDIO_2PI;
+            }
+            a0 -= F3DAUDIO_2PI;
+        }
+        SDL_assert(emitterAzimuth >= a0 && emitterAzimuth <= a1);
+
+        val = (emitterAzimuth - a0) / (a1 - a0);
+
+        i0 = infos[0]->matrixIdx;
+        i1 = infos[1]->matrixIdx;
+
+        pMatrixCoefficients[i0 * numSrcChannels + currentChannel] = (1.0f - val) * totalEnergy;
+        pMatrixCoefficients[i1 * numSrcChannels + currentChannel] = (       val) * totalEnergy;
+    }
+
+    if (diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] > 0.0f)
+    {
+        /* This code is similar to the matching speakers code above. */
+        const SpeakerInfo* infos[2];
+        float a0, a1, val;
+        uint32_t i0, i1;
+        float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] * attenuation;
+
+        x = VectorDot(listenerBasis->front, projPlane);
+        y = VectorDot(listenerBasis->right, projPlane);
+
+        /* Similarly, we expect atan2 to be well behaved here. */
+        emitterAzimuth = FAudio_atan2f(y, x);
+
+        /* Opposite speakers lie at azimuth + PI */
+        emitterAzimuth += F3DAUDIO_PI;
+
+        /* Normalize to [0; 2PI) range. */
+        if (emitterAzimuth < 0.0f)
+        {
+            emitterAzimuth += F3DAUDIO_2PI;
+        }
+        else if (emitterAzimuth > F3DAUDIO_2PI)
+        {
+            emitterAzimuth -= F3DAUDIO_2PI;
+        }
+
+        FindSpeakerAzimuths(curConfig, emitterAzimuth, skipCenter, infos);
+        a0 = infos[0]->azimuth;
+        a1 = infos[1]->azimuth;
+        /* The following code is necessary to handle the singularity in 0 == 2PI.
+         * It'll give us a nice, well ordered interval.
+         */
+        if (a0 > a1)
+        {
+            if (emitterAzimuth >= a0)
+            {
+                emitterAzimuth -= F3DAUDIO_2PI;
+            }
+            a0 -= F3DAUDIO_2PI;
+        }
+        SDL_assert(emitterAzimuth >= a0 && emitterAzimuth <= a1);
+
+        val = (emitterAzimuth - a0) / (a1 - a0);
+
+        i0 = infos[0]->matrixIdx;
+        i1 = infos[1]->matrixIdx;
+
+        pMatrixCoefficients[i0 * numSrcChannels + currentChannel] = (1.0f - val) * totalEnergy;
+        pMatrixCoefficients[i1 * numSrcChannels + currentChannel] = (       val) * totalEnergy;
+    }
+
+#if 0
+
+        x = VectorDot(pListener->OrientFront, projPlane);
+        y = VectorDot(orientRight, projPlane);
+
+        /* Having checked for "small distances" before, our atan2f should be well-conditioned. (That is, projPlane has non-zero length) */
+        emitterAzimuth = FAudio_atan2f(y, x);
+        if (emitterAzimuth < 0.0f) {
+            emitterAzimuth += F3DAUDIO_2PI;
+        }
+        // TODO: sprinkle asserts
+
+        FindSpeakerAzimuths(curConfig, emitterAzimuth, skipCenter, infos);
+        a0 = infos[0]->azimuth;
+        a1 = infos[1]->azimuth;
+        if (a0 > a1)
+        {
+            if (emitterAzimuth >= a0)
+            {
+                emitterAzimuth -= F3DAUDIO_2PI;
+            }
+            a0 -= F3DAUDIO_2PI;
+        }
+        SDL_assert(emitterAzimuth >= a0 && emitterAzimuth <= a1);
+        val = (emitterAzimuth - a0) / (a1 - a0);
+
+        i0 = infos[0]->matrixIdx;
+        i1 = infos[1]->matrixIdx;
+
+
+        // TODO Clamp in release, assert in debug
+        // TODO multi emitters.
+        // for (int iEm = 0; iEm < SrcChannelCount; ++iEm) {
+        MatrixCoefficients[i0] = (1.0f - val) * attenuation;
+        MatrixCoefficients[i1] = (       val) * attenuation;
+        // }
+    }
+#endif
+
+    if (flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
+    {
+        SDL_assert(curConfig->LFSpeakerIdx != -1);
+        pMatrixCoefficients[curConfig->LFSpeakerIdx * numSrcChannels + currentChannel] = attenuation;
+    }
+}
+
+/* Adrien: here is the meaty part of the library. Calculations consist of several orthogonal steps, that compose multiplicatively:
+ * - First, we compute the attenuations (volume and LFE) due to distance, which may involve an optional volume and/or LFE volume curve.
+ * - Then, we compute those due to optional cones.
+ * - We then compute how much energy is diffuse w.r.t InnerRadius. If InnerRadius is 0.0f, this step is computed as if it was InnerRadius was NON_NULL_DISTANCE_DISK_RADIUS. The way this works is, we look at the radial distance of the current emitter channel to the listener, w.r.t to the listener's top orientation (i.e. this distance is independant of the emitter's elevation!). If this distance is less than NULL_DISTANCE_RADIUS, energy is diffused equally between all channels. If it's greater than InnerRadius (or NON_NULL_DISTANCE_RADIUS, if InnerRadius is 0.0f, as mentioned above), the two closest speakers, by azimuth, receive all the energy. Between InnerRadius/2.0f and InnerRadius, the energy starts bleeding into the opposite speakers. Once we go below InnerRadius/2.0f, the energy also starts to bleed into the other (non-opposite) channels, if there are any. This computation is handled by the ComputeInnerRadiusDiffusionFactors function. (TODO: High-accuracy version of this.)
+ * - Finally, if we're not in the equal diffusion case, we find out the azimuths of the two closest speakers (with azimuth being defined with respect to the listener's front orientation, in the plane normal to the listener's top vector), as well as the azimuths of the two opposite speakers, if necessary, and linearly interpolate with respect to the angular distance. In the equal diffusion case, each channel receives the same value.
+ * Note: in the case of multi-channel emitters, the distance attenuation is only compted once, but all the azimuths and InnerRadius calculations are done per emitter channel. */
+// TODO: Handle InnerRadiusAngle. But honestly the X3DAudio default behaviour is so wacky that I wonder if anybody has ever used it.
 static void CalculateMatrix(
     uint32_t ChannelMask,
     uint32_t Flags,
@@ -724,42 +1004,15 @@ static void CalculateMatrix(
     float* MatrixCoefficients
 ) {
     const ConfigInfo* curConfig = GetConfigInfo(ChannelMask);
-    float attenuation = 1.0f;
-    float LFEattenuation = 1.0f;
+    float nd = eToLDistance / pEmitter->CurveDistanceScaler;
+    float attenuation = GetDistanceAttenuation(nd, pEmitter->pVolumeCurve);
+    float LFEattenuation = GetDistanceAttenuation(nd, pEmitter->pLFECurve); /* TODO: this could be skipped if the destination has no LFE */
+    uint32_t iEC;
 
-    // TODO: Handle this.
-    if (SrcChannelCount > 1)
-    {
-        UNIMPLEMENTED();
-        return;
-    }
-
-    if (pEmitter->pVolumeCurve)
-    {
-        float nd = eToLDistance / pEmitter->CurveDistanceScaler;
-        float val = FindCurveParam(pEmitter->pVolumeCurve, nd);
-        attenuation *= val;
-    }
-    else
-    {
-        if ((eToLDistance / pEmitter->CurveDistanceScaler) >= 1.0f)
-        {
-            attenuation = pEmitter->CurveDistanceScaler / eToLDistance;
-        }
-    }
-
-    if (pEmitter->pLFECurve) {
-        // UNIMPLEMENTED();
-    }
-    else
-    {
-        // TODO;
-    }
-
+    /* Note: For both cone calculations, the angle might be NaN or infinite if distance == 0... ComputeConeParameter *does* check for this special case. It is necessary that we still go through the ComputeConeParameters function, because omnidirectional cones might give either InnerVolume or OuterVolume. -Adrien */
     if (pListener->pCone)
     {
         /* Adrien: negate the dot product because we need listenerToEmitter in this case */
-        /* Here the angle might be NaN or infinite if distance == 0... ComputeConeParameter *does* check for this special case. */
         float angle = FAudio_acosf(-1.0f * VectorDot(pListener->OrientFront, emitterToListener) / eToLDistance);
 
         float listenerConeParam = ComputeConeParameter(
@@ -771,11 +1024,11 @@ static void CalculateMatrix(
             pListener->pCone->OuterVolume
         );
         attenuation *= listenerConeParam;
+        // TODO: figure out if cones affect LFE channel.
     }
-
+    /* See note above. */
     if (pEmitter->pCone)
     {
-        /* Here the angle might be NaN or infinite if distance == 0... ComputeConeParameter *does* check for this special case. */
         float angle = FAudio_acosf(VectorDot(pEmitter->OrientFront, emitterToListener) / eToLDistance);
 
         float emitterConeParam = ComputeConeParameter(
@@ -789,6 +1042,9 @@ static void CalculateMatrix(
         attenuation *= emitterConeParam;
     }
 
+#if 0
+    /* We can skip all diffusion and InnerRadius-like behaviour for MONO setups. */
+    // TODO: doesn't work for multi-channel emitters!
     if (DstChannelCount == 1)
     {
         MatrixCoefficients[0] = attenuation;
@@ -797,7 +1053,6 @@ static void CalculateMatrix(
     else if (eToLDistance <= DIFFUSION_NULL_DISTANCE_DISK_RADIUS)
     {
         // TODO handle NON_NULL_DISTANCE
-        // TODO: handle REDIRECT TO LFE
         uint32_t i, centerChannelIdx = -1;
         uint32_t nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
         float equalAttenuation;
@@ -809,6 +1064,8 @@ static void CalculateMatrix(
             centerChannelIdx = curConfig->speakers[0].matrixIdx;
         }
         equalAttenuation = attenuation / nChannelsToDiffuseTo;
+
+        // TODO move this to the general calculation.
         for (i = 0; i < DstChannelCount; ++i)
         {
             if (i == centerChannelIdx || i == curConfig->LFSpeakerIdx)
@@ -890,9 +1147,111 @@ static void CalculateMatrix(
             MatrixCoefficients[curConfig->LFSpeakerIdx] = attenuation;
         }
     }
+#endif
 
-    // TODO: add post check to valide values
+#if 1
+    FAudio_zero(MatrixCoefficients, sizeof(float) * SrcChannelCount * DstChannelCount);
+
+    /* In the SPEAKER_MONO case, we can skip all energy diffusion calculation. */
+    if (DstChannelCount == 1)
+    {
+        for (iEC = 0; iEC < pEmitter->ChannelCount; ++iEC)
+        {
+            float curEmAzimuth = 0.0f;
+            if (pEmitter->pChannelAzimuths)
+            {
+                curEmAzimuth = pEmitter->pChannelAzimuths[iEC];
+            }
+            /* The MONO setup doesn't have an LFE speaker. */
+            if (curEmAzimuth != F3DAUDIO_2PI)
+            {
+                MatrixCoefficients[iEC] = attenuation;
+            }
+        }
+    }
+    else
+    {
+        F3DAUDIO_VECTOR listenerToEmitter = VectorScale(emitterToListener, -1.0f);
+        F3DAUDIO_VECTOR listenerToEmChannel;
+        F3DAUDIO_BASIS listenerBasis;
+
+        /* Remember here that the coordinate system is Left-Handed. */
+        listenerBasis.front = pListener->OrientFront;
+        listenerBasis.right = VectorCross(pListener->OrientTop, pListener->OrientFront);
+        listenerBasis.top = pListener->OrientTop;
+
+
+        /* Handling the mono-channel emitter case separately is easier than having it as a separate case of a for-loop; indeed, in this case, we need to ignore the non-relevant values from the emitter, even if they're set. */
+        if (pEmitter->ChannelCount == 1)
+        {
+
+            listenerToEmChannel = listenerToEmitter;
+
+            ComputeEmitterChannelCoefficients(
+                curConfig,
+                &listenerBasis,
+                pEmitter->InnerRadius,
+                listenerToEmChannel,
+                attenuation,
+                Flags,
+                0 /* currentChannel */,
+                1 /* numSrcChannels */,
+                MatrixCoefficients
+            );
+        }
+        /* Multi-channel emitter case. */
+        else
+        {
+            F3DAUDIO_VECTOR emitterRight;
+            float emChRadius = pEmitter->ChannelRadius;
+
+            emitterRight = VectorCross(pEmitter->OrientTop, pEmitter->OrientFront);
+
+            for (iEC = 0; iEC < pEmitter->ChannelCount; ++iEC)
+            {
+                float emChAzimuth = pEmitter->pChannelAzimuths[iEC];
+
+                /* LFEs are easy enough to deal with; we can just do them separately. */
+                if (emChAzimuth == F3DAUDIO_2PI)
+                {
+                    /* LFEs are positioned at the emitter base */
+                    MatrixCoefficients[curConfig->LFSpeakerIdx * pEmitter->ChannelCount + iEC] = LFEattenuation;
+                }
+                else
+                {
+                    /* First compute the emitter channel vector relative to the emitter base... */
+                    F3DAUDIO_VECTOR emitterBaseToChannel;
+                    emitterBaseToChannel = VectorAdd(
+                        VectorScale(pEmitter->OrientFront, emChRadius * FAudio_cosf(emChAzimuth)),
+                        VectorScale(emitterRight, emChRadius * FAudio_sinf(emChAzimuth))
+                    );
+                    /* Then translate. */
+                    listenerToEmChannel = VectorAdd(
+                        listenerToEmitter,
+                        emitterBaseToChannel
+                    );
+                    ComputeEmitterChannelCoefficients(
+                        curConfig,
+                        &listenerBasis,
+                        pEmitter->InnerRadius,
+                        listenerToEmChannel,
+                        attenuation,
+                        Flags,
+                        iEC,
+                        pEmitter->ChannelCount,
+                        MatrixCoefficients
+                    );
+                }
+            }
+        }
+
+
+    }
+    // TODO: add post check to validate values
     // (sum < 1, all values > 0, no Inf / NaN..
+    // Perhaps under a paranoid check disabled by default.
+
+#endif
 }
 
 /* DopplerPitchScalar

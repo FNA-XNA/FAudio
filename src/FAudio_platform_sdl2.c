@@ -548,6 +548,17 @@ double FAudio_fabs(double x)
 	return SDL_fabs(x);
 }
 
+
+float FAudio_cosf(float x)
+{
+	return SDL_cosf(x);
+}
+
+float FAudio_sinf(float x)
+{
+	return SDL_sinf(x);
+}
+
 float FAudio_sqrtf(float x)
 {
 	return SDL_sqrtf(x);
