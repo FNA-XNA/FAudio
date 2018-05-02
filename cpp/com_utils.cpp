@@ -17,6 +17,13 @@ const IID CLSID_XAudio2_5 = { 0x4c9b6dde, 0x6809, 0x46e6,{ 0xa2, 0x78, 0x9b, 0x6
 const IID CLSID_XAudio2_6 = { 0x3eda9b49, 0x2085, 0x498b,{ 0x9b, 0xb2, 0x39, 0xa6, 0x77, 0x84, 0x93, 0xde } };
 const IID CLSID_XAudio2_7 = { 0x5a508685, 0xa254, 0x4fba,{ 0x9b, 0x82, 0x9a, 0x24, 0xb0, 0x03, 0x06, 0xaf } };
 
+const IID *CLSID_XAudio2[] = {
+	&CLSID_XAudio2_0, &CLSID_XAudio2_1,
+	&CLSID_XAudio2_2, &CLSID_XAudio2_3,
+	&CLSID_XAudio2_4, &CLSID_XAudio2_5,
+	&CLSID_XAudio2_6, &CLSID_XAudio2_7
+};
+
 const IID CLSID_AudioVolumeMeter = { 0xcac1105f, 0x619b, 0x4d04,{ 0x83, 0x1a, 0x44, 0xe1, 0xcb, 0xf1, 0x2d, 0x57 } };
 const IID CLSID_AudioReverb = { 0x6a93130e, 0x1d53, 0x41d1,{ 0xa9, 0xcf, 0xe7, 0x58, 0x80, 0x0b, 0xb1, 0x79 } };
 
@@ -96,6 +103,15 @@ private:
 // COM DLL interface functions
 //
 
+static void *DllHandle = NULL;
+
+BOOL __stdcall DllMain(void *hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
+	if (dwReason == 1 /*DLL_PROCESS_ATTACH*/) {
+		DllHandle = hinstDLL;
+	}
+	return 1;
+}
+
 #if XAUDIO2_VERSION <= 7
 
 extern "C" HRESULT __stdcall DllCanUnloadNow() {
@@ -122,14 +138,18 @@ extern "C" HRESULT __stdcall DllGetClassObject(REFCLSID rclsid, REFIID riid, LPV
 	}
 
 	return factory->QueryInterface(riid, ppv);
-
 }
 
-extern "C" HRESULT __stdcall DllRegisterServer() {
+extern "C" HRESULT register_faudio_dll(void *, REFIID);
+extern "C" HRESULT unregister_faudio_dll(void *, REFIID);
+
+extern "C" HRESULT __stdcall DllRegisterServer(void) {
+	register_faudio_dll(DllHandle, *CLSID_XAudio2[XAUDIO2_VERSION]);
 	return S_OK;
 }
 
-extern "C" HRESULT __stdcall DllUnregisterServer() {
+extern "C" HRESULT __stdcall DllUnregisterServer(void) {
+	unregister_faudio_dll(DllHandle, *CLSID_XAudio2[XAUDIO2_VERSION]);
 	return S_OK;
 }
 

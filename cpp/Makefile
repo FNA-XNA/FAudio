@@ -1,16 +1,25 @@
 CC=i686-w64-mingw32-gcc
 CXX=i686-w64-mingw32-g++
 AR=i686-w64-mingw32-ar
+DLLTOOL=i686-w64-mingw32-dlltool
+DLLTOOL=dlltool
+AR=ar
 
-CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS
-LDFLAGS += -Wl,--enable-stdcall-fixup 
+CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600
+LDFLAGS += -Wl,--enable-stdcall-fixup
 
 # Source lists
 XAPO_SRC = XAPOBase.cpp
 
-XAUDIO2_SRC = 	com_utils.cpp \
+XAUDIO2_SRC_x20 = 	com_utils.cpp \
 		xaudio2.cpp \
-		XAudio2fx.cpp
+		XAudio2fx.cpp \
+		win_registry.cpp
+
+XAUDIO2_SRC_x28 = 	com_utils.cpp \
+		xaudio2.cpp \
+		XAudio2fx.cpp \
+		win_device.cpp
 
 X3DAUDIO_SRC = 	X3DAudio.cpp
 
@@ -19,34 +28,34 @@ XAPO_TARGET = XAPOBase.lib
 XAPO_OBJ = $(XAPO_SRC:%.cpp=%.o)
 
 XAUDIO20_TARGET = xaudio2_0.dll
-XAUDIO20_OBJ = $(XAUDIO2_SRC:%.cpp=%_x20.o) xaudiodll_x27.o
+XAUDIO20_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x20.o) xaudiodll_x27.o
 
 XAUDIO21_TARGET = xaudio2_1.dll
-XAUDIO21_OBJ = $(XAUDIO2_SRC:%.cpp=%_x21.o) xaudiodll_x27.o
+XAUDIO21_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x21.o) xaudiodll_x27.o
 
 XAUDIO22_TARGET = xaudio2_2.dll
-XAUDIO22_OBJ = $(XAUDIO2_SRC:%.cpp=%_x22.o) xaudiodll_x27.o
+XAUDIO22_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x22.o) xaudiodll_x27.o
 
 XAUDIO23_TARGET = xaudio2_3.dll
-XAUDIO23_OBJ = $(XAUDIO2_SRC:%.cpp=%_x23.o) xaudiodll_x27.o
+XAUDIO23_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x23.o) xaudiodll_x27.o
 
 XAUDIO24_TARGET = xaudio2_4.dll
-XAUDIO24_OBJ = $(XAUDIO2_SRC:%.cpp=%_x24.o) xaudiodll_x27.o
+XAUDIO24_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x24.o) xaudiodll_x27.o
 
 XAUDIO25_TARGET = xaudio2_5.dll
-XAUDIO25_OBJ = $(XAUDIO2_SRC:%.cpp=%_x25.o) xaudiodll_x27.o
+XAUDIO25_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x25.o) xaudiodll_x27.o
 
 XAUDIO26_TARGET = xaudio2_6.dll
-XAUDIO26_OBJ = $(XAUDIO2_SRC:%.cpp=%_x26.o) xaudiodll_x27.o
+XAUDIO26_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x26.o) xaudiodll_x27.o
 
 XAUDIO27_TARGET = xaudio2_7.dll
-XAUDIO27_OBJ = $(XAUDIO2_SRC:%.cpp=%_x27.o) xaudiodll_x27.o
+XAUDIO27_OBJ = $(XAUDIO2_SRC_x20:%.cpp=%_x27.o) xaudiodll_x27.o
 
 XAUDIO28_TARGET = xaudio2_8.dll
-XAUDIO28_OBJ = $(XAUDIO2_SRC:%.cpp=%_x28.o) xaudiodll_x29.o
+XAUDIO28_OBJ = $(XAUDIO2_SRC_x28:%.cpp=%_x28.o) xaudiodll_x29.o
 
 XAUDIO29_TARGET = xaudio2_9.dll
-XAUDIO29_OBJ = $(XAUDIO2_SRC:%.cpp=%_x29.o) xaudiodll_x29.o
+XAUDIO29_OBJ = $(XAUDIO2_SRC_x29:%.cpp=%_x29.o) xaudiodll_x29.o
 
 X3DAUDIO_TARGET = x3daudio.dll
 X3DAUDIO_OBJ = $(X3DAUDIO_SRC:%.cpp=%.o)
@@ -127,10 +136,10 @@ $(X3DAUDIO_TARGET) : $(X3DAUDIO_OBJ)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(X3DAUDIO_OBJ) ../libFAudio.a
 
 xaudiodll_x27.o: xaudio2_7.def
-	i686-w64-mingw32-dlltool -d $< -e $@
+	$(DLLTOOL) -d $< -e $@
 
 xaudiodll_x29.o: xaudio2_9.def
-	i686-w64-mingw32-dlltool -d $< -e $@
+	$(DLLTOOL) -d $< -e $@
 
 clean:
 	rm -f $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \

@@ -70,6 +70,7 @@ extern const IID CLSID_XAudio2_4;
 extern const IID CLSID_XAudio2_5;
 extern const IID CLSID_XAudio2_6;
 extern const IID CLSID_XAudio2_7;
+extern const IID *CLSID_XAudio2[];
 
 extern const IID CLSID_AudioVolumeMeter;
 extern const IID CLSID_AudioReverb;
