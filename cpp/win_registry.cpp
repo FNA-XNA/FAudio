@@ -37,7 +37,7 @@ extern "C" HRESULT register_faudio_dll(void *DllHandle, REFIID clsid) {
 
 	// open registry (creating key if it does not exist)
 	HKEY registry_key = NULL;
-	if (RegCreateKeyExW(HKEY_CURRENT_USER, key, 0, nullptr, 0, KEY_WRITE, nullptr, &registry_key, nullptr)) {
+	if (RegCreateKeyExW(HKEY_CURRENT_USER, key, 0, NULL, 0, KEY_WRITE, NULL, &registry_key, NULL)) {
 		return E_FAIL;
 	}
 
