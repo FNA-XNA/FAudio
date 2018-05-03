@@ -631,6 +631,13 @@ FAUDIOAPI uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	uint32_t NewSourceSampleRate
 );
 
+/* FAudioMasteringVoice Interface */
+
+FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
+	FAudioMasteringVoice *voice,
+	uint32_t *pChannelMask
+);
+
 /* FAudioEngineCallback Interface */
 
 typedef void (FAUDIOCALL * OnCriticalErrorFunc)(
