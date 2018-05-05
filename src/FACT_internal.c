@@ -201,7 +201,7 @@ void FACT_INTERNAL_GetNextWave(
 		const int16_t rngPitch = (int16_t) (
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxPitch - evt->wave.minPitch)
-		);
+		) + evt->wave.minPitch;
 		if (evtInst->loopCount < evt->wave.loopCount)
 		{
 			/* Variation on Loop */
