@@ -66,4 +66,4 @@ install_dll x3daudio x3daudio1_5
 install_dll x3daudio x3daudio1_6
 install_dll x3daudio x3daudio1_7
 
-ln -sf "$dll_path/../libFAudio.dll" "$wine_path/libFAudio.dll"
+cp "$dll_path/../../FAudio.dll" "$wine_path/FAudio.dll"
