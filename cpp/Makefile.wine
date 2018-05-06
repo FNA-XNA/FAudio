@@ -44,7 +44,8 @@ XAUDIO2_SRC_x20 = \
 XAUDIO2_SRC_x28 = \
 	com_utils.cpp \
 	xaudio2.cpp \
-	XAudio2fx.cpp 
+	XAudio2fx.cpp \
+	X3DAudio.cpp
 
 X3DAUDIO_SRC = 	X3DAudio.cpp
 

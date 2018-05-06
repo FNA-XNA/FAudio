@@ -1,4 +1,4 @@
-CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600
+CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600 -DUNICODE
 LDFLAGS += -Wl,--enable-stdcall-fixup
 
 ifneq (,$(findstring x86_64,$(CC)))
@@ -20,7 +20,8 @@ XAUDIO2_SRC_x28 = \
 	com_utils.cpp \
 	xaudio2.cpp \
 	XAudio2fx.cpp \
-	win_device.cpp
+	win_device.cpp \
+	X3DAudio.cpp
 
 X3DAUDIO_SRC = 	X3DAudio.cpp
 

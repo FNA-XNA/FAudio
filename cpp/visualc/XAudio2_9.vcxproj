@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="..\com_utils.cpp" />
     <ClCompile Include="..\win_device.cpp" />
+    <ClCompile Include="..\X3DAudio.cpp" />
     <ClCompile Include="..\xaudio2.cpp" />
     <ClCompile Include="..\XAudio2fx.cpp" />
   </ItemGroup>
