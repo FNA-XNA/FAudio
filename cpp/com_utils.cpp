@@ -144,12 +144,16 @@ extern "C" HRESULT register_faudio_dll(void *, REFIID);
 extern "C" HRESULT unregister_faudio_dll(void *, REFIID);
 
 extern "C" HRESULT __stdcall DllRegisterServer(void) {
+#ifndef __WINE__
 	register_faudio_dll(DllHandle, *CLSID_XAudio2[XAUDIO2_VERSION]);
+#endif
 	return S_OK;
 }
 
 extern "C" HRESULT __stdcall DllUnregisterServer(void) {
+#ifndef __WINE__
 	unregister_faudio_dll(DllHandle, *CLSID_XAudio2[XAUDIO2_VERSION]);
+#endif
 	return S_OK;
 }
 

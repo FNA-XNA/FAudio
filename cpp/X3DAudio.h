@@ -5,10 +5,23 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef FAUDIOCPP_EXPORTS
-#define F3DAUDIOCPP_API  extern "C" __declspec(dllexport) void __cdecl
+#if defined _WIN32 || defined __CYGWIN__
+  #define DLLIMPORT __declspec(dllimport)
+  #define DLLEXPORT __declspec(dllexport)
 #else
-#define F3DAUDIOCPP_API  extern "C" __declspec(dllimport) void __cdecl
+  #if __GNUC__ >= 4
+    #define DLLIMPORT __attribute__((visibility ("default")))
+    #define DLLEXPORT __attribute__((visibility ("default")))
+  #else
+    #define DLLIMPORT
+    #define DLLEXPORT
+  #endif
+#endif
+
+#ifdef FAUDIOCPP_EXPORTS
+#define F3DAUDIOCPP_API  extern "C" DLLEXPORT void __cdecl
+#else
+#define F3DAUDIOCPP_API  extern "C" DLLIMPORT void __cdecl
 #endif
 
 #ifndef X3DAUDIO_VERSION

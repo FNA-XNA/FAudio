@@ -5,7 +5,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define TRACE_FILE	"c:/temp/faudio_cpp.txt"
+#if defined _WIN32 || defined __CYGWIN__
+#define TRACE_FILE	"c:\\temp\\faudio_cpp.log"
+#else
+#define TRACE_FILE	"/tmp/faudio_cpp.log"
+#endif
+
 #define TRACE_FUNC()	do { trace_msg(__FUNCTION__); } while (0)
 #define TRACE_MSG(f,...) do {trace_msg("%s: " f, __FUNCTION__, __VA_ARGS__);} while (0)
 
