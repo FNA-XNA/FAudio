@@ -192,7 +192,7 @@ class IXAudio2SubmixVoice : public IXAudio2Voice {
 class IXAudio2MasteringVoice : public IXAudio2Voice {
 public:
 #if (XAUDIO2_VERSION >= 8)
-	X2METHOD(HRESULT) GetChannelMask (DWORD* pChannelmask) = 0;
+	X2METHOD(HRESULT) GetChannelMask (uint32_t *pChannelmask) = 0;
 #endif
 };
 

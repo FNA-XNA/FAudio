@@ -2,7 +2,6 @@
 #include "XAPO.h"
 
 #include <FAPOBase.h>
-#include <FAudio_internal.h>
 
 #define TRACING_ENABLE
 #include "trace.h"
@@ -261,9 +260,6 @@ static void *wrap_xapo_effect(IUnknown *xapo) {
 	f_effect->fapo.parameters.SetParameters = SetParameters;
 
 	f_effect->fapo.base.Destructor = Destructor;
-
-	TRACE_MSG("end");
-
 	return f_effect;
 }
 
@@ -771,7 +767,6 @@ public:
 
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(faudio, &faudio_voice, InputChannels, InputSampleRate, Flags, device_index, effect_chain);
-		channel_mask = faudio->mixFormat->dwChannelMask;
 	}
 #endif
 
@@ -934,19 +929,14 @@ public:
 
 	// IXAudio2MasteringVoice
 #if XAUDIO2_VERSION >= 8
-	X2METHOD(HRESULT) GetChannelMask(DWORD* pChannelmask) {
-		*pChannelmask = channel_mask;
-		return S_OK;
+	X2METHOD(HRESULT) GetChannelMask(uint32_t * pChannelmask) {
+		return FAudioMasteringVoice_GetChannelMask(faudio_voice, pChannelmask);
 	}
 #endif
 
 private:
 	FAudioVoiceSends *voice_sends;
 	FAudioEffectChain *effect_chain;
-
-#if XAUDIO2_VERSION >= 8
-	uint32_t channel_mask;
-#endif
 };
 
 ///////////////////////////////////////////////////////////////////////////////
