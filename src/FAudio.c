@@ -1078,6 +1078,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->buffer.LoopLength = loopLength;
 
 	/* Submit! */
+	/* FIXME: Atomics */
+	FAudio_PlatformLockAudio(voice->audio);
 	entry->next = NULL;
 	if (voice->src.bufferList == NULL)
 	{
@@ -1093,6 +1095,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		}
 		list->next = entry;
 	}
+	/* FIXME: Atomics */
+	FAudio_PlatformUnlockAudio(voice->audio);
 	return 0;
 }
 
@@ -1101,6 +1105,9 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 ) {
 	FAudioBufferEntry *entry, *next;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	/* FIXME: Atomics */
+	FAudio_PlatformLockAudio(voice->audio);
 
 	/* If the source is playing, don't flush the active buffer */
 	entry = voice->src.bufferList;
@@ -1127,6 +1134,9 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 		FAudio_free(entry);
 		entry = next;
 	}
+
+	/* FIXME: Atomics */
+	FAudio_PlatformUnlockAudio(voice->audio);
 	return 0;
 }
 
@@ -1150,10 +1160,16 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
+	/* FIXME: Atomics */
+	FAudio_PlatformLockAudio(voice->audio);
+
 	if (voice->src.bufferList != NULL)
 	{
 		voice->src.bufferList->buffer.LoopCount = 0;
 	}
+
+	/* FIXME: Atomics */
+	FAudio_PlatformUnlockAudio(voice->audio);
 	return 0;
 }
 
@@ -1163,6 +1179,9 @@ void FAudioSourceVoice_GetState(
 ) {
 	FAudioBufferEntry *entry;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+
+	/* FIXME: Atomics */
+	FAudio_PlatformLockAudio(voice->audio);
 
 	pVoiceState->BuffersQueued = 0;
 	pVoiceState->SamplesPlayed = voice->src.totalSamples;
@@ -1180,6 +1199,9 @@ void FAudioSourceVoice_GetState(
 	{
 		pVoiceState->pCurrentBufferContext = NULL;
 	}
+
+	/* FIXME: Atomics */
+	FAudio_PlatformUnlockAudio(voice->audio);
 }
 
 uint32_t FAudioSourceVoice_SetFrequencyRatio(
