@@ -1499,9 +1499,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	FAudio_PlatformLockAudio(pCue->parentBank->parentEngine->audio);
 
-	/* Need an initial sound to play */
-	FACT_INTERNAL_SelectSound(pCue);
-
 	/* Instance Limits */
 	#define INSTANCE_BEHAVIOR(obj, match) \
 		wnr = NULL; \
@@ -1517,7 +1514,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			/* FIXME: How is this different from Replace Oldest? */ \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
@@ -1530,7 +1528,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		{ \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
@@ -1544,7 +1543,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			max.maxf = FACTVOLUME_MAX; \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					/*FIXME: tmp->playing.sound.volume < max.maxf &&*/ \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
@@ -1559,7 +1559,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			max.maxi = 0xFF; \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					tmp->playing.sound.sound->priority < max.maxi && \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
@@ -1599,6 +1600,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	}
 	data->instanceCount += 1;
 	#undef INSTANCE_BEHAVIOR
+
+	/* Need an initial sound to play */
+	FACT_INTERNAL_SelectSound(pCue);
 
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~(
