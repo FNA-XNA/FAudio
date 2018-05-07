@@ -70,3 +70,17 @@ void *CreateAudioReverbInternal() {
 	FAudioCreateReverb(&fapo_object, 0);
 	return new XAudio2Reverb(fapo_object);
 }
+
+#if XAUDIO2_VERSION >=8
+
+FAUDIOCPP_API CreateAudioVolumeMeter(class IUnknown** ppApo) {
+	*ppApo = reinterpret_cast<IUnknown *> (CreateAudioVolumeMeterInternal());
+	return S_OK;
+}
+
+FAUDIOCPP_API CreateAudioReverb(class IUnknown** ppApo) {
+	*ppApo = reinterpret_cast<IUnknown *> (CreateAudioReverbInternal());
+	return S_OK;
+}
+
+#endif // XAUDIO2_VERSION >=8

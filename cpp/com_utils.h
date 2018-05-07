@@ -72,8 +72,25 @@ extern const IID CLSID_XAudio2_6;
 extern const IID CLSID_XAudio2_7;
 extern const IID *CLSID_XAudio2[];
 
-extern const IID CLSID_AudioVolumeMeter;
-extern const IID CLSID_AudioReverb;
+extern const IID CLSID_AudioVolumeMeter_0;
+extern const IID CLSID_AudioVolumeMeter_1;
+extern const IID CLSID_AudioVolumeMeter_2;
+extern const IID CLSID_AudioVolumeMeter_3;
+extern const IID CLSID_AudioVolumeMeter_4;
+extern const IID CLSID_AudioVolumeMeter_5;
+extern const IID CLSID_AudioVolumeMeter_6;
+extern const IID CLSID_AudioVolumeMeter_7;
+extern const IID *CLSID_AudioVolumeMeter[];
+
+extern const IID CLSID_AudioReverb_0;
+extern const IID CLSID_AudioReverb_1;
+extern const IID CLSID_AudioReverb_2;
+extern const IID CLSID_AudioReverb_3;
+extern const IID CLSID_AudioReverb_4;
+extern const IID CLSID_AudioReverb_5;
+extern const IID CLSID_AudioReverb_6;
+extern const IID CLSID_AudioReverb_7;
+extern const IID *CLSID_AudioReverb[];
 
 // quality of life macro's
 #define FACOM_METHOD(rtype)		virtual rtype __stdcall 
