@@ -1118,6 +1118,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	else
 	{
 		voice->src.curBufferOffset = 0;
+		voice->src.bufferList = NULL;
 	}
 
 	/* Go through each buffer, send an event for each one before deleting */
