@@ -6,7 +6,8 @@
 
 typedef FAPORegistrationProperties XAPO_REGISTRATION_PROPERTIES;
 
-class CXAPOBase : public IXAPO {
+class CXAPOBase : public IXAPO 
+{
 protected:
 	// for CXAPOParametersBase and other derived classes that wrap FAPO structs
 	CXAPOBase(FAPOBase *base);
@@ -15,29 +16,29 @@ public:
 	CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties);
 	virtual ~CXAPOBase();
 
-	FACOM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppInterface);
-	FACOM_METHOD(ULONG) AddRef();
-	FACOM_METHOD(ULONG) Release();
+	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppInterface);
+	COM_METHOD(ULONG) AddRef();
+	COM_METHOD(ULONG) Release();
 
-	FACOM_METHOD(HRESULT) GetRegistrationProperties (XAPO_REGISTRATION_PROPERTIES** ppRegistrationProperties);
-	FACOM_METHOD(HRESULT) IsInputFormatSupported (
+	COM_METHOD(HRESULT) GetRegistrationProperties (XAPO_REGISTRATION_PROPERTIES** ppRegistrationProperties);
+	COM_METHOD(HRESULT) IsInputFormatSupported (
 		const WAVEFORMATEX* pOutputFormat, 
 		const WAVEFORMATEX* pRequestedInputFormat, 
 		WAVEFORMATEX** ppSupportedInputFormat);
-	FACOM_METHOD(HRESULT) IsOutputFormatSupported (
+	COM_METHOD(HRESULT) IsOutputFormatSupported (
 		const WAVEFORMATEX* pInputFormat, 
 		const WAVEFORMATEX* pRequestedOutputFormat, 
 		WAVEFORMATEX** ppSupportedOutputFormat);
-	FACOM_METHOD(HRESULT) Initialize(const void*pData, UINT32 DataByteSize);
-	FACOM_METHOD(void) Reset();
-	FACOM_METHOD(HRESULT) LockForProcess (
+	COM_METHOD(HRESULT) Initialize(const void*pData, UINT32 DataByteSize);
+	COM_METHOD(void) Reset();
+	COM_METHOD(HRESULT) LockForProcess (
 		UINT32 InputLockedParameterCount, 
 		const XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS* pInputLockedParameters, 
 		UINT32 OutputLockedParameterCount, 
 		const XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS* pOutputLockedParameters);
-	FACOM_METHOD(void) UnlockForProcess ();
-	FACOM_METHOD(UINT32) CalcInputFrames(UINT32 OutputFrameCount);
-	FACOM_METHOD(UINT32) CalcOutputFrames(UINT32 InputFrameCount);
+	COM_METHOD(void) UnlockForProcess ();
+	COM_METHOD(UINT32) CalcInputFrames(UINT32 OutputFrameCount);
+	COM_METHOD(UINT32) CalcOutputFrames(UINT32 InputFrameCount);
 
 protected:
 	virtual HRESULT ValidateFormatDefault(WAVEFORMATEX* pFormat, BOOL fOverwrite);
@@ -61,7 +62,8 @@ protected:
 	bool	 own_fapo_base;
 };
 
-class CXAPOParametersBase : public CXAPOBase, public IXAPOParameters {
+class CXAPOParametersBase : public CXAPOBase, public IXAPOParameters 
+{
 protected:
 	// for derived classes that wrap FAPO structs
 	CXAPOParametersBase(FAPOParametersBase *param_base);
@@ -73,12 +75,12 @@ public:
 		BOOL fProducer);
 	virtual ~CXAPOParametersBase();
 
-	FACOM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppInterface);
-	FACOM_METHOD(ULONG) AddRef();
-	FACOM_METHOD(ULONG) Release();
+	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppInterface);
+	COM_METHOD(ULONG) AddRef();
+	COM_METHOD(ULONG) Release();
 
-	FACOM_METHOD(void) SetParameters (const void* pParameters, UINT32 ParameterByteSize);
-	FACOM_METHOD(void) GetParameters (void* pParameters, UINT32 ParameterByteSize);
+	COM_METHOD(void) SetParameters (const void* pParameters, UINT32 ParameterByteSize);
+	COM_METHOD(void) GetParameters (void* pParameters, UINT32 ParameterByteSize);
 
 	virtual void OnSetParameters(const void*, UINT32);
 
@@ -91,6 +93,5 @@ private:
 	bool own_fapo_param_base;
 
 };
-
 
 #endif // FACT_CPP_XAPOBASE_H

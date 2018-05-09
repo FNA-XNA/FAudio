@@ -93,67 +93,65 @@ typedef struct XAUDIO2_VOICE_DETAILS {
 } XAUDIO2_VOICE_DETAILS;
 #endif // XAUDIO2_VERSION <= 7
 
-#define X2METHOD(rtype)		virtual rtype __stdcall 
-
 class IXAudio2Voice  {
 public:
-	X2METHOD(void) GetVoiceDetails (XAUDIO2_VOICE_DETAILS* pVoiceDetails) = 0;
-	X2METHOD(HRESULT) SetOutputVoices (const XAUDIO2_VOICE_SENDS* pSendList) = 0;
-	X2METHOD(HRESULT) SetEffectChain (const XAUDIO2_EFFECT_CHAIN* pEffectChain) = 0;
-	X2METHOD(HRESULT) EnableEffect (
+	COM_METHOD(void) GetVoiceDetails (XAUDIO2_VOICE_DETAILS* pVoiceDetails) = 0;
+	COM_METHOD(HRESULT) SetOutputVoices (const XAUDIO2_VOICE_SENDS* pSendList) = 0;
+	COM_METHOD(HRESULT) SetEffectChain (const XAUDIO2_EFFECT_CHAIN* pEffectChain) = 0;
+	COM_METHOD(HRESULT) EnableEffect (
 		UINT32 EffectIndex,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(HRESULT) DisableEffect (
+	COM_METHOD(HRESULT) DisableEffect (
 		UINT32 EffectIndex,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetEffectState (UINT32 EffectIndex, BOOL* pEnabled) = 0;
-	X2METHOD(HRESULT) SetEffectParameters (
+	COM_METHOD(void) GetEffectState (UINT32 EffectIndex, BOOL* pEnabled) = 0;
+	COM_METHOD(HRESULT) SetEffectParameters (
 		UINT32 EffectIndex,
 		const void* pParameters,
 		UINT32 ParametersByteSize,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(HRESULT) GetEffectParameters (
+	COM_METHOD(HRESULT) GetEffectParameters (
 		UINT32 EffectIndex,
 		void* pParameters,
 		UINT32 ParametersByteSize) = 0;
-	X2METHOD(HRESULT) SetFilterParameters (
+	COM_METHOD(HRESULT) SetFilterParameters (
 		const XAUDIO2_FILTER_PARAMETERS* pParameters,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetFilterParameters (XAUDIO2_FILTER_PARAMETERS* pParameters) = 0;
+	COM_METHOD(void) GetFilterParameters (XAUDIO2_FILTER_PARAMETERS* pParameters) = 0;
 #if XAUDIO2_VERSION >= 4
-	X2METHOD(HRESULT) SetOutputFilterParameters (
+	COM_METHOD(HRESULT) SetOutputFilterParameters (
 		IXAudio2Voice* pDestinationVoice,
 		const XAUDIO2_FILTER_PARAMETERS* pParameters,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetOutputFilterParameters (
+	COM_METHOD(void) GetOutputFilterParameters (
 		IXAudio2Voice* pDestinationVoice,
 		XAUDIO2_FILTER_PARAMETERS* pParameters) = 0;
 #endif // XAUDIO2_VERSION >= 4
-	X2METHOD(HRESULT) SetVolume (
+	COM_METHOD(HRESULT) SetVolume (
 		float Volume,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetVolume (float* pVolume) = 0;
-	X2METHOD(HRESULT) SetChannelVolumes (
+	COM_METHOD(void) GetVolume (float* pVolume) = 0;
+	COM_METHOD(HRESULT) SetChannelVolumes (
 		UINT32 Channels, 
 		const float* pVolumes,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetChannelVolumes (UINT32 Channels, float* pVolumes) = 0;
-	X2METHOD(HRESULT) SetOutputMatrix (
+	COM_METHOD(void) GetChannelVolumes (UINT32 Channels, float* pVolumes) = 0;
+	COM_METHOD(HRESULT) SetOutputMatrix (
 		IXAudio2Voice* pDestinationVoice,
 		UINT32 SourceChannels, 
 		UINT32 DestinationChannels,
 		const float* pLevelMatrix,
 		UINT32 OperationSet  = FAUDIO_COMMIT_NOW) = 0;
 #if XAUDIO2_VERSION >= 1
-	X2METHOD(void) GetOutputMatrix (
+	COM_METHOD(void) GetOutputMatrix (
 #else
-	X2METHOD(HRESULT) GetOutputMatrix (
+	COM_METHOD(HRESULT) GetOutputMatrix (
 #endif // XAUDIO2_VERSION >= 1
 		IXAudio2Voice* pDestinationVoice,
 		UINT32 SourceChannels, 
 		UINT32 DestinationChannels,
 		float* pLevelMatrix) = 0;
-	X2METHOD(void) DestroyVoice() = 0;
+	COM_METHOD(void) DestroyVoice() = 0;
 
 public:
 	// not the ideal solution but the cleanest way I known to get to the common FAudioVoice object
@@ -163,25 +161,25 @@ public:
 
 class IXAudio2SourceVoice : public IXAudio2Voice {
 public:
-	X2METHOD(HRESULT) Start (UINT32 Flags = 0, UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(HRESULT) Stop (UINT32 Flags = 0, UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(HRESULT) SubmitSourceBuffer (
+	COM_METHOD(HRESULT) Start (UINT32 Flags = 0, UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
+	COM_METHOD(HRESULT) Stop (UINT32 Flags = 0, UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
+	COM_METHOD(HRESULT) SubmitSourceBuffer (
 		const XAUDIO2_BUFFER* pBuffer, 
 		const XAUDIO2_BUFFER_WMA* pBufferWMA = NULL) = 0;
-	X2METHOD(HRESULT) FlushSourceBuffers () = 0;
-	X2METHOD(HRESULT) Discontinuity () = 0;
-	X2METHOD(HRESULT) ExitLoop (UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
+	COM_METHOD(HRESULT) FlushSourceBuffers () = 0;
+	COM_METHOD(HRESULT) Discontinuity () = 0;
+	COM_METHOD(HRESULT) ExitLoop (UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
 #if (XAUDIO2_VERSION <= 7)
-	X2METHOD(void) GetState ( XAUDIO2_VOICE_STATE* pVoiceState) = 0;
+	COM_METHOD(void) GetState ( XAUDIO2_VOICE_STATE* pVoiceState) = 0;
 #else
-	X2METHOD(void) GetState ( XAUDIO2_VOICE_STATE* pVoiceState, UINT32 Flags = 0) = 0;
+	COM_METHOD(void) GetState ( XAUDIO2_VOICE_STATE* pVoiceState, UINT32 Flags = 0) = 0;
 #endif
-	X2METHOD(HRESULT) SetFrequencyRatio (
+	COM_METHOD(HRESULT) SetFrequencyRatio (
 		float Ratio,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW) = 0;
-	X2METHOD(void) GetFrequencyRatio (float* pRatio) = 0;
+	COM_METHOD(void) GetFrequencyRatio (float* pRatio) = 0;
 #if XAUDIO2_VERSION >= 4
-	X2METHOD(HRESULT) SetSourceSampleRate (UINT32 NewSourceSampleRate) = 0;
+	COM_METHOD(HRESULT) SetSourceSampleRate (UINT32 NewSourceSampleRate) = 0;
 #endif // XAUDIO2_VERSION >= 4
 };
 
@@ -192,46 +190,46 @@ class IXAudio2SubmixVoice : public IXAudio2Voice {
 class IXAudio2MasteringVoice : public IXAudio2Voice {
 public:
 #if (XAUDIO2_VERSION >= 8)
-	X2METHOD(HRESULT) GetChannelMask (uint32_t *pChannelmask) = 0;
+	COM_METHOD(HRESULT) GetChannelMask (uint32_t *pChannelmask) = 0;
 #endif
 };
 
 class IXAudio2VoiceCallback {
 public:
 #if XAUDIO2_VERSION >= 1
-	X2METHOD(void) OnVoiceProcessingPassStart (UINT32 BytesRequired) = 0;
+	COM_METHOD(void) OnVoiceProcessingPassStart (UINT32 BytesRequired) = 0;
 #else
-	X2METHOD(void) OnVoiceProcessingPassStart () = 0;
+	COM_METHOD(void) OnVoiceProcessingPassStart () = 0;
 #endif // XAUDIO2_VERSION >= 1
-	X2METHOD(void) OnVoiceProcessingPassEnd () = 0;
-	X2METHOD(void) OnStreamEnd () = 0;
-	X2METHOD(void) OnBufferStart (void* pBufferContext) = 0;
-	X2METHOD(void) OnBufferEnd (void* pBufferContext) = 0;
-	X2METHOD(void) OnLoopEnd (void* pBufferContext) = 0;
-	X2METHOD(void) OnVoiceError (void* pBufferContext, HRESULT Error) = 0;
+	COM_METHOD(void) OnVoiceProcessingPassEnd () = 0;
+	COM_METHOD(void) OnStreamEnd () = 0;
+	COM_METHOD(void) OnBufferStart (void* pBufferContext) = 0;
+	COM_METHOD(void) OnBufferEnd (void* pBufferContext) = 0;
+	COM_METHOD(void) OnLoopEnd (void* pBufferContext) = 0;
+	COM_METHOD(void) OnVoiceError (void* pBufferContext, HRESULT Error) = 0;
 };
 
 class IXAudio2EngineCallback {
 public:
-	X2METHOD(void) OnProcessingPassStart () = 0;
-	X2METHOD(void) OnProcessingPassEnd () = 0;
-	X2METHOD(void) OnCriticalError (HRESULT Error) = 0;
+	COM_METHOD(void) OnProcessingPassStart () = 0;
+	COM_METHOD(void) OnProcessingPassEnd () = 0;
+	COM_METHOD(void) OnCriticalError (HRESULT Error) = 0;
 };
 
 class IXAudio2 : public IUnknown {
 public:
 #if (XAUDIO2_VERSION <= 7)
-	X2METHOD(HRESULT) GetDeviceCount(UINT32 *pCount) = 0;
-	X2METHOD(HRESULT) GetDeviceDetails (UINT32 Index, XAUDIO2_DEVICE_DETAILS* pDeviceDetails) = 0;
-	X2METHOD(HRESULT) Initialize (
+	COM_METHOD(HRESULT) GetDeviceCount(UINT32 *pCount) = 0;
+	COM_METHOD(HRESULT) GetDeviceDetails (UINT32 Index, XAUDIO2_DEVICE_DETAILS* pDeviceDetails) = 0;
+	COM_METHOD(HRESULT) Initialize (
 		UINT32 Flags = 0,
 		XAUDIO2_PROCESSOR XAudio2Processor = FAUDIO_DEFAULT_PROCESSOR) = 0;
 #endif // XAUDIO2_VERSION <= 7
 
-	X2METHOD(HRESULT) RegisterForCallbacks (IXAudio2EngineCallback* pCallback) = 0;
-	X2METHOD(void) UnregisterForCallbacks ( IXAudio2EngineCallback* pCallback) = 0;
+	COM_METHOD(HRESULT) RegisterForCallbacks (IXAudio2EngineCallback* pCallback) = 0;
+	COM_METHOD(void) UnregisterForCallbacks ( IXAudio2EngineCallback* pCallback) = 0;
 
-	X2METHOD(HRESULT) CreateSourceVoice (
+	COM_METHOD(HRESULT) CreateSourceVoice (
 		IXAudio2SourceVoice** ppSourceVoice,
 		const WAVEFORMATEX* pSourceFormat,
 		UINT32 Flags = 0,
@@ -240,7 +238,7 @@ public:
 		const XAUDIO2_VOICE_SENDS* pSendList = NULL,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain = NULL) = 0;
 
-	X2METHOD(HRESULT) CreateSubmixVoice(
+	COM_METHOD(HRESULT) CreateSubmixVoice(
 		IXAudio2SubmixVoice** ppSubmixVoice,
 		UINT32 InputChannels, 
 		UINT32 InputSampleRate,
@@ -250,7 +248,7 @@ public:
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain = NULL) = 0;
 
 #if XAUDIO2_VERSION <= 7
-	X2METHOD(HRESULT) CreateMasteringVoice(
+	COM_METHOD(HRESULT) CreateMasteringVoice(
 		IXAudio2MasteringVoice** ppMasteringVoice,
 		UINT32 InputChannels = FAUDIO_DEFAULT_CHANNELS,
 		UINT32 InputSampleRate = FAUDIO_DEFAULT_SAMPLERATE,
@@ -258,7 +256,7 @@ public:
 		UINT32 DeviceIndex = 0,
 		const XAUDIO2_EFFECT_CHAIN* pEffectChain = NULL) = 0;
 #else
-	X2METHOD(HRESULT) CreateMasteringVoice (
+	COM_METHOD(HRESULT) CreateMasteringVoice (
 		IXAudio2MasteringVoice** ppMasteringVoice,
 		UINT32 InputChannels = FAUDIO_DEFAULT_CHANNELS,
 		UINT32 InputSampleRate = FAUDIO_DEFAULT_SAMPLERATE,
@@ -268,15 +266,15 @@ public:
 		int StreamCategory = 6) = 0;	// FIXME: type was AUDIO_STREAM_CATEGORY (scoped enum so int for now)
 #endif // XAUDIO2_VERSION <= 7
 
-	X2METHOD(HRESULT) StartEngine() = 0;
-	X2METHOD(void) StopEngine() = 0;
+	COM_METHOD(HRESULT) StartEngine() = 0;
+	COM_METHOD(void) StopEngine() = 0;
 
-	X2METHOD(HRESULT) CommitChanges(UINT32 OperationSet) = 0;
+	COM_METHOD(HRESULT) CommitChanges(UINT32 OperationSet) = 0;
 
-	X2METHOD(void) GetPerformanceData(XAUDIO2_PERFORMANCE_DATA* pPerfData) = 0;
+	COM_METHOD(void) GetPerformanceData(XAUDIO2_PERFORMANCE_DATA* pPerfData) = 0;
 
-	X2METHOD(void) SetDebugConfiguration(
-		const XAUDIO2_DEBUG_CONFIGURATION* pDebugConfiguration,
+	COM_METHOD(void) SetDebugConfiguration(
+		XAUDIO2_DEBUG_CONFIGURATION* pDebugConfiguration,
 		void* pReserved = NULL) = 0;
 };
 

@@ -93,24 +93,24 @@ extern const IID CLSID_AudioReverb_7;
 extern const IID *CLSID_AudioReverb[];
 
 // quality of life macro's
-#define FACOM_METHOD(rtype)		virtual rtype __stdcall 
+#define COM_METHOD(rtype)		virtual rtype __stdcall 
 
 // common interfaces
 class IUnknown {
 public:
-	FACOM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppvInterface) = 0;
-	FACOM_METHOD(ULONG) AddRef() = 0;
-	FACOM_METHOD(ULONG) Release() = 0;
+	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppvInterface) = 0;
+	COM_METHOD(ULONG) AddRef() = 0;
+	COM_METHOD(ULONG) Release() = 0;
 };
 
 class IClassFactory : public IUnknown {
 public:
-	FACOM_METHOD(HRESULT) CreateInstance(
+	COM_METHOD(HRESULT) CreateInstance(
 		IUnknown *pUnkOuter,
 		REFIID riid,
 		void **ppvObject) = 0;
 
-	FACOM_METHOD(HRESULT) LockServer(BOOL fLock) = 0;
+	COM_METHOD(HRESULT) LockServer(BOOL fLock) = 0;
 };
 
 #ifdef __cplusplus

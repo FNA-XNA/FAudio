@@ -10,12 +10,13 @@ const IID DEVINTERFACE_AUDIO_RENDER = { 0xe6327cad, 0xdcec, 0x4949, {0xae, 0x8a,
 const DWORD MAX_FRIENDLY_NAME = 2048;
 static wchar_t friendlyName[MAX_FRIENDLY_NAME];
 
-LPCWSTR win_device_id_to_friendly_name(LPCWSTR deviceId) {
-
+LPCWSTR win_device_id_to_friendly_name(LPCWSTR deviceId) 
+{
 	LPCWSTR result = NULL;
 	HDEVINFO devInfoSet = SetupDiGetClassDevs(&DEVINTERFACE_AUDIO_RENDER, 0, 0, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
 
-	if (devInfoSet == INVALID_HANDLE_VALUE) {
+	if (devInfoSet == INVALID_HANDLE_VALUE) 
+	{
 		return NULL;
 	}
 
@@ -27,9 +28,10 @@ LPCWSTR win_device_id_to_friendly_name(LPCWSTR deviceId) {
 
 	DWORD deviceIndex = 0;
 
-	for (;;) {
-
-		if (!SetupDiEnumDeviceInterfaces(devInfoSet, 0, &DEVINTERFACE_AUDIO_RENDER, deviceIndex, &devInterface)) {
+	for (;;) 
+	{
+		if (!SetupDiEnumDeviceInterfaces(devInfoSet, 0, &DEVINTERFACE_AUDIO_RENDER, deviceIndex, &devInterface)) 
+		{
 			break;
 		}
 		deviceIndex++;
@@ -39,25 +41,29 @@ LPCWSTR win_device_id_to_friendly_name(LPCWSTR deviceId) {
 		SetupDiGetDeviceInterfaceDetail(devInfoSet, &devInterface, NULL, 0, &reqSize, NULL);
 		SP_DEVICE_INTERFACE_DETAIL_DATA *interfaceDetail = reinterpret_cast<SP_DEVICE_INTERFACE_DETAIL_DATA *>(new uint8_t[reqSize]);
 
-		if (!interfaceDetail) {
+		if (!interfaceDetail) 
+		{
 			break;
 		} 
 
 		interfaceDetail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 
-		if (!SetupDiGetDeviceInterfaceDetail(devInfoSet, &devInterface, interfaceDetail, reqSize, NULL, &devInfo)) {
+		if (!SetupDiGetDeviceInterfaceDetail(devInfoSet, &devInterface, interfaceDetail, reqSize, NULL, &devInfo)) 
+		{
 			delete[] interfaceDetail;
 			continue;
 		}
 		
-		if (_wcsicmp(deviceId, interfaceDetail->DevicePath) != 0) {
+		if (_wcsicmp(deviceId, interfaceDetail->DevicePath) != 0) 
+		{
 			delete[] interfaceDetail;
 			continue;
 		}
 
 		delete[] interfaceDetail;
 
-		if (!SetupDiGetDeviceRegistryProperty(devInfoSet, &devInfo, SPDRP_FRIENDLYNAME, NULL, (LPBYTE) friendlyName, MAX_FRIENDLY_NAME * sizeof(wchar_t), NULL)) {
+		if (!SetupDiGetDeviceRegistryProperty(devInfoSet, &devInfo, SPDRP_FRIENDLYNAME, NULL, (LPBYTE) friendlyName, MAX_FRIENDLY_NAME * sizeof(wchar_t), NULL)) 
+		{
 			continue;
 		}
 
@@ -65,25 +71,28 @@ LPCWSTR win_device_id_to_friendly_name(LPCWSTR deviceId) {
 		break;
 	}
 
-	if (devInfoSet) {
+	if (devInfoSet) 
+	{
 		SetupDiDestroyDeviceInfoList(devInfoSet);
 	}
 
 	return result;
 }
 
-uint32_t device_index_from_device_id(FAudio *faudio, LPCWSTR deviceId) {
-
+uint32_t device_index_from_device_id(FAudio *faudio, LPCWSTR deviceId) 
+{
 	LPCWSTR friendlyName = win_device_id_to_friendly_name(deviceId);
 
 	uint32_t dev_count;
 	FAudio_GetDeviceCount(faudio, &dev_count);
 
-	for (uint32_t i = 0; i < dev_count; ++i) {
+	for (uint32_t i = 0; i < dev_count; ++i) 
+	{
 		FAudioDeviceDetails dev_details;
 		FAudio_GetDeviceDetails(faudio, i, &dev_details);
 
-		if (_wcsicmp((LPCWSTR) dev_details.DisplayName, friendlyName) == 0) {
+		if (_wcsicmp((LPCWSTR) dev_details.DisplayName, friendlyName) == 0) 
+		{
 			return i;
 		}
 	}

@@ -5,7 +5,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include <FAudioFX.h>
+#include <stdint.h>
 
 #ifndef XAUDIO2_VERSION
 #define XAUDIO2_VERSION 7
