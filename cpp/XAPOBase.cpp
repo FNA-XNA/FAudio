@@ -32,11 +32,11 @@ CXAPOBase::~CXAPOBase()
 
 HRESULT CXAPOBase::QueryInterface(REFIID riid, void** ppInterface) 
 {
-	if (riid == IID_IXAPO) 
+	if (guid_equals(riid, IID_IXAPO))
 	{
 		*ppInterface = static_cast<IXAPO *>(this);
 	} 
-	else if (riid == IID_IUnknown) 
+	else if (guid_equals(riid, IID_IUnknown))
 	{
 		*ppInterface = static_cast<IUnknown *>(this);
 	} 
@@ -215,7 +215,7 @@ CXAPOParametersBase::~CXAPOParametersBase()
 
 HRESULT CXAPOParametersBase::QueryInterface(REFIID riid, void** ppInterface) 
 {
-	if (riid == IID_IXAPOParameters) 
+	if (guid_equals(riid, IID_IXAPOParameters))
 	{
 		*ppInterface = static_cast<IXAPOParameters *>(this);
 		CXAPOBase::AddRef();

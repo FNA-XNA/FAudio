@@ -1,4 +1,5 @@
 #include "com_utils.h"
+#include <SDL.h>
 
 /* GUIDs */
 const IID IID_IUnknown = {0x00000000, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
@@ -58,6 +59,11 @@ const IID *CLSID_AudioReverb[] = {
 	&CLSID_AudioReverb_6, &CLSID_AudioReverb_7,
 };
 
+bool guid_equals(REFIID a, REFIID b)
+{
+	return SDL_memcmp(&a, &b, sizeof(IID)) == 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Class Factory: fun COM stuff
@@ -73,7 +79,7 @@ template <REFIID fact_iid, FACTORY_FUNC fact_creator> class ClassFactory : publi
 public:
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppvInterface)
 	{
-		if ((riid == IID_IUnknown) || (riid == IID_IClassFactory))
+		if (guid_equals(riid, IID_IUnknown) || guid_equals(riid, IID_IClassFactory))
 		{
 			*ppvInterface = static_cast<IClassFactory *>(this);
 		}
@@ -116,7 +122,7 @@ public:
 
 		void *obj = NULL;
 
-		if (riid == fact_iid)
+		if (guid_equals(riid, fact_iid))
 		{
 			obj = fact_creator();
 		}
@@ -167,15 +173,15 @@ extern "C" HRESULT __stdcall DllGetClassObject(REFCLSID rclsid, REFIID riid, LPV
 {
 	IClassFactory *factory = NULL;
 
-	if (rclsid == *CLSID_XAudio2[XAUDIO2_VERSION])
+	if (guid_equals(rclsid, *CLSID_XAudio2[XAUDIO2_VERSION]))
 	{
 		factory = new ClassFactory<IID_IXAudio2, CreateXAudio2Internal>();
 	}
-	else if (rclsid == *CLSID_AudioVolumeMeter[XAUDIO2_VERSION])
+	else if (guid_equals(rclsid, *CLSID_AudioVolumeMeter[XAUDIO2_VERSION]))
 	{
 		factory = new ClassFactory<IID_IUnknown, CreateAudioVolumeMeterInternal>();
 	}
-	else if (rclsid == *CLSID_AudioReverb[XAUDIO2_VERSION])
+	else if (guid_equals(rclsid, *CLSID_AudioReverb[XAUDIO2_VERSION]))
 	{
 		factory = new ClassFactory<IID_IUnknown, CreateAudioReverbInternal>();
 	}

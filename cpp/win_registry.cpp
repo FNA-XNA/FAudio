@@ -1,35 +1,36 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <stdio.h>
 
-static bool registry_write_string(HKEY reg, const wchar_t *name, const wchar_t *value, size_t len) 
+#include <SDL.h>
+
+static bool registry_write_string(HKEY reg, const char *name, const char *value, size_t len) 
 {
-	HRESULT hr = RegSetValueExW(
+	HRESULT hr = RegSetValueExA(
 		reg, 
 		name, 
 		0, 
 		REG_SZ, 
 		reinterpret_cast<const BYTE *> (value), 
-		static_cast<DWORD>((len + 1) * sizeof(wchar_t))
+		static_cast<DWORD>((len + 1) * sizeof(char))
 	);
 	return hr == ERROR_SUCCESS;
 }
 
-static const wchar_t *base_key() 
+static const char *base_key() 
 {
 	if (sizeof(void *) == 4) 
 	{	
-		return L"Software\\Classes\\WOW6432Node\\CLSID";
+		return "Software\\Classes\\WOW6432Node\\CLSID";
 	} 
 	else 
 	{
-		return L"Software\\Classes\\CLSID";
+		return "Software\\Classes\\CLSID";
 	}
 }
 
-static void format_clsid(REFIID clsid, wchar_t *value, size_t max) 
+static void format_clsid(REFIID clsid, char *value, size_t max) 
 {
-	swprintf(value, max, L"{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+	SDL_snprintf(value, max, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
 		clsid.Data1, clsid.Data2, clsid.Data3,
 		clsid.Data4[0], clsid.Data4[1], clsid.Data4[2], clsid.Data4[3],
 		clsid.Data4[4], clsid.Data4[5], clsid.Data4[6], clsid.Data4[7]);
@@ -43,22 +44,22 @@ extern "C" HRESULT register_faudio_dll(void *DllHandle, REFIID clsid)
 //	- the system-wide configuration is stored under HKEY_LOCAL_MACHINE
 //	- we override the registration for the XAudio2 DLLs for the current user
 	
-	wchar_t str_clsid[40];
-	format_clsid(clsid, str_clsid, sizeof(str_clsid) / sizeof(wchar_t));
+	char str_clsid[40];
+	format_clsid(clsid, str_clsid, sizeof(str_clsid) / sizeof(char));
 
-	wchar_t key[2048];
-	swprintf(key, sizeof(key) / sizeof(wchar_t), L"%s\\%s\\InProcServer32", base_key(), str_clsid);
+	char key[2048];
+	SDL_snprintf(key, sizeof(key) / sizeof(char), "%s\\%s\\InProcServer32", base_key(), str_clsid);
 
 	// open registry (creating key if it does not exist)
 	HKEY registry_key = NULL;
-	if (RegCreateKeyExW(HKEY_CURRENT_USER, key, 0, NULL, 0, KEY_WRITE, NULL, &registry_key, NULL)) 
+	if (RegCreateKeyExA(HKEY_CURRENT_USER, key, 0, NULL, 0, KEY_WRITE, NULL, &registry_key, NULL)) 
 	{
 		return E_FAIL;
 	}
 
 	// retrieve path to the dll
-	wchar_t path[2048];
-	DWORD len = GetModuleFileNameW(reinterpret_cast<HMODULE>(DllHandle), path, sizeof(key) / sizeof(wchar_t));
+	char path[2048];
+	DWORD len = GetModuleFileNameA(reinterpret_cast<HMODULE>(DllHandle), path, sizeof(key) / sizeof(char));
 
 	// update registry
 	registry_write_string(registry_key, NULL, path, len);
@@ -69,19 +70,18 @@ extern "C" HRESULT register_faudio_dll(void *DllHandle, REFIID clsid)
 
 extern "C" HRESULT unregister_faudio_dll(void *DllHandle, REFIID clsid) 
 {
-
 	// open registry 
 	HKEY registry_key = NULL;
-	if (RegOpenKeyExW(HKEY_CURRENT_USER, base_key(), 0, DELETE | KEY_SET_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &registry_key)) 
+	if (RegOpenKeyExA(HKEY_CURRENT_USER, base_key(), 0, DELETE | KEY_SET_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &registry_key)) 
 	{
 		return E_FAIL;
 	}
 
-	wchar_t str_clsid[40];
-	format_clsid(clsid, str_clsid, sizeof(str_clsid) / sizeof(wchar_t));
+	char str_clsid[40];
+	format_clsid(clsid, str_clsid, sizeof(str_clsid) / sizeof(char));
 
 	// delete key
-	HRESULT hr = RegDeleteTreeW(registry_key, str_clsid);
+	HRESULT hr = RegDeleteTreeA(registry_key, str_clsid);
 	RegCloseKey(registry_key);
 	return S_OK;
 }

@@ -1261,11 +1261,11 @@ public:
 	{
 		TRACE_FUNC();
 
-		if (riid == IID_IXAudio2)
+		if (guid_equals(riid, IID_IXAudio2))
 		{
 			*ppvInterface = static_cast<IXAudio2 *>(this);
 		}
-		else if (riid == IID_IUnknown)
+		else if (guid_equals(riid, IID_IUnknown))
 		{
 			*ppvInterface = static_cast<IUnknown *>(this);
 		}
