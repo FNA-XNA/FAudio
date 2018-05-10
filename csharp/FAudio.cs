@@ -1930,25 +1930,17 @@ public static class FAudio
 	#region XNA Song API
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern IntPtr XNA_GenSong(
-		byte[] name,
-		out float seconds
-	);
-	public static IntPtr XNA_GenSong(
-		string name,
-		out float seconds
-	) {
-		return XNA_GenSong(
-			UTF8_ToNative(name),
-			out seconds
-		);
+	public static extern void XNA_SongInit();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void XNA_SongQuit();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern float XNA_PlaySong(byte[] name);
+	public static float XNA_PlaySong(string name)
+	{
+		return XNA_PlaySong(UTF8_ToNative(name));
 	}
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_DisposeSong(IntPtr song);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_PlaySong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void XNA_PauseSong();
