@@ -45,10 +45,10 @@ uint8_t *songCache;
 void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
 	FAudioBuffer buffer;
-	uint32_t decoded = stb_vorbis_get_samples_short_interleaved(
+	uint32_t decoded = stb_vorbis_get_samples_float_interleaved(
 		activeSong,
 		activeSongInfo.channels,
-		(short*) songCache,
+		(float*) songCache,
 		activeSongInfo.sample_rate
 	);
 	if (decoded == 0)
@@ -58,7 +58,7 @@ void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 	buffer.Flags = (decoded < activeSongInfo.sample_rate) ?
 		FAUDIO_END_OF_STREAM :
 		0;
-	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(int16_t);
+	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(float);
 	buffer.pAudioData = songCache;
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = decoded;
@@ -125,10 +125,10 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 
 	/* Set format info */
 	activeSongInfo = stb_vorbis_get_info(activeSong);
-	format.wFormatTag = 1;
+	format.wFormatTag = 3;
 	format.nChannels = activeSongInfo.channels;
 	format.nSamplesPerSec = activeSongInfo.sample_rate;
-	format.wBitsPerSample = sizeof(int16_t) * 8;
+	format.wBitsPerSample = sizeof(float) * 8;
 	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
 	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 	format.cbSize = 0;
