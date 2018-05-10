@@ -240,6 +240,7 @@ void FAudio_free(void *ptr);
 void FAudio_zero(void *ptr, size_t size);
 void FAudio_memcpy(void *dst, const void *src, size_t size);
 void FAudio_memmove(void *dst, void *src, size_t size);
+int FAudio_memcmp(const void *ptr1, const void *ptr2, size_t size);
 size_t FAudio_strlen(const char *ptr);
 int FAudio_strcmp(const char *str1, const char *str2);
 void FAudio_strlcpy(char *dst, const char *src, size_t len);

@@ -128,6 +128,7 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	uint32_t i;
+	uint16_t realFormat;
 
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
@@ -161,25 +162,56 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
-	if (pSourceFormat->wFormatTag == 1)
+		
+	if (pSourceFormat->wFormatTag >= 1 && pSourceFormat->wFormatTag <= 3)
+	{
+		/* Plain ol' WaveFormatEx */
+		realFormat = pSourceFormat->wFormatTag;
+	}
+	else if (pSourceFormat->wFormatTag == 0xFFFE)
+	{
+		/* WaveFormatExtensible, match GUID */
+		#define MAKE_SUBFORMAT_GUID(guid, fmt)	FAudioGUID KSDATAFORMAT_SUBTYPE_##guid = {(uint16_t)(fmt), 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}}
+		MAKE_SUBFORMAT_GUID(PCM, 1);
+		MAKE_SUBFORMAT_GUID(ADPCM, 2);
+		MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
+		#undef MAKE_SUBFORMAT_GUID
+
+		#define COMPARE_GUID(guid, realFmt) \
+		if (FAudio_memcmp(&((FAudioWaveFormatExtensible *)pSourceFormat)->SubFormat, &KSDATAFORMAT_SUBTYPE_##guid, sizeof(FAudioGUID)) == 0) \
+		{ \
+			realFormat = realFmt; \
+		}
+
+		COMPARE_GUID(PCM, 1)
+		else COMPARE_GUID(ADPCM, 2)
+		else COMPARE_GUID(IEEE_FLOAT, 3)
+		else
+		{
+			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
+		}
+		#undef MAKE_GUID
+	}
+	else
+	{
+		FAudio_assert(0 && "Unsupported wFormatTag!");
+	}
+
+	if (realFormat == 1)
 	{
 		(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
 			FAudio_INTERNAL_DecodePCM16 :
 			FAudio_INTERNAL_DecodePCM8;
 	}
-	else if (pSourceFormat->wFormatTag == 2)
+	else if (realFormat == 2)
 	{
 		(*ppSourceVoice)->src.decode = (pSourceFormat->nChannels == 2) ?
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
 			FAudio_INTERNAL_DecodeMonoMSADPCM;
 	}
-	else if (pSourceFormat->wFormatTag == 3)
+	else if (realFormat == 3)
 	{
 		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
-	}
-	else
-	{
-		FAudio_assert(0 && "Unsupported wFormatTag!");
 	}
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 

@@ -503,6 +503,11 @@ void FAudio_memmove(void *dst, void *src, size_t size)
 	SDL_memmove(dst, src, size);
 }
 
+int FAudio_memcmp(const void *ptr1, const void *ptr2, size_t size)
+{
+	return SDL_memcmp(ptr1, ptr2, size);
+}
+
 size_t FAudio_strlen(const char *ptr)
 {
 	return SDL_strlen(ptr);
