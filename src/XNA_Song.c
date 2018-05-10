@@ -26,6 +26,7 @@
 
 #include "FAudio_internal.h"
 
+#define STB_VORBIS_NO_INTEGER_CONVERSION
 #include "stb_vorbis.h" /* TODO: Remove CRT dependency */
 
 /* Globals */
