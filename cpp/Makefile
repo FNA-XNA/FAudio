@@ -1,7 +1,11 @@
-CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600 -DUNICODE
-LDFLAGS += -Wl,--enable-stdcall-fixup
+CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600 `sdl2-config --cflags`
+LDFLAGS += -Wl,--enable-stdcall-fixup `sdl2-config --libs` -static-libgcc -static-libstdc++ -L.. -lFAudio
 
-ifneq (,$(findstring x86_64,$(CC)))
+DLLTOOL ?= dlltool
+
+TARGET ?= $(shell $(CC) -v 2>&1 | grep -i Target:)
+
+ifneq (,$(findstring x86_64,$(TARGET)))
 	BUILD_DIR = build_win64
 else
 	BUILD_DIR = build_win32
@@ -59,7 +63,7 @@ XAUDIO28_OBJ = $(XAUDIO2_SRC_x28:%.cpp=$(BUILD_DIR)/%_x28.o) $(BUILD_DIR)/xaudio
 XAUDIO29_TARGET = $(BUILD_DIR)/xaudio2_9.dll
 XAUDIO29_OBJ = $(XAUDIO2_SRC_x28:%.cpp=$(BUILD_DIR)/%_x29.o) $(BUILD_DIR)/xaudiodll_x28.o
 
-X3DAUDIO_TARGET = $(BUILD_DIR)/x3daudio.dll
+X3DAUDIO_TARGET = $(BUILD_DIR)/x3daudio1_7.dll
 X3DAUDIO_OBJ = $(X3DAUDIO_SRC:%.cpp=$(BUILD_DIR)/%.o)
 
 
@@ -92,10 +96,10 @@ $(BUILD_DIR)/%_x27.o:%.cpp
 	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=7 -c -o $@ $<
 
 $(BUILD_DIR)/%_x28.o:%.cpp
-	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=8 -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=8 -DUNICODE -c -o $@ $<
 
 $(BUILD_DIR)/%_x29.o:%.cpp
-	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=9 -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=9 -DUNICODE -c -o $@ $<
 
 all: $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \
      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
@@ -105,37 +109,41 @@ $(XAPO_TARGET): directories $(XAPO_OBJ)
 	$(AR) rcs $@ $(XAPO_OBJ)
 
 $(XAUDIO20_TARGET) : directories $(XAUDIO20_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO20_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO20_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO21_TARGET) : directories $(XAUDIO21_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO21_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO21_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO22_TARGET) : directories $(XAUDIO22_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO22_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO22_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO23_TARGET) : directories $(XAUDIO23_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO23_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO23_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO24_TARGET) : directories $(XAUDIO24_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO24_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO24_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO25_TARGET) : directories $(XAUDIO25_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO25_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO25_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO26_TARGET) : directories $(XAUDIO26_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO26_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO26_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO27_TARGET) : directories $(XAUDIO27_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO27_OBJ) $(XAPO_TARGET) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO27_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO28_TARGET) : directories $(XAUDIO28_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO28_OBJ) $(XAPO_TARGET) ../FAudio.a -lsetupapi
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO28_OBJ) $(XAPO_TARGET) $(LDFLAGS) -lsetupapi
 
 $(XAUDIO29_TARGET) : directories $(XAUDIO29_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(XAUDIO29_OBJ) $(XAPO_TARGET) ../FAudio.a -lsetupapi
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO29_OBJ) $(XAPO_TARGET) $(LDFLAGS) -lsetupapi
 
 $(X3DAUDIO_TARGET) : directories $(X3DAUDIO_OBJ)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(X3DAUDIO_OBJ) ../FAudio.a
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(X3DAUDIO_OBJ) $(LDFLAGS)
+	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_3.dll
+	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_4.dll
+	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_5.dll
+	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_6.dll
 
 $(BUILD_DIR)/xaudiodll_x20.o: xaudio2_7.def
 	$(DLLTOOL) -d $< -e $@
@@ -147,10 +155,11 @@ $(BUILD_DIR)/xaudiodll_x28.o: xaudio2_9.def
 
 directories:
 	mkdir -p $(BUILD_DIR)
-
+	cp ../FAudio.dll $(BUILD_DIR)
 
 clean:
 	rm -f $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \
 	      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
-	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) $(BUILD_DIR)/*.o
+	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \
+	      $(BUILD_DIR)/*.o $(BUILD_DIR)/*.dll
 	rmdir $(BUILD_DIR)

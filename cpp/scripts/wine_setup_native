@@ -27,43 +27,42 @@ fi
 dll_path=$(pwd)
 
 function install_dll {
-	src_name=$1
-	dst_name=$2
+	name=$1
 	
 	# update registry
-	log=$(wine reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v $dst_name /d native /f 2>>/dev/null)
+	log=$(wine reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v $name /d native /f 2>>/dev/null)
 
 	if [ $? -ne 0 ]; then
-		echo "Failed to update registry for $dst_name"
+		echo "Failed to update registry for $name"
 		exit 1
 	fi
 
 	# link dll
-	ln -sf "$dll_path/$src_name.dll" "$wine_path/$dst_name.dll"
+	ln -sf "$dll_path/$name.dll" "$wine_path/$name.dll"
 
 	if [ $? -ne 0 ]; then
-		echo "Failed to create link for $dst_name"
+		echo "Failed to create link for $name"
 		exit 1
 	fi
 
-	echo "$dst_name: done"
+	echo "$name: done"
 }
 
-install_dll xaudio2_0 xaudio2_0
-install_dll xaudio2_1 xaudio2_1
-install_dll xaudio2_2 xaudio2_2
-install_dll xaudio2_3 xaudio2_3
-install_dll xaudio2_4 xaudio2_4
-install_dll xaudio2_5 xaudio2_5
-install_dll xaudio2_6 xaudio2_6
-install_dll xaudio2_7 xaudio2_7
-install_dll xaudio2_8 xaudio2_8
-install_dll xaudio2_9 xaudio2_9
+install_dll xaudio2_0 
+install_dll xaudio2_1 
+install_dll xaudio2_2 
+install_dll xaudio2_3 
+install_dll xaudio2_4 
+install_dll xaudio2_5 
+install_dll xaudio2_6 
+install_dll xaudio2_7 
+install_dll xaudio2_8 
+install_dll xaudio2_9 
 
-install_dll x3daudio x3daudio1_3
-install_dll x3daudio x3daudio1_4
-install_dll x3daudio x3daudio1_5
-install_dll x3daudio x3daudio1_6
-install_dll x3daudio x3daudio1_7
+install_dll x3daudio1_3
+install_dll x3daudio1_4
+install_dll x3daudio1_5 
+install_dll x3daudio1_6
+install_dll x3daudio1_7
 
-cp "$dll_path/../../FAudio.dll" "$wine_path/FAudio.dll"
+ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
