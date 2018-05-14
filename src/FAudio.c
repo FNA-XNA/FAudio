@@ -878,7 +878,9 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	LinkedList *list;
 	FAudioSubmixVoice *submix;
 
-	/* TODO: Lock, check for dependencies and fail if still in use */
+	FAudio_PlatformLockAudio(voice->audio);
+
+	/* TODO: Check for dependencies and fail if still in use */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
 		LinkedList_RemoveEntry(&voice->audio->sources, voice);
@@ -947,6 +949,8 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	{
 		FAudio_free(voice->channelVolume);
 	}
+
+	FAudio_PlatformUnlockAudio(voice->audio);
 	FAudio_Release(voice->audio);
 	FAudio_free(voice);
 }
