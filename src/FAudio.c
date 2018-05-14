@@ -1118,6 +1118,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	if (voice->src.active && entry != NULL)
 	{
 		entry = entry->next;
+		voice->src.bufferList->next = NULL;
 	}
 	else
 	{
