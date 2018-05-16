@@ -156,6 +156,7 @@ $(BUILD_DIR)/xaudiodll_x28.o: xaudio2_9.def
 directories:
 	mkdir -p $(BUILD_DIR)
 	cp ../FAudio.dll $(BUILD_DIR)
+	cp `sdl2-config --prefix`/bin/SDL2.dll $(BUILD_DIR)
 
 clean:
 	rm -f $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \

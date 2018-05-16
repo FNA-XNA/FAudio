@@ -66,3 +66,4 @@ install_dll x3daudio1_6
 install_dll x3daudio1_7
 
 ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
+ln -sf "$dll_path/SDL2.dll" "$wine_path/SDL2.dll"
