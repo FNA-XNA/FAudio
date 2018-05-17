@@ -14,10 +14,10 @@ Newer Visual Studio versions should be able to upgrade the 2010 solution (e.g. V
 
 The resulting DLLs can also be used as native DLLs with Wine.
 
-### Building Windows DLLs with MSYS / mingw-w64
+### Building Windows DLLs with MSYS / mingw-w64 on Windows
 The included ```Makefile``` has been tested to work with msys and mingw-w64 for both 32-bit and 64-bit builds.
 
-### Building native Wine DLLs with mingw-w64
+### Building native Wine DLLs with mingw-w64 on Linux
 Because cross-compiling is fun.
 
 #### Prerequisites
@@ -33,7 +33,7 @@ The project includes two shell scripts to set up your environment for cross-comp
 - cross-compile FACT: ```make clean all``` in the root directory of FACT
 - cross-compile the C++/COM wrapper: change to the ```cpp``` subdirectory and run ```make```
 
-The results are stored in either the ```build_win32``` or ```build_win64``` subdirectory. It might be a good idea to copy ```libFAudio.so``` from the base FACT directory to your build directory because it will be overwritten next time you compile FACT.
+The results are stored in either the ```build_win32``` or ```build_win64``` subdirectory. 
 
 ### Building builtin Wine DLLs 
 The C++/COM wrapper has a separate Makefile for building Wine linux shared libraries. It's assumed that you're running a 64-bit Linux system.
@@ -84,6 +84,9 @@ Please note: the version 2.8+ wrapper builtin DLLs do not implement device enume
 - Remove a dependency (e.g. ```FAudio.dll```), the application will fail to load the wrapper and hopefully show a nice error message.
     - Some applications (e.g. games using Wwise) will just try to use a different version of XAudio2 :-)
 - Use [Sysinternals Proces Monitor](https://docs.microsoft.com/en-us/sysinternals/downloads/procmon) to check which DLLs are loaded by the application
+
+## Redistributing the DLLs
+The COM wrapper DLLs depend on both FAudio.dll and SDL2.dll. During the build process they are copied to the output directory. Don't forget to include these DLLs when you want to use the binaries from another directory or on another computer.
 
 # Known Issues
 1. The application hangs when using the wrapper DLLs
