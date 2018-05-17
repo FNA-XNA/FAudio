@@ -1315,3 +1315,17 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	);
 	return 0;
 }
+
+/* FAudioMasteringVoice Interface */
+
+FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
+	FAudioMasteringVoice *voice,
+	uint32_t *pChannelMask
+) {
+	FAudio_assert(voice->type == FAUDIO_VOICE_MASTER);
+	FAudio_assert(voice->audio->mixFormat != NULL);
+	FAudio_assert(pChannelMask != NULL);
+
+	*pChannelMask = voice->audio->mixFormat->dwChannelMask;
+	return 0;
+}

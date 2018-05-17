@@ -5,15 +5,34 @@
 UNAME = $(shell uname)
 ARCH = $(shell uname -m)
 
-# Compiler
-ifeq ($(UNAME), Darwin)
-	CC = cc -arch i386 -arch x86_64 -mmacosx-version-min=10.6
-	TARGET = dylib
-else
-	TARGET = so
+LDFLAGS += `sdl2-config --libs`
+
+# Detect Windows target
+WINDOWS_TARGET=0
+ifeq ($(OS), Windows_NT) # cygwin/msys2
+	WINDOWS_TARGET=1
+endif
+ifneq (,$(findstring w64-mingw32,$(CC)))  # mingw-w64 on Linux
+	WINDOWS_TARGET=1
 endif
 
-CFLAGS += -g -Wall -pedantic -fpic -fPIC
+# Compiler
+ifeq ($(WINDOWS_TARGET),1)
+	TARGET_PREFIX = 
+	TARGET_SUFFIX = dll
+	LDFLAGS += -static-libgcc
+else ifeq ($(UNAME), Darwin)
+	CC = cc -arch i386 -arch x86_64 -mmacosx-version-min=10.6
+	CFLAGS += -fpic -fPIC
+	TARGET_PREFIX = lib
+	TARGET_SUFFIX = dylib
+else
+	CFLAGS += -fpic -fPIC
+	TARGET_PREFIX = lib
+	TARGET_SUFFIX = so
+endif
+
+CFLAGS += -g -Wall -pedantic 
 
 # Source lists
 FAUDIOSRC = \
@@ -34,13 +53,13 @@ FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
 # Targets
 
 all: $(FAUDIOOBJ)
-	$(CC) $(CFLAGS) -shared -o libFAudio.$(TARGET) $(FAUDIOOBJ) `sdl2-config --libs`
+	$(CC) $(CFLAGS) -shared -o $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) $(FAUDIOOBJ) $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
 
 clean:
-	rm -f $(FAUDIOOBJ) libFAudio.$(TARGET)
+	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
 
 .PHONY: test tool
 
