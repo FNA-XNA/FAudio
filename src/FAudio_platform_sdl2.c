@@ -77,6 +77,10 @@ void FAudio_PlatformAddRef()
 {
 	/* SDL tracks ref counts for each subsystem */
 	SDL_InitSubSystem(SDL_INIT_AUDIO);
+	FAudio_INTERNAL_InitConverterFunctions(
+		SDL_HasSSE2(),
+		SDL_HasNEON()
+	);
 }
 
 void FAudio_PlatformRelease()
