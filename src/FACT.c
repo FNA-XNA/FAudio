@@ -791,7 +791,6 @@ uint32_t FACTSoundBank_Play(
 		timeOffset,
 		&result
 	);
-	FACTCue_Play(result);
 	if (ppCue != NULL)
 	{
 		*ppCue = result;
@@ -801,6 +800,7 @@ uint32_t FACTSoundBank_Play(
 		/* AKA we get to Destroy() this ourselves */
 		result->managed = 1;
 	}
+	FACTCue_Play(result);
 	return 0;
 }
 
@@ -820,8 +820,6 @@ uint32_t FACTSoundBank_Play3D(
 		timeOffset,
 		&result
 	);
-	FACT3DApply(pDSPSettings, result);
-	FACTCue_Play(result);
 	if (ppCue != NULL)
 	{
 		*ppCue = result;
@@ -831,6 +829,8 @@ uint32_t FACTSoundBank_Play3D(
 		/* AKA we get to Destroy() this ourselves */
 		result->managed = 1;
 	}
+	FACT3DApply(pDSPSettings, result);
+	FACTCue_Play(result);
 	return 0;
 }
 
@@ -1506,6 +1506,12 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		if (obj->maxInstanceBehavior == 0) /* Fail */ \
 		{ \
 			/* FIXME: May need to delete stuff from SelectSound */ \
+			pCue->state |= FACT_STATE_STOPPED; \
+			pCue->state &= ~( \
+				FACT_STATE_PLAYING | \
+				FACT_STATE_STOPPING | \
+				FACT_STATE_PAUSED \
+			); \
 			FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio); \
 			return 1; \
 		} \
