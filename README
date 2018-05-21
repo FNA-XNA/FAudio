@@ -13,6 +13,11 @@ License
 -------
 FAudio is released under the zlib license. See LICENSE for details.
 
+About FAudio
+------------
+FAudio was written to be used for FNA's Audio/Media namespaces. We access this
+library via FAudio#, which you can find in the 'csharp/' directory.
+
 Dependencies
 ------------
 FAudio depends solely on SDL2. FAudio never explicitly uses the C runtime.
