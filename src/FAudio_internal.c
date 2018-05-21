@@ -756,8 +756,9 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	for (i = 0; i < totalSamples; i += 1)
 	{
 		/* TODO: SSE */
+		output[i] *= audio->master->volume;
 		output[i] = FAudio_clamp(
-			output[i] * audio->master->volume,
+			output[i],
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
