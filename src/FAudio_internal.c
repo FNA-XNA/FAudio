@@ -837,13 +837,13 @@ void FAudio_INTERNAL_SetDefaultMatrix(
 /* PCM Decoding */
 
 void (*FAudio_INTERNAL_Convert_S8_To_F32)(
-	const int8_t *src,
-	float *dst,
+	const int8_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 );
 void (*FAudio_INTERNAL_Convert_S16_To_F32)(
-	const int16_t *src,
-	float *dst,
+	const int16_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 );
 
@@ -1179,8 +1179,8 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 void FAudio_INTERNAL_Convert_S8_To_F32_Scalar(
-	const int8_t *src,
-	float *dst,
+	const int8_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 ) {
 	uint32_t i;
@@ -1191,8 +1191,8 @@ void FAudio_INTERNAL_Convert_S8_To_F32_Scalar(
 }
 
 void FAudio_INTERNAL_Convert_S16_To_F32_Scalar(
-	const int16_t *src,
-	float *dst,
+	const int16_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 ) {
 	uint32_t i;
@@ -1205,8 +1205,8 @@ void FAudio_INTERNAL_Convert_S16_To_F32_Scalar(
 
 #if HAVE_SSE2_INTRINSICS
 void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
-	const int8_t *src,
-	float *dst,
+	const int8_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 ) {
     int i;
@@ -1259,8 +1259,8 @@ void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
 }
 
 void FAudio_INTERNAL_Convert_S16_To_F32_SSE2(
-	const int16_t *src,
-	float *dst,
+	const int16_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 ) {
     int i;
@@ -1304,8 +1304,8 @@ void FAudio_INTERNAL_Convert_S16_To_F32_SSE2(
 
 #if HAVE_NEON_INTRINSICS
 void FAudio_INTERNAL_Convert_S8_To_F32_NEON(
-	const int8_t *src,
-	float *dst,
+	const int8_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 ) {
     int i;
@@ -1350,8 +1350,8 @@ void FAudio_INTERNAL_Convert_S8_To_F32_NEON(
 }
 
 void FAudio_INTERNAL_Convert_S16_To_F32_NEON(
-	const int16_t *src,
-	float *dst,
+	const int16_t *restrict src,
+	float *restrict dst,
 	uint32_t len
 ) {
     int i;
