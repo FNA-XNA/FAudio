@@ -13,6 +13,18 @@ License
 -------
 FAudio is released under the zlib license. See LICENSE for details.
 
+Dependencies
+------------
+FAudio depends solely on SDL2. FAudio never explicitly uses the C runtime.
+
+Building FAudio
+---------------
+For *nix platforms, just type `make` in the root directory!
+
+For Windows, see the 'visualc/' directory.
+
+For Xbox One, see the 'visualc-winrt/' directory.
+
 Found an issue?
 ---------------
 Issues and patches can be reported via GitHub:
