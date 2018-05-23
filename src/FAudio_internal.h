@@ -37,6 +37,7 @@
 
 #ifdef _WIN32
 #define inline __inline
+#define restrict __restrict
 #endif
 
 /* Linked Lists */
