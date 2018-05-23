@@ -1506,7 +1506,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		tmp = pCue->parentBank->cueList; \
 		if (obj->maxInstanceBehavior == 0) /* Fail */ \
 		{ \
-			/* FIXME: May need to delete stuff from SelectSound */ \
 			pCue->state |= FACT_STATE_STOPPED; \
 			pCue->state &= ~( \
 				FACT_STATE_PLAYING | \
@@ -1640,8 +1639,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
-	uint8_t i;
-
 	if (pCue->state & FACT_STATE_STOPPED)
 	{
 		return 0;
@@ -1672,27 +1669,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		}
 		else if (pCue->active & 0x02)
 		{
-			for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
-			{
-				if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
-				{
-					FACTWave_Destroy(
-						pCue->playing.sound.tracks[i].activeWave.wave
-					);
-				}
-				if (pCue->playing.sound.tracks[i].upcomingWave.wave != NULL)
-				{
-					FACTWave_Destroy(
-						pCue->playing.sound.tracks[i].upcomingWave.wave
-					);
-				}
-				FAudio_free(pCue->playing.sound.tracks[i].events);
-			}
-			FAudio_free(pCue->playing.sound.tracks);
-
-			pCue->parentBank->parentEngine->categories[
-				pCue->playing.sound.sound->category
-			].instanceCount -= 1;
+			FACT_INTERNAL_DestroySound(pCue);
 		}
 		pCue->data->instanceCount -= 1;
 		pCue->active = 0;

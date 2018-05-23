@@ -532,6 +532,32 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	}
 }
 
+void FACT_INTERNAL_DestroySound(FACTCue *cue)
+{
+	uint8_t i;
+	for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+	{
+		if (cue->playing.sound.tracks[i].activeWave.wave != NULL)
+		{
+			FACTWave_Destroy(
+				cue->playing.sound.tracks[i].activeWave.wave
+			);
+		}
+		if (cue->playing.sound.tracks[i].upcomingWave.wave != NULL)
+		{
+			FACTWave_Destroy(
+				cue->playing.sound.tracks[i].upcomingWave.wave
+			);
+		}
+		FAudio_free(cue->playing.sound.tracks[i].events);
+	}
+	FAudio_free(cue->playing.sound.tracks);
+
+	cue->parentBank->parentEngine->categories[
+		cue->playing.sound.sound->category
+	].instanceCount -= 1;
+}
+
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue)
 {
 	/* TODO */
@@ -953,17 +979,11 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			/* New sound, time for death! */
 			if (cue->active)
 			{
-				active = &cue->playing.sound;
-				for (i = 0; i < active->sound->trackCount; i += 1)
-				if (active->tracks[i].activeWave.wave != NULL)
-				{
-					FACTWave_Destroy(active->tracks[i].activeWave.wave);
-				}
+				FACT_INTERNAL_DestroySound(cue);
 			}
 			cue->start = elapsed;
 			cue->elapsed = 0;
 
-			/* FIXME: Free SelectSound leaks! */
 			FACT_INTERNAL_SelectSound(cue);
 		}
 	}
