@@ -1298,6 +1298,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 
 	LinkedList_RemoveEntry(&pWave->parentBank->waveList, pWave);
 
+	FAudioVoice_DestroyVoice(pWave->voice);
 	if (pWave->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
