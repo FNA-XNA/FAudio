@@ -201,7 +201,7 @@ void FACT_INTERNAL_GetNextWave(
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxPitch - evt->wave.minPitch)
 		) + evt->wave.minPitch;
-		if (evtInst->loopCount < evt->wave.loopCount)
+		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
 			if (evt->wave.variationFlags & 0x0100)
@@ -236,7 +236,7 @@ void FACT_INTERNAL_GetNextWave(
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxVolume - evt->wave.minVolume)
 		) + evt->wave.minVolume;
-		if (evtInst->loopCount < evt->wave.loopCount)
+		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
 			if (evt->wave.variationFlags & 0x0200)
@@ -283,7 +283,7 @@ void FACT_INTERNAL_GetNextWave(
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxFrequency - evt->wave.minFrequency)
 		);
-		if (evtInst->loopCount < evt->wave.loopCount)
+		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
 			if (evt->wave.variationFlags & 0x0C00)
