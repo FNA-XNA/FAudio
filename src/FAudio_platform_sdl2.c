@@ -557,7 +557,6 @@ double FAudio_fabs(double x)
 	return SDL_fabs(x);
 }
 
-
 float FAudio_cosf(float x)
 {
 	return SDL_cosf(x);
