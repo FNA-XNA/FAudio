@@ -151,6 +151,9 @@ typedef struct F3DAUDIO_VECTOR
 	float z;
 } F3DAUDIO_VECTOR;
 
+
+#pragma pack(push, 1)
+
 typedef struct F3DAUDIO_DISTANCE_CURVE_POINT
 {
 	float Distance;
@@ -238,6 +241,27 @@ F3DAUDIOAPI void F3DAudioCalculate(
 	uint32_t Flags,
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 );
+
+#define PARAM_CHECK_OK 1
+#define PARAM_CHECK_FAIL (!PARAM_CHECK_OK)
+
+F3DAUDIOAPI int F3DAudioCheckInitParams(
+    uint32_t SpeakerChannelMask,
+    float SpeedOfSound,
+	F3DAUDIO_HANDLE Instance
+);
+
+F3DAUDIOAPI int F3DAudioCheckCalculateParams(
+	const F3DAUDIO_HANDLE Instance,
+	const F3DAUDIO_LISTENER *pListener,
+	const F3DAUDIO_EMITTER *pEmitter,
+	uint32_t Flags,
+	F3DAUDIO_DSP_SETTINGS *pDSPSettings
+);
+
+F3DAUDIOAPI void F3DAudioInternalChecks();
+
+#pragma pack(pop)
 
 #ifdef __cplusplus
 }

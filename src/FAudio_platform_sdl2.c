@@ -552,6 +552,42 @@ double FAudio_ceil(double x)
 	return SDL_ceil(x);
 }
 
+double FAudio_fabs(double x)
+{
+	return SDL_fabs(x);
+}
+
+
+float FAudio_cosf(float x)
+{
+	return SDL_cosf(x);
+}
+
+float FAudio_sinf(float x)
+{
+	return SDL_sinf(x);
+}
+
+float FAudio_sqrtf(float x)
+{
+	return SDL_sqrtf(x);
+}
+
+float FAudio_acosf(float x)
+{
+	return SDL_acosf(x);
+}
+
+float FAudio_atan2f(float y, float x)
+{
+	return SDL_atan2f(y, x);
+}
+
+float FAudio_fabsf(float x)
+{
+	return SDL_fabsf(x);
+}
+
 uint32_t FAudio_timems()
 {
 	return SDL_GetTicks();
