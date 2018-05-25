@@ -28,7 +28,7 @@
 #include "FAudio_internal.h"
 
 #include <math.h> /* ONLY USE THIS FOR isnan! */
-#include <float.h> /* Adrien: required for FLT_MIN/FLT_MAX */
+#include <float.h> /* ONLY USE THIS FOR FLT_MIN/FLT_MAX! */
 
 /* VS2010 doesn't define isnan (which is C99), so here it is. */
 #if defined(_MSC_VER) && !defined(isnan)
