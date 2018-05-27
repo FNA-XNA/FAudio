@@ -25,6 +25,7 @@
  */
 
 #include "FAudio.h"
+#include "FAPOBase.h"
 
 #ifdef FAUDIO_UNKNOWN_PLATFORM
 #include <assert.h>
@@ -36,6 +37,7 @@
 
 #ifdef _WIN32
 #define inline __inline
+#define restrict __restrict
 #endif
 
 /* Linked Lists */
@@ -68,8 +70,7 @@ struct FAudioBufferEntry
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 );
@@ -92,12 +93,12 @@ struct FAudio
 	LinkedList *callbacks;
 	FAudioWaveFormatExtensible *mixFormat;
 
-	/* Temp storage for processing */
+	/* Temp storage for processing, interleaved PCM32F */
 	#define EXTRA_DECODE_PADDING 2
 	uint32_t decodeSamples;
 	uint32_t resampleSamples;
-	float *decodeCache; /* Deinterleaved PCM32F */
-	float *resampleCache; /* Interleaved PCM32F */
+	float *decodeCache;
+	float *resampleCache;
 };
 
 struct FAudioVoice
@@ -108,12 +109,19 @@ struct FAudioVoice
 
 	FAudioVoiceSends sends;
 	float **sendCoefficients;
-	FAudioEffectChain effects;
+	struct
+	{
+		uint32_t count;
+		FAudioEffectDescriptor *desc;
+		void **parameters;
+		uint32_t *parameterSizes;
+		uint8_t *parameterUpdates;
+	} effects;
 	FAudioFilterParameters filter;
 	FAudioFilterState *filterState;
 
 	float volume;
-	float channelVolume[2]; /* Assuming stereo input */
+	float *channelVolume;
 
 	union
 	{
@@ -132,7 +140,7 @@ struct FAudioVoice
 
 			/* Read-only */
 			float maxFreqRatio;
-			FAudioWaveFormatEx format;
+			FAudioWaveFormatEx format; /* TODO: WaveFormatExtensible! */
 			FAudioDecodeCallback decode;
 			FAudioVoiceCallback *callback;
 
@@ -173,23 +181,25 @@ struct FAudioVoice
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
+void FAudio_INTERNAL_SetDefaultMatrix(
+	float *matrix,
+	uint32_t srcChannels,
+	uint32_t dstChannels
+);
+void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 
 #define DECODE_FUNC(type) \
 	extern void FAudio_INTERNAL_Decode##type( \
 		FAudioBuffer *buffer, \
 		uint32_t curOffset, \
-		float *decodeCacheL, \
-		float *decodeCacheR, \
+		float *decodeCache, \
 		uint32_t samples, \
 		FAudioWaveFormatEx *format \
 	);
-DECODE_FUNC(MonoPCM8)
-DECODE_FUNC(MonoPCM16)
-DECODE_FUNC(MonoPCM32F)
+DECODE_FUNC(PCM8)
+DECODE_FUNC(PCM16)
+DECODE_FUNC(PCM32F)
 DECODE_FUNC(MonoMSADPCM)
-DECODE_FUNC(StereoPCM8)
-DECODE_FUNC(StereoPCM16)
-DECODE_FUNC(StereoPCM32F)
 DECODE_FUNC(StereoMSADPCM)
 #undef DECODE_FUNC
 
@@ -232,9 +242,12 @@ void FAudio_free(void *ptr);
 void FAudio_zero(void *ptr, size_t size);
 void FAudio_memcpy(void *dst, const void *src, size_t size);
 void FAudio_memmove(void *dst, void *src, size_t size);
+int FAudio_memcmp(const void *ptr1, const void *ptr2, size_t size);
+
 size_t FAudio_strlen(const char *ptr);
 int FAudio_strcmp(const char *str1, const char *str2);
 void FAudio_strlcpy(char *dst, const char *src, size_t len);
+
 double FAudio_pow(double x, double y);
 double FAudio_log10(double x);
 double FAudio_sqrt(double x);

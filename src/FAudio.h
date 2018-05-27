@@ -79,6 +79,8 @@ typedef uint32_t FAudioProcessor;
 
 /* Structures */
 
+#pragma pack(push, 1)
+
 typedef struct FAudioGUID
 {
 	uint32_t Data1;
@@ -87,7 +89,6 @@ typedef struct FAudioGUID
 	uint8_t Data4[8];
 } FAudioGUID;
 
-#pragma pack(push, 1)
 typedef struct FAudioWaveFormatEx
 {
 	uint16_t wFormatTag;
@@ -136,7 +137,6 @@ typedef struct FAudioADPCMWaveFormat
 	 * }
 	 */
 } FAudioADPCMWaveFormat;
-#pragma pack(pop)
 
 typedef struct FAudioDeviceDetails
 {
@@ -238,6 +238,8 @@ typedef struct FAudioDebugConfiguration
 	uint8_t LogFunctionName;
 	uint8_t LogTiming;
 } FAudioDebugConfiguration;
+
+#pragma pack(pop)
 
 /* Constants */
 
@@ -376,6 +378,9 @@ FAUDIOAPI uint32_t FAudioCreate(
 	FAudioProcessor XAudio2Processor
 );
 
+/* Only for COM interopability! DO NOT USE THIS FUNCTION! */
+FAUDIOAPI uint32_t FAudio_Construct(FAudio **ppFAudio);
+
 FAUDIOAPI uint32_t FAudio_AddRef(FAudio *audio);
 
 FAUDIOAPI uint32_t FAudio_Release(FAudio *audio);
@@ -500,6 +505,7 @@ FAUDIOAPI uint32_t FAudioVoice_SetEffectParameters(
 
 FAUDIOAPI uint32_t FAudioVoice_GetEffectParameters(
 	FAudioVoice *voice,
+	uint32_t EffectIndex,
 	void *pParameters,
 	uint32_t ParametersByteSize
 );
@@ -625,6 +631,13 @@ FAUDIOAPI uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	uint32_t NewSourceSampleRate
 );
 
+/* FAudioMasteringVoice Interface */
+
+FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
+	FAudioMasteringVoice *voice,
+	uint32_t *pChannelMask
+);
+
 /* FAudioEngineCallback Interface */
 
 typedef void (FAUDIOCALL * OnCriticalErrorFunc)(
@@ -685,10 +698,6 @@ struct FAudioVoiceCallback
 	OnVoiceProcessingPassEndFunc OnVoiceProcessingPassEnd;
 	OnVoiceProcessingPassStartFunc OnVoiceProcessingPassStart;
 };
-
-/* Functions */
-
-FAUDIOAPI uint32_t FAudioCreateReverb(void **ppApo, uint32_t Flags);
 
 /* FAudio I/O API */
 

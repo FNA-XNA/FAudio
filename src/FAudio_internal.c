@@ -128,7 +128,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
-	uint32_t i, end, endRead, decoding, decoded = 0, resetOffset = 0;
+	uint32_t end, endRead, decoding, decoded = 0, resetOffset = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
@@ -153,8 +153,8 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 		}
 
 		/* Check for end-of-buffer */
-		end = (buffer->LoopCount > 0 && buffer->LoopLength > 0) ?
-			buffer->LoopLength :
+		end = (buffer->LoopCount > 0) ?
+			(buffer->LoopBegin + buffer->LoopLength) :
 			buffer->PlayLength;
 		endRead = FAudio_min(
 			end - voice->src.curBufferOffset,
@@ -165,8 +165,9 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 		voice->src.decode(
 			buffer,
 			voice->src.curBufferOffset,
-			voice->audio->decodeCache + decoded,
-			voice->audio->decodeCache + voice->src.decodeSamples + decoded,
+			voice->audio->decodeCache + (
+				decoded * voice->src.format.nChannels
+			),
 			endRead,
 			&voice->src.format
 		);
@@ -231,16 +232,16 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 					buffer = NULL;
 
 					/* FIXME: I keep going past the buffer so fuck it */
-					for (i = 0; i < voice->src.format.nChannels; i += 1)
-					{
-						FAudio_zero(
-							voice->audio->decodeCache + (
-								(i * voice->src.decodeSamples) +
-								(decoded + endRead)
-							),
-							(decoding - endRead) * sizeof(float)
-						);
-					}
+					FAudio_zero(
+						voice->audio->decodeCache + (
+							(decoded + endRead) *
+							voice->src.format.nChannels
+						),
+						sizeof(float) * (
+							(decoding - endRead) *
+							voice->src.format.nChannels
+						)
+					);
 				}
 			}
 		}
@@ -262,11 +263,7 @@ static void FAudio_INTERNAL_ResamplePCM(
 	/* Linear Resampler */
 	/* TODO: SSE */
 	uint32_t i, j;
-	float *dCache[2] =
-	{
-		voice->audio->decodeCache,
-		voice->audio->decodeCache + voice->src.decodeSamples
-	};
+	float *dCache = voice->audio->decodeCache;
 	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
@@ -274,8 +271,8 @@ static void FAudio_INTERNAL_ResamplePCM(
 		{
 			/* lerp, then convert to float value */
 			*(*resampleCache)++ = (float) (
-				dCache[j][0] +
-				(dCache[j][1] - dCache[j][0]) *
+				dCache[j] +
+				(dCache[j + voice->src.format.nChannels] - dCache[j]) *
 				FIXED_TO_DOUBLE(cur)
 			);
 		}
@@ -288,10 +285,7 @@ static void FAudio_INTERNAL_ResamplePCM(
 		 * Sometimes this will be 0 until cur accumulates
 		 * enough steps, especially for "slow" rates.
 		 */
-		for (j = 0; j < voice->src.format.nChannels; j += 1)
-		{
-			dCache[j] += cur >> FIXED_PRECISION;
-		}
+		dCache += (cur >> FIXED_PRECISION) * voice->src.format.nChannels;
 
 		/* Now that any integer has been added, drop it.
 		 * The offset pointer will preserve the total.
@@ -332,6 +326,69 @@ static inline void FAudio_INTERNAL_FilterVoice(
 		filterState[ci][BandPassFilter] = (filter->Frequency * filterState[ci][HighPassFilter]) + filterState[ci][BandPassFilter];
 		filterState[ci][NotchFilter] = filterState[ci][HighPassFilter] + filterState[ci][LowPassFilter];
 		samples[j * numChannels + ci] = filterState[ci][filter->Type];
+	}
+}
+
+static inline void FAudio_INTERNAL_ProcessEffectChain(
+	FAudioVoice *voice,
+	uint32_t channels,
+	uint32_t sampleRate,
+	float *buffer,
+	uint32_t samples
+) {
+	uint32_t i;
+	FAPOParametersBase *fapo;
+	FAudioWaveFormatEx fmt;
+	FAPOLockForProcessBufferParameters lockParams;
+	FAPOProcessBufferParameters params;
+
+	/* FIXME: This always assumes in-place processing is supported */
+
+	/* Lock in formats that the APO will expect for processing */
+	fmt.wFormatTag = 3;
+	fmt.nChannels = channels;
+	fmt.nSamplesPerSec = sampleRate;
+	fmt.nAvgBytesPerSec = sampleRate * channels * 4;
+	fmt.nBlockAlign = 4;
+	fmt.wBitsPerSample = 32;
+	fmt.cbSize = 0;
+	lockParams.pFormat = &fmt;
+	lockParams.MaxFrameCount = samples;
+
+	/* Set up the buffer to be written into */
+	params.pBuffer = buffer;
+	params.BufferFlags = FAPO_BUFFER_VALID;
+	params.ValidFrameCount = samples;
+
+	/* Update parameters, process! */
+	for (i = 0; i < voice->effects.count; i += 1)
+	{
+		fapo = (FAPOParametersBase*) voice->effects.desc[i].pEffect;
+		if (voice->effects.parameterUpdates[i])
+		{
+			fapo->parameters.SetParameters(
+				fapo,
+				voice->effects.parameters[i],
+				voice->effects.parameterSizes[i]
+			);
+			voice->effects.parameterUpdates[i] = 0;
+		}
+		fapo->base.base.LockForProcess(
+			fapo,
+			1,
+			&lockParams,
+			1,
+			&lockParams
+		);
+		fapo->base.base.Process(
+			fapo,
+			1,
+			&params,
+			1,
+			&params,
+			voice->effects.desc[i].InitialState
+		);
+		fapo->base.base.UnlockForProcess(fapo);
 	}
 }
 
@@ -414,15 +471,12 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		if (voice->src.resampleStep == FIXED_ONE)
 		{
 			/* Actually, just copy directly... */
-			for (i = 0; i < toResample; i += 1)
-			for (j = 0; j < voice->src.format.nChannels; j += 1)
-			{
-				/* TODO: SSE */
-				*resampleCache++ = *(voice->audio->decodeCache + (
-					(j * voice->src.decodeSamples) +
-					i
-				));
-			}
+			FAudio_memcpy(
+				resampleCache,
+				voice->audio->decodeCache,
+				toResample * voice->src.format.nChannels * sizeof(float)
+			);
+			resampleCache += toResample * voice->src.format.nChannels;
 		}
 		else
 		{
@@ -461,8 +515,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		goto end;
 	}
 
-	/* TODO: Effects */
-
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
@@ -472,6 +524,18 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->audio->resampleCache,
 			mixed,
 			voice->src.format.nChannels
+		);
+	}
+
+	/* Process effect chain */
+	if (voice->effects.count > 0)
+	{
+		FAudio_INTERNAL_ProcessEffectChain(
+			voice,
+			voice->src.format.nChannels,
+			voice->src.format.nSamplesPerSec,
+			voice->audio->resampleCache,
+			mixed
 		);
 	}
 
@@ -496,17 +560,18 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		for (ci = 0; ci < voice->src.format.nChannels; ci += 1)
 		{
 			/* Include source/channel volumes in the mix! */
+			stream[j * oChan + co] += (
+				voice->audio->resampleCache[
+					j * voice->src.format.nChannels + ci
+				] *
+				voice->channelVolume[ci] *
+				voice->volume *
+				voice->sendCoefficients[i][
+					co * voice->src.format.nChannels + ci
+				]
+			);
 			stream[j * oChan + co] = FAudio_clamp(
-				stream[j * oChan + co] + (
-					voice->audio->resampleCache[
-						j * voice->src.format.nChannels + ci
-					] *
-					voice->channelVolume[ci] *
-					voice->volume *
-					voice->sendCoefficients[i][
-						co * voice->src.format.nChannels + ci
-					]
-				),
+				stream[j * oChan + co],
 				-FAUDIO_MAX_VOLUME_LEVEL,
 				FAUDIO_MAX_VOLUME_LEVEL
 			);
@@ -551,15 +616,14 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	for (i = 0; i < resampled; i += 1)
 	{
 		/* TODO: SSE */
+		voice->audio->resampleCache[i] *= voice->volume;
 		voice->audio->resampleCache[i] = FAudio_clamp(
-			voice->audio->resampleCache[i] * voice->volume,
+			voice->audio->resampleCache[i],
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
 	}
 	resampled /= voice->mix.inputChannels;
-
-	/* TODO: Effects */
 
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
@@ -570,6 +634,18 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->audio->resampleCache,
 			resampled,
 			voice->mix.inputChannels
+		);
+	}
+
+	/* Process effect chain */
+	if (voice->effects.count > 0)
+	{
+		FAudio_INTERNAL_ProcessEffectChain(
+			voice,
+			voice->mix.inputChannels,
+			voice->mix.inputSampleRate,
+			voice->audio->resampleCache,
+			resampled
 		);
 	}
 
@@ -593,16 +669,17 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		for (co = 0; co < oChan; co += 1)
 		for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
 		{
+			stream[j * oChan + co] += (
+				voice->audio->resampleCache[
+					j * voice->mix.inputChannels + ci
+				] *
+				voice->channelVolume[ci] *
+				voice->sendCoefficients[i][
+					co * voice->mix.inputChannels + ci
+				]
+			);
 			stream[j * oChan + co] = FAudio_clamp(
-				stream[j * oChan + co] + (
-					voice->audio->resampleCache[
-						j * voice->mix.inputChannels + ci
-					] *
-					voice->channelVolume[ci] *
-					voice->sendCoefficients[i][
-						co * voice->mix.inputChannels + ci
-					]
-				),
+				stream[j * oChan + co],
 				-FAUDIO_MAX_VOLUME_LEVEL,
 				FAUDIO_MAX_VOLUME_LEVEL
 			);
@@ -679,14 +756,25 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	for (i = 0; i < totalSamples; i += 1)
 	{
 		/* TODO: SSE */
+		output[i] *= audio->master->volume;
 		output[i] = FAudio_clamp(
-			output[i] * audio->master->volume,
+			output[i],
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
 	}
 
-	/* TODO: Master effect chain processing */
+	/* Process master effect chain */
+	if (audio->master->effects.count > 0)
+	{
+		FAudio_INTERNAL_ProcessEffectChain(
+			audio->master,
+			audio->master->master.inputChannels,
+			audio->master->master.inputSampleRate,
+			output,
+			audio->updateSize
+		);
+	}
 
 	/* OnProcessingPassEnd callbacks */
 	list = audio->callbacks;
@@ -727,126 +815,84 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 	}
 }
 
-/* 8-bit PCM Decoding */
+static const float MATRIX_DEFAULTS[8][8][64] =
+{
+	#include "matrix_defaults.inl"
+};
 
-void FAudio_INTERNAL_DecodeMonoPCM8(
+void FAudio_INTERNAL_SetDefaultMatrix(
+	float *matrix,
+	uint32_t srcChannels,
+	uint32_t dstChannels
+) {
+	FAudio_assert(srcChannels > 0 && srcChannels < 9);
+	FAudio_assert(dstChannels > 0 && dstChannels < 9);
+	FAudio_memcpy(
+		matrix,
+		MATRIX_DEFAULTS[srcChannels - 1][dstChannels - 1],
+		srcChannels * dstChannels * sizeof(float)
+	);
+}
+
+/* PCM Decoding */
+
+void (*FAudio_INTERNAL_Convert_S8_To_F32)(
+	const int8_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+);
+void (*FAudio_INTERNAL_Convert_S16_To_F32)(
+	const int16_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+);
+
+void FAudio_INTERNAL_DecodePCM8(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED1,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED2
+	FAudioWaveFormatEx *format
 ) {
-	uint32_t i;
-	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
-		buffer->PlayBegin + curOffset
+	FAudio_INTERNAL_Convert_S8_To_F32(
+		((int8_t*) buffer->pAudioData) + (
+			curOffset * format->nChannels
+		),
+		decodeCache,
+		samples * format->nChannels
 	);
-	for (i = 0; i < samples; i += 1)
-	{
-		/* TODO: SSE */
-		*decodeCache++ = *buf++ / 128.0f;
-	}
 }
 
-void FAudio_INTERNAL_DecodeStereoPCM8(
-	FAudioBuffer *buffer,
-	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
-	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED
-) {
-	uint32_t i;
-	const int8_t *buf = ((int8_t*) buffer->pAudioData) + (
-		(buffer->PlayBegin + curOffset) * 2
-	);
-	for (i = 0; i < samples; i += 1)
-	{
-		/* TODO: SSE */
-		*decodeCacheL++ = *buf++ / 128.0f;
-		*decodeCacheR++ = *buf++ / 128.0f;
-	}
-}
-
-/* 16-bit PCM Decoding */
-
-void FAudio_INTERNAL_DecodeMonoPCM16(
+void FAudio_INTERNAL_DecodePCM16(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED1,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED2
+	FAudioWaveFormatEx *format
 ) {
-	uint32_t i;
-	const int16_t *buf = ((int16_t*) buffer->pAudioData) + (
-		buffer->PlayBegin + curOffset
+	FAudio_INTERNAL_Convert_S16_To_F32(
+		((int16_t*) buffer->pAudioData) + (
+			curOffset * format->nChannels
+		),
+		decodeCache,
+		samples * format->nChannels
 	);
-	for (i = 0; i < samples; i += 1)
-	{
-		/* TODO: SSE */
-		*decodeCache++ = *buf++ / 32768.0f;
-	}
 }
 
-void FAudio_INTERNAL_DecodeStereoPCM16(
-	FAudioBuffer *buffer,
-	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
-	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED
-) {
-	uint32_t i;
-	const int16_t *buf = ((int16_t*) buffer->pAudioData) + (
-		(buffer->PlayBegin + curOffset) * 2
-	);
-	for (i = 0; i < samples; i += 1)
-	{
-		/* TODO: SSE */
-		*decodeCacheL++ = *buf++ / 32768.0f;
-		*decodeCacheR++ = *buf++ / 32768.0f;
-	}
-}
-
-/* 32-bit float PCM Decoding */
-
-void FAudio_INTERNAL_DecodeMonoPCM32F(
+void FAudio_INTERNAL_DecodePCM32F(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED1,
 	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED2
+	FAudioWaveFormatEx *format
 ) {
-	const float *buf = ((float*) buffer->pAudioData) + (
-		buffer->PlayBegin + curOffset
-	);
 	FAudio_memcpy(
 		decodeCache,
-		buf,
-		sizeof(float) * samples
+		((float*) buffer->pAudioData) + (
+			curOffset * format->nChannels
+		),
+		sizeof(float) * samples * format->nChannels
 	);
-}
-
-void FAudio_INTERNAL_DecodeStereoPCM32F(
-	FAudioBuffer *buffer,
-	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
-	uint32_t samples,
-	FAudioWaveFormatEx *UNUSED
-) {
-	uint32_t i;
-	const float *buf = ((float*) buffer->pAudioData) + (
-		(buffer->PlayBegin + curOffset) * 2
-	);
-	for (i = 0; i < samples; i += 1)
-	{
-		/* TODO: SSE */
-		*decodeCacheL++ = *buf++;
-		*decodeCacheR++ = *buf++;
-	}
 }
 
 /* MSADPCM Decoding */
@@ -1003,12 +1049,11 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
 	float *decodeCache,
-	float *UNUSED,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 ) {
 	/* Loop variables */
-	uint32_t i, off, copy;
+	uint32_t copy;
 
 	/* Read pointers */
 	uint8_t *buf;
@@ -1038,11 +1083,12 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 			blockCache,
 			format->nBlockAlign
 		);
-		/* TODO: SSE */
-		for (i = 0, off = midOffset; i < copy; i += 1)
-		{
-			*decodeCache++ = blockCache[off++] / 32768.0f;
-		}
+		FAudio_INTERNAL_Convert_S16_To_F32(
+			blockCache + midOffset,
+			decodeCache,
+			copy
+		);
+		decodeCache += copy;
 		samples -= copy;
 		midOffset = 0;
 	}
@@ -1051,13 +1097,12 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	FAudioBuffer *buffer,
 	uint32_t curOffset,
-	float *decodeCacheL,
-	float *decodeCacheR,
+	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 ) {
 	/* Loop variables */
-	uint32_t i, off, copy;
+	uint32_t copy;
 
 	/* Read pointers */
 	uint8_t *buf;
@@ -1087,13 +1132,285 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 			blockCache,
 			format->nBlockAlign
 		);
-		/* TODO: SSE */
-		for (i = 0, off = midOffset * 2; i < copy; i += 1)
-		{
-			*decodeCacheL++ = blockCache[off++] / 32768.0f;
-			*decodeCacheR++ = blockCache[off++] / 32768.0f;
-		}
+		FAudio_INTERNAL_Convert_S16_To_F32(
+			blockCache + (midOffset * 2),
+			decodeCache,
+			copy * 2
+		);
+		decodeCache += copy * 2;
 		samples -= copy;
 		midOffset = 0;
 	}
+}
+
+/* Type Converters */
+
+/* The SSE/NEON converters are based on SDL_audiotypecvt:
+ * https://hg.libsdl.org/SDL/file/default/src/audio/SDL_audiotypecvt.c
+ */
+
+#ifdef __ARM_NEON__
+#include <arm_neon.h>
+#define HAVE_NEON_INTRINSICS 1
+#endif
+
+#ifdef __SSE2__
+#include <emmintrin.h>
+#define HAVE_SSE2_INTRINSICS 1
+#endif
+
+#if defined(__x86_64__) && HAVE_SSE2_INTRINSICS
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
+#elif __MACOSX__ && HAVE_SSE2_INTRINSICS
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* Mac OS X/Intel guarantees SSE2. */
+#elif defined(__ARM_ARCH) && (__ARM_ARCH >= 8) && HAVE_NEON_INTRINSICS
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* ARMv8+ promise NEON. */
+#elif defined(__APPLE__) && defined(__ARM_ARCH) && (__ARM_ARCH >= 7) && HAVE_NEON_INTRINSICS
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* All Apple ARMv7 chips promise NEON support. */
+#endif
+
+/* Set to zero if platform is guaranteed to use a SIMD codepath here. */
+#ifndef NEED_SCALAR_CONVERTER_FALLBACKS
+#define NEED_SCALAR_CONVERTER_FALLBACKS 1
+#endif
+
+#define DIVBY128 0.0078125f
+#define DIVBY32768 0.000030517578125f
+
+#if NEED_SCALAR_CONVERTER_FALLBACKS
+void FAudio_INTERNAL_Convert_S8_To_F32_Scalar(
+	const int8_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+	uint32_t i;
+	for (i = 0; i < len; i += 1)
+	{
+		*dst++ = *src++ * DIVBY128;
+	}
+}
+
+void FAudio_INTERNAL_Convert_S16_To_F32_Scalar(
+	const int16_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+	uint32_t i;
+	for (i = 0; i < len; i += 1)
+	{
+		*dst++ = *src++ * DIVBY32768;
+	}
+}
+#endif /* NEED_SCALAR_CONVERTER_FALLBACKS */
+
+#if HAVE_SSE2_INTRINSICS
+void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
+	const int8_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+    int i;
+    src += len - 1;
+    dst += len - 1;
+
+    /* Get dst aligned to 16 bytes (since buffer is growing, we don't have to worry about overreading from src) */
+    for (i = len; i && (((size_t) (dst-15)) & 15); --i, --src, --dst) {
+        *dst = ((float) *src) * DIVBY128;
+    }
+
+    src -= 15; dst -= 15;  /* adjust to read SSE blocks from the start. */
+    FAudio_assert(!i || ((((size_t) dst) & 15) == 0));
+
+    /* Make sure src is aligned too. */
+    if ((((size_t) src) & 15) == 0) {
+        /* Aligned! Do SSE blocks as long as we have 16 bytes available. */
+        const __m128i *mmsrc = (const __m128i *) src;
+        const __m128i zero = _mm_setzero_si128();
+        const __m128 divby128 = _mm_set1_ps(DIVBY128);
+        while (i >= 16) {   /* 16 * 8-bit */
+            const __m128i bytes = _mm_load_si128(mmsrc);  /* get 16 sint8 into an XMM register. */
+            /* treat as int16, shift left to clear every other sint16, then back right with sign-extend. Now sint16. */
+            const __m128i shorts1 = _mm_srai_epi16(_mm_slli_epi16(bytes, 8), 8);
+            /* right-shift-sign-extend gets us sint16 with the other set of values. */
+            const __m128i shorts2 = _mm_srai_epi16(bytes, 8);
+            /* unpack against zero to make these int32, shift to make them sign-extend, convert to float, multiply. Whew! */
+            const __m128 floats1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpacklo_epi16(shorts1, zero), 16), 16)), divby128);
+            const __m128 floats2 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpacklo_epi16(shorts2, zero), 16), 16)), divby128);
+            const __m128 floats3 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpackhi_epi16(shorts1, zero), 16), 16)), divby128);
+            const __m128 floats4 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpackhi_epi16(shorts2, zero), 16), 16)), divby128);
+            /* Interleave back into correct order, store. */
+            _mm_store_ps(dst, _mm_unpacklo_ps(floats1, floats2));
+            _mm_store_ps(dst+4, _mm_unpackhi_ps(floats1, floats2));
+            _mm_store_ps(dst+8, _mm_unpacklo_ps(floats3, floats4));
+            _mm_store_ps(dst+12, _mm_unpackhi_ps(floats3, floats4));
+            i -= 16; mmsrc--; dst -= 16;
+        }
+
+        src = (const int8_t *) mmsrc;
+    }
+
+    src += 15; dst += 15;  /* adjust for any scalar finishing. */
+
+    /* Finish off any leftovers with scalar operations. */
+    while (i) {
+        *dst = ((float) *src) * DIVBY128;
+        i--; src--; dst--;
+    }
+}
+
+void FAudio_INTERNAL_Convert_S16_To_F32_SSE2(
+	const int16_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+    int i;
+    src += len - 1;
+    dst += len - 1;
+
+    /* Get dst aligned to 16 bytes (since buffer is growing, we don't have to worry about overreading from src) */
+    for (i = len; i && (((size_t) (dst-7)) & 15); --i, --src, --dst) {
+        *dst = ((float) *src) * DIVBY32768;
+    }
+
+    src -= 7; dst -= 7;  /* adjust to read SSE blocks from the start. */
+    FAudio_assert(!i || ((((size_t) dst) & 15) == 0));
+
+    /* Make sure src is aligned too. */
+    if ((((size_t) src) & 15) == 0) {
+        /* Aligned! Do SSE blocks as long as we have 16 bytes available. */
+        const __m128 divby32768 = _mm_set1_ps(DIVBY32768);
+        while (i >= 8) {   /* 8 * 16-bit */
+            const __m128i ints = _mm_load_si128((__m128i const *) src);  /* get 8 sint16 into an XMM register. */
+            /* treat as int32, shift left to clear every other sint16, then back right with sign-extend. Now sint32. */
+            const __m128i a = _mm_srai_epi32(_mm_slli_epi32(ints, 16), 16);
+            /* right-shift-sign-extend gets us sint32 with the other set of values. */
+            const __m128i b = _mm_srai_epi32(ints, 16);
+            /* Interleave these back into the right order, convert to float, multiply, store. */
+            _mm_store_ps(dst, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi32(a, b)), divby32768));
+            _mm_store_ps(dst+4, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi32(a, b)), divby32768));
+            i -= 8; src -= 8; dst -= 8;
+        }
+    }
+
+    src += 7; dst += 7;  /* adjust for any scalar finishing. */
+
+    /* Finish off any leftovers with scalar operations. */
+    while (i) {
+        *dst = ((float) *src) * DIVBY32768;
+        i--; src--; dst--;
+    }
+}
+#endif /* HAVE_SSE2_INTRINSICS */
+
+#if HAVE_NEON_INTRINSICS
+void FAudio_INTERNAL_Convert_S8_To_F32_NEON(
+	const int8_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+    int i;
+    src += len - 1;
+    dst += len - 1;
+
+    /* Get dst aligned to 16 bytes (since buffer is growing, we don't have to worry about overreading from src) */
+    for (i = len; i && (((size_t) (dst-15)) & 15); --i, --src, --dst) {
+        *dst = ((float) *src) * DIVBY128;
+    }
+
+    src -= 15; dst -= 15;  /* adjust to read NEON blocks from the start. */
+    FAudio_assert(!i || ((((size_t) dst) & 15) == 0));
+
+    /* Make sure src is aligned too. */
+    if ((((size_t) src) & 15) == 0) {
+        /* Aligned! Do NEON blocks as long as we have 16 bytes available. */
+        const int8_t *mmsrc = (const int8_t *) src;
+        const float32x4_t divby128 = vdupq_n_f32(DIVBY128);
+        while (i >= 16) {   /* 16 * 8-bit */
+            const int8x16_t bytes = vld1q_s8(mmsrc);  /* get 16 sint8 into a NEON register. */
+            const int16x8_t int16hi = vmovl_s8(vget_high_s8(bytes));  /* convert top 8 bytes to 8 int16 */
+            const int16x8_t int16lo = vmovl_s8(vget_low_s8(bytes));   /* convert bottom 8 bytes to 8 int16 */
+            /* split int16 to two int32, then convert to float, then multiply to normalize, store. */
+            vst1q_f32(dst, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(int16hi))), divby128));
+            vst1q_f32(dst+4, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(int16hi))), divby128));
+            vst1q_f32(dst+8, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(int16lo))), divby128));
+            vst1q_f32(dst+12, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(int16lo))), divby128));
+            i -= 16; mmsrc -= 16; dst -= 16;
+        }
+
+        src = (const int8_t *) mmsrc;
+    }
+
+    src += 15; dst += 15;  /* adjust for any scalar finishing. */
+
+    /* Finish off any leftovers with scalar operations. */
+    while (i) {
+        *dst = ((float) *src) * DIVBY128;
+        i--; src--; dst--;
+    }
+}
+
+void FAudio_INTERNAL_Convert_S16_To_F32_NEON(
+	const int16_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+    int i;
+    src += len - 1;
+    dst += len - 1;
+
+    /* Get dst aligned to 16 bytes (since buffer is growing, we don't have to worry about overreading from src) */
+    for (i = len; i && (((size_t) (dst-7)) & 15); --i, --src, --dst) {
+        *dst = ((float) *src) * DIVBY32768;
+    }
+
+    src -= 7; dst -= 7;  /* adjust to read NEON blocks from the start. */
+    FAudio_assert(!i || ((((size_t) dst) & 15) == 0));
+
+    /* Make sure src is aligned too. */
+    if ((((size_t) src) & 15) == 0) {
+        /* Aligned! Do NEON blocks as long as we have 16 bytes available. */
+        const float32x4_t divby32768 = vdupq_n_f32(DIVBY32768);
+        while (i >= 8) {   /* 8 * 16-bit */
+            const int16x8_t ints = vld1q_s16((int16_t const *) src);  /* get 8 sint16 into a NEON register. */
+            /* split int16 to two int32, then convert to float, then multiply to normalize, store. */
+            vst1q_f32(dst, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(ints))), divby32768));
+            vst1q_f32(dst+4, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(ints))), divby32768));
+            i -= 8; src -= 8; dst -= 8;
+        }
+    }
+
+    src += 7; dst += 7;  /* adjust for any scalar finishing. */
+
+    /* Finish off any leftovers with scalar operations. */
+    while (i) {
+        *dst = ((float) *src) * DIVBY32768;
+        i--; src--; dst--;
+    }
+}
+#endif /* HAVE_NEON_INTRINSICS */
+
+void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON)
+{
+#if HAVE_SSE2_INTRINSICS
+	if (hasSSE2)
+	{
+		FAudio_INTERNAL_Convert_S8_To_F32 = FAudio_INTERNAL_Convert_S8_To_F32_SSE2;
+		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_SSE2;
+		return;
+	}
+#endif
+#if HAVE_NEON_INTRINSICS
+	if (hasNEON)
+	{
+		FAudio_INTERNAL_Convert_S8_To_F32 = FAudio_INTERNAL_Convert_S8_To_F32_NEON;
+		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
+		return;
+	}
+#endif
+#if NEED_SCALAR_CONVERTER_FALLBACKS
+	FAudio_INTERNAL_Convert_S8_To_F32 = FAudio_INTERNAL_Convert_S8_To_F32_Scalar;
+	FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_Scalar;
+#else
+	FAudio_assert(0 && "Need converter functions!");
+#endif
 }

@@ -24,6 +24,7 @@
  *
  */
 
+#include "FAudioFX.h"
 #include "FACT_internal.h"
 
 /* AudioEngine implementation */
@@ -190,7 +191,7 @@ uint32_t FACTAudioEngine_Initialize(
 		FAudio_CreateSubmixVoice(
 			pEngine->audio,
 			&pEngine->reverbVoice,
-			masterDetails.InputChannels,
+			1, /* Reverb will be omnidirectional */
 			masterDetails.InputSampleRate,
 			0,
 			0,
@@ -198,7 +199,8 @@ uint32_t FACTAudioEngine_Initialize(
 			&reverbChain
 		);
 
-		/* TODO: Release reverbDesc.pEffect */
+		/* We can release now, the submix owns this! */
+		FAPOBase_Release(reverbDesc.pEffect);
 	}
 #endif
 	return 0;
@@ -789,7 +791,6 @@ uint32_t FACTSoundBank_Play(
 		timeOffset,
 		&result
 	);
-	FACTCue_Play(result);
 	if (ppCue != NULL)
 	{
 		*ppCue = result;
@@ -799,6 +800,7 @@ uint32_t FACTSoundBank_Play(
 		/* AKA we get to Destroy() this ourselves */
 		result->managed = 1;
 	}
+	FACTCue_Play(result);
 	return 0;
 }
 
@@ -818,8 +820,6 @@ uint32_t FACTSoundBank_Play3D(
 		timeOffset,
 		&result
 	);
-	FACT3DApply(pDSPSettings, result);
-	FACTCue_Play(result);
 	if (ppCue != NULL)
 	{
 		*ppCue = result;
@@ -829,6 +829,8 @@ uint32_t FACTSoundBank_Play3D(
 		/* AKA we get to Destroy() this ourselves */
 		result->managed = 1;
 	}
+	FACT3DApply(pDSPSettings, result);
+	FACTCue_Play(result);
 	return 0;
 }
 
@@ -963,13 +965,19 @@ uint32_t FACTSoundBank_GetState(
 	FACTSoundBank *pSoundBank,
 	uint32_t *pdwState
 ) {
-	/* FIXME: Is there more to this than just checking INUSE? */
 	uint16_t i;
+	if (pSoundBank == NULL)
+	{
+		*pdwState = 0;
+		return 0;
+	}
+	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
 		if (pSoundBank->cues[i].instanceCount > 0)
 		{
-			return FACT_STATE_INUSE;
+			*pdwState |= FACT_STATE_INUSE;
+			return 0;
 		}
 	}
 	return 0;
@@ -1022,13 +1030,19 @@ uint32_t FACTWaveBank_GetState(
 	FACTWaveBank *pWaveBank,
 	uint32_t *pdwState
 ) {
-	/* FIXME: Is there more to this than just checking INUSE? */
 	uint32_t i;
+	if (pWaveBank == NULL)
+	{
+		*pdwState = 0;
+		return 0;
+	}
+	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pWaveBank->entryCount; i += 1)
 	{
 		if (pWaveBank->entryRefs[i] > 0)
 		{
-			return FACT_STATE_INUSE;
+			*pdwState |= FACT_STATE_INUSE;
+			return 0;
 		}
 	}
 	return 0;
@@ -1084,7 +1098,7 @@ uint32_t FACTWaveBank_Prepare(
 	FAudioBuffer buffer;
 	FAudioVoiceSends sends;
 	FAudioSendDescriptor send;
-	FAudioWaveFormatEx format;
+	FAudioADPCMWaveFormat format;
 	FACTWaveBankEntry *entry = &pWaveBank->entries[nWaveIndex];
 
 	*ppWave = (FACTWave*) FAudio_malloc(sizeof(FACTWave));
@@ -1119,16 +1133,28 @@ uint32_t FACTWaveBank_Prepare(
 	send.pOutputVoice = pWaveBank->parentEngine->master;
 	sends.SendCount = 1;
 	sends.pSends = &send;
-	format.wFormatTag = entry->Format.wFormatTag;
-	format.nChannels = entry->Format.nChannels;
-	format.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	format.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.nChannels;
-	format.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
-	if (format.wFormatTag == 0)
+	format.wfx.wFormatTag = entry->Format.wFormatTag;
+	format.wfx.nChannels = entry->Format.nChannels;
+	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
+	format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
+	if (format.wfx.wFormatTag == 0)
 	{
-		format.wFormatTag = 1; /* PCM */
+		format.wfx.wFormatTag = 1; /* PCM */
+		format.wfx.nBlockAlign = format.wfx.nChannels * format.wfx.wBitsPerSample / 8;
+		format.wfx.cbSize = 0;
 	}
-	else if (format.wFormatTag != 2) /* Includes 0x1 - XMA, 0x3 - WMA */
+	else if (format.wfx.wFormatTag == 2)
+	{
+		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
+		format.wfx.cbSize = (
+			sizeof(FAudioADPCMWaveFormat) -
+			sizeof(FAudioWaveFormatEx)
+		);
+		format.wSamplesPerBlock = (
+			((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2
+		);
+	}
+	else /* Includes 0x1 - XMA, 0x3 - WMA */
 	{
 		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
@@ -1145,7 +1171,7 @@ uint32_t FACTWaveBank_Prepare(
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
-		&format,
+		&format.wfx,
 		0,
 		4.0f,
 		(FAudioVoiceCallback*) &(*ppWave)->callback,
@@ -1155,20 +1181,20 @@ uint32_t FACTWaveBank_Prepare(
 	if (pWaveBank->streaming)
 	{
 		/* Init stream cache info */
-		if (format.wFormatTag == 1)
+		if (format.wfx.wFormatTag == 1)
 		{
 			(*ppWave)->streamSize = (
-				format.nSamplesPerSec *
-				format.nChannels *
-				(format.wBitsPerSample / 8)
+				format.wfx.nSamplesPerSec *
+				format.wfx.nChannels *
+				(format.wfx.wBitsPerSample / 8)
 			);
 		}
-		else if (format.wFormatTag == 2)
+		else if (format.wfx.wFormatTag == 2)
 		{
 			(*ppWave)->streamSize = (
-				format.nSamplesPerSec /
-				(((format.nBlockAlign / format.nChannels) - 6) * 2) *
-				format.nBlockAlign
+				format.wfx.nSamplesPerSec /
+				format.wSamplesPerBlock *
+				format.wfx.nBlockAlign
 			);
 		}
 		(*ppWave)->streamCache = (uint8_t*) FAudio_malloc((*ppWave)->streamSize);
@@ -1187,22 +1213,31 @@ uint32_t FACTWaveBank_Prepare(
 		);
 		buffer.PlayBegin = (*ppWave)->initialPosition;
 		buffer.PlayLength = entry->PlayRegion.dwLength;
-		if (format.wFormatTag == 1)
+		if (format.wfx.wFormatTag == 1)
 		{
-			buffer.PlayLength /= format.wBitsPerSample / 8;
-			buffer.PlayLength /= format.nChannels;
+			buffer.PlayLength /= format.wfx.wBitsPerSample / 8;
+			buffer.PlayLength /= format.wfx.nChannels;
 		}
-		else if (format.wFormatTag == 2)
+		else if (format.wfx.wFormatTag == 2)
 		{
 			buffer.PlayLength = (
 				buffer.PlayLength /
-				format.nBlockAlign *
-				(((format.nBlockAlign / format.nChannels) - 6) * 2)
+				format.wfx.nBlockAlign *
+				format.wSamplesPerBlock
 			);
 		}
-		buffer.LoopBegin = entry->LoopRegion.dwStartSample;
-		buffer.LoopLength = entry->LoopRegion.dwTotalSamples;
-		buffer.LoopCount = nLoopCount;
+		if (nLoopCount == 0)
+		{
+			buffer.LoopBegin = 0;
+			buffer.LoopLength = 0;
+			buffer.LoopCount = 0;
+		}
+		else
+		{
+			buffer.LoopBegin = entry->LoopRegion.dwStartSample;
+			buffer.LoopLength = entry->LoopRegion.dwTotalSamples;
+			buffer.LoopCount = nLoopCount;
+		}
 		buffer.pContext = NULL;
 		FAudioSourceVoice_SubmitSourceBuffer((*ppWave)->voice, &buffer, NULL);
 	}
@@ -1263,6 +1298,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 
 	LinkedList_RemoveEntry(&pWave->parentBank->waveList, pWave);
 
+	FAudioVoice_DestroyVoice(pWave->voice);
 	if (pWave->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
@@ -1464,16 +1500,18 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	FAudio_PlatformLockAudio(pCue->parentBank->parentEngine->audio);
 
-	/* Need an initial sound to play */
-	FACT_INTERNAL_SelectSound(pCue);
-
 	/* Instance Limits */
 	#define INSTANCE_BEHAVIOR(obj, match) \
 		wnr = NULL; \
 		tmp = pCue->parentBank->cueList; \
 		if (obj->maxInstanceBehavior == 0) /* Fail */ \
 		{ \
-			/* FIXME: May need to delete stuff from SelectSound */ \
+			pCue->state |= FACT_STATE_STOPPED; \
+			pCue->state &= ~( \
+				FACT_STATE_PLAYING | \
+				FACT_STATE_STOPPING | \
+				FACT_STATE_PAUSED \
+			); \
 			FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio); \
 			return 1; \
 		} \
@@ -1482,7 +1520,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			/* FIXME: How is this different from Replace Oldest? */ \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
@@ -1495,7 +1534,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		{ \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
 					wnr = tmp; \
@@ -1509,7 +1549,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			max.maxf = FACTVOLUME_MAX; \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					/*FIXME: tmp->playing.sound.volume < max.maxf &&*/ \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
@@ -1524,7 +1565,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			max.maxi = 0xFF; \
 			while (tmp != NULL) \
 			{ \
-				if (	match && \
+				if (	tmp != pCue && \
+					match && \
 					tmp->playing.sound.sound->priority < max.maxi && \
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
 				{ \
@@ -1565,6 +1607,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	data->instanceCount += 1;
 	#undef INSTANCE_BEHAVIOR
 
+	/* Need an initial sound to play */
+	FACT_INTERNAL_SelectSound(pCue);
+
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~(
 		FACT_STATE_PAUSED |
@@ -1594,8 +1639,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 {
-	uint8_t i;
-
 	if (pCue->state & FACT_STATE_STOPPED)
 	{
 		return 0;
@@ -1626,27 +1669,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		}
 		else if (pCue->active & 0x02)
 		{
-			for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
-			{
-				if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
-				{
-					FACTWave_Destroy(
-						pCue->playing.sound.tracks[i].activeWave.wave
-					);
-				}
-				if (pCue->playing.sound.tracks[i].upcomingWave.wave != NULL)
-				{
-					FACTWave_Destroy(
-						pCue->playing.sound.tracks[i].upcomingWave.wave
-					);
-				}
-				FAudio_free(pCue->playing.sound.tracks[i].events);
-			}
-			FAudio_free(pCue->playing.sound.tracks);
-
-			pCue->parentBank->parentEngine->categories[
-				pCue->playing.sound.sound->category
-			].instanceCount -= 1;
+			FACT_INTERNAL_DestroySound(pCue);
 		}
 		pCue->data->instanceCount -= 1;
 		pCue->active = 0;

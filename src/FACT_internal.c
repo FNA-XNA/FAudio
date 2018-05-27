@@ -53,7 +53,7 @@ void FACT_INTERNAL_GetNextWave(
 	FAudioVoiceSends reverbSends;
 #endif
 	const char *wbName;
-	FACTWaveBank *wb;
+	FACTWaveBank *wb = NULL;
 	LinkedList *list;
 	uint16_t wbTrack;
 	uint8_t wbIndex;
@@ -149,11 +149,10 @@ void FACT_INTERNAL_GetNextWave(
 	FAudio_assert(wb != NULL);
 
 	/* Generate the Wave */
-	/* For infinite loops with no variation, let Wave do the work */
 	if (evtInst->loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
 	{
+		/* For infinite loops with no variation, let Wave do the work */
 		loopCount = 255;
-		evtInst->loopCount = 0;
 	}
 	FACTWaveBank_Prepare(
 		wb,
@@ -201,8 +200,8 @@ void FACT_INTERNAL_GetNextWave(
 		const int16_t rngPitch = (int16_t) (
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxPitch - evt->wave.minPitch)
-		);
-		if (evtInst->loopCount < evt->wave.loopCount)
+		) + evt->wave.minPitch;
+		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
 			if (evt->wave.variationFlags & 0x0100)
@@ -237,7 +236,7 @@ void FACT_INTERNAL_GetNextWave(
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxVolume - evt->wave.minVolume)
 		) + evt->wave.minVolume;
-		if (evtInst->loopCount < evt->wave.loopCount)
+		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
 			if (evt->wave.variationFlags & 0x0200)
@@ -284,7 +283,7 @@ void FACT_INTERNAL_GetNextWave(
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxFrequency - evt->wave.minFrequency)
 		);
-		if (evtInst->loopCount < evt->wave.loopCount)
+		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
 			if (evt->wave.variationFlags & 0x0C00)
@@ -322,7 +321,15 @@ void FACT_INTERNAL_GetNextWave(
 	}
 
 	/* Try to change loop counter at the very end */
-	if (evtInst->loopCount > 0)
+	if (evtInst->loopCount == 255)
+	{
+		/* For infinite loops with no variation, Wave does the work */
+		if (!(evt->wave.variationFlags & 0x0F00))
+		{
+			evtInst->loopCount = 0;
+		}
+	}
+	else if (evtInst->loopCount > 0)
 	{
 		evtInst->loopCount -= 1;
 	}
@@ -333,7 +340,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	uint16_t i, j;
 	float max, next, weight;
 	const char *wbName;
-	FACTWaveBank *wb;
+	FACTWaveBank *wb = NULL;
 	LinkedList *list;
 	FACTEvent *evt;
 	FACTEventInstance *evtInst;
@@ -530,6 +537,32 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			}
 		}
 	}
+}
+
+void FACT_INTERNAL_DestroySound(FACTCue *cue)
+{
+	uint8_t i;
+	for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+	{
+		if (cue->playing.sound.tracks[i].activeWave.wave != NULL)
+		{
+			FACTWave_Destroy(
+				cue->playing.sound.tracks[i].activeWave.wave
+			);
+		}
+		if (cue->playing.sound.tracks[i].upcomingWave.wave != NULL)
+		{
+			FACTWave_Destroy(
+				cue->playing.sound.tracks[i].upcomingWave.wave
+			);
+		}
+		FAudio_free(cue->playing.sound.tracks[i].events);
+	}
+	FAudio_free(cue->playing.sound.tracks);
+
+	cue->parentBank->parentEngine->categories[
+		cue->playing.sound.sound->category
+	].instanceCount -= 1;
 }
 
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue)
@@ -953,17 +986,11 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			/* New sound, time for death! */
 			if (cue->active)
 			{
-				active = &cue->playing.sound;
-				for (i = 0; i < active->sound->trackCount; i += 1)
-				if (active->tracks[i].activeWave.wave != NULL)
-				{
-					FACTWave_Destroy(active->tracks[i].activeWave.wave);
-				}
+				FACT_INTERNAL_DestroySound(cue);
 			}
 			cue->start = elapsed;
 			cue->elapsed = 0;
 
-			/* FIXME: Free SelectSound leaks! */
 			FACT_INTERNAL_SelectSound(cue);
 		}
 	}

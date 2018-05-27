@@ -81,7 +81,7 @@ public static class FAudio
 
 	/* Structures */
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public unsafe struct FAudioGUID
 	{
 		public uint Data1;
@@ -138,7 +138,7 @@ public static class FAudio
 		 */
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public unsafe struct FAudioDeviceDetails
 	{
 		public fixed short DeviceID[256]; /* Win32 wchar_t */
@@ -147,7 +147,7 @@ public static class FAudio
 		public FAudioWaveFormatExtensible OutputFormat;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioVoiceDetails
 	{
 		public uint CreationFlags;
@@ -155,21 +155,21 @@ public static class FAudio
 		public uint InputSampleRate;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioSendDescriptor
 	{
 		public uint Flags;
 		public IntPtr pOutputVoice; /* FAudioVoice* */
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioVoiceSends
 	{
 		public uint SendCount;
 		public IntPtr pSends; /* FAudioSendDescriptor* */
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioEffectDescriptor
 	{
 		public IntPtr pEffect; /* void* */
@@ -177,14 +177,14 @@ public static class FAudio
 		public uint OutputChannels;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioEffectChain
 	{
 		public uint EffectCount;
 		public IntPtr pEffectDescriptors; /* FAudioEffectDescriptor* */
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioFilterParameters
 	{
 		public FAudioFilterType Type;
@@ -192,7 +192,7 @@ public static class FAudio
 		public float OneOverQ;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioBuffer
 	{
 		public uint Flags;
@@ -206,14 +206,14 @@ public static class FAudio
 		public IntPtr pContext; /* void* */
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioBufferWMA
 	{
 		public IntPtr pDecodedPacketCumulativeBytes; /* const uint32_t* */
 		public uint PacketCount;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioVoiceState
 	{
 		public IntPtr pCurrentBufferContext; /* void* */
@@ -221,7 +221,7 @@ public static class FAudio
 		public ulong SamplesPlayed;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioPerformanceData
 	{
 		public ulong AudioCyclesSinceLastQuery;
@@ -240,7 +240,7 @@ public static class FAudio
 		public uint ActiveXmaStreams;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct FAudioDebugConfiguration
 	{
 		public uint TraceMask;
@@ -303,7 +303,7 @@ public static class FAudio
 	/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudioCreate(
-		out IntPtr ppFudio, /* FAudio** */
+		out IntPtr ppFAudio, /* FAudio** */
 		uint Flags,
 		uint XAudio2Processor /* FAudioProcessor */
 	);
@@ -468,6 +468,7 @@ public static class FAudio
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudioVoice_GetEffectParameters(
 		IntPtr voice, /* FAudioVoice* */
+		uint EffectIndex,
 		IntPtr pParameters, /* void* */
 		uint ParametersByteSize
 	);
@@ -697,13 +698,23 @@ public static class FAudio
 		public IntPtr OnVoiceProcessingPassStart; /* OnVoiceProcessingPassStartFunc */
 	}
 
-	/* Functions */
+	#endregion
 
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FAudioCreateReverb(
-		out IntPtr ppApo, /* void** */
-		uint Flags
-	);
+	#region FAudioFX API
+
+	/* TODO */
+
+	#endregion
+
+	#region FAPO API
+
+	/* TODO */
+
+	#endregion
+
+	#region FAPOBase API
+
+	/* TODO */
 
 	#endregion
 
@@ -1725,7 +1736,7 @@ public static class FAudio
 
 	/* Structures */
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_VECTOR
 	{
 		public float x;
@@ -1733,21 +1744,21 @@ public static class FAudio
 		public float z;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_DISTANCE_CURVE_POINT
 	{
 		public float Distance;
 		public float DSPSetting;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_DISTANCE_CURVE
 	{
 		IntPtr pPoints; /* F3DAUDIO_DISTANCE_CURVE_POINT* */
 		public uint PointCount;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_CONE
 	{
 		public float InnerAngle;
@@ -1760,7 +1771,7 @@ public static class FAudio
 		public float OuterReverb;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_LISTENER
 	{
 		public F3DAUDIO_VECTOR OrientFront;
@@ -1770,7 +1781,7 @@ public static class FAudio
 		public IntPtr pCone; /* F3DAUDIO_CONE* */
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_EMITTER
 	{
 		public IntPtr pCone; /* F3DAUDIO_CONE* */
@@ -1792,7 +1803,7 @@ public static class FAudio
 		public float DopplerScaler;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_DSP_SETTINGS
 	{
 		public IntPtr pMatrixCoefficients; /* float* */
@@ -1824,7 +1835,7 @@ public static class FAudio
 		ref F3DAUDIO_LISTENER pListener,
 		ref F3DAUDIO_EMITTER pEmitter,
 		uint Flags,
-		out F3DAUDIO_DSP_SETTINGS pDSPSettings
+		ref F3DAUDIO_DSP_SETTINGS pDSPSettings
 	);
 
 	#endregion
@@ -1905,7 +1916,7 @@ public static class FAudio
 		byte[] F3DInstance, // F3DAUDIO_HANDLE
 		ref F3DAUDIO_LISTENER pListener,
 		ref F3DAUDIO_EMITTER pEmitter,
-		out F3DAUDIO_DSP_SETTINGS pDSPSettings
+		ref F3DAUDIO_DSP_SETTINGS pDSPSettings
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -1919,25 +1930,17 @@ public static class FAudio
 	#region XNA Song API
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern IntPtr XNA_GenSong(
-		byte[] name,
-		out float seconds
-	);
-	public static IntPtr XNA_GenSong(
-		string name,
-		out float seconds
-	) {
-		return XNA_GenSong(
-			UTF8_ToNative(name),
-			out seconds
-		);
+	public static extern void XNA_SongInit();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void XNA_SongQuit();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern float XNA_PlaySong(byte[] name);
+	public static float XNA_PlaySong(string name)
+	{
+		return XNA_PlaySong(UTF8_ToNative(name));
 	}
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_DisposeSong(IntPtr song);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern void XNA_PlaySong(IntPtr song);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void XNA_PauseSong();

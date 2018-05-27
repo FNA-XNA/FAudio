@@ -15,7 +15,9 @@
     <ClCompile Include="..\src\FACT.c" />
     <ClCompile Include="..\src\FACT3D.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
+    <ClCompile Include="..\src\FAPOBase.c" />
     <ClCompile Include="..\src\FAudio.c" />
+    <ClCompile Include="..\src\FAudioFX.c" />
     <ClCompile Include="..\src\FAudio_internal.c" />
     <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
     <ClCompile Include="..\src\XNA_Song.c" />
@@ -25,7 +27,10 @@
     <ClInclude Include="..\src\FACT.h" />
     <ClInclude Include="..\src\FACT3D.h" />
     <ClInclude Include="..\src\FACT_internal.h" />
+    <ClInclude Include="..\src\FAPO.h" />
+    <ClInclude Include="..\src\FAPOBase.h" />
     <ClInclude Include="..\src\FAudio.h" />
+    <ClInclude Include="..\src\FAudioFX.h" />
     <ClInclude Include="..\src\FAudio_internal.h" />
     <ClInclude Include="..\src\stb.h" />
     <ClInclude Include="..\src\stb_vorbis.h" />

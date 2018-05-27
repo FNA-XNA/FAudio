@@ -496,6 +496,7 @@ void FACT_INTERNAL_GetNextWave(
 	FACTEventInstance *evtInst
 );
 void FACT_INTERNAL_SelectSound(FACTCue *cue);
+void FACT_INTERNAL_DestroySound(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
 void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
 

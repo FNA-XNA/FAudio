@@ -26,11 +26,11 @@
 
 #include "FAudio_internal.h"
 
+#define STB_VORBIS_NO_INTEGER_CONVERSION
 #include "stb_vorbis.h" /* TODO: Remove CRT dependency */
 
 /* Globals */
 
-uint32_t songRefcount = 0;
 float songVolume = 1.0f;
 FAudio *songAudio = NULL;
 FAudioMasteringVoice *songMaster = NULL;
@@ -46,10 +46,10 @@ uint8_t *songCache;
 void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
 	FAudioBuffer buffer;
-	uint32_t decoded = stb_vorbis_get_samples_short_interleaved(
+	uint32_t decoded = stb_vorbis_get_samples_float_interleaved(
 		activeSong,
 		activeSongInfo.channels,
-		(short*) songCache,
+		(float*) songCache,
 		activeSongInfo.sample_rate
 	);
 	if (decoded == 0)
@@ -59,7 +59,7 @@ void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 	buffer.Flags = (decoded < activeSongInfo.sample_rate) ?
 		FAUDIO_END_OF_STREAM :
 		0;
-	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(int16_t);
+	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(float);
 	buffer.pAudioData = songCache;
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = decoded;
@@ -87,92 +87,55 @@ void XNA_SongKill()
 		FAudio_free(songCache);
 		songCache = NULL;
 	}
-	activeSong = NULL;
-}
-
-void XNA_SongDevice_AddRef()
-{
-	songRefcount += 1;
-	if (songRefcount == 1)
+	if (activeSong != NULL)
 	{
-		FAudioCreate(&songAudio, 0, FAUDIO_DEFAULT_PROCESSOR);
-		FAudio_CreateMasteringVoice(
-			songAudio,
-			&songMaster,
-			FAUDIO_DEFAULT_CHANNELS,
-			48000, /* Should be 0, but SDL... */
-			0,
-			0,
-			NULL
-		);
-	}
-}
-
-void XNA_SongDevice_Release()
-{
-	if (songRefcount == 0)
-	{
-		return;
-	}
-	songRefcount -= 1;
-	if (songRefcount == 0)
-	{
-		XNA_SongKill();
-		FAudioVoice_DestroyVoice(songMaster);
-		FAudio_Release(songAudio);
+		stb_vorbis_close(activeSong);
+		activeSong = NULL;
 	}
 }
 
 /* "Public" API */
 
-FAUDIOAPI stb_vorbis* XNA_GenSong(const char* name, float *seconds)
+FAUDIOAPI void XNA_SongInit()
 {
-	stb_vorbis *result = stb_vorbis_open_filename(name, NULL, NULL);
-	if (result != NULL)
-	{
-		XNA_SongDevice_AddRef();
-	}
-	*seconds = stb_vorbis_stream_length_in_seconds(result);
-	return result;
+	FAudioCreate(&songAudio, 0, FAUDIO_DEFAULT_PROCESSOR);
+	FAudio_CreateMasteringVoice(
+		songAudio,
+		&songMaster,
+		FAUDIO_DEFAULT_CHANNELS,
+		48000, /* Should be 0, but SDL... */
+		0,
+		0,
+		NULL
+	);
 }
 
-FAUDIOAPI void XNA_DisposeSong(stb_vorbis *song)
+FAUDIOAPI void XNA_SongQuit()
 {
-	if (song == NULL)
-	{
-		return;
-	}
-	if (song == activeSong)
-	{
-		XNA_SongKill();
-	}
-	stb_vorbis_close(song);
-	XNA_SongDevice_Release();
+	XNA_SongKill();
+	FAudioVoice_DestroyVoice(songMaster);
+	FAudio_Release(songAudio);
 }
 
-FAUDIOAPI void XNA_PlaySong(stb_vorbis *song)
+FAUDIOAPI float XNA_PlaySong(const char *name)
 {
 	FAudioWaveFormatEx format;
-	if (song == NULL || song == activeSong)
-	{
-		return;
-	}
 	XNA_SongKill();
 
+	activeSong = stb_vorbis_open_filename(name, NULL, NULL);
+
 	/* Set format info */
-	activeSongInfo = stb_vorbis_get_info(song);
-	format.wFormatTag = 1;
+	activeSongInfo = stb_vorbis_get_info(activeSong);
+	format.wFormatTag = 3;
 	format.nChannels = activeSongInfo.channels;
 	format.nSamplesPerSec = activeSongInfo.sample_rate;
-	format.nAvgBytesPerSec = 0; /* FIXME */
-	format.nBlockAlign = 0; /* FIXME */
-	format.wBitsPerSample = 16;
+	format.wBitsPerSample = sizeof(float) * 8;
+	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
+	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 	format.cbSize = 0;
 
 	/* Allocate decode cache */
-	songCache = (uint8_t*) FAudio_malloc(
-		format.nSamplesPerSec * format.nChannels * sizeof(int16_t)
-	);
+	songCache = (uint8_t*) FAudio_malloc(format.nAvgBytesPerSec);
 
 	/* Init voice */
 	FAudio_zero(&callbacks, sizeof(FAudioVoiceCallback));
@@ -190,12 +153,12 @@ FAUDIOAPI void XNA_PlaySong(stb_vorbis *song)
 	FAudioVoice_SetVolume(songVoice, songVolume, 0);
 
 	/* Okay, this song is decoding now */
-	activeSong = song;
 	stb_vorbis_seek_start(activeSong);
 	XNA_SongSubmitBuffer(NULL, NULL);
 
 	/* Finally. */
 	FAudioSourceVoice_Start(songVoice, 0, 0);
+	return stb_vorbis_stream_length_in_seconds(activeSong);
 }
 
 FAUDIOAPI void XNA_PauseSong()
