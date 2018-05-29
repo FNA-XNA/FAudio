@@ -1168,6 +1168,7 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->callback.callback.OnVoiceProcessingPassEnd = NULL;
 	(*ppWave)->callback.callback.OnVoiceProcessingPassStart = NULL;
 	(*ppWave)->callback.wave = *ppWave;
+	(*ppWave)->srcChannels = format.wfx.nChannels;
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
@@ -1411,6 +1412,30 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	uint32_t uDstChannelCount,
 	float *pMatrixCoefficients
 ) {
+	uint32_t i;
+	float *mtxDst, *mtxSrc;
+
+	/* There seems to be this weird feature in XACT where the channel count
+	 * can be completely wrong and it'll go to the right place.
+	 * I guess these XACT functions do some extra work to merge coefficients
+	 * but I have no idea where it really happens and XAudio2 definitely
+	 * does NOT like it when this is wrong, so here it goes...
+	 * -flibit
+	 */
+	if (uSrcChannelCount == 1 && pWave->srcChannels == 2)
+	{
+		mtxDst = pMatrixCoefficients + ((uDstChannelCount - 1) * 2);
+		mtxSrc = pMatrixCoefficients + (uDstChannelCount - 1);
+		for (i = 0; i < uDstChannelCount; i += 1)
+		{
+			mtxDst[0] = *mtxSrc;
+			mtxDst[1] = *mtxSrc;
+			mtxDst -= 2;
+			mtxSrc -= 1;
+		}
+		uSrcChannelCount = 2;
+	}
+
 	FAudioVoice_SetOutputMatrix(
 		pWave->voice,
 		pWave->voice->sends.pSends->pOutputVoice,

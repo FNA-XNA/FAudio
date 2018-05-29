@@ -433,6 +433,7 @@ struct FACTWave
 	uint8_t *streamCache;
 
 	/* FAudio references */
+	uint16_t srcChannels;
 	FAudioSourceVoice *voice;
 	FACTWaveCallback callback;
 };
