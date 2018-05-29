@@ -78,10 +78,6 @@ void F3DAudioCalculate(
 ) {
 	F3DAUDIO_VECTOR emitterToListener;
 	float scaledSpeedOfSound;
-#if 0 /* TODO: F3DAUDIO_CALCULATE_MATRIX */
-	uint32_t i;
-	float *matrix = pDSPSettings->pMatrixCoefficients;
-#endif
 
 	/* Distance */
 	emitterToListener.x = pListener->Position.x - pEmitter->Position.x;
@@ -96,35 +92,12 @@ void F3DAudioCalculate(
 	/* MatrixCoefficients */
 	if (Flags & F3DAUDIO_CALCULATE_MATRIX)
 	{
-#if 0 /* TODO: Combine speaker azimuths with emitter/listener vector blah */
-		for (i = 0; i < pDSPSettings->SrcChannelCount; i += 1)
-		{
-			#define SPEAKER(pos) \
-				if (INSTANCE_SPEAKERMASK & SPEAKER_##pos) \
-				{ \
-					*matrix++ = pos##_AZIMUTH; \
-				}
-			#define SIDE_LEFT_AZIMUTH LEFT_AZIMUTH
-			#define SIDE_RIGHT_AZIMUTH RIGHT_AZIMUTH
-			SPEAKER(FRONT_LEFT)
-			SPEAKER(FRONT_RIGHT)
-			/* TODO: F3DAUDIO_CALCULATE_ZEROCENTER */
-			SPEAKER(FRONT_CENTER)
-			/* TODO: F3DAUDIO_CALCULATE_REDIRECT_TO_LFE */
-			SPEAKER(LOW_FREQUENCY)
-			SPEAKER(BACK_LEFT)
-			SPEAKER(BACK_RIGHT)
-			SPEAKER(FRONT_LEFT_OF_CENTER)
-			SPEAKER(FRONT_RIGHT_OF_CENTER)
-			SPEAKER(BACK_CENTER)
-			SPEAKER(SIDE_LEFT)
-			SPEAKER(SIDE_RIGHT)
-			#undef SPEAKER
-			#undef SIDE_LEFT_AZIMUTH
-			#undef SIDE_RIGHT_AZIMUTH
-			/* TODO: SPEAKER_TOP_*, Atmos support...? */
-		}
-#endif
+		/* TODO: F3DAUDIO_CALCULATE_MATRIX */
+		FAudio_INTERNAL_SetDefaultMatrix(
+			pDSPSettings->pMatrixCoefficients,
+			pDSPSettings->SrcChannelCount,
+			pDSPSettings->DstChannelCount
+		);
 	}
 
 	/* TODO: F3DAUDIO_CALCULATE_DELAY */
