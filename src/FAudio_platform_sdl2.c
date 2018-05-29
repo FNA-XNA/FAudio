@@ -153,13 +153,13 @@ void FAudio_PlatformInit(FAudio *audio)
 		}
 
 		/* Write up the format */
-		device->format.Format.wFormatTag = 1;
+		device->format.Format.wFormatTag = 3;
 		device->format.Format.nChannels = have.channels;
 		device->format.Format.nSamplesPerSec = have.freq;
 		device->format.Format.nAvgBytesPerSec = have.freq * 4;
-		device->format.Format.nBlockAlign = 0; /* ? */
+		device->format.Format.nBlockAlign = have.channels * 4;
 		device->format.Format.wBitsPerSample = 32;
-		device->format.Format.cbSize = 0; /* ? */
+		device->format.Format.cbSize = 0;
 		device->format.Samples.wValidBitsPerSample = 32;
 		if (have.channels == 1)
 		{
@@ -416,9 +416,13 @@ void FAudio_PlatformGetDeviceDetails(
 
 	/* FIXME: SDL needs a device format query function! */
 	details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
+	details->OutputFormat.Format.wFormatTag = 3;
 	details->OutputFormat.Format.nChannels = 2;
 	details->OutputFormat.Format.nSamplesPerSec = 48000;
-	details->OutputFormat.Samples.wValidBitsPerSample = 4;
+	details->OutputFormat.Format.nAvgBytesPerSec = 48000 * 4;
+	details->OutputFormat.Format.nBlockAlign = 2 * 4;
+	details->OutputFormat.Format.wBitsPerSample = 32;
+	details->OutputFormat.Samples.wValidBitsPerSample = 32;
 }
 
 FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(
