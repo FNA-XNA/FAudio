@@ -335,6 +335,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	uint32_t DeviceIndex,
 	const FAudioEffectChain *pEffectChain
 ) {
+	FAudioDeviceDetails details;
+
 	/* For now we only support one allocated master voice at a time */
 	FAudio_assert(audio->master == NULL);
 
@@ -352,8 +354,13 @@ uint32_t FAudio_CreateMasteringVoice(
 	FAudioVoice_SetEffectChain(*ppMasteringVoice, pEffectChain);
 
 	/* Master Properties */
-	(*ppMasteringVoice)->master.inputChannels = InputChannels;
-	(*ppMasteringVoice)->master.inputSampleRate = InputSampleRate;
+	FAudio_GetDeviceDetails(audio, DeviceIndex, &details);
+	(*ppMasteringVoice)->master.inputChannels = (InputChannels == FAUDIO_DEFAULT_CHANNELS) ?
+		details.OutputFormat.Format.nChannels :
+		InputChannels;
+	(*ppMasteringVoice)->master.inputSampleRate = (InputSampleRate == FAUDIO_DEFAULT_SAMPLERATE) ?
+		details.OutputFormat.Format.nSamplesPerSec :
+		InputSampleRate;
 	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
 
 	/* Platform Device */

@@ -103,7 +103,7 @@ FAUDIOAPI void XNA_SongInit()
 		songAudio,
 		&songMaster,
 		FAUDIO_DEFAULT_CHANNELS,
-		48000, /* Should be 0, but SDL... */
+		FAUDIO_DEFAULT_SAMPLERATE,
 		0,
 		0,
 		NULL

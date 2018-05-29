@@ -168,7 +168,7 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->audio,
 		&pEngine->master,
 		FAUDIO_DEFAULT_CHANNELS,
-		48000, /* Should be FAUDIO_DEFAULT_SAMPLERATE, but SDL... */
+		FAUDIO_DEFAULT_SAMPLERATE,
 		0,
 		deviceIndex,
 		NULL

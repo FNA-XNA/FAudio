@@ -126,16 +126,7 @@ void FAudio_PlatformInit(FAudio *audio)
 		device->engineList = entry;
 		device->next = NULL;
 
-		/* Enforce a default device format.
-		 * FIXME: The way SDL picks device defaults is fucking stupid.
-		 * It's basically just a bunch of hardcoding and the values used
-		 * are just awful:
-		 *
-		 * https://hg.libsdl.org/SDL/file/c3446901fc1c/src/audio/SDL_audio.c#l1087
-		 *
-		 * We should step in and see if we can't pull this from the OS.
-		 * -flibit
-		 */
+		/* Build the device format */
 		want.freq = audio->master->master.inputSampleRate;
 		want.format = AUDIO_F32;
 		want.channels = audio->master->master.inputChannels;
@@ -150,10 +141,7 @@ void FAudio_PlatformInit(FAudio *audio)
 			0,
 			&want,
 			&have,
-			(
-				SDL_AUDIO_ALLOW_CHANNELS_CHANGE |
-				SDL_AUDIO_ALLOW_FREQUENCY_CHANGE
-			)
+			0
 		);
 		if (device->device == 0)
 		{
@@ -212,15 +200,9 @@ void FAudio_PlatformInit(FAudio *audio)
 		audio->updateSize = device->bufferSize;
 		audio->mixFormat = &device->format;
 
-		/* Maybe also give it to the master voice */
-		if (audio->master->master.inputChannels == 0)
-		{
-			audio->master->master.inputChannels = have.channels;
-		}
-		if (audio->master->master.inputSampleRate == 0)
-		{
-			audio->master->master.inputSampleRate = have.freq;
-		}
+		/* Also give some info to the master voice */
+		audio->master->master.inputChannels = have.channels;
+		audio->master->master.inputSampleRate = have.freq;
 
 		/* Add to the device list */
 		if (devlist == NULL)
