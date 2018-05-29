@@ -419,7 +419,7 @@ void FAudio_PlatformGetDeviceDetails(
 	details->OutputFormat.Format.wFormatTag = 3;
 	details->OutputFormat.Format.nChannels = 2;
 	details->OutputFormat.Format.nSamplesPerSec = 48000;
-	details->OutputFormat.Format.nAvgBytesPerSec = 48000 * 4;
+	details->OutputFormat.Format.nAvgBytesPerSec = 48000 * 2 * 4;
 	details->OutputFormat.Format.nBlockAlign = 2 * 4;
 	details->OutputFormat.Format.wBitsPerSample = 32;
 	details->OutputFormat.Samples.wValidBitsPerSample = 32;
