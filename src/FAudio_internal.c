@@ -345,12 +345,12 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(
 	/* FIXME: This always assumes in-place processing is supported */
 
 	/* Lock in formats that the APO will expect for processing */
+	fmt.wBitsPerSample = 32;
 	fmt.wFormatTag = 3;
 	fmt.nChannels = channels;
 	fmt.nSamplesPerSec = sampleRate;
-	fmt.nAvgBytesPerSec = sampleRate * channels * 4;
-	fmt.nBlockAlign = 4;
-	fmt.wBitsPerSample = 32;
+	fmt.nBlockAlign = fmt.nChannels * (fmt.wBitsPerSample / 8);
+	fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
 	fmt.cbSize = 0;
 	lockParams.pFormat = &fmt;
 	lockParams.MaxFrameCount = samples;
