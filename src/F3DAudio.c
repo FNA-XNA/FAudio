@@ -286,7 +286,7 @@ static inline int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve)
 	for (i = 0; i < (pCurve->PointCount - 1); ++i)
 	{
 		PARAM_CHECK(
-			points[i].Distance < points[i].Distance,
+			points[i].Distance < points[i+1].Distance,
 			"Curve points must be in strict ascending order"
 		);
 	}
