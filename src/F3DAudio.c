@@ -459,7 +459,10 @@ static float ComputeDistanceAttenuation(
 		 * -Adrien
 		 */
 		size_t i = 1;
-		while ((i++ < n_points) && (normalizedDistance >= points[i].Distance));
+		while ((i < n_points) && (normalizedDistance >= points[i].Distance))
+		{
+			++i;
+		}
 		if (i == n_points)
 		{
 			res = points[n_points - 1].DSPSetting;
