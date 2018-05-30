@@ -948,7 +948,7 @@ static inline void ComputeEmitterChannelCoefficients(
 				continue;
 			}
 
-			pMatrixCoefficients[curSpeakerIdx * numSrcChannels + currentChannel] = energyPerChannel;
+			pMatrixCoefficients[curSpeakerIdx * numSrcChannels + currentChannel] += energyPerChannel;
 		}
 	}
 
@@ -998,8 +998,8 @@ static inline void ComputeEmitterChannelCoefficients(
 		i0 = infos[0]->matrixIdx;
 		i1 = infos[1]->matrixIdx;
 
-		pMatrixCoefficients[i0 * numSrcChannels + currentChannel] = (1.0f - val) * totalEnergy;
-		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] = (       val) * totalEnergy;
+		pMatrixCoefficients[i0 * numSrcChannels + currentChannel] += (1.0f - val) * totalEnergy;
+		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] += (       val) * totalEnergy;
 	}
 
 	if (diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] > 0.0f)
@@ -1051,14 +1051,14 @@ static inline void ComputeEmitterChannelCoefficients(
 		i0 = infos[0]->matrixIdx;
 		i1 = infos[1]->matrixIdx;
 
-		pMatrixCoefficients[i0 * numSrcChannels + currentChannel] = (1.0f - val) * totalEnergy;
-		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] = (       val) * totalEnergy;
+		pMatrixCoefficients[i0 * numSrcChannels + currentChannel] += (1.0f - val) * totalEnergy;
+		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] += (       val) * totalEnergy;
 	}
 
 	if (flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
 	{
 		FAudio_assert(curConfig->LFSpeakerIdx != -1);
-		pMatrixCoefficients[curConfig->LFSpeakerIdx * numSrcChannels + currentChannel] = attenuation;
+		pMatrixCoefficients[curConfig->LFSpeakerIdx * numSrcChannels + currentChannel] += attenuation;
 	}
 }
 
