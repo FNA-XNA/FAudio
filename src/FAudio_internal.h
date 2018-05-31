@@ -35,9 +35,21 @@
 #define FAudio_assert SDL_assert
 #endif
 
+/* Windows/Visual Studio cruft */
 #ifdef _WIN32
 #define inline __inline
-#define restrict __restrict
+#if defined(_MSC_VER)
+	#if (_MSC_VER >= 1700) /* VS2012+ */
+		#define restrict __restrict
+	#else /* VS2010- */
+		#define restrict
+	#endif
+#endif
+#endif
+
+/* C++ does not have restrict (though VS2012+ does have __restrict) */
+#if defined(__cplusplus) && !defined(restrict)
+#define restrict
 #endif
 
 /* Linked Lists */
