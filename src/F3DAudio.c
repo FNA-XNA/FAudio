@@ -1276,8 +1276,6 @@ static inline void CalculateDoppler(
 	float* DopplerFactor
 ) {
 	float scaledSpeedOfSound;
-
-	/* TODO: div by zero here if emitter and listener at same pos -Adrien */
 	*DopplerFactor = 1.0f;
 
 	/* Project... */
@@ -1308,12 +1306,13 @@ static inline void CalculateDoppler(
 			scaledSpeedOfSound
 		);
 
+		/* ... then Multiply. */
 		*DopplerFactor = (
 			SpeedOfSound - pEmitter->DopplerScaler * *listenerVelocityComponent
 		) / (
 			SpeedOfSound - pEmitter->DopplerScaler * *emitterVelocityComponent
 		);
-		if (isnan(*DopplerFactor))
+		if (isnan(*DopplerFactor)) /* If emitter/listener are at the same pos... */
 		{
 			*DopplerFactor = 1.0f;
 		}
@@ -1327,11 +1326,6 @@ static inline void CalculateDoppler(
 	}
 }
 
-/* Determined roughly.
- * Below that distance, the emitter angle is considered to be PI/2.
- */
-#define EMITTER_ANGLE_NULL_DISTANCE 1.2e-7
-
 void F3DAudioCalculate(
 	const F3DAUDIO_HANDLE Instance,
 	const F3DAUDIO_LISTENER *pListener,
@@ -1342,7 +1336,7 @@ void F3DAudioCalculate(
 	F3DAUDIO_VECTOR emitterToListener;
 	float eToLDistance, dp;
 
-	/* Distance */
+	/* For XACT, this calculates "Distance" */
 	emitterToListener = VectorSub(pListener->Position, pEmitter->Position);
 	eToLDistance = VectorLength(emitterToListener);
 	pDSPSettings->EmitterToListenerDistance = eToLDistance;
@@ -1364,31 +1358,7 @@ void F3DAudioCalculate(
 		);
 	}
 
-	if (Flags & F3DAUDIO_CALCULATE_DELAY)
-	{
-		FAudio_assert(0 && "DELAY not implemented!");
-	}
-
-	if (Flags & F3DAUDIO_CALCULATE_LPF_DIRECT)
-	{
-		/* A default value of 0.75 is fine as a zero order approximation. */
-		pDSPSettings->LPFDirectCoefficient = 0.75f;
-		FAudio_assert(0 && "LPF_DIRECT not implemented!");
-	}
-
-	if (Flags & F3DAUDIO_CALCULATE_LPF_REVERB)
-	{
-		/* Ditto. */
-		pDSPSettings->LPFReverbCoefficient = 0.75f;
-		FAudio_assert(0 && "LPF_REVERB not implemented!");
-	}
-
-	if (Flags & F3DAUDIO_CALCULATE_REVERB)
-	{
-		pDSPSettings->ReverbLevel = 0.0f;
-		FAudio_assert(0 && "REVERB not implemented!");
-	}
-
+	/* For XACT, this calculates "DopplerPitchScalar" */
 	if (Flags & F3DAUDIO_CALCULATE_DOPPLER)
 	{
 		CalculateDoppler(
@@ -1403,18 +1373,45 @@ void F3DAudioCalculate(
 		);
 	}
 
-	/* OrientationAngle */
+	/* For XACT, this calculates "OrientationAngle" */
 	if (Flags & F3DAUDIO_CALCULATE_EMITTER_ANGLE)
 	{
+		/* Determined roughly.
+		 * Below that distance, the emitter angle is considered to be PI/2.
+		 */
+		#define EMITTER_ANGLE_NULL_DISTANCE 1.2e-7
 		if (eToLDistance < EMITTER_ANGLE_NULL_DISTANCE)
 		{
 			pDSPSettings->EmitterToListenerAngle = F3DAUDIO_PI / 2.0f;
 		}
 		else
 		{
-			/* Note: OrientFront is normalized. */
+			/* Note: pEmitter->OrientFront is normalized. */
 			dp = VectorDot(emitterToListener, pEmitter->OrientFront) / eToLDistance;
 			pDSPSettings->EmitterToListenerAngle = FAudio_acosf(dp);
 		}
+	}
+
+	/* Unimplemented Flags */
+	if (Flags & F3DAUDIO_CALCULATE_DELAY)
+	{
+		FAudio_assert(0 && "DELAY not implemented!");
+	}
+	if (Flags & F3DAUDIO_CALCULATE_LPF_DIRECT)
+	{
+		/* A default value of 0.75 is fine as a zero order approximation. */
+		pDSPSettings->LPFDirectCoefficient = 0.75f;
+		FAudio_assert(0 && "LPF_DIRECT not implemented!");
+	}
+	if (Flags & F3DAUDIO_CALCULATE_LPF_REVERB)
+	{
+		/* Ditto. */
+		pDSPSettings->LPFReverbCoefficient = 0.75f;
+		FAudio_assert(0 && "LPF_REVERB not implemented!");
+	}
+	if (Flags & F3DAUDIO_CALCULATE_REVERB)
+	{
+		pDSPSettings->ReverbLevel = 0.0f;
+		FAudio_assert(0 && "REVERB not implemented!");
 	}
 }
