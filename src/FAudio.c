@@ -189,12 +189,14 @@ uint32_t FAudio_CreateSourceVoice(
 		else
 		{
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
+			realFormat = 0;
 		}
 		#undef MAKE_GUID
 	}
 	else
 	{
 		FAudio_assert(0 && "Unsupported wFormatTag!");
+		realFormat = 0;
 	}
 
 	if (realFormat == 1)
