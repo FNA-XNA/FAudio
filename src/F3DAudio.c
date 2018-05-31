@@ -64,6 +64,7 @@
 
 /* To be considered orthonormal, a pair of vectors must have a magnitude of
  * 1 +- 1x10-5 and a dot product of 0 +- 1x10-5.
+ * FIXME DOCS: ELI5
  */
 #define VECTOR_BASE_CHECK(u, v) \
 	PARAM_CHECK( \
@@ -115,8 +116,9 @@ F3DAUDIOAPI uint32_t F3DAudioCheckInitParams(
 		}
 	}
 
-	/* Adrien: The docs don't clearly say it, but the debug dll does check
-	 * that we're exactly in one of the allowed speaker configurations.
+	/* The docs don't clearly say it, but the debug dll does check that
+	 * we're exactly in one of the allowed speaker configurations.
+	 * -Adrien
 	 */
 	PARAM_CHECK(
 		speakerMaskIsValid == 1,
@@ -212,6 +214,7 @@ static inline F3DAUDIO_VECTOR Vec(float x, float y, float z)
 
 #define VectorDot(u, v) ((u.x * v.x) + (u.y * v.y) + (u.z * v.z))
 
+/* FIXME DOCS */
 typedef struct F3DAUDIO_BASIS
 {
 	F3DAUDIO_VECTOR front;
@@ -454,8 +457,8 @@ static inline float ComputeDistanceAttenuation(
 		}
 		else
 		{
+			/* FIXME DOCS */
 			alpha = (points[i].Distance - normalizedDistance) / (points[i].Distance - points[i - 1].Distance);
-
 			res = LERP(alpha, points[i].DSPSetting, points[i - 1].DSPSetting);
 		}
 	}
@@ -470,9 +473,6 @@ static inline float ComputeDistanceAttenuation(
 	return res;
 }
 
-/* This was determined experimentally -Adrien */
-#define CONE_NULL_DISTANCE_TOLERANCE 1e-7
-
 static inline float ComputeConeParameter(
 	float distance,
 	float angle,
@@ -481,6 +481,10 @@ static inline float ComputeConeParameter(
 	float innerParam,
 	float outerParam
 ) {
+	/* This was determined experimentally -Adrien */
+	/* FIXME DOCS */
+	#define CONE_NULL_DISTANCE_TOLERANCE 1e-7
+
 	float halfInnerAngle, halfOuterAngle, alpha;
 
 	/* Quote X3DAudio.h:
@@ -492,20 +496,24 @@ static inline float ComputeConeParameter(
 		return outerParam;
 	}
 
+	/* FIXME DOCS */
 	if (innerAngle == F3DAUDIO_2PI && outerAngle == F3DAUDIO_2PI)
 	{
 		return innerParam;
 	}
 
+	/* FIXME DOCS */
 	halfInnerAngle = innerAngle / 2.0f;
 	if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= halfInnerAngle)
 	{
 		return innerParam;
 	}
 
+	/* FIXME DOCS */
 	halfOuterAngle = outerAngle / 2.0f;
 	if (angle <= halfOuterAngle)
 	{
+		/* FIXME DOCS */
 		alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
 
 		/* Sooo... This is awkward. MSDN doesn't say anything, but
@@ -718,6 +726,7 @@ static inline void FindSpeakerAzimuths(
 
 	for (i = 0; i < config->numNonLFSpeakers; i += 1)
 	{
+		/* FIXME DOCS */
 		a0 = config->speakers[i].azimuth;
 		nexti = (i + 1) % config->numNonLFSpeakers;
 		a1 = config->speakers[nexti].azimuth;
@@ -740,6 +749,7 @@ static inline void FindSpeakerAzimuths(
 
 	if (skipCenter)
 	{
+		/* FIXME DOCS */
 		if (a0 == 0.0f)
 		{
 			if (i == 0)
@@ -765,24 +775,11 @@ static inline void FindSpeakerAzimuths(
 }
 
 /* Used to store diffusion factors */
+/* FIXME DOCS */
 #define DIFFUSION_SPEAKERS_ALL		0
 #define DIFFUSION_SPEAKERS_MATCHING	1
 #define DIFFUSION_SPEAKERS_OPPOSITE	2
 typedef float DiffusionSpeakerFactors[3];
-
-/* These constants were estimated roughly, by trial and error.
- * TODO: determine them more accurately.
- */
-#define DIFFUSION_DISTANCE_EQUAL_ENERGY 1e-7f
-#define DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS 4e-7f
-
-/* Determined experimentally; this is the midpoint value, i.e. the value at 0.5
- * for the matching speakers, used for the standard diffusion curve.
- *
- * Note: It is SUSPICIOUSLY close to 1/sqrt(2), but I haven't figured out why.
- * -Adrien
- */
-#define DIFFUSION_LERP_MIDPOINT_VALUE 0.707107f
 
 /* ComputeInnerRadiusDiffusionFactors is a utility function that returns how
  * energy dissipates to the speakers, given the radial distance between the
@@ -814,6 +811,22 @@ static inline void ComputeInnerRadiusDiffusionFactors(
 	float InnerRadius,
 	DiffusionSpeakerFactors diffusionFactors
 ) {
+	/* These constants were estimated roughly, by trial and error.
+	 * TODO: determine them more accurately.
+	 */
+	/* FIXME DOCS */
+	#define DIFFUSION_DISTANCE_EQUAL_ENERGY 1e-7f
+	#define DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS 4e-7f
+
+	/* Determined experimentally; this is the midpoint value, i.e. the
+	 * value at 0.5 for the matching speakers, used for the standard
+	 * diffusion curve.
+	 *
+	 * Note: It is SUSPICIOUSLY close to 1/sqrt(2), but I haven't figured out why.
+	 * -Adrien
+	 */
+	#define DIFFUSION_LERP_MIDPOINT_VALUE 0.707107f
+
 	float actualInnerRadius = FAudio_max(InnerRadius, DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS);
 	float normalizedRadialDist;
 	float a, ms, os;
@@ -899,8 +912,10 @@ static inline void ComputeEmitterChannelCoefficients(
 	float a0, a1, val;
 	uint32_t i0, i1;
 
+	/* FIXME DOCS */
 	elevation = VectorDot(listenerBasis->top, channelPosition);
 
+	/* FIXME DOCS */
 	projTopVec = VectorScale(listenerBasis->top, elevation);
 	projPlane = VectorSub(channelPosition, projTopVec);
 	radialDistance = VectorLength(projPlane);
@@ -911,6 +926,7 @@ static inline void ComputeEmitterChannelCoefficients(
 		diffusionFactors
 	);
 
+	/* FIXME DOCS */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_ALL] > 0.0f)
 	{
 		nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
@@ -937,6 +953,7 @@ static inline void ComputeEmitterChannelCoefficients(
 		}
 	}
 
+	/* FIXME DOCS */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] > 0.0f)
 	{
 		const float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] * attenuation;
@@ -984,6 +1001,7 @@ static inline void ComputeEmitterChannelCoefficients(
 		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] += (       val) * totalEnergy;
 	}
 
+	/* FIXME DOCS */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] > 0.0f)
 	{
 		/* This code is similar to the matching speakers code above. */
