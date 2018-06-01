@@ -547,6 +547,21 @@ double FAudio_sqrt(double x)
 	return SDL_sqrt(x);
 }
 
+double FAudio_sin(double x)
+{
+	return SDL_sin(x);
+}
+
+double FAudio_cos(double x)
+{
+	return SDL_cos(x);
+}
+
+double FAudio_tan(double x)
+{
+	return SDL_tan(x);
+}
+
 double FAudio_acos(double x)
 {
 	return SDL_acos(x);
