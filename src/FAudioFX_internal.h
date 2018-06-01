@@ -90,6 +90,17 @@ void FAudioFXFilterBiQuad_Change(FAudioFXFilterBiQuad *filter, float frequency, 
 float FAudioFXFilterBiQuad_Process(FAudioFXFilterBiQuad *filter, float sample);
 void FAudioFXFilterBiQuad_Destroy(FAudioFXFilterBiQuad *filter);
 
+/* comb-filter with integrated low and high shelving filter */
+typedef struct FAudioFXFilterCombShelving {
+	FAudioFXFilterBiQuad low_shelving;
+	FAudioFXFilterBiQuad high_shelving;
+	FAudioFXFilterDelay delay;
+} FAudioFXFilterCombShelving;
+
+FAudioFXFilterCombShelving *FAudioFXFilterCombShelving_Create(int32_t sampleRate, float delay_ms, float rt60_ms);
+void FAudioFXFilterCombShelving_Change(FAudioFXFilterCombShelving *filter, float delay_ms, float rt60_ms);
+float FAudioFXFilterCombShelving_Process(FAudioFXFilterCombShelving *filter, float sample);
+
 
 /* state variable filter */
 #define FAUDIOFX_STATEVARIABLE_LOWPASS 0

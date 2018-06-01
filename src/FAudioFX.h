@@ -115,13 +115,6 @@ typedef struct FAudioFXReverbTestParameters
 	float RoomSize;					/* 1 - 100 feet NOT USED YET */
 
 	/* extra parameters (for testing/tuning) */
-	float Comb1Delay;				// 0 - 100 ms (31.71)
-	float Comb2Delay;				// 0 - 100 ms (37.11)
-	float LPFComb1Delay;			// 0 - 100 ms (40.23)
-	float LPFComb1Gain;				// -1 - 1 (0.7)
-	float LPFComb2Delay;			// 0 - 100 ms (44.14)
-	float LPFComb2Gain;				// -1 - 1 (0.7)
-
 	float InDiffusionLength1;		// 0 - 100 ms (13.28)
 	float InDiffusionLength2;		// 0 - 100 ms (28.13)
 	float OutDiffusionLength;		// 0 - 100 ms (13.28)

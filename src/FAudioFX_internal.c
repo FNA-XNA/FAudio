@@ -259,6 +259,60 @@ void FAudioFXFilterBiQuad_Destroy(FAudioFXFilterBiQuad *filter)
 	FAudio_free(filter);
 }
 
+/* comb-filter with integrated low and high shelving filter */
+FAudioFXFilterCombShelving *FAudioFXFilterCombShelving_Create(int32_t sampleRate, float delay_ms, float rt60_ms)
+{
+	FAudio_assert(delay_ms > 0 && delay_ms < FAUDIOFX_DELAY_MAX_DELAY_MS);
+
+	/* FIXME: round up to nearest power of 2 to use bitmask instead of mod */
+	uint32_t cap = FAudioFX_INTERNAL_MsToSamples(FAUDIOFX_DELAY_MAX_DELAY_MS, sampleRate);
+	size_t size = sizeof(FAudioFXFilterCombShelving) + cap * sizeof(float);
+
+	FAudioFXFilterCombShelving *filter = (FAudioFXFilterCombShelving *) FAudio_malloc(size);
+	FAudio_zero(filter, size);
+
+	filter->delay.sampleRate = sampleRate;
+	filter->low_shelving.type = FAUDIOFX_BIQUAD_LOWSHELVING;
+	filter->low_shelving.sampleRate = sampleRate;
+	filter->high_shelving.type = FAUDIOFX_BIQUAD_HIGHSHELVING;
+	filter->high_shelving.sampleRate = sampleRate;
+	filter->delay.capacity = cap;
+	filter->delay.delay = FAudioFX_INTERNAL_MsToSamples(delay_ms, sampleRate);
+	filter->delay.read_idx = 0;
+	filter->delay.write_idx = filter->delay.delay;
+	filter->delay.denormal = DENORMAL;
+	FAudioFXFilterCombShelving_Change(filter, delay_ms, rt60_ms);
+
+	return filter;
+}
+
+void FAudioFXFilterCombShelving_Change(FAudioFXFilterCombShelving *filter, float delay_ms, float rt60_ms)
+{
+	FAudioFXFilterDelay_Change(&filter->delay, delay_ms, rt60_ms);
+}
+
+float FAudioFXFilterCombShelving_Process(FAudioFXFilterCombShelving *filter, float sample)
+{
+	FAudio_assert(filter != NULL);
+	FAudio_assert(filter->delay.read_idx < filter->delay.capacity);
+	FAudio_assert(filter->delay.write_idx < filter->delay.capacity);
+
+	float delay_out = filter->delay.buffer[filter->delay.read_idx];
+
+	/* apply shelving filters */
+	float feedback = FAudioFXFilterBiQuad_Process(&filter->high_shelving, delay_out);
+	feedback = FAudioFXFilterBiQuad_Process(&filter->low_shelving, feedback);
+
+	/* comb filter gain */
+	filter->delay.buffer[filter->delay.write_idx] = sample + (filter->delay.feedback * feedback) + filter->delay.denormal;
+
+	filter->delay.read_idx = (filter->delay.read_idx + 1) % filter->delay.capacity;
+	filter->delay.write_idx = (filter->delay.write_idx + 1) % filter->delay.capacity;
+	filter->delay.denormal = -filter->delay.denormal;
+
+	return delay_out;
+}
+
 /* state variable filter */
 FAudioFXFilterStateVariable *FAudioFXFilterStateVariable_Create(
 	int32_t sampleRate,

@@ -147,13 +147,13 @@ Room Reverb structure (loosely based on the reverberator from
 Only mono to mono in this prototype
 
 
-                     +--------  Bandwidth  ---------+        Diffusion
+                        Diffusion
 
-In    +--------+     +-----------+     +------------+    +----+    +----+
- +----+PreDelay+-----+LowShelving+-----+HighShelving+----+APF1+----+APF2+--+
-      +--------+     +-----------+     +------------+    +----+    +----+  |
-                                                                           | * g0
- +----------------------------------------------------------------+--------+
+In    +--------+     +----+    +----+              * g0
+ +----+PreDelay+-----+APF1+----+APF2+-----------------------------+
+      +--------+     +----+    +----+                             |
+                                                                  |
+ +----------------------------------------------------------------+
  |                                                                |
  |    +-----+        +--------+   * c0                            |
  +----+Delay+---+----+Comb1   +-----------+                       |
@@ -163,21 +163,21 @@ In    +--------+     +-----------+     +------------+    +----+    +----+
                 +----+Comb2   +-----------+                       | 
                 |    +--------+           |    +-----+  * g1      |
                 |                         +----+ SUM +----------+ |
-                |    +--------+   * c2    |    +-----+          | |
-                +----+LPFComb1+-----------+                     | |
+                |    +--------+   * cx    |    +-----+          | |
+                +----+...     +-----------+                     | |
                 |    +--------+           |                     | |
                 |                         |                     | |
-                |    +--------+   * c3    |                   +-+-+-+
-                +----+LPFComb2+-----------+                   | SUM |
+                |    +--------+   * c7    |                   +-+-+-+
+                +----+Comb8   +-----------+                   | SUM |
                      +--------+                               +--+--+
                                                                  |
  +---------------------------------------------------------------+
  |
- |      * g2      +------------+          +----+         Out
- +----------------+HighShelving+----------+APF3+--------->
-                  +------------+          +----+
+ |    +----+    +----+    +----+    +----+    * g2    +------------+     Out
+ +----|APF3|----|APF4|----|APF5|----|APF6|------------+HighShelving+------>
+      +----+    +----+    +----+    +----+            +------------+     
 
-     +----  Room Damping  -----+         Diffusion
+                                             +---- Room Damping ----+    
 
 
 */
@@ -185,13 +185,11 @@ In    +--------+     +-----------+     +------------+    +----+    +----+
 typedef struct RoomReverb
 {
 	FAudioFXFilterDelay		*early_delay;
-	FAudioFXFilterBiQuad	*low_shelving;
-	FAudioFXFilterBiQuad	*high_shelving;
 	FAudioFXFilterAllPass	*apf_in[2];
 
 	FAudioFXFilterDelay		*reverb_delay;
 	FAudioFXFilterDelay		*comb[2];
-	FAudioFXFilterCombLpf	*lpf_comb[2];
+	FAudioFXFilterCombShelving	*lpf_comb[8];
 
 	float					early_gain;
 	float					reverb_gain;
@@ -199,7 +197,7 @@ typedef struct RoomReverb
 	FAudioFXFilterBiQuad	*room_high_shelf;
 	float					room_gain;
 
-	FAudioFXFilterAllPass	*apf_out;
+	FAudioFXFilterAllPass	*apf_out[4];
 
 	float					wet_ratio;
 	float					dry_ratio;
@@ -222,22 +220,26 @@ void RoomReverb_Create(FAudioFXReverb *fapo)
 {
 	fapo->network.early_delay = FAudioFXFilterDelay_Create(fapo->sampleRate, 10, 0.0f);
 
-	fapo->network.low_shelving = FAudioFXFilterBiQuad_Create(fapo->sampleRate, FAUDIOFX_BIQUAD_LOWSHELVING, 0, 0, 0);
-	fapo->network.high_shelving = FAudioFXFilterBiQuad_Create(fapo->sampleRate, FAUDIOFX_BIQUAD_HIGHSHELVING, 0, 0, 0);
 	fapo->network.apf_in[0] = FAudioFXFilterAllPass_Create(fapo->sampleRate, 10, 0.0f);
 	fapo->network.apf_in[1] = FAudioFXFilterAllPass_Create(fapo->sampleRate, 10, 0.0f);
 
 	fapo->network.reverb_delay = FAudioFXFilterDelay_Create(fapo->sampleRate, 10, 0.0f);
 	fapo->network.comb[0] = FAudioFXFilterDelay_Create(fapo->sampleRate, 10, 0.0f);
 	fapo->network.comb[1] = FAudioFXFilterDelay_Create(fapo->sampleRate, 10, 0.0f);
-	fapo->network.lpf_comb[0] = FAudioFXFilterCombLpf_Create(fapo->sampleRate, 10.0f, 100.0f, 0.75);
-	fapo->network.lpf_comb[1] = FAudioFXFilterCombLpf_Create(fapo->sampleRate, 10.0f, 100.0f, 0.75);
+	
+	for (int32_t i = 0; i < 8; ++i)
+	{
+		fapo->network.lpf_comb[i] = FAudioFXFilterCombShelving_Create(fapo->sampleRate, 10.0f, 100.0f);
+	}
 
 	fapo->network.early_gain = 1.0f;
 	fapo->network.reverb_gain = 1.0f;
 
 	fapo->network.room_high_shelf = FAudioFXFilterBiQuad_Create(fapo->sampleRate, FAUDIOFX_BIQUAD_HIGHSHELVING, 4000, 0, -10);
-	fapo->network.apf_out = FAudioFXFilterAllPass_Create(fapo->sampleRate, 10, 100);
+	fapo->network.apf_out[0] = FAudioFXFilterAllPass_Create(fapo->sampleRate, 13.28f, 0.5f);
+	fapo->network.apf_out[1] = FAudioFXFilterAllPass_Create(fapo->sampleRate, 23.18f, 0.5f);
+	fapo->network.apf_out[2] = FAudioFXFilterAllPass_Create(fapo->sampleRate, 23.18f, 0.5f);
+	fapo->network.apf_out[3] = FAudioFXFilterAllPass_Create(fapo->sampleRate, 23.18f, 0.5f);
 }
 
 uint32_t FAudioFXReverb_LockForProcess(
@@ -303,36 +305,44 @@ void FAudioFXReverb_Process(
 	RoomReverb *reverb = &fapo->network;
 	FAudioFXFilterDelay_Change(reverb->early_delay, (float) params->ReflectionsDelay, 0.0f);
 
-	FAudioFXFilterBiQuad_Change(
-		reverb->low_shelving, 
-		50.0f + params->LowEQCutoff * 50.0f, 
-		0.0f, 
-		params->LowEQGain - 8.0f);
-	FAudioFXFilterBiQuad_Change(
-		reverb->high_shelving, 
-		1000 + params->HighEQCutoff * 500.0f, 
-		0.0f, 
-		params->HighEQGain - 8.0f);
 
-	float early_diffusion = 0.9f - ((params->EarlyDiffusion / 15.0f) * 0.85f);
+	float early_diffusion = 0.6f - ((params->EarlyDiffusion / 15.0f) * 0.2f);
 	FAudioFXFilterAllPass_Change(reverb->apf_in[0], params->InDiffusionLength1, early_diffusion);
 	FAudioFXFilterAllPass_Change(reverb->apf_in[1], params->InDiffusionLength2, -early_diffusion);
 
-	FAudioFXFilterDelay_Change(reverb->reverb_delay, params->ReverbDelay, 0.0f);
+	uint32_t delay = (params->ReverbDelay > params->ReflectionsDelay) ? params->ReverbDelay - params->ReflectionsDelay : params->ReverbDelay;
+	FAudioFXFilterDelay_Change(reverb->reverb_delay, (float) delay, 0.0f);
 
-	FAudioFXFilterDelay_Change(reverb->comb[0], params->Comb1Delay, params->DecayTime * 1000.0f);
-	FAudioFXFilterDelay_Change(reverb->comb[1], params->Comb2Delay, params->DecayTime * 1000.0f);
-	FAudioFXFilterCombLpf_Change(reverb->lpf_comb[0], params->LPFComb1Delay, params->DecayTime * 1000.0f, params->LPFComb1Gain);
-	FAudioFXFilterCombLpf_Change(reverb->lpf_comb[1], params->LPFComb2Delay, params->DecayTime * 1000.0f, params->LPFComb2Gain);
+	float comb_delays[] = { 25.31f, 26.94f, 28.96f, 30.75f, 32.24f, 33.8f, 35.31f, 36.67f };
+	for (int32_t comb = 0; comb < 8; ++comb)
+	{
+		FAudioFXFilterCombShelving_Change(reverb->lpf_comb[comb], comb_delays[comb], params->DecayTime * 1000.0f * 0.2f);
+
+		FAudioFXFilterBiQuad_Change(
+			&reverb->lpf_comb[comb]->low_shelving,
+			50.0f + params->LowEQCutoff * 50.0f,
+			0.0f,
+			params->LowEQGain - 8.0f);
+		FAudioFXFilterBiQuad_Change(
+			&reverb->lpf_comb[comb]->high_shelving,
+			1000 + params->HighEQCutoff * 500.0f,
+			0.0f,
+			params->HighEQGain - 8.0f);
+	}
 	
 	reverb->early_gain = FAudioFX_INTERNAL_DbGainToFactor(params->ReflectionsGain);
 	reverb->reverb_gain = FAudioFX_INTERNAL_DbGainToFactor(params->ReverbGain);
 
 	reverb->room_gain = FAudioFX_INTERNAL_DbGainToFactor(params->RoomFilterMain);
-	FAudioFXFilterBiQuad_Change(fapo->network.room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterHF);
+	FAudioFXFilterBiQuad_Change(fapo->network.room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterMain + params->RoomFilterHF);
 
-	float late_diffusion = 0.8f - ((params->LateDiffusion / 15.0f) * 0.4f);
-	FAudioFXFilterAllPass_Change(reverb->apf_out, params->OutDiffusionLength, late_diffusion);
+	float late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
+	float allpass_delays[] = { 5.10f, 12.61f, 10.0f, 7.73f };
+
+	for (int32_t ap = 0; ap < 4; ++ap)
+	{
+		FAudioFXFilterAllPass_Change(reverb->apf_out[ap], allpass_delays[ap], late_diffusion);
+	}
 
 	reverb->wet_ratio = params->WetDryMix / 100.0f;
 	reverb->dry_ratio = 1.0f - reverb->wet_ratio;
@@ -342,12 +352,8 @@ void FAudioFXReverb_Process(
 	{
 		float in = input_buffer[idx];
 
-		/* bandwidth filter */
-		float bw_in = FAudioFXFilterBiQuad_Process(reverb->low_shelving, in);
-		bw_in = FAudioFXFilterBiQuad_Process(reverb->high_shelving, bw_in);
-
 		/* pre delay */
-		float delay_in = FAudioFXFilterDelay_Process(reverb->early_delay, bw_in);
+		float delay_in = FAudioFXFilterDelay_Process(reverb->early_delay, in);
 
 		/* early reflections */
 		float early = FAudioFXFilterAllPass_Process(reverb->apf_in[0], delay_in);
@@ -357,24 +363,30 @@ void FAudioFXReverb_Process(
 
 		/* reverberation */
 		float revdelay = FAudioFXFilterDelay_Process(reverb->reverb_delay, early);
-		float comb = 0.0f;
-		comb += 0.25f * FAudioFXFilterDelay_Process(reverb->comb[0], revdelay);
-		comb -= 0.25f * FAudioFXFilterDelay_Process(reverb->comb[1], revdelay);
-		comb += 0.25f * FAudioFXFilterCombLpf_Process(reverb->lpf_comb[0], revdelay);
-		comb -= 0.25f * FAudioFXFilterCombLpf_Process(reverb->lpf_comb[1], revdelay);
+		float comb_out = 0.0f;
+		float gain = 0.125f;
+		for (int32_t comb = 0; comb < 8; ++comb)
+		{
+			comb_out += gain * FAudioFXFilterCombShelving_Process(reverb->lpf_comb[comb], revdelay);
+			gain = -gain;
+		}
 
 		/* combine early reflections and reverberation */
-		float early_late = early + (reverb->reverb_gain * comb);
-	
-		/* room filter */
-		float room = early_late * reverb->room_gain;
-		room = FAudioFXFilterBiQuad_Process(reverb->room_high_shelf, room);
+		float early_late = 0.5f * early + 0.5f * (reverb->reverb_gain * comb_out);
 		
 		/* output diffusion */
-		float out = FAudioFXFilterAllPass_Process(reverb->apf_out, room);
+		float out = early_late;
+		for (int32_t ap = 0; ap < 4; ++ap)
+		{
+			out = FAudioFXFilterAllPass_Process(reverb->apf_out[ap], out);
+		}
+
+		/* room filter */
+		float room = out * reverb->room_gain;
+		room = FAudioFXFilterBiQuad_Process(reverb->room_high_shelf, room);
 
 		/* wet/dry mix */
-		output_buffer[idx] = (out * reverb->wet_ratio) + (in * reverb->dry_ratio);
+		output_buffer[idx] = (room * reverb->wet_ratio) + (in * reverb->dry_ratio);
 	}
 
 	FAPOParametersBase_EndProcess(&fapo->base);
