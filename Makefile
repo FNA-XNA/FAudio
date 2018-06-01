@@ -45,7 +45,8 @@ FAUDIOSRC = \
 	src/FACT.c \
 	src/FACT_internal.c \
 	src/XNA_Song.c \
-	src/FAudio_platform_sdl2.c
+	src/FAudio_platform_sdl2.c \
+	src/FAudioFX_internal.c
 
 # Object code lists
 FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)

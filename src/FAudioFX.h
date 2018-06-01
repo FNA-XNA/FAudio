@@ -87,6 +87,46 @@ typedef struct FAudioFXReverbI3DL2Parameters
 	float HFReference;
 } FAudioFXReverbI3DL2Parameters;
 
+typedef struct FAudioFXReverbTestParameters
+{
+	float WetDryMix;				/* 0 - 100 (0 = fully dry, 100 = fully wet) */
+	uint32_t ReflectionsDelay;		/* 0 - 300 ms */
+	uint8_t ReverbDelay;			/* 0 - 85 ms */
+
+	uint8_t RearDelay;				/* 0 - 5 ms NOT USED YET */
+	uint8_t PositionLeft;			/* 0 - 30 NOT USED YET */
+	uint8_t PositionRight;			/* 0 - 30 NOT USED YET */
+	uint8_t PositionMatrixLeft;		/* 0 - 30 NOT USED YET */
+	uint8_t PositionMatrixRight;	/* 0 - 30 NOT USED YET */
+
+	uint8_t EarlyDiffusion;			/* 0 - 15 */
+	uint8_t LateDiffusion;			/* 0 - 15 */
+	uint8_t LowEQGain;				/* 0 - 12 (formula dB = LowEQGain - 8) */
+	uint8_t LowEQCutoff;			/* 0 - 9  (formula Hz = 50 + (LowEQCutoff * 50)) */
+	uint8_t HighEQGain;				/* 0 - 8  (formula dB = HighEQGain - 8)*/
+	uint8_t HighEQCutoff;			/* 0 - 14 (formula Hz = 1000 + (HighEqCutoff * 500))*/
+	float RoomFilterFreq;			/* 20 - 20000Hz */
+	float RoomFilterMain;			/* -100 - 0dB */
+	float RoomFilterHF;				/* -100 - 0dB */
+	float ReflectionsGain;			/* -100 - 20dB */
+	float ReverbGain;				/* -100 - 20dB */
+	float DecayTime;				/* 0.1 - .... ms */
+	float Density;					/* 0 - 100 %*/
+	float RoomSize;					/* 1 - 100 feet NOT USED YET */
+
+	/* extra parameters (for testing/tuning) */
+	float Comb1Delay;				// 0 - 100 ms (31.71)
+	float Comb2Delay;				// 0 - 100 ms (37.11)
+	float LPFComb1Delay;			// 0 - 100 ms (40.23)
+	float LPFComb1Gain;				// -1 - 1 (0.7)
+	float LPFComb2Delay;			// 0 - 100 ms (44.14)
+	float LPFComb2Gain;				// -1 - 1 (0.7)
+
+	float InDiffusionLength1;		// 0 - 100 ms (13.28)
+	float InDiffusionLength2;		// 0 - 100 ms (28.13)
+	float OutDiffusionLength;		// 0 - 100 ms (13.28)
+} FAudioFXReverbTestParameters;
+
 #pragma pack(pop)
 
 /* Constants */

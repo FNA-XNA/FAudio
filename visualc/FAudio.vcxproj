@@ -74,6 +74,7 @@
     <ClCompile Include="..\src\FAPOBase.c" />
     <ClCompile Include="..\src\FAudio.c" />
     <ClCompile Include="..\src\FAudioFX.c" />
+    <ClCompile Include="..\src\FAudioFX_internal.c" />
     <ClCompile Include="..\src\FAudio_internal.c" />
     <ClCompile Include="..\src\FACT.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
@@ -83,6 +84,7 @@
   <ItemGroup>
     <ClInclude Include="..\src\FAudio.h" />
     <ClInclude Include="..\src\FAudioFX.h" />
+    <ClInclude Include="..\src\FAudioFX_internal.h" />
     <ClInclude Include="..\src\FAudio_internal.h" />
     <ClInclude Include="..\src\F3DAudio.h" />
     <ClInclude Include="..\src\FACT.h" />
