@@ -323,7 +323,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	);
 
 	/* Add to list, finally. */
-	LinkedList_AddEntry(&audio->submixes, ppSubmixVoice);
+	LinkedList_AddEntry(&audio->submixes, *ppSubmixVoice);
 	FAudio_AddRef(audio);
 	return 0;
 }

@@ -737,7 +737,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	}
 
 	/* Mix submixes, ordered by processing stage */
-	for (i = 0; i < audio->submixStages; i += 1)
+	for (i = 0; i <= audio->submixStages; i += 1)
 	{
 		list = audio->submixes;
 		while (list != NULL)
