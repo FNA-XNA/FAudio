@@ -197,7 +197,7 @@ uint32_t FACTAudioEngine_Initialize(
 		);
 
 		/* We can release now, the submix owns this! */
-		FAPOBase_Release(reverbDesc.pEffect);
+		FAPOBase_Release((FAPOBase*) reverbDesc.pEffect);
 	}
 	return 0;
 }

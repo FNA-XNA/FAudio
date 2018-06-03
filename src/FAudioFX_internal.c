@@ -58,7 +58,7 @@ FAudioFXFilterDelay *FAudioFXFilterDelay_Create(int32_t sampleRate, float delay_
 	filter->read_idx = 0;
 	filter->write_idx = filter->delay;
 	filter->denormal = DENORMAL;
-	FAudio_zero(filter->buffer, cap);
+	FAudio_zero(filter->buffer, cap * sizeof(float));
 	FAudioFXFilterDelay_Change(filter, delay_ms, rt60_ms);
 
 	return filter;
