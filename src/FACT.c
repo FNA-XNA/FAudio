@@ -115,11 +115,9 @@ uint32_t FACTAudioEngine_Initialize(
 ) {
 	uint32_t parseRet;
 	uint32_t deviceIndex;
-#if 0 /* TODO: Implement reverb first! */
 	FAudioVoiceDetails masterDetails;
 	FAudioEffectDescriptor reverbDesc;
 	FAudioEffectChain reverbChain;
-#endif
 
 	/* Parse the file */
 	parseRet = FACT_INTERNAL_ParseAudioEngine(pEngine, pParams);
@@ -174,7 +172,6 @@ uint32_t FACTAudioEngine_Initialize(
 		NULL
 	);
 
-#if 0 /* TODO: Implement reverb first! */
 	/* Create the reverb effect, if applicable */
 	if (pEngine->dspPresetCount > 0) /* Never more than 1...? */
 	{
@@ -183,7 +180,7 @@ uint32_t FACTAudioEngine_Initialize(
 		/* Reverb effect chain... */
 		FAudioCreateReverb(&reverbDesc.pEffect, 0);
 		reverbDesc.InitialState = 1;
-		reverbDesc.OutputChannels = masterDetails.InputChannels;
+		reverbDesc.OutputChannels = 1;
 		reverbChain.EffectCount = 1;
 		reverbChain.pEffectDescriptors = &reverbDesc;
 
@@ -202,7 +199,6 @@ uint32_t FACTAudioEngine_Initialize(
 		/* We can release now, the submix owns this! */
 		FAPOBase_Release(reverbDesc.pEffect);
 	}
-#endif
 	return 0;
 }
 

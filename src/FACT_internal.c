@@ -25,6 +25,7 @@
  */
 
 #include "FACT_internal.h"
+#include "FAudioFX.h"
 
 /* RNG */
 
@@ -48,10 +49,8 @@ void FACT_INTERNAL_GetNextWave(
 	FACTEvent *evt,
 	FACTEventInstance *evtInst
 ) {
-#if 0 /* TODO: Implement reverb first! */
 	FAudioSendDescriptor reverbDesc[2];
 	FAudioVoiceSends reverbSends;
-#endif
 	const char *wbName;
 	FACTWaveBank *wb = NULL;
 	LinkedList *list;
@@ -163,7 +162,6 @@ void FACT_INTERNAL_GetNextWave(
 		&trackInst->upcomingWave.wave
 	);
 	trackInst->upcomingWave.wave->parentCue = cue;
-#if 0 /* TODO: Implement reverb first! */
 	if (sound->dspCodeCount > 0) /* Never more than 1...? */
 	{
 		reverbDesc[0].Flags = 0;
@@ -177,7 +175,6 @@ void FACT_INTERNAL_GetNextWave(
 			&reverbSends
 		);
 	}
-#endif
 
 	/* 3D Audio */
 	if (cue->active3D)
@@ -880,6 +877,7 @@ void FACT_INTERNAL_UpdateRPCs(
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 {
+	FAudioFXReverbTestParameters rvbPar;
 	uint16_t i, j, par;
 	for (i = 0; i < engine->rpcCount; i += 1)
 	{
@@ -908,7 +906,46 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 			}
 		}
 	}
-	/* TODO: Set Submit Effect0 Parameters from above RPC changes */
+
+	/* Set Effect parameters from above RPC changes */
+	if (engine->reverbVoice != NULL)
+	{
+		rvbPar.WetDryMix = engine->dspPresets[0].parameters[0].value;
+		rvbPar.ReflectionsDelay = engine->dspPresets[0].parameters[1].value;
+		rvbPar.ReverbDelay = engine->dspPresets[0].parameters[2].value;
+		rvbPar.RearDelay = engine->dspPresets[0].parameters[3].value;
+		rvbPar.PositionLeft = engine->dspPresets[0].parameters[4].value;
+		rvbPar.PositionRight = engine->dspPresets[0].parameters[5].value;
+		rvbPar.PositionMatrixLeft = engine->dspPresets[0].parameters[6].value;
+		rvbPar.PositionMatrixRight = engine->dspPresets[0].parameters[7].value;
+		rvbPar.EarlyDiffusion = engine->dspPresets[0].parameters[8].value;
+		rvbPar.LateDiffusion = engine->dspPresets[0].parameters[9].value;
+		rvbPar.LowEQGain = engine->dspPresets[0].parameters[10].value;
+		rvbPar.LowEQCutoff = engine->dspPresets[0].parameters[11].value;
+		rvbPar.HighEQGain = engine->dspPresets[0].parameters[12].value;
+		rvbPar.HighEQCutoff = engine->dspPresets[0].parameters[13].value;
+		rvbPar.RoomFilterFreq = engine->dspPresets[0].parameters[14].value;
+		rvbPar.RoomFilterMain = engine->dspPresets[0].parameters[15].value;
+		rvbPar.RoomFilterHF = engine->dspPresets[0].parameters[16].value;
+		rvbPar.ReflectionsGain = engine->dspPresets[0].parameters[17].value;
+		rvbPar.ReverbGain = engine->dspPresets[0].parameters[18].value;
+		rvbPar.DecayTime = engine->dspPresets[0].parameters[19].value;
+		rvbPar.Density = engine->dspPresets[0].parameters[20].value;
+		rvbPar.RoomSize = engine->dspPresets[0].parameters[21].value;
+
+		/* TODO: REMOVE THIS */
+		rvbPar.InDiffusionLength1 = 13.28f;
+		rvbPar.InDiffusionLength2 = 28.13f;
+		rvbPar.OutDiffusionLength = 13.28f;
+
+		FAudioVoice_SetEffectParameters(
+			engine->reverbVoice,
+			0,
+			&rvbPar,
+			sizeof(FAudioFXReverbTestParameters),
+			0
+		);
+	}
 }
 
 /* Cue Update Functions */
