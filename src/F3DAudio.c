@@ -64,6 +64,7 @@
 
 /* To be considered orthonormal, a pair of vectors must have a magnitude of
  * 1 +- 1x10-5 and a dot product of 0 +- 1x10-5.
+ * FIXME DOCS: ELI5
  */
 #define VECTOR_BASE_CHECK(u, v) \
 	PARAM_CHECK( \
@@ -83,7 +84,7 @@
 #define SPEEDOFSOUNDEPSILON(Instance)	*((float*)	&Instance[16])
 
 /* Export for unit tests */
-F3DAUDIOAPI int F3DAudioCheckInitParams(
+F3DAUDIOAPI uint32_t F3DAudioCheckInitParams(
 	uint32_t SpeakerChannelMask,
 	float SpeedOfSound,
 	F3DAUDIO_HANDLE instance
@@ -101,12 +102,12 @@ F3DAUDIOAPI int F3DAudioCheckInitParams(
 		SPEAKER_7POINT1,
 		SPEAKER_7POINT1_SURROUND,
 	};
-	int speakerMaskIsValid = 0;
-	int i;
+	uint8_t speakerMaskIsValid = 0;
+	uint32_t i;
 
 	POINTER_CHECK(instance);
 
-	for (i = 0; i < ARRAY_COUNT(kAllowedSpeakerMasks); ++i)
+	for (i = 0; i < ARRAY_COUNT(kAllowedSpeakerMasks); i += 1)
 	{
 		if (SpeakerChannelMask == kAllowedSpeakerMasks[i])
 		{
@@ -115,8 +116,9 @@ F3DAUDIOAPI int F3DAudioCheckInitParams(
 		}
 	}
 
-	/* Adrien: The docs don't clearly say it, but the debug dll does check
-	 * that we're exactly in one of the allowed speaker configurations.
+	/* The docs don't clearly say it, but the debug dll does check that
+	 * we're exactly in one of the allowed speaker configurations.
+	 * -Adrien
 	 */
 	PARAM_CHECK(
 		speakerMaskIsValid == 1,
@@ -210,21 +212,9 @@ static inline F3DAUDIO_VECTOR Vec(float x, float y, float z)
 	(v.x * v.x) + (v.y * v.y) + (v.z * v.z) \
 )
 
-static inline F3DAUDIO_VECTOR VectorNormalize(F3DAUDIO_VECTOR v, float *norm)
-{
-	F3DAUDIO_VECTOR res;
-	*norm = VectorLength(v);
-	res.x = v.x / *norm;
-	res.y = v.y / *norm;
-	res.z = v.z / *norm;
-	return res;
-}
+#define VectorDot(u, v) ((u.x * v.x) + (u.y * v.y) + (u.z * v.z))
 
-static inline float VectorDot(F3DAUDIO_VECTOR u, F3DAUDIO_VECTOR v)
-{
-	return (u.x * v.x) + (u.y * v.y) + (u.z * v.z);
-}
-
+/* FIXME DOCS */
 typedef struct F3DAUDIO_BASIS
 {
 	F3DAUDIO_VECTOR front;
@@ -234,7 +224,7 @@ typedef struct F3DAUDIO_BASIS
 
 /* CHECK UTILITY FUNCTIONS */
 
-static inline int CheckCone(F3DAUDIO_CONE *pCone)
+static inline uint8_t CheckCone(F3DAUDIO_CONE *pCone)
 {
 	if (!pCone)
 	{
@@ -256,7 +246,7 @@ static inline int CheckCone(F3DAUDIO_CONE *pCone)
 	return PARAM_CHECK_OK;
 }
 
-static inline int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve)
+static inline uint8_t CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve)
 {
 	F3DAUDIO_DISTANCE_CURVE_POINT *points;
 	uint32_t i;
@@ -269,7 +259,7 @@ static inline int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve)
 	POINTER_CHECK(points);
 	PARAM_CHECK(pCurve->PointCount >= 2, "Invalid number of points for curve");
 
-	for (i = 0; i < pCurve->PointCount; ++i)
+	for (i = 0; i < pCurve->PointCount; i += 1)
 	{
 		FLOAT_BETWEEN_CHECK(points[i].Distance, 0.0f, 1.0f);
 	}
@@ -283,10 +273,10 @@ static inline int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve)
 		"Last point in the curve must be at distance 1.0f"
 	);
 
-	for (i = 0; i < (pCurve->PointCount - 1); ++i)
+	for (i = 0; i < (pCurve->PointCount - 1); i += 1)
 	{
 		PARAM_CHECK(
-			points[i].Distance < points[i+1].Distance,
+			points[i].Distance < points[i + 1].Distance,
 			"Curve points must be in strict ascending order"
 		);
 	}
@@ -295,7 +285,7 @@ static inline int CheckCurve(F3DAUDIO_DISTANCE_CURVE *pCurve)
 }
 
 /* Export for unit tests */
-F3DAUDIOAPI int F3DAudioCheckCalculateParams(
+F3DAUDIOAPI uint8_t F3DAudioCheckCalculateParams(
 	const F3DAUDIO_HANDLE Instance,
 	const F3DAUDIO_LISTENER *pListener,
 	const F3DAUDIO_EMITTER *pEmitter,
@@ -315,8 +305,8 @@ F3DAUDIOAPI int F3DAudioCheckCalculateParams(
 	}
 	if (Flags & F3DAUDIO_CALCULATE_ZEROCENTER)
 	{
-		uint32_t isCalculateMatrix = (Flags & F3DAUDIO_CALCULATE_MATRIX);
-		uint32_t hasCenter = SPEAKERMASK(Instance) & SPEAKER_FRONT_CENTER;
+		const uint32_t isCalculateMatrix = (Flags & F3DAUDIO_CALCULATE_MATRIX);
+		const uint32_t hasCenter = SPEAKERMASK(Instance) & SPEAKER_FRONT_CENTER;
 		PARAM_CHECK(
 			isCalculateMatrix && hasCenter,
 			"F3DAUDIO_CALCULATE_ZEROCENTER is only valid for matrix"
@@ -326,8 +316,8 @@ F3DAUDIOAPI int F3DAudioCheckCalculateParams(
 
 	if (Flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
 	{
-		uint32_t isCalculateMatrix = (Flags & F3DAUDIO_CALCULATE_MATRIX);
-		uint32_t hasLF = SPEAKERMASK(Instance) & SPEAKER_LOW_FREQUENCY;
+		const uint32_t isCalculateMatrix = (Flags & F3DAUDIO_CALCULATE_MATRIX);
+		const uint32_t hasLF = SPEAKERMASK(Instance) & SPEAKER_LOW_FREQUENCY;
 		PARAM_CHECK(
 			isCalculateMatrix && hasLF,
 			"F3DAUDIO_CALCULATE_REDIRECT_TO_LFE is only valid for matrix"
@@ -394,7 +384,7 @@ F3DAUDIOAPI int F3DAudioCheckCalculateParams(
 		);
 		if (pEmitter->pChannelAzimuths)
 		{
-			for (i = 0; i < pEmitter->ChannelCount; ++i)
+			for (i = 0; i < pEmitter->ChannelCount; i += 1)
 			{
 				float currentAzimuth = pEmitter->pChannelAzimuths[i];
 				FLOAT_BETWEEN_CHECK(currentAzimuth, 0.0f, F3DAUDIO_2PI);
@@ -444,33 +434,31 @@ F3DAUDIOAPI int F3DAudioCheckCalculateParams(
 /* This function computes the distance either according to a curve if pCurve
  * isn't NULL, or according to the inverse distance law 1/d otherwise.
  */
-static float ComputeDistanceAttenuation(
+static inline float ComputeDistanceAttenuation(
 	float normalizedDistance,
 	F3DAUDIO_DISTANCE_CURVE *pCurve
 ) {
 	float res;
+	float alpha;
+	uint32_t n_points;
+	size_t i;
 	if (pCurve)
 	{
 		F3DAUDIO_DISTANCE_CURVE_POINT* points = pCurve->pPoints;
-		uint32_t n_points = pCurve->PointCount;
-		float alpha;
+		n_points = pCurve->PointCount;
 
 		/* By definition, the first point in the curve must be 0.0f
 		 * -Adrien
 		 */
-		size_t i = 1;
-		while ((i < n_points) && (normalizedDistance >= points[i].Distance))
-		{
-			++i;
-		}
+		for (i = 1; (i < n_points) && (normalizedDistance >= points[i].Distance); i += 1);
 		if (i == n_points)
 		{
 			res = points[n_points - 1].DSPSetting;
 		}
 		else
 		{
+			/* FIXME DOCS */
 			alpha = (points[i].Distance - normalizedDistance) / (points[i].Distance - points[i - 1].Distance);
-
 			res = LERP(alpha, points[i].DSPSetting, points[i - 1].DSPSetting);
 		}
 	}
@@ -485,10 +473,7 @@ static float ComputeDistanceAttenuation(
 	return res;
 }
 
-/* This was determined experimentally -Adrien */
-#define CONE_NULL_DISTANCE_TOLERANCE 1e-7
-
-static float ComputeConeParameter(
+static inline float ComputeConeParameter(
 	float distance,
 	float angle,
 	float innerAngle,
@@ -496,7 +481,11 @@ static float ComputeConeParameter(
 	float innerParam,
 	float outerParam
 ) {
-	float halfInnerAngle, halfOuterAngle;
+	/* This was determined experimentally -Adrien */
+	/* FIXME DOCS */
+	#define CONE_NULL_DISTANCE_TOLERANCE 1e-7
+
+	float halfInnerAngle, halfOuterAngle, alpha;
 
 	/* Quote X3DAudio.h:
 	 * "Set both cone angles to 0 or X3DAUDIO_2PI for omnidirectionality using
@@ -507,21 +496,25 @@ static float ComputeConeParameter(
 		return outerParam;
 	}
 
+	/* FIXME DOCS */
 	if (innerAngle == F3DAUDIO_2PI && outerAngle == F3DAUDIO_2PI)
 	{
 		return innerParam;
 	}
 
+	/* FIXME DOCS */
 	halfInnerAngle = innerAngle / 2.0f;
 	if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= halfInnerAngle)
 	{
 		return innerParam;
 	}
 
+	/* FIXME DOCS */
 	halfOuterAngle = outerAngle / 2.0f;
 	if (angle <= halfOuterAngle)
 	{
-		float alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
+		/* FIXME DOCS */
+		alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
 
 		/* Sooo... This is awkward. MSDN doesn't say anything, but
 		 * X3DAudio.h says that this should be lerped. However in
@@ -588,7 +581,7 @@ typedef struct
 	 */
 	uint32_t numNonLFSpeakers;
 
-	uint32_t LFSpeakerIdx;
+	int32_t LFSpeakerIdx;
 } ConfigInfo;
 
 /* It is absolutely necessary that these are stored in increasing, *positive*
@@ -704,7 +697,7 @@ const ConfigInfo kSpeakersConfigInfo[] =
 static const ConfigInfo* GetConfigInfo(uint32_t speakerConfigMask)
 {
 	uint32_t i;
-	for (i = 0; i < ARRAY_COUNT(kSpeakersConfigInfo); ++i)
+	for (i = 0; i < ARRAY_COUNT(kSpeakersConfigInfo); i += 1)
 	{
 		if (kSpeakersConfigInfo[i].configMask == speakerConfigMask)
 		{
@@ -720,10 +713,10 @@ static const ConfigInfo* GetConfigInfo(uint32_t speakerConfigMask)
  * between which the emitter lies. All the azimuths here are relative to the
  * listener's base, since that's where the speakers are defined.
  */
-static void FindSpeakerAzimuths(
+static inline void FindSpeakerAzimuths(
 	const ConfigInfo* config,
 	float emitterAzimuth,
-	int skipCenter,
+	uint8_t skipCenter,
 	const SpeakerInfo **speakerInfo
 ) {
 	uint32_t i, nexti;
@@ -731,8 +724,9 @@ static void FindSpeakerAzimuths(
 
 	FAudio_assert(config != NULL);
 
-	for (i = 0; i < config->numNonLFSpeakers; ++i)
+	for (i = 0; i < config->numNonLFSpeakers; i += 1)
 	{
+		/* FIXME DOCS */
 		a0 = config->speakers[i].azimuth;
 		nexti = (i + 1) % config->numNonLFSpeakers;
 		a1 = config->speakers[nexti].azimuth;
@@ -755,6 +749,7 @@ static void FindSpeakerAzimuths(
 
 	if (skipCenter)
 	{
+		/* FIXME DOCS */
 		if (a0 == 0.0f)
 		{
 			if (i == 0)
@@ -778,6 +773,13 @@ static void FindSpeakerAzimuths(
 	speakerInfo[0] = &config->speakers[i];
 	speakerInfo[1] = &config->speakers[nexti];
 }
+
+/* Used to store diffusion factors */
+/* FIXME DOCS */
+#define DIFFUSION_SPEAKERS_ALL		0
+#define DIFFUSION_SPEAKERS_MATCHING	1
+#define DIFFUSION_SPEAKERS_OPPOSITE	2
+typedef float DiffusionSpeakerFactors[3];
 
 /* ComputeInnerRadiusDiffusionFactors is a utility function that returns how
  * energy dissipates to the speakers, given the radial distance between the
@@ -804,38 +806,30 @@ static void FindSpeakerAzimuths(
  *
  * Above InnerRadius, only the two matching speakers receive sound.
  */
-
-/* These constants were estimated roughly, by trial and error.
- * TODO: determine them more accurately.
- */
-#define DIFFUSION_DISTANCE_EQUAL_ENERGY 1e-7f
-#define DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS 4e-7f
-
-enum
-{
-	DIFFUSION_SPEAKERS_ALL = 0,
-	DIFFUSION_SPEAKERS_MATCHING = 1,
-	DIFFUSION_SPEAKERS_OPPOSITE = 2
-};
-
-/* Determined experimentally; this is the midpoint value, i.e. the value at 0.5
- * for the matching speakers, used for the standard diffusion curve.
- *
- * Note: It is SUSPICIOUSLY close to 1/sqrt(2), but I haven't figured out why.
- * -Adrien
- */
-#define DIFFUSION_LERP_MIDPOINT_VALUE 0.707107f
-
-static void ComputeInnerRadiusDiffusionFactors(
+static inline void ComputeInnerRadiusDiffusionFactors(
 	float radialDistance,
 	float InnerRadius,
-	float *diffusionFactors
+	DiffusionSpeakerFactors diffusionFactors
 ) {
+	/* These constants were estimated roughly, by trial and error.
+	 * TODO: determine them more accurately.
+	 */
+	/* FIXME DOCS */
+	#define DIFFUSION_DISTANCE_EQUAL_ENERGY 1e-7f
+	#define DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS 4e-7f
+
+	/* Determined experimentally; this is the midpoint value, i.e. the
+	 * value at 0.5 for the matching speakers, used for the standard
+	 * diffusion curve.
+	 *
+	 * Note: It is SUSPICIOUSLY close to 1/sqrt(2), but I haven't figured out why.
+	 * -Adrien
+	 */
+	#define DIFFUSION_LERP_MIDPOINT_VALUE 0.707107f
+
 	float actualInnerRadius = FAudio_max(InnerRadius, DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS);
 	float normalizedRadialDist;
 	float a, ms, os;
-
-	FAudio_assert(diffusionFactors);
 
 	normalizedRadialDist = radialDistance / actualInnerRadius;
 
@@ -906,14 +900,22 @@ static inline void ComputeEmitterChannelCoefficients(
 ) {
 	float elevation, radialDistance;
 	F3DAUDIO_VECTOR projTopVec, projPlane;
-	int skipCenter = (flags & F3DAUDIO_CALCULATE_ZEROCENTER) ? 1 : 0;
-	float diffusionFactors[3] = { 0.0f };
+	uint8_t skipCenter = (flags & F3DAUDIO_CALCULATE_ZEROCENTER) ? 1 : 0;
+	DiffusionSpeakerFactors diffusionFactors = { 0.0f };
 
 	float x, y;
 	float emitterAzimuth;
+	float energyPerChannel;
+	uint32_t nChannelsToDiffuseTo;
+	uint32_t iS, centerChannelIdx = -1;
+	const SpeakerInfo* infos[2];
+	float a0, a1, val;
+	uint32_t i0, i1;
 
+	/* FIXME DOCS */
 	elevation = VectorDot(listenerBasis->top, channelPosition);
 
+	/* FIXME DOCS */
 	projTopVec = VectorScale(listenerBasis->top, elevation);
 	projPlane = VectorSub(channelPosition, projTopVec);
 	radialDistance = VectorLength(projPlane);
@@ -924,12 +926,11 @@ static inline void ComputeEmitterChannelCoefficients(
 		diffusionFactors
 	);
 
+	/* FIXME DOCS */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_ALL] > 0.0f)
 	{
-		uint32_t iS, centerChannelIdx = -1;
-		uint32_t nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
-		float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_ALL] * attenuation;
-		float energyPerChannel;
+		nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
+		const float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_ALL] * attenuation;
 
 		if (skipCenter)
 		{
@@ -940,9 +941,9 @@ static inline void ComputeEmitterChannelCoefficients(
 
 		energyPerChannel = totalEnergy / nChannelsToDiffuseTo;
 
-		for (iS = 0; iS < curConfig->numNonLFSpeakers; ++iS)
+		for (iS = 0; iS < curConfig->numNonLFSpeakers; iS += 1)
 		{
-			uint32_t curSpeakerIdx = curConfig->speakers[iS].matrixIdx;
+			const uint32_t curSpeakerIdx = curConfig->speakers[iS].matrixIdx;
 			if (skipCenter && iS == centerChannelIdx)
 			{
 				continue;
@@ -952,12 +953,10 @@ static inline void ComputeEmitterChannelCoefficients(
 		}
 	}
 
+	/* FIXME DOCS */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] > 0.0f)
 	{
-		const SpeakerInfo* infos[2];
-		float a0, a1, val;
-		uint32_t i0, i1;
-		float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] * attenuation;
+		const float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] * attenuation;
 
 		x = VectorDot(listenerBasis->front, projPlane);
 		y = VectorDot(listenerBasis->right, projPlane);
@@ -1002,13 +1001,11 @@ static inline void ComputeEmitterChannelCoefficients(
 		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] += (       val) * totalEnergy;
 	}
 
+	/* FIXME DOCS */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] > 0.0f)
 	{
 		/* This code is similar to the matching speakers code above. */
-		const SpeakerInfo* infos[2];
-		float a0, a1, val;
-		uint32_t i0, i1;
-		float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] * attenuation;
+		const float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] * attenuation;
 
 		x = VectorDot(listenerBasis->front, projPlane);
 		y = VectorDot(listenerBasis->right, projPlane);
@@ -1111,11 +1108,16 @@ static inline void CalculateMatrix(
 	float* MatrixCoefficients
 ) {
 	uint32_t iEC;
+	float curEmAzimuth;
 	const ConfigInfo* curConfig = GetConfigInfo(ChannelMask);
 	float nd = eToLDistance / pEmitter->CurveDistanceScaler;
 	float attenuation = ComputeDistanceAttenuation(nd, pEmitter->pVolumeCurve);
 	/* TODO: this could be skipped if the destination has no LFE */
 	float LFEattenuation = ComputeDistanceAttenuation(nd, pEmitter->pLFECurve);
+
+	F3DAUDIO_VECTOR listenerToEmitter;
+	F3DAUDIO_VECTOR listenerToEmChannel;
+	F3DAUDIO_BASIS listenerBasis;
 
 	/* Note: For both cone calculations, the angle might be NaN or infinite
 	 * if distance == 0... ComputeConeParameter *does* check for this
@@ -1130,9 +1132,12 @@ static inline void CalculateMatrix(
 		 * this case
 		 * -Adrien
 		 */
-		float angle = -FAudio_acosf(VectorDot(pListener->OrientFront, emitterToListener) / eToLDistance);
+		const float angle = -FAudio_acosf(
+			VectorDot(pListener->OrientFront, emitterToListener) /
+			eToLDistance
+		);
 
-		float listenerConeParam = ComputeConeParameter(
+		const float listenerConeParam = ComputeConeParameter(
 			eToLDistance,
 			angle,
 			pListener->pCone->InnerAngle,
@@ -1147,9 +1152,12 @@ static inline void CalculateMatrix(
 	/* See note above. */
 	if (pEmitter->pCone && pEmitter->ChannelCount == 1)
 	{
-		float angle = FAudio_acosf(VectorDot(pEmitter->OrientFront, emitterToListener) / eToLDistance);
+		const float angle = FAudio_acosf(
+			VectorDot(pEmitter->OrientFront, emitterToListener) /
+			eToLDistance
+		);
 
-		float emitterConeParam = ComputeConeParameter(
+		const float emitterConeParam = ComputeConeParameter(
 			eToLDistance,
 			angle,
 			pEmitter->pCone->InnerAngle,
@@ -1165,9 +1173,9 @@ static inline void CalculateMatrix(
 	/* In the SPEAKER_MONO case, we can skip all energy diffusion calculation. */
 	if (DstChannelCount == 1)
 	{
-		for (iEC = 0; iEC < pEmitter->ChannelCount; ++iEC)
+		for (iEC = 0; iEC < pEmitter->ChannelCount; iEC += 1)
 		{
-			float curEmAzimuth = 0.0f;
+			curEmAzimuth = 0.0f;
 			if (pEmitter->pChannelAzimuths)
 			{
 				curEmAzimuth = pEmitter->pChannelAzimuths[iEC];
@@ -1182,9 +1190,7 @@ static inline void CalculateMatrix(
 	}
 	else
 	{
-		F3DAUDIO_VECTOR listenerToEmitter = VectorScale(emitterToListener, -1.0f);
-		F3DAUDIO_VECTOR listenerToEmChannel;
-		F3DAUDIO_BASIS listenerBasis;
+		listenerToEmitter = VectorScale(emitterToListener, -1.0f);
 
 		/* Remember here that the coordinate system is Left-Handed. */
 		listenerBasis.front = pListener->OrientFront;
@@ -1215,14 +1221,11 @@ static inline void CalculateMatrix(
 		}
 		else /* Multi-channel emitter case. */
 		{
-			F3DAUDIO_VECTOR emitterRight;
-			float emChRadius = pEmitter->ChannelRadius;
+			const F3DAUDIO_VECTOR emitterRight = VectorCross(pEmitter->OrientTop, pEmitter->OrientFront);
 
-			emitterRight = VectorCross(pEmitter->OrientTop, pEmitter->OrientFront);
-
-			for (iEC = 0; iEC < pEmitter->ChannelCount; ++iEC)
+			for (iEC = 0; iEC < pEmitter->ChannelCount; iEC += 1)
 			{
-				float emChAzimuth = pEmitter->pChannelAzimuths[iEC];
+				const float emChAzimuth = pEmitter->pChannelAzimuths[iEC];
 
 				/* LFEs are easy enough to deal with; we can
 				 * just do them separately.
@@ -1237,8 +1240,8 @@ static inline void CalculateMatrix(
 					 * vector relative to the emitter base...
 					 */
 					const F3DAUDIO_VECTOR emitterBaseToChannel = VectorAdd(
-						VectorScale(pEmitter->OrientFront, emChRadius * FAudio_cosf(emChAzimuth)),
-						VectorScale(emitterRight, emChRadius * FAudio_sinf(emChAzimuth))
+						VectorScale(pEmitter->OrientFront, pEmitter->ChannelRadius * FAudio_cosf(emChAzimuth)),
+						VectorScale(emitterRight, pEmitter->ChannelRadius * FAudio_sinf(emChAzimuth))
 					);
 					/* ... then translate. */
 					listenerToEmChannel = VectorAdd(
@@ -1280,7 +1283,7 @@ static inline void CalculateMatrix(
  * https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-doppler-shift
  * -Chad
  */
-static void CalculateDoppler(
+static inline void CalculateDoppler(
 	float SpeedOfSound,
 	const F3DAUDIO_LISTENER* pListener,
 	const F3DAUDIO_EMITTER* pEmitter,
@@ -1290,7 +1293,7 @@ static void CalculateDoppler(
 	float* emitterVelocityComponent,
 	float* DopplerFactor
 ) {
-	/* TODO: div by zero here if emitter and listener at same pos -Adrien */
+	float scaledSpeedOfSound;
 	*DopplerFactor = 1.0f;
 
 	/* Project... */
@@ -1309,7 +1312,6 @@ static void CalculateDoppler(
 
 	if (pEmitter->DopplerScaler > 0.0f)
 	{
-		float scaledSpeedOfSound;
 		scaledSpeedOfSound = SpeedOfSound / pEmitter->DopplerScaler;
 
 		/* Clamp... */
@@ -1322,12 +1324,13 @@ static void CalculateDoppler(
 			scaledSpeedOfSound
 		);
 
+		/* ... then Multiply. */
 		*DopplerFactor = (
 			SpeedOfSound - pEmitter->DopplerScaler * *listenerVelocityComponent
 		) / (
 			SpeedOfSound - pEmitter->DopplerScaler * *emitterVelocityComponent
 		);
-		if (isnan(*DopplerFactor))
+		if (isnan(*DopplerFactor)) /* If emitter/listener are at the same pos... */
 		{
 			*DopplerFactor = 1.0f;
 		}
@@ -1341,11 +1344,6 @@ static void CalculateDoppler(
 	}
 }
 
-/* Determined roughly.
- * Below that distance, the emitter angle is considered to be PI/2.
- */
-#define EMITTER_ANGLE_NULL_DISTANCE 1.2e-7
-
 void F3DAudioCalculate(
 	const F3DAUDIO_HANDLE Instance,
 	const F3DAUDIO_LISTENER *pListener,
@@ -1353,15 +1351,12 @@ void F3DAudioCalculate(
 	uint32_t Flags,
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
-	F3DAUDIO_VECTOR emitterToListener, normalizedEToL;
-	float eToLDistance, dummy, dp;
+	F3DAUDIO_VECTOR emitterToListener;
+	float eToLDistance, dp;
 
-	/* Distance */
+	/* For XACT, this calculates "Distance" */
 	emitterToListener = VectorSub(pListener->Position, pEmitter->Position);
-	normalizedEToL = VectorNormalize(emitterToListener, &dummy);
 	eToLDistance = VectorLength(emitterToListener);
-
-
 	pDSPSettings->EmitterToListenerDistance = eToLDistance;
 
 	F3DAudioCheckCalculateParams(Instance, pListener, pEmitter, Flags, pDSPSettings);
@@ -1381,31 +1376,7 @@ void F3DAudioCalculate(
 		);
 	}
 
-	if (Flags & F3DAUDIO_CALCULATE_DELAY)
-	{
-		FAudio_assert(0 && "DELAY not implemented!");
-	}
-
-	if (Flags & F3DAUDIO_CALCULATE_LPF_DIRECT)
-	{
-		/* A default value of 0.75 is fine as a zero order approximation. */
-		pDSPSettings->LPFDirectCoefficient = 0.75f;
-		FAudio_assert(0 && "LPF_DIRECT not implemented!");
-	}
-
-	if (Flags & F3DAUDIO_CALCULATE_LPF_REVERB)
-	{
-		/* Ditto. */
-		pDSPSettings->LPFReverbCoefficient = 0.75f;
-		FAudio_assert(0 && "LPF_REVERB not implemented!");
-	}
-
-	if (Flags & F3DAUDIO_CALCULATE_REVERB)
-	{
-		pDSPSettings->ReverbLevel = 0.0f;
-		FAudio_assert(0 && "REVERB not implemented!");
-	}
-
+	/* For XACT, this calculates "DopplerPitchScalar" */
 	if (Flags & F3DAUDIO_CALCULATE_DOPPLER)
 	{
 		CalculateDoppler(
@@ -1420,18 +1391,45 @@ void F3DAudioCalculate(
 		);
 	}
 
-	/* OrientationAngle */
+	/* For XACT, this calculates "OrientationAngle" */
 	if (Flags & F3DAUDIO_CALCULATE_EMITTER_ANGLE)
 	{
+		/* Determined roughly.
+		 * Below that distance, the emitter angle is considered to be PI/2.
+		 */
+		#define EMITTER_ANGLE_NULL_DISTANCE 1.2e-7
 		if (eToLDistance < EMITTER_ANGLE_NULL_DISTANCE)
 		{
 			pDSPSettings->EmitterToListenerAngle = F3DAUDIO_PI / 2.0f;
 		}
 		else
 		{
-			/* Note: OrientFront is normalized. */
+			/* Note: pEmitter->OrientFront is normalized. */
 			dp = VectorDot(emitterToListener, pEmitter->OrientFront) / eToLDistance;
 			pDSPSettings->EmitterToListenerAngle = FAudio_acosf(dp);
 		}
+	}
+
+	/* Unimplemented Flags */
+	if (Flags & F3DAUDIO_CALCULATE_DELAY)
+	{
+		FAudio_assert(0 && "DELAY not implemented!");
+	}
+	if (Flags & F3DAUDIO_CALCULATE_LPF_DIRECT)
+	{
+		/* A default value of 0.75 is fine as a zero order approximation. */
+		pDSPSettings->LPFDirectCoefficient = 0.75f;
+		FAudio_assert(0 && "LPF_DIRECT not implemented!");
+	}
+	if (Flags & F3DAUDIO_CALCULATE_LPF_REVERB)
+	{
+		/* Ditto. */
+		pDSPSettings->LPFReverbCoefficient = 0.75f;
+		FAudio_assert(0 && "LPF_REVERB not implemented!");
+	}
+	if (Flags & F3DAUDIO_CALCULATE_REVERB)
+	{
+		pDSPSettings->ReverbLevel = 0.0f;
+		FAudio_assert(0 && "REVERB not implemented!");
 	}
 }
