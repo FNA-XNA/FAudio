@@ -910,28 +910,28 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 	/* Set Effect parameters from above RPC changes */
 	if (engine->reverbVoice != NULL)
 	{
-		rvbPar.WetDryMix = engine->dspPresets[0].parameters[0].value;
-		rvbPar.ReflectionsDelay = engine->dspPresets[0].parameters[1].value;
-		rvbPar.ReverbDelay = engine->dspPresets[0].parameters[2].value;
-		rvbPar.RearDelay = engine->dspPresets[0].parameters[3].value;
-		rvbPar.PositionLeft = engine->dspPresets[0].parameters[4].value;
-		rvbPar.PositionRight = engine->dspPresets[0].parameters[5].value;
-		rvbPar.PositionMatrixLeft = engine->dspPresets[0].parameters[6].value;
-		rvbPar.PositionMatrixRight = engine->dspPresets[0].parameters[7].value;
-		rvbPar.EarlyDiffusion = engine->dspPresets[0].parameters[8].value;
-		rvbPar.LateDiffusion = engine->dspPresets[0].parameters[9].value;
-		rvbPar.LowEQGain = engine->dspPresets[0].parameters[10].value;
-		rvbPar.LowEQCutoff = engine->dspPresets[0].parameters[11].value;
-		rvbPar.HighEQGain = engine->dspPresets[0].parameters[12].value;
-		rvbPar.HighEQCutoff = engine->dspPresets[0].parameters[13].value;
-		rvbPar.RoomFilterFreq = engine->dspPresets[0].parameters[14].value;
-		rvbPar.RoomFilterMain = engine->dspPresets[0].parameters[15].value;
-		rvbPar.RoomFilterHF = engine->dspPresets[0].parameters[16].value;
-		rvbPar.ReflectionsGain = engine->dspPresets[0].parameters[17].value;
-		rvbPar.ReverbGain = engine->dspPresets[0].parameters[18].value;
-		rvbPar.DecayTime = engine->dspPresets[0].parameters[19].value;
-		rvbPar.Density = engine->dspPresets[0].parameters[20].value;
-		rvbPar.RoomSize = engine->dspPresets[0].parameters[21].value;
+		rvbPar.WetDryMix = engine->dspPresets[0].parameters[21].value;
+		rvbPar.ReflectionsDelay = engine->dspPresets[0].parameters[0].value;
+		rvbPar.ReverbDelay = engine->dspPresets[0].parameters[1].value;
+		rvbPar.RearDelay = engine->dspPresets[0].parameters[12].value;
+		rvbPar.PositionLeft = engine->dspPresets[0].parameters[2].value;
+		rvbPar.PositionRight = engine->dspPresets[0].parameters[3].value;
+		rvbPar.PositionMatrixLeft = engine->dspPresets[0].parameters[4].value;
+		rvbPar.PositionMatrixRight = engine->dspPresets[0].parameters[5].value;
+		rvbPar.HighEQGain = engine->dspPresets[0].parameters[10].value;
+		rvbPar.LowEQCutoff = engine->dspPresets[0].parameters[9].value;
+		rvbPar.LowEQGain = engine->dspPresets[0].parameters[8].value;
+		rvbPar.LateDiffusion = engine->dspPresets[0].parameters[7].value;
+		rvbPar.EarlyDiffusion = engine->dspPresets[0].parameters[6].value;
+		rvbPar.HighEQCutoff = engine->dspPresets[0].parameters[11].value;
+		rvbPar.RoomFilterMain = engine->dspPresets[0].parameters[14].value;
+		rvbPar.RoomFilterFreq = engine->dspPresets[0].parameters[13].value;
+		rvbPar.RoomFilterHF = engine->dspPresets[0].parameters[15].value;
+		rvbPar.ReflectionsGain = engine->dspPresets[0].parameters[16].value;
+		rvbPar.ReverbGain = engine->dspPresets[0].parameters[17].value;
+		rvbPar.DecayTime = engine->dspPresets[0].parameters[18].value;
+		rvbPar.Density = engine->dspPresets[0].parameters[19].value;
+		rvbPar.RoomSize = engine->dspPresets[0].parameters[20].value;
 
 		/* TODO: REMOVE THIS */
 		rvbPar.InDiffusionLength1 = 13.28f;
