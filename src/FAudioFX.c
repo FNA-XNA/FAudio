@@ -237,7 +237,7 @@ uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 	/* Allocate... */
 	FAudioFXReverb *result = (FAudioFXReverb*) FAudio_malloc(sizeof(FAudioFXReverb));
 	uint8_t *params = (uint8_t*) FAudio_malloc(
-		sizeof(FAudioFXReverbTestParameters) * 3
+		sizeof(FAudioFXReverbParameters) * 3
 	);
 
 	/* Initialize... */
@@ -245,7 +245,7 @@ uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 		&result->base,
 		&ReverbProperties,
 		params,
-		sizeof(FAudioFXReverbTestParameters),
+		sizeof(FAudioFXReverbParameters),
 		0
 	);
 

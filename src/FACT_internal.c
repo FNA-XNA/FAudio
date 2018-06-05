@@ -877,7 +877,7 @@ void FACT_INTERNAL_UpdateRPCs(
 
 void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 {
-	FAudioFXReverbTestParameters rvbPar;
+	FAudioFXReverbParameters rvbPar;
 	uint16_t i, j, par;
 	for (i = 0; i < engine->rpcCount; i += 1)
 	{
@@ -933,16 +933,11 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 		rvbPar.Density = engine->dspPresets[0].parameters[19].value;
 		rvbPar.RoomSize = engine->dspPresets[0].parameters[20].value;
 
-		/* TODO: REMOVE THIS */
-		rvbPar.InDiffusionLength1 = 13.28f;
-		rvbPar.InDiffusionLength2 = 28.13f;
-		rvbPar.OutDiffusionLength = 13.28f;
-
 		FAudioVoice_SetEffectParameters(
 			engine->reverbVoice,
 			0,
 			&rvbPar,
-			sizeof(FAudioFXReverbTestParameters),
+			sizeof(FAudioFXReverbParameters),
 			0
 		);
 	}
