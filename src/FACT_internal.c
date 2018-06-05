@@ -2139,7 +2139,23 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	if (transitionOffset != -1)
 	{
 		FAudio_assert((ptr - start) == transitionOffset);
+#if 0 /* FIXME: Transition Tables */
+		uint32_t tableEntries = read_u32(&ptr);
+		for (i = 0; i < tableEntries, i += 1)
+		{
+			read_s32(&ptr); /* -1 */
+			/* Marker min/max values? */
+			read_u32(&ptr);
+			read_u32(&ptr);
+			read_u32(&ptr);
+			read_u32(&ptr);
+			uint16_t fadeIn = read_u16(&ptr);
+			uint16_t fadeOut = read_u16(&ptr);
+			read_u16(&ptr); /* Flags? */
+		}
+#else
 		ptr = start + cueHashOffset;
+#endif
 	}
 
 	/* Cue Hash data? No idea what this is... */
