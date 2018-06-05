@@ -94,15 +94,21 @@ void FAudio_PlatformInit(FAudio *audio)
 	FAudioEntry *entry, *entryList;
 	FAudioPlatformDevice *device, *deviceList;
 	SDL_AudioSpec want, have;
-	const char *name;
+	const char *name = NULL;
 
 	/* The entry to be added to the audio device */
 	entry = (FAudioEntry*) FAudio_malloc(sizeof(FAudioEntry));
 	entry->audio = audio;
 	entry->next = NULL;
 
-	/* Use the device that the engine tells us to use */
-	name = SDL_GetAudioDeviceName(audio->master->master.deviceIndex, 0);
+	/* Use a specific device if the engine gives us an index value */
+	if (audio->master->master.deviceIndex > 0)
+	{
+		name = SDL_GetAudioDeviceName(
+			audio->master->master.deviceIndex,
+			0
+		);
+	}
 
 	/* Check to see if the device is already opened */
 	device = devlist;
