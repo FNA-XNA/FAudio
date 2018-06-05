@@ -2039,6 +2039,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		sb->cues[cur].flags = read_u8(&ptr);
 		sb->cues[cur].sbCode = read_u32(&ptr);
 		sb->cues[cur].transitionOffset = read_u32(&ptr);
+		if (sb->cues[cur].transitionOffset == 0xFFFFFFFF)
+		{
+			/* FIXME: Why */
+			sb->cues[cur].transitionOffset = 0;
+		}
 		sb->cues[cur].instanceLimit = read_u8(&ptr);
 		sb->cues[cur].fadeInMS = read_u16(&ptr);
 		sb->cues[cur].fadeOutMS = read_u16(&ptr);
