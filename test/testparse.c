@@ -468,6 +468,39 @@ int main(int argc, char **argv)
 			);
 		}
 	}
+	for (i = 0; i < sb->transitionCount; i += 1)
+	{
+		printf(
+			"\tTransition %d, Code %d:\n"
+			"\t\tEntry Count: %d\n",
+			i,
+			sb->transitionCodes[i],
+			sb->transitions[i].entryCount
+		);
+		for (j = 0; j < sb->transitions[i].entryCount; j += 1)
+		{
+			printf(
+				"\t\t\tTransition %d:\n"
+				"\t\t\t\tSound Code: %d\n"
+				"\t\t\t\tSrc Marker Min: %d\n"
+				"\t\t\t\tSrc Marker Max: %d\n"
+				"\t\t\t\tDst Marker Min: %d\n"
+				"\t\t\t\tDst Marker Max: %d\n"
+				"\t\t\t\tFade In: %d\n"
+				"\t\t\t\tFade Out: %d\n"
+				"\t\t\t\tFlags: %d\n",
+				j,
+				sb->transitions[i].entries[j].soundCode,
+				sb->transitions[i].entries[j].srcMarkerMin,
+				sb->transitions[i].entries[j].srcMarkerMax,
+				sb->transitions[i].entries[j].dstMarkerMin,
+				sb->transitions[i].entries[j].dstMarkerMax,
+				sb->transitions[i].entries[j].fadeIn,
+				sb->transitions[i].entries[j].fadeOut,
+				sb->transitions[i].entries[j].flags
+			);
+		}
+	}
 
 	/* Print WaveBank information */
 	printf("WaveBank \"%s\"\n", wb->name);

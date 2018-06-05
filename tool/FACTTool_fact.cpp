@@ -906,6 +906,65 @@ void FACTTool_Update()
 			ImGui::TreePop();
 		}
 
+		/* Transitions */
+		if (ImGui::CollapsingHeader("Transitions"))
+		for (uint16_t j = 0; j < soundBanks[i]->transitionCount; j += 1)
+		if (ImGui::TreeNode(
+			(void*) (intptr_t) j,
+			"Code #%d",
+			soundBanks[i]->transitionCodes[j]
+		)) {
+			ImGui::Text(
+				"Entry Count: %X",
+				soundBanks[i]->transitions[j].entryCount
+			);
+			if (ImGui::TreeNode("Entries"))
+			{
+				for (uint16_t k = 0; k < soundBanks[i]->transitions[j].entryCount; k += 1)
+				if (ImGui::TreeNode(
+					(void*) (intptr_t) k,
+					"Entry #%d",
+					k
+				)) {
+					ImGui::Text(
+						"Sound Code: %d",
+						soundBanks[i]->transitions[j].entries[k].soundCode
+					);
+					ImGui::Text(
+						"Src Min Marker: %d",
+						soundBanks[i]->transitions[j].entries[k].srcMarkerMin
+					);
+					ImGui::Text(
+						"Src Max Marker: %d",
+						soundBanks[i]->transitions[j].entries[k].srcMarkerMax
+					);
+					ImGui::Text(
+						"Dst Min Marker: %d",
+						soundBanks[i]->transitions[j].entries[k].dstMarkerMin
+					);
+					ImGui::Text(
+						"Dst Max Marker: %d",
+						soundBanks[i]->transitions[j].entries[k].dstMarkerMax
+					);
+					ImGui::Text(
+						"Fade In: %d",
+						soundBanks[i]->transitions[j].entries[k].fadeIn
+					);
+					ImGui::Text(
+						"Fade Out: %d",
+						soundBanks[i]->transitions[j].entries[k].fadeOut
+					);
+					ImGui::Text(
+						"Flags: %d",
+						soundBanks[i]->transitions[j].entries[k].flags
+					);
+					ImGui::TreePop();
+				}
+				ImGui::TreePop();
+			}
+			ImGui::TreePop();
+		}
+
 		/* We out. */
 		ImGui::End();
 	}

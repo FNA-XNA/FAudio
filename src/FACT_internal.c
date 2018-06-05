@@ -2011,6 +2011,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 	/* All Cue data */
 	sb->variationCount = 0;
+	sb->transitionCount = 0;
 	sb->cues = (FACTCueData*) FAudio_malloc(
 		sizeof(FACTCueData) *
 		sb->cueCount
@@ -2048,6 +2049,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		{
 			/* FIXME: Is this the only way to get this...? */
 			sb->variationCount += 1;
+		}
+		if (sb->cues[cur].transitionOffset > 0)
+		{
+			/* FIXME: Is this the only way to get this...? */
+			sb->transitionCount += 1;
 		}
 	}
 
@@ -2135,27 +2141,44 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		}
 	}
 
-	/* FIXME: How is transition data structured? */
-	if (transitionOffset != -1)
+	/* Transition data */
+	if (sb->transitionCount > 0)
 	{
 		FAudio_assert((ptr - start) == transitionOffset);
-#if 0 /* FIXME: Transition Tables */
-		uint32_t tableEntries = read_u32(&ptr);
-		for (i = 0; i < tableEntries, i += 1)
+		sb->transitions = (FACTTransitionTable*) FAudio_malloc(
+			sizeof(FACTTransitionTable) *
+			sb->transitionCount
+		);
+		sb->transitionCodes = (uint32_t*) FAudio_malloc(
+			sizeof(uint32_t) *
+			sb->transitionCount
+		);
+	}
+	else
+	{
+		sb->transitions = NULL;
+		sb->transitionCodes = NULL;
+	}
+	for (i = 0; i < sb->transitionCount; i += 1)
+	{
+		sb->transitionCodes[i] = (uint32_t) (ptr - start);
+		sb->transitions[i].entryCount = read_u32(&ptr);
+		memsize = sizeof(FACTTransition) * sb->transitions[i].entryCount;
+		sb->transitions[i].entries = (FACTTransition*) FAudio_malloc(
+			memsize
+		);
+		FAudio_zero(sb->transitions[i].entries, memsize);
+		for (j = 0; j < sb->transitions[i].entryCount; j += 1)
 		{
-			read_s32(&ptr); /* -1 */
-			/* Marker min/max values? */
-			read_u32(&ptr);
-			read_u32(&ptr);
-			read_u32(&ptr);
-			read_u32(&ptr);
-			uint16_t fadeIn = read_u16(&ptr);
-			uint16_t fadeOut = read_u16(&ptr);
-			read_u16(&ptr); /* Flags? */
+			sb->transitions[i].entries[j].soundCode = read_s32(&ptr);
+			sb->transitions[i].entries[j].srcMarkerMin = read_u32(&ptr);
+			sb->transitions[i].entries[j].srcMarkerMax = read_u32(&ptr);
+			sb->transitions[i].entries[j].dstMarkerMin = read_u32(&ptr);
+			sb->transitions[i].entries[j].dstMarkerMax = read_u32(&ptr);
+			sb->transitions[i].entries[j].fadeIn = read_u16(&ptr);
+			sb->transitions[i].entries[j].fadeOut = read_u16(&ptr);
+			sb->transitions[i].entries[j].flags = read_u16(&ptr);
 		}
-#else
-		ptr = start + cueHashOffset;
-#endif
 	}
 
 	/* Cue Hash data? No idea what this is... */

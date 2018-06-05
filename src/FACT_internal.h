@@ -269,6 +269,24 @@ typedef struct FACTVariationTable
 	FACTVariation *entries;
 } FACTVariationTable;
 
+typedef struct FACTTransition
+{
+	int32_t soundCode;
+	uint32_t srcMarkerMin;
+	uint32_t srcMarkerMax;
+	uint32_t dstMarkerMin;
+	uint32_t dstMarkerMax;
+	uint16_t fadeIn;
+	uint16_t fadeOut;
+	uint16_t flags;
+} FACTTransition;
+
+typedef struct FACTTransitionTable
+{
+	uint32_t entryCount;
+	FACTTransition *entries;
+} FACTTransitionTable;
+
 /* Internal Cue Types */
 
 typedef struct FACTInstanceRPCData
@@ -380,6 +398,7 @@ struct FACTSoundBank
 	uint8_t wavebankCount;
 	uint16_t soundCount;
 	uint16_t variationCount;
+	uint16_t transitionCount;
 
 	/* Strings, strings everywhere! */
 	char **wavebankNames;
@@ -392,6 +411,8 @@ struct FACTSoundBank
 	uint32_t *soundCodes;
 	FACTVariationTable *variations;
 	uint32_t *variationCodes;
+	FACTTransitionTable *transitions;
+	uint32_t *transitionCodes;
 };
 
 struct FACTWaveBank

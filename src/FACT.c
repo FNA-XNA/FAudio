@@ -943,6 +943,14 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	FAudio_free(pSoundBank->variations);
 	FAudio_free(pSoundBank->variationCodes);
 
+	/* Transition data */
+	for (i = 0; i < pSoundBank->transitionCount; i += 1)
+	{
+		FAudio_free(pSoundBank->transitions[i].entries);
+	}
+	FAudio_free(pSoundBank->transitions);
+	FAudio_free(pSoundBank->transitionCodes);
+
 	/* Cue Name data */
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
