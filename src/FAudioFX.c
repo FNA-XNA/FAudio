@@ -228,6 +228,7 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 void FAudioFXReverb_Free(void* fapo)
 {
 	FAudioFXReverb *reverb = (FAudioFXReverb*) fapo;
+	DspReverb_Destroy(reverb->reverb);
 	FAudio_free(reverb->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }

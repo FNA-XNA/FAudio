@@ -38,5 +38,6 @@ typedef struct FAudioFXReverbParameters FAudioFXReverbParameters;
 DspReverb *DspReverb_Create(int32_t sampleRate);
 void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params);
 void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count, int32_t num_channels);
+void DspReverb_Destroy(DspReverb *reverb);
 
 #endif // FAUDIOFX_DSP_h

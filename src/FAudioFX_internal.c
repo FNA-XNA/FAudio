@@ -347,7 +347,7 @@ static inline float DspCombShelving_Process(DspCombShelving *filter, float sampl
 	return delay_out;
 }
 
-static float DspCombShelving_Destroy(DspCombShelving *filter)
+static void DspCombShelving_Destroy(DspCombShelving *filter)
 {
 	FAudio_assert(filter != NULL);
 	DspComb_Destroy(&filter->comb);
@@ -668,4 +668,30 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 			*out_ptr++ = (room * reverb->wet_ratio) + (in * reverb->dry_ratio);
 		}
 	}
+}
+
+void DspReverb_Destroy(DspReverb *reverb)
+{
+	DspDelay_Destroy(&reverb->early_delay);
+
+	for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	{
+		DspAllPass_Destroy(&reverb->apf_in[i]);
+	}
+
+	DspDelay_Destroy(&reverb->reverb_delay);
+
+	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+	{
+		DspCombShelving_Destroy(&reverb->lpf_comb[i]);
+	}
+
+	DspBiQuad_Destroy(&reverb->room_high_shelf);
+
+	for (int32_t i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	{
+		DspAllPass_Destroy(&reverb->apf_out[i]);
+	}
+
+	FAudio_free(reverb);
 }
