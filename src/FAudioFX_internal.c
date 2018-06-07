@@ -561,13 +561,12 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	}
 
 	/* reverberation */
-	uint32_t delay = (params->ReverbDelay > params->ReflectionsDelay) ? params->ReverbDelay - params->ReflectionsDelay : params->ReverbDelay;
-	DspDelay_Change(&reverb->reverb_delay, (float)delay);
+	DspDelay_Change(&reverb->reverb_delay, (float) params->ReverbDelay);
 
 	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
 	{
 		/* set decay time of comb filter */
-		DspComb_Change(&reverb->lpf_comb[i].comb, COMB_DELAYS[i], params->DecayTime * 1000.0f * 0.2f);
+		DspComb_Change(&reverb->lpf_comb[i].comb, COMB_DELAYS[i], params->DecayTime * 1000.0f);
 
 		/* high/low shelving */
 		DspBiQuad_Change(
@@ -625,13 +624,10 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 		/* early reflections */
 		float early = delay_in;
 
-		for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+		/*for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
 		{
 			early = DspAllPass_Process(&reverb->apf_in[i], early);
-		}
-
-		/* early reflection gain */
-		early = early * reverb->early_gain;
+		} */
 
 		/* reverberation */
 		float revdelay = DspDelay_Process(&reverb->reverb_delay, early);
@@ -642,21 +638,21 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 		for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
 			comb_out += comb_gain * DspCombShelving_Process(&reverb->lpf_comb[i], revdelay);
-			comb_gain = -comb_gain;
+			/* comb_gain = -comb_gain; */
+		}
+
+		/* output diffusion */
+		float late = comb_out;
+		for (int32_t ap = 0; ap < 4; ++ap)
+		{
+			late = DspAllPass_Process(&reverb->apf_out[ap], late);
 		}
 
 		/* combine early reflections and reverberation */
-		float early_late = (early + (reverb->reverb_gain * comb_out));
-
-		/* output diffusion */
-		float out = early_late;
-		for (int32_t ap = 0; ap < 4; ++ap)
-		{
-			out = DspAllPass_Process(&reverb->apf_out[ap], out);
-		}
+		float early_late = (reverb->early_gain * early) + (reverb->reverb_gain * late);
 
 		/* room filter */
-		float room = out * reverb->room_gain;
+		float room = early_late * reverb->room_gain;
 		room = DspBiQuad_Process(&reverb->room_high_shelf, room);
 
 		/* wet/dry mix */
