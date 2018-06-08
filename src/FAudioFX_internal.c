@@ -127,6 +127,14 @@ static inline float DspDelay_Tap(DspDelay *filter, uint32_t delay)
 	return filter->buffer[(filter->write_idx - delay + filter->capacity) % filter->capacity];
 }
 
+static inline void DspDelay_Reset(DspDelay *filter)
+{
+	FAudio_assert(filter != NULL);
+	filter->read_idx = 0;
+	filter->write_idx = filter->delay;
+	FAudio_zero(filter->buffer, filter->capacity * sizeof(float));
+}
+
 static void DspDelay_Destroy(DspDelay *filter)
 {
 	FAudio_assert(filter != NULL);
@@ -177,6 +185,11 @@ static inline float DspComb_Process(DspComb *filter, float sample_in)
 	DspDelay_Write(&filter->delay, to_buf);
 
 	return delay_out;
+}
+
+static inline void DspComb_Reset(DspComb *filter)
+{
+	DspDelay_Reset(&filter->delay);
 }
 
 static void DspComb_Destroy(DspComb *filter)
@@ -304,6 +317,13 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 	return  result;
 }
 
+static inline void DspBiQuad_Reset(DspBiQuad *filter)
+{
+	FAudio_assert(filter != NULL);
+	FAudio_zero(&filter->delay_x, sizeof(filter->delay_x));
+	FAudio_zero(&filter->delay_y, sizeof(filter->delay_y));
+}
+
 static void DspBiQuad_Destroy(DspBiQuad *filter)
 {
 }
@@ -345,6 +365,14 @@ static inline float DspCombShelving_Process(DspCombShelving *filter, float sampl
 	DspDelay_Write(&filter->comb.delay, FAudioFX_INTERNAL_undenormalize(sample_in + (filter->comb.feedback_gain * feedback)));
 
 	return delay_out;
+}
+
+static void DspCombShelving_Reset(DspCombShelving *filter)
+{
+	FAudio_assert(filter != NULL);
+	DspComb_Reset(&filter->comb);
+	DspBiQuad_Reset(&filter->low_shelving);
+	DspBiQuad_Reset(&filter->high_shelving);
 }
 
 static void DspCombShelving_Destroy(DspCombShelving *filter)
@@ -390,6 +418,12 @@ static inline float DspAllPass_Process(DspAllPass *filter, float sample_in)
 	float out = FAudioFX_INTERNAL_undenormalize(delay_out - (filter->feedback_gain * to_buf));
 
 	return out;
+}
+
+static void DspAllPass_Reset(DspAllPass *filter)
+{
+	FAudio_assert(filter != NULL);
+	DspDelay_Reset(&filter->delay);
 }
 
 static void DspAllPass_Destroy(DspAllPass *filter)
@@ -663,6 +697,30 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 		{
 			*out_ptr++ = (room * reverb->wet_ratio) + (in * reverb->dry_ratio);
 		}
+	}
+}
+
+void DspReverb_Reset(DspReverb *reverb)
+{
+	DspDelay_Reset(&reverb->early_delay);
+
+	for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	{
+		DspAllPass_Reset(&reverb->apf_in[i]);
+	}
+
+	DspDelay_Reset(&reverb->reverb_delay);
+
+	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+	{
+		DspCombShelving_Reset(&reverb->lpf_comb[i]);
+	}
+
+	DspBiQuad_Reset(&reverb->room_high_shelf);
+
+	for (int32_t i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	{
+		DspAllPass_Reset(&reverb->apf_out[i]);
 	}
 }
 

@@ -255,8 +255,6 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	return result;
 }
 
-
-
 uint32_t FAudioFXReverb_LockForProcess(
 	FAudioFXReverb *fapo,
 	uint32_t InputLockedParameterCount,
@@ -350,7 +348,8 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 {
 	FAPOBase_Reset(&fapo->base.base);
 
-	// FIXME: figure out when this gets/should get called
+	/* reset the cached state of the reverb filter */
+	DspReverb_Reset(fapo->reverb);
 }
 
 void FAudioFXReverb_Free(void* fapo)
