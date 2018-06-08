@@ -1,4 +1,5 @@
 #include "XAPOBase.h"
+#include <FAudio_internal.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -69,7 +70,8 @@ ULONG CXAPOBase::Release()
 
 HRESULT CXAPOBase::GetRegistrationProperties(XAPO_REGISTRATION_PROPERTIES** ppRegistrationProperties) 
 {
-	return FAPOBase_GetRegistrationProperties(fapo_base, ppRegistrationProperties);
+	FAudio_assert(fapo_base->base.GetRegistrationProperties != NULL);
+	return fapo_base->base.GetRegistrationProperties(fapo_base, ppRegistrationProperties);
 }
 
 HRESULT CXAPOBase::IsInputFormatSupported(
@@ -77,7 +79,8 @@ HRESULT CXAPOBase::IsInputFormatSupported(
 	const WAVEFORMATEX* pRequestedInputFormat,
 	WAVEFORMATEX** ppSupportedInputFormat
 ) {
-	return FAPOBase_IsInputFormatSupported(
+	FAudio_assert(fapo_base->base.IsInputFormatSupported != NULL);
+	return fapo_base->base.IsInputFormatSupported(
 		fapo_base, 
 		pOutputFormat, 
 		pRequestedInputFormat, 
@@ -89,7 +92,8 @@ HRESULT CXAPOBase::IsOutputFormatSupported(
 	const WAVEFORMATEX* pRequestedOutputFormat,
 	WAVEFORMATEX** ppSupportedOutputFormat
 ) {
-	return FAPOBase_IsOutputFormatSupported(
+	FAudio_assert(fapo_base->base.IsOutputFormatSupported != NULL);
+	return fapo_base->base.IsOutputFormatSupported(
 		fapo_base, 
 		pInputFormat, 
 		pRequestedOutputFormat, 
@@ -98,12 +102,14 @@ HRESULT CXAPOBase::IsOutputFormatSupported(
 
 HRESULT CXAPOBase::Initialize(const void*pData, UINT32 DataByteSize) 
 {
-	return FAPOBase_Initialize(fapo_base, pData, DataByteSize);
+	FAudio_assert(fapo_base->base.Initialize != NULL);
+	return fapo_base->base.Initialize(fapo_base, pData, DataByteSize);
 }
 
 void CXAPOBase::Reset() 
 {
-	FAPOBase_Reset(fapo_base);
+	FAudio_assert(fapo_base->base.Reset != NULL);
+	fapo_base->base.Reset(fapo_base);
 }
 
 HRESULT CXAPOBase::LockForProcess(
@@ -112,7 +118,8 @@ HRESULT CXAPOBase::LockForProcess(
 	UINT32 OutputLockedParameterCount,
 	const XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS* pOutputLockedParameters
 ) {
-	return FAPOBase_LockForProcess(
+	FAudio_assert(fapo_base->base.LockForProcess != NULL);
+	return fapo_base->base.LockForProcess(
 		fapo_base, 
 		InputLockedParameterCount, 
 		pInputLockedParameters, 
@@ -122,17 +129,20 @@ HRESULT CXAPOBase::LockForProcess(
 
 void CXAPOBase::UnlockForProcess() 
 {
-	FAPOBase_UnlockForProcess(fapo_base);
+	FAudio_assert(fapo_base->base.UnlockForProcess != NULL);
+	fapo_base->base.UnlockForProcess(fapo_base);
 }
 
 UINT32 CXAPOBase::CalcInputFrames(UINT32 OutputFrameCount) 
 {
-	return FAPOBase_CalcInputFrames(fapo_base, OutputFrameCount);
+	FAudio_assert(fapo_base->base.CalcInputFrames != NULL);
+	return fapo_base->base.CalcInputFrames(fapo_base, OutputFrameCount);
 }
 
 UINT32 CXAPOBase::CalcOutputFrames(UINT32 InputFrameCount) 
 {
-	return FAPOBase_CalcOutputFrames(fapo_base, InputFrameCount);
+	FAudio_assert(fapo_base->base.CalcOutputFrames != NULL);
+	return fapo_base->base.CalcOutputFrames(fapo_base, InputFrameCount);
 }
 
 // protected functions
@@ -239,16 +249,19 @@ ULONG CXAPOParametersBase::Release()
 
 void CXAPOParametersBase::SetParameters(const void* pParameters, UINT32 ParameterByteSize) 
 {
-	FAPOParametersBase_SetParameters(fapo_param_base, pParameters, ParameterByteSize);
+	FAudio_assert(fapo_param_base->parameters.SetParameters);
+	fapo_param_base->parameters.SetParameters(fapo_param_base, pParameters, ParameterByteSize);
 }
 
 void CXAPOParametersBase::GetParameters(void* pParameters, UINT32 ParameterByteSize) {
-	FAPOParametersBase_GetParameters(fapo_param_base, pParameters, ParameterByteSize);
+	FAudio_assert(fapo_param_base->parameters.GetParameters);
+	fapo_param_base->parameters.GetParameters(fapo_param_base, pParameters, ParameterByteSize);
 }
 
 void CXAPOParametersBase::OnSetParameters(const void* pParameters, UINT32 ParameterByteSize) 
 {
-	FAPOParametersBase_OnSetParameters(fapo_param_base, pParameters, ParameterByteSize);
+	FAudio_assert(fapo_param_base->OnSetParameters);
+	fapo_param_base->OnSetParameters(fapo_param_base, pParameters, ParameterByteSize);
 }
 
 BOOL CXAPOParametersBase::ParametersChanged() 
