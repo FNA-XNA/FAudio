@@ -149,6 +149,114 @@ typedef struct FAudioFXReverb
 	DspReverb *reverb;
 } FAudioFXReverb;
 
+uint32_t FAudioFXReverb_IsInputFormatSupported(
+	FAPOBase *fapo,
+	const FAudioWaveFormatEx *pOutputFormat,
+	const FAudioWaveFormatEx *pRequestedInputFormat,
+	FAudioWaveFormatEx **ppSupportedInputFormat
+) {
+	uint32_t result = 0;
+
+#define SET_SUPPORTED_FIELD(field, value)	\
+	result = 1;	\
+	if (ppSupportedInputFormat && *ppSupportedInputFormat)	\
+	{	\
+		(*ppSupportedInputFormat)->field = (value);	\
+	}
+
+	/* sample rate */
+	if (pOutputFormat->nSamplesPerSec != pRequestedInputFormat->nSamplesPerSec)
+	{
+		SET_SUPPORTED_FIELD(nSamplesPerSec, pOutputFormat->nSamplesPerSec);
+	}
+
+	/* data type */
+	if (pRequestedInputFormat->wFormatTag != 3)
+	{
+		SET_SUPPORTED_FIELD(wFormatTag, 3);
+	}
+
+	/* number of input / output channels */
+	if (pOutputFormat->nChannels == 1 || pOutputFormat->nChannels == 2)
+	{
+		if (pRequestedInputFormat->nChannels != pRequestedInputFormat->nChannels)
+		{
+			SET_SUPPORTED_FIELD(nChannels, pOutputFormat->nChannels);
+		}
+	}
+	else if (pOutputFormat->nChannels == 6)
+	{
+		if (pRequestedInputFormat->nChannels != 1 || pRequestedInputFormat->nChannels != 2)
+		{
+			SET_SUPPORTED_FIELD(nChannels, 1);
+		}
+	}
+	else
+	{
+		SET_SUPPORTED_FIELD(nChannels, 1);
+		result = 1;
+	}
+
+#undef SET_SUPPORTED_FIELD
+
+	return result;
+}
+
+uint32_t FAudioFXReverb_IsOutputFormatSupported(
+	FAPOBase *fapo,
+	const FAudioWaveFormatEx *pInputFormat,
+	const FAudioWaveFormatEx *pRequestedOutputFormat,
+	FAudioWaveFormatEx **ppSupportedOutputFormat
+) {
+	uint32_t result = 0;
+
+#define SET_SUPPORTED_FIELD(field, value)	\
+	result = 1;	\
+	if (ppSupportedOutputFormat && *ppSupportedOutputFormat)	\
+	{	\
+		(*ppSupportedOutputFormat)->field = (value);	\
+	}
+
+	/* sample rate */
+	if (pInputFormat->nSamplesPerSec != pRequestedOutputFormat->nSamplesPerSec)
+	{
+		SET_SUPPORTED_FIELD(nSamplesPerSec, pInputFormat->nSamplesPerSec);
+	}
+
+	/* data type */
+	if (pRequestedOutputFormat->wFormatTag != 3)
+	{
+		SET_SUPPORTED_FIELD(wFormatTag, 3);
+	}
+
+	/* number of input / output channels */
+	if (pInputFormat->nChannels == 1 || pInputFormat->nChannels == 2)
+	{
+		if (pRequestedOutputFormat->nChannels != pRequestedOutputFormat->nChannels)
+		{
+			SET_SUPPORTED_FIELD(nChannels, pInputFormat->nChannels);
+		}
+	}
+	else if (pInputFormat->nChannels == 6)
+	{
+		if (pRequestedOutputFormat->nChannels != 1 || pRequestedOutputFormat->nChannels != 2)
+		{
+			SET_SUPPORTED_FIELD(nChannels, 1);
+		}
+	}
+	else
+	{
+		SET_SUPPORTED_FIELD(nChannels, 1);
+		result = 1;
+	}
+
+#undef SET_SUPPORTED_FIELD
+
+	return result;
+}
+
+
+
 uint32_t FAudioFXReverb_LockForProcess(
 	FAudioFXReverb *fapo,
 	uint32_t InputLockedParameterCount,
@@ -170,7 +278,27 @@ uint32_t FAudioFXReverb_LockForProcess(
 		return result;
 	}
 
-	/* FIXME: do advanced validation */
+	/* reverb specific validation */
+	if (pInputLockedParameters->pFormat->wFormatTag != 3) /* WAVE_FORMAT_IEEE_FLOAT */
+	{
+		return 1;
+	}
+
+	if (pInputLockedParameters->pFormat->nSamplesPerSec < FAUDIOFX_REVERB_MIN_FRAMERATE ||
+		pInputLockedParameters->pFormat->nSamplesPerSec > FAUDIOFX_REVERB_MAX_FRAMERATE)
+	{
+		return 1;
+	}
+
+	if (!((pInputLockedParameters->pFormat->nChannels == 1 &&
+			(pOutputLockedParameters->pFormat->nChannels == 1 ||
+			 pOutputLockedParameters->pFormat->nChannels == 6)) ||
+		  (pInputLockedParameters->pFormat->nChannels == 2 &&
+			(pOutputLockedParameters->pFormat->nChannels == 2 ||
+			 pOutputLockedParameters->pFormat->nChannels == 6))))
+	{
+		return 1;
+	}
 
 	/* save the things we care about */
 	fapo->inChannels = pInputLockedParameters->pFormat->nChannels;
@@ -256,14 +384,16 @@ uint32_t FAudioCreateReverb(void** ppApo, uint32_t Flags)
 	result->reverb = NULL;
 
 	/* Function table... */
-	result->base.base.base.LockForProcess = (LockForProcessFunc)
-		FAudioFXReverb_LockForProcess;
-	result->base.base.base.Reset = (ResetFunc)
-		FAudioFXReverb_Reset;
-	result->base.base.base.Process = (ProcessFunc)
-		FAudioFXReverb_Process;
+	#define ASSIGN_VT(name) \
+		result->base.base.base.name = (name##Func) FAudioFXReverb_##name;
+	ASSIGN_VT(LockForProcess);
+	ASSIGN_VT(IsInputFormatSupported);
+	ASSIGN_VT(IsOutputFormatSupported);
+	ASSIGN_VT(Reset);
+	ASSIGN_VT(Process);
 	result->base.base.Destructor = FAudioFXReverb_Free;
-	
+	#undef ASSIGN_VT
+
 	/* Finally. */
 	*ppApo = result;
 	return 0;
