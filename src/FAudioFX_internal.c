@@ -453,39 +453,43 @@ Reverb network - loosely based on the reverberator from
 the classic classic Schroeder-Moorer reverberator with modifications
 to fit the XAudio2FX parameters.
 
-Mono - Mono:
-
-                        Diffusion
-
-In    +--------+     +----+    +----+              * g0
- +----+PreDelay+-----+APF1+----+APF2+-----------------------------+
-      +--------+     +----+    +----+                             |
-                                                                  |
- +----------------------------------------------------------------+
- |                                                                |
- |    +-----+        +--------+   * c0                            |
- +----+Delay+---+----+Comb1   +-----------+                       |
-      +-----+   |    +--------+           |                       |
-                |                         |                       |
-                |    +--------+   * c1    |                       |
-                +----+Comb2   +-----------+                       | 
-                |    +--------+           |    +-----+  * g1      |
-                |                         +----+ SUM +----------+ |
-                |    +--------+   * cx    |    +-----+          | |
-                +----+...     +-----------+                     | |
-                |    +--------+           |                     | |
-                |                         |                     | |
-                |    +--------+   * c7    |                   +-+-+-+
-                +----+Comb8   +-----------+                   | SUM |
-                     +--------+                               +--+--+
-                                                                 |
- +---------------------------------------------------------------+
- |
- |    +----+    +----+    +----+    +----+    * g2    +------------+     Out
- +----|APF3|----|APF4|----|APF5|----|APF6|------------+HighShelving+------>
-      +----+    +----+    +----+    +----+            +------------+     
-
-                                             +---- Room Damping ----+    
+                                                                         
+    In    +--------+   +----+      +------------+      +-----+           
+  ----|--->PreDelay---->APF1---+--->Sub LeftCh  |----->|     |   Left Out
+      |   +--------+   +----+  |   +------------+      | Wet |-------->  
+      |                        |   +------------+      |     |           
+      |                        |---|Sub RightCh |----->| Dry |           
+      |                            +------------+      |     |  Right Out
+      |                                                | Mix |-------->  
+      +----------------------------------------------->|     |           
+                                                       +-----+           
+ Sub routine per channel :                                                                    
+                                                                         
+     In  +-----+      +-----+ * cg                                       
+   ---+->|Delay|--+---|Comb1|------+                                     
+      |  +-----+  |   +-----+      |                                     
+      |           |                |                                     
+      |           |   +-----+ * cg |                                     
+      |           +--->Comb2|------+                                     
+      |           |   +-----+      |     +-----+                         
+      |           |                +---->| SUM |--------+                
+      |           |   +-----+ * cg |     +-----+        |                
+      |           +--->...  |------+                    |                
+      | * g0      |   +-----+      |                    |                
+      |           |                |                    |                
+      |           +--->-----+ * cg |                    |                
+      |               |Comb8|------+                    |                
+      |               +-----+                           |                
+      v                                                 |                
+   +-----+  g1   +----+   +----+   +----+   +----+      |                
+   | SUM |<------|APF4|<--|APF3|<--|APF2|<--|APF1|<-----+                
+   +-----+       +----+   +----+   +----+   +----+                       
+      |                                                                  
+      |                                                                  
+      |            +-------------+          Out                          
+      +----------->|RoomFilter   |------------------------>              
+                   +-------------+                                       
+                                                                         
 
 Parameters:
 
@@ -515,7 +519,7 @@ float RoomSize;					1 - 100 feet (NOT USED YET)
 */
 
 #define REVERB_COUNT_COMB 8
-#define REVERB_COUNT_APF_IN	2
+#define REVERB_COUNT_APF_IN	1
 #define REVERB_COUNT_APF_OUT 4
 
 static float COMB_DELAYS[REVERB_COUNT_COMB] =
@@ -533,7 +537,7 @@ static float COMB_DELAYS[REVERB_COUNT_COMB] =
 static float APF_IN_DELAYS[REVERB_COUNT_APF_IN] =
 {
 	13.28f,
-	28.13f
+/*	28.13f */
 };
 
 static float APF_OUT_DELAYS[REVERB_COUNT_APF_OUT] =
@@ -544,29 +548,39 @@ static float APF_OUT_DELAYS[REVERB_COUNT_APF_OUT] =
 	7.73f
 };
 
+static const float STEREO_SPREAD[2] =
+{
+	0.0f,
+	0.5216f
+};
+
+typedef struct DspReverbChannel
+{
+	DspDelay reverb_delay;
+	DspCombShelving	lpf_comb[REVERB_COUNT_COMB];
+	DspAllPass	apf_out[REVERB_COUNT_APF_OUT];
+	DspBiQuad room_high_shelf;
+} DspReverbChannel;
+
 typedef struct DspReverb
 {
 	DspDelay early_delay;
 	DspAllPass apf_in[REVERB_COUNT_APF_IN];
+	
+	int32_t out_channels;
+	DspReverbChannel channel[2];
+
 	float early_gain;
-
-	DspDelay reverb_delay;
-	DspCombShelving	lpf_comb[REVERB_COUNT_COMB];
 	float reverb_gain;
-
-	DspBiQuad room_high_shelf;
 	float room_gain;
-
-	DspAllPass	apf_out[REVERB_COUNT_APF_OUT];
-
 	float wet_ratio;
 	float dry_ratio;
 } DspReverb;
 
-DspReverb *DspReverb_Create(int32_t sampleRate)
+DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out_channels)
 {
 	DspReverb *reverb = (DspReverb *)FAudio_malloc(sizeof(DspReverb));
-	int32_t i;
+	int32_t i, c;
 
 	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10);
 
@@ -575,24 +589,28 @@ DspReverb *DspReverb_Create(int32_t sampleRate)
 		DspAllPass_Initialize(&reverb->apf_in[i], sampleRate, APF_IN_DELAYS[i], 0.5f);
 	}
 
-	DspDelay_Initialize(&reverb->reverb_delay, sampleRate, 10);
-
-	for (i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (c = 0; c < out_channels; ++c)
 	{
-		DspCombShelving_Initialize(&reverb->lpf_comb[i], sampleRate, COMB_DELAYS[i], 500, 500, -6, 5000, -6);
-	}
+		DspDelay_Initialize(&reverb->channel[c].reverb_delay, sampleRate, 10);
 
-	DspBiQuad_Initialize(&reverb->room_high_shelf, sampleRate, DSP_BIQUAD_HIGHSHELVING, 5000, 0, -10);
+		for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		{
+			DspCombShelving_Initialize(&reverb->channel[c].lpf_comb[i], sampleRate, COMB_DELAYS[i] + STEREO_SPREAD[c], 500, 500, -6, 5000, -6);
+		}
 
-	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
-	{
-		DspAllPass_Initialize(&reverb->apf_out[i], sampleRate, APF_OUT_DELAYS[i], 0.5f);
+		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+		{
+			DspAllPass_Initialize(&reverb->channel[c].apf_out[i], sampleRate, APF_OUT_DELAYS[i] + STEREO_SPREAD[c], 0.5f);
+		}
+
+		DspBiQuad_Initialize(&reverb->channel[c].room_high_shelf, sampleRate, DSP_BIQUAD_HIGHSHELVING, 5000, 0, -10);
 	}
 
 	reverb->early_gain = 1.0f;
 	reverb->reverb_gain = 1.0f;
 	reverb->dry_ratio = 0.0f;
 	reverb->wet_ratio = 1.0f;
+	reverb->out_channels = out_channels;
 
 	return reverb;
 }
@@ -600,7 +618,7 @@ DspReverb *DspReverb_Create(int32_t sampleRate)
 void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params)
 {
 	float early_diffusion, late_diffusion;
-	int32_t i;
+	int32_t i, c;
 
 	/* pre delay */
 	DspDelay_Change(&reverb->early_delay, (float)params->ReflectionsDelay);
@@ -614,40 +632,45 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	}
 
 	/* reverberation */
-	DspDelay_Change(&reverb->reverb_delay, (float) params->ReverbDelay);
-
-	for (i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (c = 0; c < reverb->out_channels; ++c)
 	{
-		/* set decay time of comb filter */
-		DspComb_Change(&reverb->lpf_comb[i].comb, COMB_DELAYS[i], params->DecayTime * 1000.0f);
+		DspDelay_Change(&reverb->channel[c].reverb_delay, (float) params->ReverbDelay);
 
-		/* high/low shelving */
-		DspBiQuad_Change(
-			&reverb->lpf_comb[i].low_shelving,
-			50.0f + params->LowEQCutoff * 50.0f,
-			0.0f,
-			params->LowEQGain - 8.0f);
-		DspBiQuad_Change(
-			&reverb->lpf_comb[i].high_shelving,
-			1000 + params->HighEQCutoff * 500.0f,
-			0.0f,
-			params->HighEQGain - 8.0f);
+		for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		{
+			/* set decay time of comb filter */
+			DspComb_Change(&reverb->channel[c].lpf_comb[i].comb, COMB_DELAYS[i] + STEREO_SPREAD[c], params->DecayTime * 1000.0f);
+
+			/* high/low shelving */
+			DspBiQuad_Change(
+				&reverb->channel[c].lpf_comb[i].low_shelving,
+				50.0f + params->LowEQCutoff * 50.0f,
+				0.0f,
+				params->LowEQGain - 8.0f);
+			DspBiQuad_Change(
+				&reverb->channel[c].lpf_comb[i].high_shelving,
+				1000 + params->HighEQCutoff * 500.0f,
+				0.0f,
+				params->HighEQGain - 8.0f);
+		}
 	}
 
 	/* gain */
 	reverb->early_gain = FAudioFX_INTERNAL_DbGainToFactor(params->ReflectionsGain);
 	reverb->reverb_gain = FAudioFX_INTERNAL_DbGainToFactor(params->ReverbGain);
-
-	/* room filter */
 	reverb->room_gain = FAudioFX_INTERNAL_DbGainToFactor(params->RoomFilterMain);
-	DspBiQuad_Change(&reverb->room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterMain + params->RoomFilterHF);
 
 	/* late diffusion */
 	late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
 
-	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	for (c = 0; c < reverb->out_channels; ++c)
 	{
-		DspAllPass_Change(&reverb->apf_out[i], APF_OUT_DELAYS[i], late_diffusion);
+		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+		{
+			DspAllPass_Change(&reverb->channel[c].apf_out[i], APF_OUT_DELAYS[i] + STEREO_SPREAD[c], late_diffusion);
+		}
+		
+		DspBiQuad_Change(&reverb->channel[c].room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterMain + params->RoomFilterHF);
 	}
 
 	/* wet/dry mix (100 = fully wet / 0 = fully dry) */
@@ -665,9 +688,9 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 	while (sample_idx < sample_count)
 	{
 		float delay_in, early, revdelay, late;
-		float early_late, room;
+		float early_late, room_out[2];
 		float comb_out, comb_gain;
-		int32_t i;
+		int32_t i, c;
 
 		/* get input, merging stereo samples */
 		float in = samples_in[sample_idx++];
@@ -682,51 +705,51 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 		/* early reflections */
 		early = delay_in;
 
-		/*for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
+		for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 		{
 			early = DspAllPass_Process(&reverb->apf_in[i], early);
-		} */
-
-		/* reverberation */
-		revdelay = DspDelay_Process(&reverb->reverb_delay, early);
-
-		comb_out = 0.0f;
-		comb_gain = 1.0f / REVERB_COUNT_COMB;
-
-		for (i = 0; i < REVERB_COUNT_COMB; ++i)
-		{
-			comb_out += comb_gain * DspCombShelving_Process(&reverb->lpf_comb[i], revdelay);
-			/* comb_gain = -comb_gain; */
 		}
 
-		/* output diffusion */
-		late = comb_out;
-		for (i = 0; i < 4; ++i)
+		/* reverberation (per channel) */
+		for (c = 0; c < reverb->out_channels; ++c)
 		{
-			late = DspAllPass_Process(&reverb->apf_out[i], late);
+			revdelay = DspDelay_Process(&reverb->channel[c].reverb_delay, early);
+
+			comb_out = 0.0f;
+			comb_gain = 1.0f / REVERB_COUNT_COMB;
+
+			for (i = 0; i < REVERB_COUNT_COMB; ++i)
+			{
+				comb_out += comb_gain * DspCombShelving_Process(&reverb->channel[c].lpf_comb[i], revdelay);
+			}
+
+			/* output diffusion */
+			late = comb_out;
+			for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+			{
+				late = DspAllPass_Process(&reverb->channel[c].apf_out[i], late);
+			}
+
+			/* combine early reflections and reverberation */
+			early_late = (reverb->early_gain * early) + (reverb->reverb_gain * late);
+
+			/* room filter */
+			room_out[c] = early_late * reverb->room_gain;
+			room_out[c] = DspBiQuad_Process(&reverb->channel[c].room_high_shelf, room_out[c]);
 		}
-
-		/* combine early reflections and reverberation */
-		early_late = (reverb->early_gain * early) + (reverb->reverb_gain * late);
-
-		/* room filter */
-		room = early_late * reverb->room_gain;
-		room = DspBiQuad_Process(&reverb->room_high_shelf, room);
 
 		/* wet/dry mix */
-		*out_ptr++ = (room * reverb->wet_ratio) + (in * reverb->dry_ratio);
-
-		/* handle stereo the stupid way for now */
+		*out_ptr++ = (room_out[0] * reverb->wet_ratio) + (in * reverb->dry_ratio);
 		if (num_channels == 2)
 		{
-			*out_ptr++ = (room * reverb->wet_ratio) + (in * reverb->dry_ratio);
+			*out_ptr++ = (room_out[1] * reverb->wet_ratio) + (in * reverb->dry_ratio);
 		}
 	}
 }
 
 void DspReverb_Reset(DspReverb *reverb)
 {
-	int32_t i;
+	int32_t i, c;
 
 	DspDelay_Reset(&reverb->early_delay);
 
@@ -735,24 +758,27 @@ void DspReverb_Reset(DspReverb *reverb)
 		DspAllPass_Reset(&reverb->apf_in[i]);
 	}
 
-	DspDelay_Reset(&reverb->reverb_delay);
-
-	for (i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (c = 0; c < reverb->out_channels; ++c)
 	{
-		DspCombShelving_Reset(&reverb->lpf_comb[i]);
-	}
+		DspDelay_Reset(&reverb->channel[c].reverb_delay);
 
-	DspBiQuad_Reset(&reverb->room_high_shelf);
+		for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		{
+			DspCombShelving_Reset(&reverb->channel[c].lpf_comb[i]);
+		}
 
-	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
-	{
-		DspAllPass_Reset(&reverb->apf_out[i]);
+		DspBiQuad_Reset(&reverb->channel[c].room_high_shelf);
+
+		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+		{
+			DspAllPass_Reset(&reverb->channel[c].apf_out[i]);
+		}
 	}
 }
 
 void DspReverb_Destroy(DspReverb *reverb)
 {
-	int32_t i;
+	int32_t i, c;
 
 	DspDelay_Destroy(&reverb->early_delay);
 
@@ -761,18 +787,21 @@ void DspReverb_Destroy(DspReverb *reverb)
 		DspAllPass_Destroy(&reverb->apf_in[i]);
 	}
 
-	DspDelay_Destroy(&reverb->reverb_delay);
-
-	for (i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (c = 0; c < reverb->out_channels; ++c)
 	{
-		DspCombShelving_Destroy(&reverb->lpf_comb[i]);
-	}
+		DspDelay_Destroy(&reverb->channel[c].reverb_delay);
 
-	DspBiQuad_Destroy(&reverb->room_high_shelf);
+		for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		{
+			DspCombShelving_Destroy(&reverb->channel[c].lpf_comb[i]);
+		}
 
-	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
-	{
-		DspAllPass_Destroy(&reverb->apf_out[i]);
+		DspBiQuad_Destroy(&reverb->channel[c].room_high_shelf);
+
+		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+		{
+			DspAllPass_Destroy(&reverb->channel[c].apf_out[i]);
+		}
 	}
 
 	FAudio_free(reverb);

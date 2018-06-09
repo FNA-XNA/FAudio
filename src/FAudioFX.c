@@ -306,7 +306,7 @@ uint32_t FAudioFXReverb_LockForProcess(
 	/* create the network if necessary */
 	if (fapo->reverb == NULL) 
 	{
-		fapo->reverb = DspReverb_Create(fapo->sampleRate);
+		fapo->reverb = DspReverb_Create(fapo->sampleRate, fapo->inChannels, fapo->outChannels);
 	}
 
 	return 0;
@@ -337,7 +337,7 @@ void FAudioFXReverb_Process(
 		fapo->reverb,
 		(const float *)pInputProcessParameters->pBuffer,
 		(float *)pOutputProcessParameters->pBuffer,
-		pInputProcessParameters->ValidFrameCount,
+		pInputProcessParameters->ValidFrameCount * fapo->inChannels,
 		fapo->inChannels
 	);
 
