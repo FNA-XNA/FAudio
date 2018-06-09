@@ -497,10 +497,10 @@ float WetDryMix;				0 - 100 (0 = fully dry, 100 = fully wet)
 uint32_t ReflectionsDelay;		0 - 300 ms 
 uint8_t ReverbDelay;			0 - 85 ms 
 uint8_t RearDelay;				0 - 5 ms (NOT USED YET) 
-uint8_t PositionLeft;			0 - 30 (NOT USED YET) 
-uint8_t PositionRight;			0 - 30 (NOT USED YET) 
-uint8_t PositionMatrixLeft;		0 - 30 (NOT USED YET) 
-uint8_t PositionMatrixRight;	0 - 30 (NOT USED YET) 
+uint8_t PositionLeft;			0 - 30 
+uint8_t PositionRight;			0 - 30 
+uint8_t PositionMatrixLeft;		0 - 30 
+uint8_t PositionMatrixRight;	0 - 30 
 uint8_t EarlyDiffusion;			0 - 15 
 uint8_t LateDiffusion;			0 - 15 
 uint8_t LowEQGain;				0 - 12 (formula dB = LowEQGain - 8) 
@@ -560,6 +560,8 @@ typedef struct DspReverbChannel
 	DspCombShelving	lpf_comb[REVERB_COUNT_COMB];
 	DspAllPass	apf_out[REVERB_COUNT_APF_OUT];
 	DspBiQuad room_high_shelf;
+	float early_gain;
+	float gain;
 } DspReverbChannel;
 
 typedef struct DspReverb
@@ -604,6 +606,7 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 		}
 
 		DspBiQuad_Initialize(&reverb->channel[c].room_high_shelf, sampleRate, DSP_BIQUAD_HIGHSHELVING, 5000, 0, -10);
+		reverb->channel[c].gain = 1.0f;
 	}
 
 	reverb->early_gain = 1.0f;
@@ -671,6 +674,11 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 		}
 		
 		DspBiQuad_Change(&reverb->channel[c].room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterMain + params->RoomFilterHF);
+
+		reverb->channel[c].gain = 1.5f - (((c % 2 == 0 ? params->PositionMatrixLeft : params->PositionMatrixRight) / 27.0f) * 0.5f);
+
+		reverb->channel[c].early_gain = 1.2f - (((c % 2 == 0 ? params->PositionLeft : params->PositionRight) / 6.0f) * 0.2f);
+		reverb->channel[c].early_gain = reverb->channel[c].early_gain * reverb->early_gain;
 	}
 
 	/* wet/dry mix (100 = fully wet / 0 = fully dry) */
@@ -731,11 +739,14 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 			}
 
 			/* combine early reflections and reverberation */
-			early_late = (reverb->early_gain * early) + (reverb->reverb_gain * late);
+			early_late = (reverb->channel[c].early_gain * early) + (reverb->reverb_gain * late);
 
 			/* room filter */
 			room_out[c] = early_late * reverb->room_gain;
 			room_out[c] = DspBiQuad_Process(&reverb->channel[c].room_high_shelf, room_out[c]);
+
+			/* PositionMatrixLeft/Rigth */
+			room_out[c] = room_out[c] * reverb->channel[c].gain;
 		}
 
 		/* wet/dry mix */
