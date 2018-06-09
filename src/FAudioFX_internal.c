@@ -93,10 +93,12 @@ static void DspDelay_Change(DspDelay *filter, float delay_ms)
 
 static inline float DspDelay_Read(DspDelay *filter)
 {
+	float delay_out;
+
 	FAudio_assert(filter != NULL);
 	FAudio_assert(filter->read_idx < filter->capacity);
 
-	float delay_out = filter->buffer[filter->read_idx];
+	delay_out = filter->buffer[filter->read_idx];
 	filter->read_idx = (filter->read_idx + 1) % filter->capacity;
 	return delay_out;
 }
@@ -112,9 +114,11 @@ static inline void DspDelay_Write(DspDelay *filter, float sample)
 
 static inline float DspDelay_Process(DspDelay *filter, float sample_in)
 {
+	float delay_out;
+
 	FAudio_assert(filter != NULL);
 
-	float delay_out = DspDelay_Read(filter);
+	delay_out = DspDelay_Read(filter);
 	DspDelay_Write(filter, sample_in);
 
 	return delay_out;
@@ -150,12 +154,14 @@ typedef struct DspComb
 
 static inline float DspComb_FeedbackFromRT60(DspComb *filter, float rt60_ms)
 {
+	float exponent;
+
 	if (rt60_ms == 0)
 	{
 		return 0;
 	}
 
-	float exponent = (-3.0f * filter->delay.delay * 1000.0f) / (filter->delay.sampleRate * rt60_ms);
+	exponent = (-3.0f * filter->delay.delay * 1000.0f) / (filter->delay.sampleRate * rt60_ms);
 	return (float)FAudio_pow(10.0f, exponent);
 }
 
@@ -177,11 +183,13 @@ static void DspComb_Change(DspComb *filter, float delay_ms, float rt60_ms)
 
 static inline float DspComb_Process(DspComb *filter, float sample_in)
 {
+	float delay_out, to_buf;
+
 	FAudio_assert(filter != NULL);
 
-	float delay_out = DspDelay_Read(&filter->delay);
+	delay_out = DspDelay_Read(&filter->delay);
 
-	float to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->feedback_gain * delay_out));
+	to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->feedback_gain * delay_out));
 	DspDelay_Write(&filter->delay, to_buf);
 
 	return delay_out;
@@ -238,8 +246,10 @@ static void DspBiQuad_Initialize(
 
 static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float gain)
 {
+	float theta_c;
+
 	FAudio_assert(filter != NULL);
-	float theta_c = (2.0f * PI * frequency) / (float)filter->sampleRate;
+	theta_c = (2.0f * PI * frequency) / (float)filter->sampleRate;
 
 	if (filter->type == DSP_BIQUAD_LOWPASS || filter->type == DSP_BIQUAD_HIGHPASS)
 	{
@@ -297,14 +307,15 @@ static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float 
 static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 {
 	/* TODO: optimize this naive implementation (use transposed form 2) */
+	float result;
+
 	FAudio_assert(filter != NULL);
 
-	float result =
-		filter->a0 * sample_in +
-		filter->a1 * filter->delay_x[0] +
-		filter->a2 * filter->delay_x[1] -
-		filter->b1 * filter->delay_y[0] -
-		filter->b2 * filter->delay_y[1];
+	result = filter->a0 * sample_in +
+			 filter->a1 * filter->delay_x[0] +
+			 filter->a2 * filter->delay_x[1] -
+			 filter->b1 * filter->delay_y[0] -
+			 filter->b2 * filter->delay_y[1];
 	result = FAudioFX_INTERNAL_undenormalize(result);
 
 	filter->delay_y[1] = filter->delay_y[0];
@@ -353,12 +364,14 @@ static void DspCombShelving_Initialize(
 
 static inline float DspCombShelving_Process(DspCombShelving *filter, float sample_in)
 {
+	float delay_out, feedback;
+
 	FAudio_assert(filter != NULL);
 
-	float delay_out = DspDelay_Read(&filter->comb.delay);
+	delay_out = DspDelay_Read(&filter->comb.delay);
 
 	/* apply shelving filters */
-	float feedback = DspBiQuad_Process(&filter->high_shelving, delay_out);
+	feedback = DspBiQuad_Process(&filter->high_shelving, delay_out);
 	feedback = DspBiQuad_Process(&filter->low_shelving, feedback);
 
 	/* apply comb filter */
@@ -370,6 +383,7 @@ static inline float DspCombShelving_Process(DspCombShelving *filter, float sampl
 static void DspCombShelving_Reset(DspCombShelving *filter)
 {
 	FAudio_assert(filter != NULL);
+
 	DspComb_Reset(&filter->comb);
 	DspBiQuad_Reset(&filter->low_shelving);
 	DspBiQuad_Reset(&filter->high_shelving);
@@ -378,6 +392,7 @@ static void DspCombShelving_Reset(DspCombShelving *filter)
 static void DspCombShelving_Destroy(DspCombShelving *filter)
 {
 	FAudio_assert(filter != NULL);
+
 	DspComb_Destroy(&filter->comb);
 	DspBiQuad_Destroy(&filter->low_shelving);
 	DspBiQuad_Destroy(&filter->high_shelving);
@@ -408,16 +423,16 @@ static void DspAllPass_Change(DspAllPass *filter, float delay_ms, float gain)
 
 static inline float DspAllPass_Process(DspAllPass *filter, float sample_in)
 {
+	float delay_out, to_buf;
+
 	FAudio_assert(filter != NULL);
 
-	float delay_out = DspDelay_Read(&filter->delay);
+	delay_out = DspDelay_Read(&filter->delay);
 
-	float to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->feedback_gain * delay_out));
+	to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->feedback_gain * delay_out));
 	DspDelay_Write(&filter->delay, to_buf);
 
-	float out = FAudioFX_INTERNAL_undenormalize(delay_out - (filter->feedback_gain * to_buf));
-
-	return out;
+	return FAudioFX_INTERNAL_undenormalize(delay_out - (filter->feedback_gain * to_buf));
 }
 
 static void DspAllPass_Reset(DspAllPass *filter)
@@ -551,24 +566,25 @@ typedef struct DspReverb
 DspReverb *DspReverb_Create(int32_t sampleRate)
 {
 	DspReverb *reverb = (DspReverb *)FAudio_malloc(sizeof(DspReverb));
+	int32_t i;
 
 	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 	{
 		DspAllPass_Initialize(&reverb->apf_in[i], sampleRate, APF_IN_DELAYS[i], 0.5f);
 	}
 
 	DspDelay_Initialize(&reverb->reverb_delay, sampleRate, 10);
 
-	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (i = 0; i < REVERB_COUNT_COMB; ++i)
 	{
 		DspCombShelving_Initialize(&reverb->lpf_comb[i], sampleRate, COMB_DELAYS[i], 500, 500, -6, 5000, -6);
 	}
 
 	DspBiQuad_Initialize(&reverb->room_high_shelf, sampleRate, DSP_BIQUAD_HIGHSHELVING, 5000, 0, -10);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 	{
 		DspAllPass_Initialize(&reverb->apf_out[i], sampleRate, APF_OUT_DELAYS[i], 0.5f);
 	}
@@ -583,13 +599,16 @@ DspReverb *DspReverb_Create(int32_t sampleRate)
 
 void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params)
 {
+	float early_diffusion, late_diffusion;
+	int32_t i;
+
 	/* pre delay */
 	DspDelay_Change(&reverb->early_delay, (float)params->ReflectionsDelay);
 
 	/* early reflections - diffusion */
-	float early_diffusion = 0.6f - ((params->EarlyDiffusion / 15.0f) * 0.2f);
+	early_diffusion = 0.6f - ((params->EarlyDiffusion / 15.0f) * 0.2f);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 	{
 		DspAllPass_Change(&reverb->apf_in[i], APF_IN_DELAYS[i], early_diffusion);
 	}
@@ -597,7 +616,7 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	/* reverberation */
 	DspDelay_Change(&reverb->reverb_delay, (float) params->ReverbDelay);
 
-	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (i = 0; i < REVERB_COUNT_COMB; ++i)
 	{
 		/* set decay time of comb filter */
 		DspComb_Change(&reverb->lpf_comb[i].comb, COMB_DELAYS[i], params->DecayTime * 1000.0f);
@@ -624,9 +643,9 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	DspBiQuad_Change(&reverb->room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterMain + params->RoomFilterHF);
 
 	/* late diffusion */
-	float late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
+	late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 	{
 		DspAllPass_Change(&reverb->apf_out[i], APF_OUT_DELAYS[i], late_diffusion);
 	}
@@ -638,13 +657,18 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 
 void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count, int32_t num_channels)
 {
-	FAudio_assert(num_channels == 1 || num_channels == 2);
-
 	size_t sample_idx = 0;
 	float *out_ptr = samples_out;
 
+	FAudio_assert(num_channels == 1 || num_channels == 2);
+
 	while (sample_idx < sample_count)
 	{
+		float delay_in, early, revdelay, late;
+		float early_late, room;
+		float comb_out, comb_gain;
+		int32_t i;
+
 		/* get input, merging stereo samples */
 		float in = samples_in[sample_idx++];
 		if (num_channels == 2)
@@ -653,40 +677,40 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 		}
 
 		/* pre delay */
-		float delay_in = DspDelay_Process(&reverb->early_delay, in);
+		delay_in = DspDelay_Process(&reverb->early_delay, in);
 
 		/* early reflections */
-		float early = delay_in;
+		early = delay_in;
 
-		/*for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+		/*for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 		{
 			early = DspAllPass_Process(&reverb->apf_in[i], early);
 		} */
 
 		/* reverberation */
-		float revdelay = DspDelay_Process(&reverb->reverb_delay, early);
+		revdelay = DspDelay_Process(&reverb->reverb_delay, early);
 
-		float comb_out = 0.0f;
-		float comb_gain = 1.0f / REVERB_COUNT_COMB;
+		comb_out = 0.0f;
+		comb_gain = 1.0f / REVERB_COUNT_COMB;
 
-		for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+		for (i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
 			comb_out += comb_gain * DspCombShelving_Process(&reverb->lpf_comb[i], revdelay);
 			/* comb_gain = -comb_gain; */
 		}
 
 		/* output diffusion */
-		float late = comb_out;
-		for (int32_t ap = 0; ap < 4; ++ap)
+		late = comb_out;
+		for (i = 0; i < 4; ++i)
 		{
-			late = DspAllPass_Process(&reverb->apf_out[ap], late);
+			late = DspAllPass_Process(&reverb->apf_out[i], late);
 		}
 
 		/* combine early reflections and reverberation */
-		float early_late = (reverb->early_gain * early) + (reverb->reverb_gain * late);
+		early_late = (reverb->early_gain * early) + (reverb->reverb_gain * late);
 
 		/* room filter */
-		float room = early_late * reverb->room_gain;
+		room = early_late * reverb->room_gain;
 		room = DspBiQuad_Process(&reverb->room_high_shelf, room);
 
 		/* wet/dry mix */
@@ -702,23 +726,25 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 
 void DspReverb_Reset(DspReverb *reverb)
 {
+	int32_t i;
+
 	DspDelay_Reset(&reverb->early_delay);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 	{
 		DspAllPass_Reset(&reverb->apf_in[i]);
 	}
 
 	DspDelay_Reset(&reverb->reverb_delay);
 
-	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (i = 0; i < REVERB_COUNT_COMB; ++i)
 	{
 		DspCombShelving_Reset(&reverb->lpf_comb[i]);
 	}
 
 	DspBiQuad_Reset(&reverb->room_high_shelf);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 	{
 		DspAllPass_Reset(&reverb->apf_out[i]);
 	}
@@ -726,23 +752,25 @@ void DspReverb_Reset(DspReverb *reverb)
 
 void DspReverb_Destroy(DspReverb *reverb)
 {
+	int32_t i;
+
 	DspDelay_Destroy(&reverb->early_delay);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 	{
 		DspAllPass_Destroy(&reverb->apf_in[i]);
 	}
 
 	DspDelay_Destroy(&reverb->reverb_delay);
 
-	for (int32_t i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (i = 0; i < REVERB_COUNT_COMB; ++i)
 	{
 		DspCombShelving_Destroy(&reverb->lpf_comb[i]);
 	}
 
 	DspBiQuad_Destroy(&reverb->room_high_shelf);
 
-	for (int32_t i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 	{
 		DspAllPass_Destroy(&reverb->apf_out[i]);
 	}
