@@ -320,6 +320,8 @@ void FAudioFXReverb_Process(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 ) {
+	uint8_t update_params = FAPOParametersBase_ParametersChanged(&fapo->base);
+
 	if (IsEnabled == 0)
 	{	
 		/* FIXME: properly handle a disabled effect (check MSDN for what to do) */
@@ -329,8 +331,11 @@ void FAudioFXReverb_Process(
 	FAudioFXReverbParameters *params = (FAudioFXReverbParameters*)
 		FAPOParametersBase_BeginProcess(&fapo->base);
 
-	/* update parameters (FIXME: only if necessary?) */
-	DspReverb_SetParameters(fapo->reverb, params);
+	/* update parameters  */
+	if (update_params)
+	{
+		DspReverb_SetParameters(fapo->reverb, params);
+	}
 
 	/* run reverb effect */
 	DspReverb_Process(
