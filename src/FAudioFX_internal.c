@@ -686,12 +686,14 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	reverb->dry_ratio = 1.0f - reverb->wet_ratio;
 }
 
-void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count, int32_t num_channels)
+float DspReverb_Process(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count, int32_t num_channels)
 {
 	size_t sample_idx = 0;
 	float *out_ptr = samples_out;
 
 	FAudio_assert(num_channels == 1 || num_channels == 2);
+
+	float squared_sum = 0;
 
 	while (sample_idx < sample_count)
 	{
@@ -750,12 +752,21 @@ void DspReverb_Process(DspReverb *reverb, const float *samples_in, float *sample
 		}
 
 		/* wet/dry mix */
-		*out_ptr++ = (room_out[0] * reverb->wet_ratio) + (in * reverb->dry_ratio);
+		#define OUT_SAMPLE(x)	\
+			*out_ptr = (x);	\
+			squared_sum += *out_ptr * *out_ptr; \
+			out_ptr += 1;
+
+		OUT_SAMPLE((room_out[0] * reverb->wet_ratio) + (in * reverb->dry_ratio));
 		if (num_channels == 2)
 		{
-			*out_ptr++ = (room_out[1] * reverb->wet_ratio) + (in * reverb->dry_ratio);
+			OUT_SAMPLE((room_out[1] * reverb->wet_ratio) + (in * reverb->dry_ratio));
 		}
+
+		#undef OUT_SAMPLE
 	}
+
+	return squared_sum;
 }
 
 void DspReverb_Reset(DspReverb *reverb)

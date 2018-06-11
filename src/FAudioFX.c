@@ -352,13 +352,19 @@ void FAudioFXReverb_Process(
 	}
 
 	/* run reverb effect */
-	DspReverb_Process(
+	float total = DspReverb_Process(
 		fapo->reverb,
 		(const float *)pInputProcessParameters->pBuffer,
 		(float *)pOutputProcessParameters->pBuffer,
 		pInputProcessParameters->ValidFrameCount * fapo->inChannels,
 		fapo->inChannels
 	);
+
+	/* set BufferFlags to silent so PLAY_TAILS knows when to stop */
+	if (total < 0.0000001f)
+	{
+		pOutputProcessParameters->BufferFlags = FAPO_BUFFER_SILENT;
+	}
 
 	FAPOParametersBase_EndProcess(&fapo->base);
 }
