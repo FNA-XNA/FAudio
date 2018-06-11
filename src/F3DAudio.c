@@ -55,6 +55,15 @@
 	PARAM_CHECK(f >= a, "Value" #f " is too low"); \
 	PARAM_CHECK(f <= b, "Value" #f " is too big");
 
+
+/* Quote X3DAUDIO docs:
+ * "To be considered orthonormal, a pair of vectors must have a magnitude of
+ * 1 +- 1x10-5 and a dot product of 0 +- 1x10-5."
+ * VECTOR_NORMAL_CHECK verifies that vectors are normal (i.e. have norm 1 +- 1x10-5)
+ * VECTOR_BASE_CHECK verifies that a pair of vectors are orthogonal (i.e. their dot
+ * product is 0 +- 1x10-5)
+ */
+
 /* TODO: Switch to square length (to save CPU) */
 #define VECTOR_NORMAL_CHECK(v) \
 	PARAM_CHECK( \
@@ -62,10 +71,6 @@
 		"Vector " #v " isn't normal" \
 	);
 
-/* To be considered orthonormal, a pair of vectors must have a magnitude of
- * 1 +- 1x10-5 and a dot product of 0 +- 1x10-5.
- * FIXME DOCS: ELI5
- */
 #define VECTOR_BASE_CHECK(u, v) \
 	PARAM_CHECK( \
 		FAudio_fabsf(VectorDot(u, v)) <= 1e-5f, \
@@ -214,7 +219,11 @@ static inline F3DAUDIO_VECTOR Vec(float x, float y, float z)
 
 #define VectorDot(u, v) ((u.x * v.x) + (u.y * v.y) + (u.z * v.z))
 
-/* FIXME DOCS */
+/* This structure represent a tuple of vectors that form a left-handed basis.
+ * That is, all vectors are normal, orthogonal to each other, and taken in the
+ * order front, right, top they follow the left-hand rule.
+ * (https://en.wikipedia.org/wiki/Right-hand_rule)
+ */
 typedef struct F3DAUDIO_BASIS
 {
 	F3DAUDIO_VECTOR front;
@@ -450,14 +459,25 @@ static inline float ComputeDistanceAttenuation(
 		/* By definition, the first point in the curve must be 0.0f
 		 * -Adrien
 		 */
+
+		/* We advance i up until our normalizedDistance lies between the distances of
+		 * the i_th and (i-1)_th points, or we reach the last point.
+		 */
 		for (i = 1; (i < n_points) && (normalizedDistance >= points[i].Distance); i += 1);
 		if (i == n_points)
 		{
+			/* We've reached the last point, so we use its value directly.
+			 * Quote X3DAUDIO docs:
+			 * "If an emitter moves beyond a distance of (CurveDistanceScaler × 1.0f),
+			 * the last point on the curve is used to compute the volume output level."
+			 */
 			res = points[n_points - 1].DSPSetting;
 		}
 		else
 		{
-			/* FIXME DOCS */
+			/* We're between two points: the distance attenuation is the linear interpolation of the DSPSetting
+			 * values defined by our points, according to the distance.
+			 */
 			alpha = (points[i].Distance - normalizedDistance) / (points[i].Distance - points[i - 1].Distance);
 			res = LERP(alpha, points[i].DSPSetting, points[i - 1].DSPSetting);
 		}
@@ -481,8 +501,12 @@ static inline float ComputeConeParameter(
 	float innerParam,
 	float outerParam
 ) {
-	/* This was determined experimentally -Adrien */
-	/* FIXME DOCS */
+	/* When computing whether a point lies inside a cone, X3DAUDIO first determines
+	 * whether the point is close enough to the apex of the cone.
+	 * If it is, the innerParam is used.
+	 * The following constant is the one that is used for this distance check;
+	 * It is an approximation, found by manual binary search.
+	 * TODO: find the exact value of the constant via automated binary search. */
 	#define CONE_NULL_DISTANCE_TOLERANCE 1e-7
 
 	float halfInnerAngle, halfOuterAngle, alpha;
@@ -495,25 +519,26 @@ static inline float ComputeConeParameter(
 	{
 		return outerParam;
 	}
-
-	/* FIXME DOCS */
 	if (innerAngle == F3DAUDIO_2PI && outerAngle == F3DAUDIO_2PI)
 	{
 		return innerParam;
 	}
 
-	/* FIXME DOCS */
+	/* If we're within the inner angle, or close enough to the apex, we use
+	 * the innerParam. */
 	halfInnerAngle = innerAngle / 2.0f;
 	if (distance <= CONE_NULL_DISTANCE_TOLERANCE || angle <= halfInnerAngle)
 	{
 		return innerParam;
 	}
 
-	/* FIXME DOCS */
+	/* If we're between the inner angle and the outer angle, we must use
+	 * some interpolation of the innerParam and outerParam according to the
+	 * distance between our angle and the inner and outer angles.
+	 */
 	halfOuterAngle = outerAngle / 2.0f;
 	if (angle <= halfOuterAngle)
 	{
-		/* FIXME DOCS */
 		alpha = (angle - halfInnerAngle) / (halfOuterAngle - halfInnerAngle);
 
 		/* Sooo... This is awkward. MSDN doesn't say anything, but
@@ -530,6 +555,7 @@ static inline float ComputeConeParameter(
 		return LERP(alpha, innerParam, outerParam);
 	}
 
+	/* Otherwise, we're outside the outer angle, so we just return the outer param. */
 	return outerParam;
 }
 
@@ -724,12 +750,20 @@ static inline void FindSpeakerAzimuths(
 
 	FAudio_assert(config != NULL);
 
+	/* We want to find, given an azimuth, which speakers are the closest
+	 * ones (in terms of angle) to that azimuth.
+	 * This is done by iterating through the list of speaker azimuths, as
+	 * given to us by the current ConfigInfo (which stores speaker azimuths
+	 * in increasing order of azimuth for each possible speaker configuration;
+	 * each speaker azimuth is defined to be between 0 and 2PI by construction).
+	 */
 	for (i = 0; i < config->numNonLFSpeakers; i += 1)
 	{
-		/* FIXME DOCS */
+		/* a0 and a1 are the azimuths of candidate speakers */
 		a0 = config->speakers[i].azimuth;
 		nexti = (i + 1) % config->numNonLFSpeakers;
 		a1 = config->speakers[nexti].azimuth;
+
 		if (a0 < a1)
 		{
 			if (emitterAzimuth >= a0 && emitterAzimuth < a1)
@@ -737,6 +771,14 @@ static inline void FindSpeakerAzimuths(
 				break;
 			}
 		}
+		/* It is possible for a speaker pair to enclose the singulary at 0 == 2PI:
+		 * consider for example the quad config, which has a front left speaker
+		 * at 7PI/4 and a front right speaker at PI/4. In that case a0 = 7PI/4 and
+		 * a1 = PI/4, and the way we know whether our current azimuth lies between
+		 * that pair is by checking whether the azimuth is greather than 7PI/4 or
+		 * whether it's less than PI/4. (By contract, currentAzimuth is always less
+		 * than 2PI.)
+		 */
 		else
 		{
 			if (emitterAzimuth >= a0 || emitterAzimuth < a1)
@@ -747,9 +789,13 @@ static inline void FindSpeakerAzimuths(
 	}
 	FAudio_assert(emitterAzimuth >= a0 || emitterAzimuth < a1);
 
+	/* skipCenter means that we don't want to use the center speaker.
+	 * The easiest way to deal with this is to check whether either of our candidate
+	 * speakers are the center, which always has an azimuth of 0.0. If that is the case
+	 * we just replace it with either the previous one or the next one.
+	 */
 	if (skipCenter)
 	{
-		/* FIXME DOCS */
 		if (a0 == 0.0f)
 		{
 			if (i == 0)
@@ -775,7 +821,7 @@ static inline void FindSpeakerAzimuths(
 }
 
 /* Used to store diffusion factors */
-/* FIXME DOCS */
+/* See below for explanation. */
 #define DIFFUSION_SPEAKERS_ALL		0
 #define DIFFUSION_SPEAKERS_MATCHING	1
 #define DIFFUSION_SPEAKERS_OPPOSITE	2
@@ -801,22 +847,20 @@ typedef float DiffusionSpeakerFactors[3];
  *
  * At the same time, both opposite and matching speakers start to receive sound
  * (in addition to the energy they receive from the aforementioned "all
- * speakers" linear law) according to some (unknown as of known) quadratic law,
+ * speakers" linear law) according to some unknown as of now law,
  * that is currently emulated with a LERP. This is true up until InnerRadius.
  *
  * Above InnerRadius, only the two matching speakers receive sound.
+ *
+ * For more detail, see the "Inner Radius and Inner Radius Angle" in the
+ * MSDN docs for the X3DAUDIO_EMITTER structure.
+ * https://msdn.microsoft.com/en-us/library/windows/desktop/microsoft.directx_sdk.x3daudio.x3daudio_emitter(v=vs.85).aspx
  */
 static inline void ComputeInnerRadiusDiffusionFactors(
 	float radialDistance,
 	float InnerRadius,
 	DiffusionSpeakerFactors diffusionFactors
 ) {
-	/* These constants were estimated roughly, by trial and error.
-	 * TODO: determine them more accurately.
-	 */
-	/* FIXME DOCS */
-	#define DIFFUSION_DISTANCE_EQUAL_ENERGY 1e-7f
-	#define DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS 4e-7f
 
 	/* Determined experimentally; this is the midpoint value, i.e. the
 	 * value at 0.5 for the matching speakers, used for the standard
@@ -827,12 +871,22 @@ static inline void ComputeInnerRadiusDiffusionFactors(
 	 */
 	#define DIFFUSION_LERP_MIDPOINT_VALUE 0.707107f
 
+	/* X3DAudio always uses an InnerRadius-like behaviour (i.e. diffusing sound to more than
+	 * a pair of speakers) even if InnerRadius is set to 0.0f.
+	 * This constant determines the distance at which this behaviour is produced in that case. */
+	/* This constant was determined by manual binary search. TODO: get a more accurate version
+	 * via an automated binary search. */
+	#define DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS 4e-7f
 	float actualInnerRadius = FAudio_max(InnerRadius, DIFFUSION_DISTANCE_MINIMUM_INNER_RADIUS);
 	float normalizedRadialDist;
 	float a, ms, os;
 
 	normalizedRadialDist = radialDistance / actualInnerRadius;
 
+	/* X3DAudio does another check for small radial distances before applying any InnerRadius-like
+	 * behaviour. This is the constant that determines the threshold: below this distance we simply
+	 * diffuse to all speakers equally. */
+	#define DIFFUSION_DISTANCE_EQUAL_ENERGY 1e-7f
 	if (radialDistance <= DIFFUSION_DISTANCE_EQUAL_ENERGY)
 	{
 		a = 1.0f;
@@ -912,10 +966,15 @@ static inline void ComputeEmitterChannelCoefficients(
 	float a0, a1, val;
 	uint32_t i0, i1;
 
-	/* FIXME DOCS */
+	/* We project against the listener basis' top vector to get the elevation of the
+	 * current emitter channel position.
+	 */
 	elevation = VectorDot(listenerBasis->top, channelPosition);
 
-	/* FIXME DOCS */
+	/* To obtain the projection in the front-right plane of the listener's basis of the
+	 * emitter channel position, we simply remove the projection against the top vector.
+	 * The radial distance is then the length of the projected vector.
+	 */
 	projTopVec = VectorScale(listenerBasis->top, elevation);
 	projPlane = VectorSub(channelPosition, projTopVec);
 	radialDistance = VectorLength(projPlane);
@@ -926,7 +985,10 @@ static inline void ComputeEmitterChannelCoefficients(
 		diffusionFactors
 	);
 
-	/* FIXME DOCS */
+	/* See the ComputeInnerRadiusDiffusionFactors comment above for more context. */
+	/* DIFFUSION_SPEAKERS_ALL corresponds to diffusing part of the sound to all of the
+	 * speakers, equally. The amount of sound is determined by the float value
+	 * diffusionFactors[DIFFUSION_SPEAKERS_ALL]. */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_ALL] > 0.0f)
 	{
 		nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
@@ -953,7 +1015,10 @@ static inline void ComputeEmitterChannelCoefficients(
 		}
 	}
 
-	/* FIXME DOCS */
+	/* DIFFUSION_SPEAKERS_MATCHING corresponds to sending part of the sound to the speakers closest
+	 * (in terms of azimuth) to the current position of the emitter. The amount of sound we shoud send
+	 * corresponds here to diffusionFactors[DIFFUSION_SPEAKERS_MATCHING].
+	 * We use the FindSpeakerAzimuths function to find the speakers that match. */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] > 0.0f)
 	{
 		const float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_MATCHING] * attenuation;
@@ -1001,7 +1066,10 @@ static inline void ComputeEmitterChannelCoefficients(
 		pMatrixCoefficients[i1 * numSrcChannels + currentChannel] += (       val) * totalEnergy;
 	}
 
-	/* FIXME DOCS */
+	/* DIFFUSION_SPEAKERS_OPPOSITE corresponds to sending part of the sound to the speakers
+	 * _opposite_ the ones that are the closest to the current emitter position.
+	 * To find these, we simply find the ones that are closest to the current emitter's azimuth + PI
+	 * using the FindSpeakerAzimuth function. */
 	if (diffusionFactors[DIFFUSION_SPEAKERS_OPPOSITE] > 0.0f)
 	{
 		/* This code is similar to the matching speakers code above. */
