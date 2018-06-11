@@ -145,6 +145,8 @@ typedef struct FAudioFXReverb
 	uint16_t inChannels;
 	uint16_t outChannels;
 	uint32_t sampleRate;
+	uint16_t inBlockAlign;
+	uint16_t outBlockAlign;
 
 	DspReverb *reverb;
 } FAudioFXReverb;
@@ -302,6 +304,8 @@ uint32_t FAudioFXReverb_LockForProcess(
 	fapo->inChannels = pInputLockedParameters->pFormat->nChannels;
 	fapo->outChannels = pOutputLockedParameters->pFormat->nChannels;
 	fapo->sampleRate = pOutputLockedParameters->pFormat->nSamplesPerSec;
+	fapo->inBlockAlign = pInputLockedParameters->pFormat->nBlockAlign;
+	fapo->outBlockAlign = pOutputLockedParameters->pFormat->nBlockAlign;
 
 	/* create the network if necessary */
 	if (fapo->reverb == NULL) 
@@ -323,8 +327,18 @@ void FAudioFXReverb_Process(
 	uint8_t update_params = FAPOParametersBase_ParametersChanged(&fapo->base);
 
 	if (IsEnabled == 0)
-	{	
-		/* FIXME: properly handle a disabled effect (check MSDN for what to do) */
+	{
+		if (pInputProcessParameters->pBuffer != pOutputProcessParameters->pBuffer)
+		{
+			if (fapo->inBlockAlign == fapo->outBlockAlign)
+			{
+				FAudio_memcpy(pOutputProcessParameters->pBuffer, pInputProcessParameters->pBuffer, fapo->inBlockAlign * pOutputProcessParameters->ValidFrameCount);
+			}
+			else
+			{
+				FAudio_assert(0 && "5.1 output not supported yet!");
+			}
+		}
 		return;
 	}
 
