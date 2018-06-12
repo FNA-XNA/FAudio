@@ -282,7 +282,7 @@ void FACT_INTERNAL_GetNextWave(
 		const float rngFrequency = (
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxFrequency - evt->wave.minFrequency)
-		);
+		) / 20000.0f;
 		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
@@ -317,7 +317,7 @@ void FACT_INTERNAL_GetNextWave(
 	else
 	{
 		trackInst->upcomingWave.baseQFactor = track->qfactor;
-		trackInst->upcomingWave.baseFrequency = track->frequency;
+		trackInst->upcomingWave.baseFrequency = track->frequency / 20000.0f;
 	}
 
 	/* Try to change loop counter at the very end */
@@ -703,8 +703,7 @@ void FACT_INTERNAL_UpdateRPCs(
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
 			{
-				/* TODO: How do we combine these? */
-				data->rpcFilterFreq += rpcResult;
+				data->rpcFilterFreq *= rpcResult / 20000.0f;
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERQFACTOR)
 			{
@@ -1102,8 +1101,8 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			/* TODO: How are all the freq/QFactor values put together? */
 			filterParams.Type = (FAudioFilterType) active->sound->tracks[i].filter;
 			filterParams.Frequency = (
-				active->tracks[i].activeWave.baseFrequency +
-				active->rpcData.rpcFilterFreq +
+				active->tracks[i].activeWave.baseFrequency *
+				active->rpcData.rpcFilterFreq *
 				active->tracks[i].rpcData.rpcFilterFreq
 			);
 			filterParams.OneOverQ = 1.0f / (
