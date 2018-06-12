@@ -29,7 +29,7 @@
 #include "FAudio_internal.h"
 
 /* constants */
-#define  PI 3.1415926536f
+#define PI 3.1415926536f
 #define DSP_DELAY_MAX_DELAY_MS 300
 
 /* utility functions */
@@ -234,7 +234,7 @@ static void DspBiQuad_Initialize(
 	DspBiQuadType type,
 	float frequency,		/* corner frequency */
 	float q,				/* only used by low/high-pass filters */
-	float gain			/* only used by low/high-shelving filters */
+	float gain				/* only used by low/high-shelving filters */
 ) {
 	FAudio_assert(filter != NULL);
 
@@ -256,7 +256,8 @@ static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float 
 		float sin_theta_c = (float)FAudio_sin(theta_c);
 		float cos_theta_c = (float)FAudio_cos(theta_c);
 		float oneOverQ = 1.0f / q;
-		float beta = (1.0f - (oneOverQ * 0.5f * sin_theta_c)) / (1.0f + (oneOverQ *  0.5f * sin_theta_c));
+		float beta = (1.0f - (oneOverQ * 0.5f * sin_theta_c)) / 
+					 (1.0f + (oneOverQ *  0.5f * sin_theta_c));
 		float gamma = (0.5f + beta) * cos_theta_c;
 
 		if (filter->type == DSP_BIQUAD_LOWPASS)
@@ -323,7 +324,10 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 	filter->delay_x[1] = filter->delay_x[0];
 	filter->delay_x[0] = sample_in;
 
-	result = FAudioFX_INTERNAL_undenormalize((result * filter->c0) + (sample_in * filter->d0));
+	result = FAudioFX_INTERNAL_undenormalize(
+		(result * filter->c0) + 
+		(sample_in * filter->d0)
+	);
 
 	return  result;
 }
@@ -358,13 +362,27 @@ static void DspCombShelving_Initialize(
 ) {
 	FAudio_assert(filter != NULL);
 	DspComb_Initialize(&filter->comb, sampleRate, delay_ms, rt60_ms);
-	DspBiQuad_Initialize(&filter->low_shelving, sampleRate, DSP_BIQUAD_LOWSHELVING, low_frequency, 0.0f, low_gain);
-	DspBiQuad_Initialize(&filter->high_shelving, sampleRate, DSP_BIQUAD_HIGHSHELVING, high_frequency, 0.0f, high_gain);
+	DspBiQuad_Initialize(
+		&filter->low_shelving, 
+		sampleRate, 
+		DSP_BIQUAD_LOWSHELVING, 
+		low_frequency, 
+		0.0f, 
+		low_gain
+	);
+	DspBiQuad_Initialize(
+		&filter->high_shelving, 
+		sampleRate, 
+		DSP_BIQUAD_HIGHSHELVING, 
+		high_frequency, 
+		0.0f, 
+		high_gain
+	);
 }
 
 static inline float DspCombShelving_Process(DspCombShelving *filter, float sample_in)
 {
-	float delay_out, feedback;
+	float delay_out, feedback, to_buf;
 
 	FAudio_assert(filter != NULL);
 
@@ -375,7 +393,8 @@ static inline float DspCombShelving_Process(DspCombShelving *filter, float sampl
 	feedback = DspBiQuad_Process(&filter->low_shelving, feedback);
 
 	/* apply comb filter */
-	DspDelay_Write(&filter->comb.delay, FAudioFX_INTERNAL_undenormalize(sample_in + (filter->comb.feedback_gain * feedback)));
+	to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->comb.feedback_gain * feedback));
+	DspDelay_Write(&filter->comb.delay, to_buf);
 
 	return delay_out;
 }
@@ -597,15 +616,36 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 
 		for (i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
-			DspCombShelving_Initialize(&reverb->channel[c].lpf_comb[i], sampleRate, COMB_DELAYS[i] + STEREO_SPREAD[c], 500, 500, -6, 5000, -6);
+			DspCombShelving_Initialize(
+				&reverb->channel[c].lpf_comb[i], 
+				sampleRate, 
+				COMB_DELAYS[i] + STEREO_SPREAD[c], 
+				500, 
+				500, 
+				-6, 
+				5000, 
+				-6
+			);
 		}
 
 		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 		{
-			DspAllPass_Initialize(&reverb->channel[c].apf_out[i], sampleRate, APF_OUT_DELAYS[i] + STEREO_SPREAD[c], 0.5f);
+			DspAllPass_Initialize(
+				&reverb->channel[c].apf_out[i], 
+				sampleRate, 
+				APF_OUT_DELAYS[i] + STEREO_SPREAD[c], 
+				0.5f
+			);
 		}
 
-		DspBiQuad_Initialize(&reverb->channel[c].room_high_shelf, sampleRate, DSP_BIQUAD_HIGHSHELVING, 5000, 0, -10);
+		DspBiQuad_Initialize(
+			&reverb->channel[c].room_high_shelf, 
+			sampleRate, 
+			DSP_BIQUAD_HIGHSHELVING, 
+			5000, 
+			0, 
+			-10
+		);
 		reverb->channel[c].gain = 1.0f;
 	}
 
@@ -642,19 +682,24 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 		for (i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
 			/* set decay time of comb filter */
-			DspComb_Change(&reverb->channel[c].lpf_comb[i].comb, COMB_DELAYS[i] + STEREO_SPREAD[c], params->DecayTime * 1000.0f);
+			DspComb_Change(
+				&reverb->channel[c].lpf_comb[i].comb, 
+				COMB_DELAYS[i] + STEREO_SPREAD[c], 
+				params->DecayTime * 1000.0f);
 
 			/* high/low shelving */
 			DspBiQuad_Change(
 				&reverb->channel[c].lpf_comb[i].low_shelving,
 				50.0f + params->LowEQCutoff * 50.0f,
 				0.0f,
-				params->LowEQGain - 8.0f);
+				params->LowEQGain - 8.0f
+			);
 			DspBiQuad_Change(
 				&reverb->channel[c].lpf_comb[i].high_shelving,
 				1000 + params->HighEQCutoff * 500.0f,
 				0.0f,
-				params->HighEQGain - 8.0f);
+				params->HighEQGain - 8.0f
+			);
 		}
 	}
 
@@ -670,10 +715,18 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	{
 		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 		{
-			DspAllPass_Change(&reverb->channel[c].apf_out[i], APF_OUT_DELAYS[i] + STEREO_SPREAD[c], late_diffusion);
+			DspAllPass_Change(
+				&reverb->channel[c].apf_out[i], 
+				APF_OUT_DELAYS[i] + STEREO_SPREAD[c], 
+				late_diffusion
+			);
 		}
 		
-		DspBiQuad_Change(&reverb->channel[c].room_high_shelf, params->RoomFilterFreq, 0.0f, params->RoomFilterMain + params->RoomFilterHF);
+		DspBiQuad_Change(
+			&reverb->channel[c].room_high_shelf, 
+			params->RoomFilterFreq, 
+			0.0f, 
+			params->RoomFilterMain + params->RoomFilterHF);
 
 		reverb->channel[c].gain = 1.5f - (((c % 2 == 0 ? params->PositionMatrixLeft : params->PositionMatrixRight) / 27.0f) * 0.5f);
 
@@ -686,8 +739,13 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	reverb->dry_ratio = 1.0f - reverb->wet_ratio;
 }
 
-float DspReverb_Process(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count, int32_t num_channels)
-{
+float DspReverb_Process(
+	DspReverb *reverb, 
+	const float *samples_in, 
+	float *samples_out, 
+	size_t sample_count, 
+	int32_t num_channels
+) {
 	size_t sample_idx = 0;
 	float *out_ptr = samples_out;
 

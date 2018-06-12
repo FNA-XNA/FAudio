@@ -332,7 +332,11 @@ void FAudioFXReverb_Process(
 		{
 			if (fapo->inBlockAlign == fapo->outBlockAlign)
 			{
-				FAudio_memcpy(pOutputProcessParameters->pBuffer, pInputProcessParameters->pBuffer, fapo->inBlockAlign * pOutputProcessParameters->ValidFrameCount);
+				FAudio_memcpy(
+					pOutputProcessParameters->pBuffer, 
+					pInputProcessParameters->pBuffer, 
+					fapo->inBlockAlign * pOutputProcessParameters->ValidFrameCount
+				);
 			}
 			else
 			{
