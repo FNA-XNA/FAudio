@@ -960,6 +960,7 @@ static inline void ComputeEmitterChannelCoefficients(
 	float x, y;
 	float emitterAzimuth;
 	float energyPerChannel;
+	float totalEnergy;
 	uint32_t nChannelsToDiffuseTo;
 	uint32_t iS, centerChannelIdx = -1;
 	const SpeakerInfo* infos[2];
@@ -992,7 +993,7 @@ static inline void ComputeEmitterChannelCoefficients(
 	if (diffusionFactors[DIFFUSION_SPEAKERS_ALL] > 0.0f)
 	{
 		nChannelsToDiffuseTo = curConfig->numNonLFSpeakers;
-		const float totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_ALL] * attenuation;
+		totalEnergy = diffusionFactors[DIFFUSION_SPEAKERS_ALL] * attenuation;
 
 		if (skipCenter)
 		{
