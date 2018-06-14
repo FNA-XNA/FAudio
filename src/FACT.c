@@ -1674,6 +1674,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	 */
 	if (	dwFlags & FACT_FLAG_STOP_IMMEDIATE ||
 		pCue->state & FACT_STATE_PAUSED	||
+		pCue->playingSound == NULL ||
 		pCue->parentBank->cues[pCue->index].fadeOutMS == 0	)
 	{
 		pCue->start = 0;
