@@ -399,7 +399,6 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			 */
 			if (i == cue->variation->entryCount)
 			{
-				cue->active = 0x00;
 				return 1;
 			}
 		}
@@ -468,10 +467,9 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				0,
 				0,
 				0,
-				&cue->playing.wave
+				&cue->simpleWave
 			);
-			cue->playing.wave->parentCue = cue;
-			cue->active = 0x01;
+			cue->simpleWave->parentCue = cue;
 		}
 	}
 
@@ -480,101 +478,108 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	{
 		/* Category Instance Limits */
 		categoryIndex = baseSound->category;
-		category = &cue->parentBank->parentEngine->categories[categoryIndex];
-		if (category->instanceCount >= category->instanceLimit)
+		if (categoryIndex != FACTCATEGORY_INVALID)
 		{
-			wnr = NULL;
-			tmp = cue->parentBank->cueList;
-			if (category->maxInstanceBehavior == 0) /* Fail */
+			category = &cue->parentBank->parentEngine->categories[categoryIndex];
+			if (category->instanceCount >= category->instanceLimit)
 			{
-				cue->state |= FACT_STATE_STOPPED;
-				cue->state &= ~(
-					FACT_STATE_PLAYING |
-					FACT_STATE_STOPPING |
-					FACT_STATE_PAUSED
-				);
-				FAudio_PlatformUnlockAudio(cue->parentBank->parentEngine->audio);
-				return 0;
-			}
-			else if (category->maxInstanceBehavior == 1) /* Queue */
-			{
-				/* FIXME: How is this different from Replace Oldest? */
-				while (tmp != NULL)
+				wnr = NULL;
+				tmp = cue->parentBank->cueList;
+				if (category->maxInstanceBehavior == 0) /* Fail */
 				{
-					if (	tmp != cue &&
-						tmp->playing.sound.sound->category == categoryIndex &&
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					cue->state |= FACT_STATE_STOPPED;
+					cue->state &= ~(
+						FACT_STATE_PLAYING |
+						FACT_STATE_STOPPING |
+						FACT_STATE_PAUSED
+					);
+					FAudio_PlatformUnlockAudio(cue->parentBank->parentEngine->audio);
+					return 0;
+				}
+				else if (category->maxInstanceBehavior == 1) /* Queue */
+				{
+					/* FIXME: How is this different from Replace Oldest? */
+					while (tmp != NULL)
 					{
-						wnr = tmp;
-						break;
+						if (	tmp != cue &&
+							tmp->playingSound != NULL &&
+							tmp->playingSound->sound->category == categoryIndex &&
+							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+						{
+							wnr = tmp;
+							break;
+						}
+						tmp = tmp->next;
 					}
-					tmp = tmp->next;
 				}
-			}
-			else if (category->maxInstanceBehavior == 2) /* Replace Oldest */
-			{
-				while (tmp != NULL)
+				else if (category->maxInstanceBehavior == 2) /* Replace Oldest */
 				{
-					if (	tmp != cue &&
-						tmp->playing.sound.sound->category == categoryIndex &&
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					while (tmp != NULL)
 					{
-						wnr = tmp;
-						break;
+						if (	tmp != cue &&
+							tmp->playingSound != NULL &&
+							tmp->playingSound->sound->category == categoryIndex &&
+							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+						{
+							wnr = tmp;
+							break;
+						}
+						tmp = tmp->next;
 					}
-					tmp = tmp->next;
 				}
-			}
-			else if (category->maxInstanceBehavior == 3) /* Replace Quietest */
-			{
-				limitmax.maxf = FACTVOLUME_MAX;
-				while (tmp != NULL)
+				else if (category->maxInstanceBehavior == 3) /* Replace Quietest */
 				{
-					if (	tmp != cue &&
-						tmp->playing.sound.sound->category == categoryIndex &&
-						/*FIXME: tmp->playing.sound.volume < limitmax.maxf &&*/
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					limitmax.maxf = FACTVOLUME_MAX;
+					while (tmp != NULL)
 					{
-						wnr = tmp;
-						/* limitmax.maxf = tmp->playing.sound.volume; */
+						if (	tmp != cue &&
+							tmp->playingSound != NULL &&
+							tmp->playingSound->sound->category == categoryIndex &&
+							/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
+							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+						{
+							wnr = tmp;
+							/* limitmax.maxf = tmp->playingSound->volume; */
+						}
+						tmp = tmp->next;
 					}
-					tmp = tmp->next;
 				}
-			}
-			else if (category->maxInstanceBehavior == 4) /* Replace Lowest Priority */
-			{
-				limitmax.maxi = 0xFF;
-				while (tmp != NULL)
+				else if (category->maxInstanceBehavior == 4) /* Replace Lowest Priority */
 				{
-					if (	tmp != cue &&
-						tmp->playing.sound.sound->category == categoryIndex &&
-						tmp->playing.sound.sound->priority < limitmax.maxi &&
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					limitmax.maxi = 0xFF;
+					while (tmp != NULL)
 					{
-						wnr = tmp;
-						limitmax.maxi = tmp->playing.sound.sound->priority;
+						if (	tmp != cue &&
+							tmp->playingSound != NULL &&
+							tmp->playingSound->sound->category == categoryIndex &&
+							tmp->playingSound->sound->priority < limitmax.maxi &&
+							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+						{
+							wnr = tmp;
+							limitmax.maxi = tmp->playingSound->sound->priority;
+						}
+						tmp = tmp->next;
 					}
-					tmp = tmp->next;
+				}
+				if (wnr != NULL)
+				{
+					fadeInMS = category->fadeInMS;
+					if (wnr->playingSound != NULL)
+					{
+						FACT_INTERNAL_BeginFadeOut(wnr->playingSound, category->fadeOutMS);
+					}
+					else
+					{
+						FACTCue_Stop(wnr, 0);
+					}
 				}
 			}
-			if (wnr != NULL)
-			{
-				fadeInMS = category->fadeInMS;
-				if (wnr->active & 0x02)
-				{
-					FACT_INTERNAL_BeginFadeOut(&wnr->playing.sound, category->fadeOutMS);
-				}
-				else
-				{
-					FACTCue_Stop(wnr, 0);
-				}
-			}
+			category->instanceCount += 1;
 		}
-		category->instanceCount += 1;
 
-		newSound = &cue->playing.sound;
-		cue->active = 0x02;
-
+		newSound = (FACTSoundInstance*) FAudio_malloc(
+			sizeof(FACTSoundInstance)
+		);
 		newSound->parentCue = cue;
 		newSound->sound = baseSound;
 		newSound->rpcData.rpcVolume = 0.0f;
@@ -660,6 +665,8 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				}
 			}
 		}
+
+		cue->playingSound = newSound;
 	}
 
 	return 1;
@@ -686,26 +693,30 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 	}
 	FAudio_free(sound->tracks);
 
-	sound->parentCue->parentBank->parentEngine->categories[
-		sound->sound->category
-	].instanceCount -= 1;
+	if (sound->sound->category != FACTCATEGORY_INVALID)
+	{
+		sound->parentCue->parentBank->parentEngine->categories[
+			sound->sound->category
+		].instanceCount -= 1;
+	}
 
 	if (	!(sound->parentCue->data->flags & 0x04) &&
 		sound->parentCue->variation->flags == 3	)
 	{
 		/* Interactive Cues avoid autostopping... */
-		/* TODO: FAudio_free(sound); */
+		sound->parentCue->playingSound = NULL;
+		FAudio_free(sound);
 		return;
 	}
 
-	sound->parentCue->active = 0;
 	/* TODO: if (sound->parentCue->playingSounds == NULL) */
 	{
 		sound->parentCue->state |= FACT_STATE_STOPPED;
 		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
 		sound->parentCue->data->instanceCount -= 1;
 	}
-	/* TODO: FAudio_free(sound); */
+	sound->parentCue->playingSound = NULL;
+	FAudio_free(sound);
 }
 
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
@@ -1282,10 +1293,11 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			cue->interactive = next;
 
 			/* New sound, time for death! */
-			if (cue->active)
+			if (cue->playingSound != NULL)
 			{
 				FACT_INTERNAL_BeginFadeOut(
-					&cue->playing.sound, fadeOut
+					cue->playingSound,
+					fadeOut
 				);
 			}
 
@@ -1333,17 +1345,11 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 				continue;
 			}
 
-			/* There's only something to do if we're a Sound. Waves are simple! */
-			if (cue->active & 0x01)
+			if (cue->playingSound != NULL)
 			{
-				/* TODO: FadeIn/FadeOut? */
-				cue->state = cue->playing.wave->state;
-			}
-			else if (cue->active & 0x02)
-			{
-				if (FACT_INTERNAL_UpdateSound(&cue->playing.sound, timestamp))
+				if (FACT_INTERNAL_UpdateSound(cue->playingSound, timestamp))
 				{
-					FACT_INTERNAL_DestroySound(&cue->playing.sound);
+					FACT_INTERNAL_DestroySound(cue->playingSound);
 				}
 			}
 
@@ -1457,6 +1463,17 @@ void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 {
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
 	c->wave->state = FACT_STATE_STOPPED;
+
+	if (	c->wave->parentCue != NULL &&
+		c->wave->parentCue->simpleWave == c->wave	)
+	{
+		c->wave->parentCue->state |= FACT_STATE_STOPPED;
+		c->wave->parentCue->state &= ~(
+			FACT_STATE_PLAYING |
+			FACT_STATE_STOPPING
+		);
+		c->wave->parentCue->data->instanceCount -= 1;
+	}
 }
 
 /* Parsing functions */

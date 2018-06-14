@@ -285,19 +285,19 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 		cue = ((FACTSoundBank*) list->entry)->cueList;
 		while (cue != NULL)
 		{
-			if (cue->active & 0x02)
-			for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+			if (cue->playingSound != NULL)
+			for (i = 0; i < cue->playingSound->sound->trackCount; i += 1)
 			{
-				if (	cue->playing.sound.tracks[i].upcomingWave.wave == NULL &&
-					cue->playing.sound.tracks[i].waveEvtInst->loopCount > 0	)
+				if (	cue->playingSound->tracks[i].upcomingWave.wave == NULL &&
+					cue->playingSound->tracks[i].waveEvtInst->loopCount > 0	)
 				{
 					FACT_INTERNAL_GetNextWave(
 						cue,
-						cue->playing.sound.sound,
-						&cue->playing.sound.sound->tracks[i],
-						&cue->playing.sound.tracks[i],
-						cue->playing.sound.tracks[i].waveEvt,
-						cue->playing.sound.tracks[i].waveEvtInst
+						cue->playingSound->sound,
+						&cue->playingSound->sound->tracks[i],
+						&cue->playingSound->tracks[i],
+						cue->playingSound->tracks[i].waveEvt,
+						cue->playingSound->tracks[i].waveEvtInst
 					);
 				}
 			}
@@ -509,11 +509,11 @@ uint8_t FACT_INTERNAL_IsInCategory(
 		cue = ((FACTSoundBank*) list->entry)->cueList; \
 		while (cue != NULL) \
 		{ \
-			if (	cue->active & 0x02 && \
+			if (	cue->playingSound != NULL && \
 				FACT_INTERNAL_IsInCategory( \
 					cue->parentBank->parentEngine, \
 					nCategory, \
-					cue->playing.sound.sound->category \
+					cue->playingSound->sound->category \
 				)	) \
 			{ \
 				action \
@@ -1584,11 +1584,12 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			{
 				if (	tmp != pCue &&
 					tmp->index == pCue->index &&
-					/*FIXME: tmp->playing.sound.volume < limitmax.maxf &&*/
+					tmp->playingSound != NULL &&
+					/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
 				{
 					wnr = tmp;
-					/* limitmax.maxf = tmp->playing.sound.volume; */
+					/* limitmax.maxf = tmp->playingSound->volume; */
 				}
 				tmp = tmp->next;
 			}
@@ -1600,11 +1601,12 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 			{
 				if (	tmp != pCue &&
 					tmp->index == pCue->index &&
-					tmp->playing.sound.sound->priority < limitmax.maxi &&
+					tmp->playingSound != NULL &&
+					tmp->playingSound->sound->priority < limitmax.maxi &&
 					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
 				{
 					wnr = tmp;
-					limitmax.maxi = tmp->playing.sound.sound->priority;
+					limitmax.maxi = tmp->playingSound->sound->priority;
 				}
 				tmp = tmp->next;
 			}
@@ -1612,9 +1614,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		if (wnr != NULL)
 		{
 			fadeInMS = data->fadeInMS;
-			if (wnr->active & 0x02)
+			if (wnr->playingSound != NULL)
 			{
-				FACT_INTERNAL_BeginFadeOut(&wnr->playing.sound, data->fadeOutMS);
+				FACT_INTERNAL_BeginFadeOut(wnr->playingSound, data->fadeOutMS);
 			}
 			else
 			{
@@ -1639,18 +1641,18 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	pCue->start = FAudio_timems();
 
 	/* If it's a simple wave, just play it! */
-	if (pCue->active & 0x01)
+	if (pCue->simpleWave != NULL)
 	{
 		if (pCue->active3D)
 		{
 			FACTWave_SetMatrixCoefficients(
-				pCue->playing.wave,
+				pCue->simpleWave,
 				pCue->srcChannels,
 				pCue->dstChannels,
 				pCue->matrixCoefficients
 			);
 		}
-		FACTWave_Play(pCue->playing.wave);
+		FACTWave_Play(pCue->simpleWave);
 	}
 
 	FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
@@ -1684,21 +1686,22 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		);
 
 		/* FIXME: Lock audio mixer before freeing this! */
-		if (pCue->active & 0x01)
+		if (pCue->simpleWave != NULL)
 		{
-			FACTWave_Destroy(pCue->playing.wave);
+			FACTWave_Destroy(pCue->simpleWave);
+			pCue->simpleWave = NULL;
+
+			pCue->data->instanceCount -= 1;
 		}
-		else if (pCue->active & 0x02)
+		else if (pCue->playingSound != NULL)
 		{
-			FACT_INTERNAL_DestroySound(&pCue->playing.sound);
+			FACT_INTERNAL_DestroySound(pCue->playingSound);
 		}
-		pCue->data->instanceCount -= 1;
-		pCue->active = 0;
 	}
 	else
 	{
 		FACT_INTERNAL_BeginFadeOut(
-			&pCue->playing.sound,
+			pCue->playingSound,
 			pCue->parentBank->cues[pCue->index].fadeOutMS
 		);
 		pCue->state |= FACT_STATE_STOPPING;
@@ -1735,23 +1738,23 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	pCue->active3D = 1;
 
 	/* Apply to Waves if they exist */
-	if (pCue->active & 0x01)
+	if (pCue->simpleWave != NULL)
 	{
 		FACTWave_SetMatrixCoefficients(
-			pCue->playing.wave,
+			pCue->simpleWave,
 			uSrcChannelCount,
 			uDstChannelCount,
 			pMatrixCoefficients
 		);
 	}
-	else if (pCue->active & 0x02)
+	else if (pCue->playingSound != NULL)
 	{
-		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
+		for (i = 0; i < pCue->playingSound->sound->trackCount; i += 1)
 		{
-			if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
+			if (pCue->playingSound->tracks[i].activeWave.wave != NULL)
 			{
 				FACTWave_SetMatrixCoefficients(
-					pCue->playing.sound.tracks[i].activeWave.wave,
+					pCue->playingSound->tracks[i].activeWave.wave,
 					uSrcChannelCount,
 					uDstChannelCount,
 					pMatrixCoefficients
@@ -1853,18 +1856,18 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	}
 
 	/* Pause the Waves */
-	if (pCue->active & 0x01)
+	if (pCue->simpleWave != NULL)
 	{
-		FACTWave_Pause(pCue->playing.wave, fPause);
+		FACTWave_Pause(pCue->simpleWave, fPause);
 	}
-	else if (pCue->active & 0x02)
+	else if (pCue->playingSound != NULL)
 	{
-		for (i = 0; i < pCue->playing.sound.sound->trackCount; i += 1)
+		for (i = 0; i < pCue->playingSound->sound->trackCount; i += 1)
 		{
-			if (pCue->playing.sound.tracks[i].activeWave.wave != NULL)
+			if (pCue->playingSound->tracks[i].activeWave.wave != NULL)
 			{
 				FACTWave_Pause(
-					pCue->playing.sound.tracks[i].activeWave.wave,
+					pCue->playingSound->tracks[i].activeWave.wave,
 					fPause
 				);
 			}
@@ -1924,14 +1927,14 @@ uint32_t FACTCue_GetProperties(
 	}
 
 	/* Sound Properties */
-	if (pCue->active & 0x02)
+	if (pCue->playingSound != NULL)
 	{
 		/* TODO: u8->float volume conversion crap */
-		sndProps->category = pCue->playing.sound.sound->category;
-		sndProps->priority = pCue->playing.sound.sound->priority;
-		sndProps->pitch = pCue->playing.sound.sound->pitch;
-		sndProps->volume = pCue->playing.sound.sound->volume;
-		sndProps->numTracks = pCue->playing.sound.sound->trackCount;
+		sndProps->category = pCue->playingSound->sound->category;
+		sndProps->priority = pCue->playingSound->sound->priority;
+		sndProps->pitch = pCue->playingSound->sound->pitch;
+		sndProps->volume = pCue->playingSound->sound->volume;
+		sndProps->numTracks = pCue->playingSound->sound->trackCount;
 		/* TODO: arrTrackProperties[0] */
 	}
 	else

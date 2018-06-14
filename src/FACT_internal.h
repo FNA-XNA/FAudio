@@ -496,12 +496,8 @@ struct FACTCue
 
 	/* Playback */
 	uint32_t state;
-	uint8_t active; /* 0x01 for wave, 0x02 for sound */
-	union
-	{
-		FACTWave *wave;
-		FACTSoundInstance sound;
-	} playing;
+	FACTWave *simpleWave;
+	FACTSoundInstance *playingSound;
 	FACTVariation *playingVariation;
 
 	/* 3D Data */
