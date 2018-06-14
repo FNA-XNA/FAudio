@@ -289,20 +289,6 @@ uint32_t FAudioFXReverb_LockForProcess(
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 ) {
-	/* call	parent to do basic validation */
-	uint32_t result = FAPOBase_LockForProcess(
-		&fapo->base.base,
-		InputLockedParameterCount,
-		pInputLockedParameters,
-		OutputLockedParameterCount,
-		pOutputLockedParameters
-	);
-
-	if (result != 0)
-	{
-		return result;
-	}
-
 	/* reverb specific validation */
 	if (!IsFloatFormat(pInputLockedParameters->pFormat))
 	{
@@ -338,7 +324,14 @@ uint32_t FAudioFXReverb_LockForProcess(
 		fapo->reverb = DspReverb_Create(fapo->sampleRate, fapo->inChannels, fapo->outChannels);
 	}
 
-	return 0;
+	/* call	parent to do basic validation */
+	return FAPOBase_LockForProcess(
+		&fapo->base.base,
+		InputLockedParameterCount,
+		pInputLockedParameters,
+		OutputLockedParameterCount,
+		pOutputLockedParameters
+	);
 }
 
 static inline void FAudioFXReverb_CopyBuffer(FAudioFXReverb *fapo, const float *buffer_in, float *buffer_out, size_t frames_in)
