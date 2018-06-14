@@ -83,7 +83,7 @@ uint32_t FAPOBase_GetRegistrationProperties(
 	FAPORegistrationProperties **ppRegistrationProperties
 ) {
 	FAudio_memcpy(
-		ppRegistrationProperties,
+		*ppRegistrationProperties,
 		fapo->m_pRegistrationProperties,
 		sizeof(FAPORegistrationProperties)
 	);
