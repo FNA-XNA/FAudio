@@ -1792,7 +1792,14 @@ uint32_t FACTCue_SetVariable(
 	uint16_t nIndex,
 	float nValue
 ) {
-	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
+	FACTVariable *var;
+
+	if (nIndex == FACTINDEX_INVALID)
+	{
+		return 1;
+	}
+
+	var = &pCue->parentBank->parentEngine->variables[nIndex];
 	FAudio_assert(var->accessibility & 0x01);
 	FAudio_assert(!(var->accessibility & 0x02));
 	FAudio_assert(var->accessibility & 0x04);
@@ -1809,7 +1816,14 @@ uint32_t FACTCue_GetVariable(
 	uint16_t nIndex,
 	float *nValue
 ) {
-	FACTVariable *var = &pCue->parentBank->parentEngine->variables[nIndex];
+	FACTVariable *var;
+
+	if (nIndex == FACTINDEX_INVALID)
+	{
+		return 1;
+	}
+
+	var = &pCue->parentBank->parentEngine->variables[nIndex];
 	FAudio_assert(var->accessibility & 0x01);
 	FAudio_assert(var->accessibility & 0x04);
 
