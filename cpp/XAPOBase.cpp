@@ -68,6 +68,14 @@ ULONG CXAPOBase::Release()
 	return refcount;
 }
 
+/* When testing an FAPO effect with Microsoft XAudio2 (not the FAudio wrapper), you'll need to make sure
+   that *ppRegistrationProperties is allocated with CoTaskMemAlloc because CreateVoice will use CoTaskMemFree
+   to release the memory.
+
+	extern "C" __declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
+	*ppRegistrationProperties = (XAPO_REGISTRATION_PROPERTIES *) CoTaskMemAlloc(sizeof(XAPO_REGISTRATION_PROPERTIES));
+*/
+
 HRESULT CXAPOBase::GetRegistrationProperties(XAPO_REGISTRATION_PROPERTIES** ppRegistrationProperties) 
 {
 	FAudio_assert(fapo_base->base.GetRegistrationProperties != NULL);
