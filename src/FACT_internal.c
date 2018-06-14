@@ -725,6 +725,7 @@ void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
 	{
 		/* No fade? Screw it, just delete us */
 		FACT_INTERNAL_DestroySound(sound);
+		return;
 	}
 
 	sound->fadeType = 2;

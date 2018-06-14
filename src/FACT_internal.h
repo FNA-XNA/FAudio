@@ -346,7 +346,7 @@ typedef struct FACTSoundInstance
 	/* Fade data */
 	uint16_t fadeStart;
 	uint16_t fadeTarget;
-	uint8_t fadeType;
+	uint8_t fadeType; /* 1 for in, 2 for out */
 
 	/* Engine references */
 	FACTCue *parentCue;
