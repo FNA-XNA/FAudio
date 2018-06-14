@@ -151,6 +151,30 @@ typedef struct FAudioFXReverb
 	DspReverb *reverb;
 } FAudioFXReverb;
 
+static inline int8_t IsFloatFormat(const FAudioWaveFormatEx *format)
+{
+	if (format->wFormatTag == 3)
+	{
+		/* Plain ol' WaveFormatEx */
+		return 1;
+	}
+
+	if (format->wFormatTag == 0xFFFE)
+	{
+		/* WaveFormatExtensible, match GUID */
+#define MAKE_SUBFORMAT_GUID(guid, fmt)	static FAudioGUID KSDATAFORMAT_SUBTYPE_##guid = {(uint16_t)(fmt), 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}}
+		MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
+#undef MAKE_SUBFORMAT_GUID
+
+		if (FAudio_memcmp(&((FAudioWaveFormatExtensible *)format)->SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)) == 0)
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 uint32_t FAudioFXReverb_IsInputFormatSupported(
 	FAPOBase *fapo,
 	const FAudioWaveFormatEx *pOutputFormat,
@@ -173,7 +197,7 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 	}
 
 	/* data type */
-	if (pRequestedInputFormat->wFormatTag != 3)
+	if (!IsFloatFormat(pRequestedInputFormat))
 	{
 		SET_SUPPORTED_FIELD(wFormatTag, 3);
 	}
@@ -204,6 +228,7 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 	return result;
 }
 
+
 uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	FAPOBase *fapo,
 	const FAudioWaveFormatEx *pInputFormat,
@@ -226,7 +251,7 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	}
 
 	/* data type */
-	if (pRequestedOutputFormat->wFormatTag != 3)
+	if (!IsFloatFormat(pRequestedOutputFormat))
 	{
 		SET_SUPPORTED_FIELD(wFormatTag, 3);
 	}
@@ -279,7 +304,7 @@ uint32_t FAudioFXReverb_LockForProcess(
 	}
 
 	/* reverb specific validation */
-	if (pInputLockedParameters->pFormat->wFormatTag != 3) /* WAVE_FORMAT_IEEE_FLOAT */
+	if (!IsFloatFormat(pInputLockedParameters->pFormat))
 	{
 		return 1;
 	}
