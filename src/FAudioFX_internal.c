@@ -222,8 +222,7 @@ typedef struct DspBiQuad
 	float a0, a1, a2;
 	float b1, b2;
 	float c0, d0;
-	float delay_x[2];
-	float delay_y[2];
+	float delay[2];
 } DspBiQuad;
 
 static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float gain);
@@ -307,22 +306,12 @@ static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float 
 
 static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 {
-	/* TODO: optimize this naive implementation (use transposed form 2) */
-	float result;
-
-	FAudio_assert(filter != NULL);
-
-	result = filter->a0 * sample_in +
-			 filter->a1 * filter->delay_x[0] +
-			 filter->a2 * filter->delay_x[1] -
-			 filter->b1 * filter->delay_y[0] -
-			 filter->b2 * filter->delay_y[1];
-	result = FAudioFX_INTERNAL_undenormalize(result);
-
-	filter->delay_y[1] = filter->delay_y[0];
-	filter->delay_y[0] = result;
-	filter->delay_x[1] = filter->delay_x[0];
-	filter->delay_x[0] = sample_in;
+	/* Direct Form II Transposed:
+		- less delay registers than Direct Form I
+		- more numerically stable than Direct Form II */
+	float result = (filter->a0 * sample_in) + filter->delay[0];
+	filter->delay[0] = (filter->a1 * sample_in) - (filter->b1 * result) + filter->delay[1];
+	filter->delay[1] = (filter->a2 * sample_in) - (filter->b2 * result);
 
 	result = FAudioFX_INTERNAL_undenormalize(
 		(result * filter->c0) + 
@@ -335,8 +324,7 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 static inline void DspBiQuad_Reset(DspBiQuad *filter)
 {
 	FAudio_assert(filter != NULL);
-	FAudio_zero(&filter->delay_x, sizeof(filter->delay_x));
-	FAudio_zero(&filter->delay_y, sizeof(filter->delay_y));
+	FAudio_zero(&filter->delay, sizeof(filter->delay));
 }
 
 static void DspBiQuad_Destroy(DspBiQuad *filter)
