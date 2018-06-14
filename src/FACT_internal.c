@@ -335,7 +335,7 @@ void FACT_INTERNAL_GetNextWave(
 	}
 }
 
-void FACT_INTERNAL_SelectSound(FACTCue *cue)
+uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 {
 	uint16_t i, j;
 	float max, next, weight;
@@ -344,12 +344,22 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	LinkedList *list;
 	FACTEvent *evt;
 	FACTEventInstance *evtInst;
+	FACTSound *baseSound = NULL;
+	FACTSoundInstance *newSound;
+
+	union
+	{
+		float maxf;
+		uint8_t maxi;
+	} limitmax;
+	FACTCue *tmp, *wnr;
+	uint16_t categoryIndex;
+	FACTAudioCategory *category;
 
 	if (cue->data->flags & 0x04)
 	{
 		/* Sound */
-		cue->playing.sound.sound = cue->sound;
-		cue->active = 0x02;
+		baseSound = cue->sound;
 	}
 	else
 	{
@@ -390,7 +400,7 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			if (i == cue->variation->entryCount)
 			{
 				cue->active = 0x00;
-				return;
+				return 1;
 			}
 		}
 		else
@@ -428,11 +438,10 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 			{
 				if (cue->variation->entries[i].soundCode == cue->parentBank->soundCodes[j])
 				{
-					cue->playing.sound.sound = &cue->parentBank->sounds[j];
+					baseSound = &cue->parentBank->sounds[j];
 					break;
 				}
 			}
-			cue->active = 0x02;
 		}
 		else
 		{
@@ -467,50 +476,165 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 	}
 
 	/* Alloc SoundInstance variables */
-	if (cue->active & 0x02)
+	if (baseSound != NULL)
 	{
-		cue->playing.sound.tracks = (FACTTrackInstance*) FAudio_malloc(
-			sizeof(FACTTrackInstance) * cue->playing.sound.sound->trackCount
-		);
-		for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+		/* Category Instance Limits */
+		categoryIndex = baseSound->category;
+		category = &cue->parentBank->parentEngine->categories[categoryIndex];
+		if (category->instanceCount >= category->instanceLimit)
 		{
-			cue->playing.sound.tracks[i].rpcData.rpcVolume = 0.0f;
-			cue->playing.sound.tracks[i].rpcData.rpcPitch = 0.0f;
-			cue->playing.sound.tracks[i].rpcData.rpcReverbSend = 0.0f;
-			cue->playing.sound.tracks[i].rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
-			cue->playing.sound.tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
-
-			cue->playing.sound.tracks[i].activeWave.wave = NULL;
-			cue->playing.sound.tracks[i].activeWave.baseVolume = 0.0f;
-			cue->playing.sound.tracks[i].activeWave.basePitch = 0;
-			cue->playing.sound.tracks[i].activeWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
-			cue->playing.sound.tracks[i].activeWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
-			cue->playing.sound.tracks[i].upcomingWave.wave = NULL;
-			cue->playing.sound.tracks[i].upcomingWave.baseVolume = 0.0f;
-			cue->playing.sound.tracks[i].upcomingWave.basePitch = 0;
-			cue->playing.sound.tracks[i].upcomingWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
-			cue->playing.sound.tracks[i].upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
-
-			cue->playing.sound.tracks[i].events = (FACTEventInstance*) FAudio_malloc(
-				sizeof(FACTEventInstance) * cue->playing.sound.sound->tracks[i].eventCount
-			);
-			for (j = 0; j < cue->playing.sound.sound->tracks[i].eventCount; j += 1)
+			wnr = NULL;
+			tmp = cue->parentBank->cueList;
+			if (category->maxInstanceBehavior == 0) /* Fail */
 			{
-				evt = &cue->playing.sound.sound->tracks[i].events[j];
+				cue->state |= FACT_STATE_STOPPED;
+				cue->state &= ~(
+					FACT_STATE_PLAYING |
+					FACT_STATE_STOPPING |
+					FACT_STATE_PAUSED
+				);
+				FAudio_PlatformUnlockAudio(cue->parentBank->parentEngine->audio);
+				return 0;
+			}
+			else if (category->maxInstanceBehavior == 1) /* Queue */
+			{
+				/* FIXME: How is this different from Replace Oldest? */
+				while (tmp != NULL)
+				{
+					if (	tmp != cue &&
+						tmp->playing.sound.sound->category == categoryIndex &&
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					{
+						wnr = tmp;
+						break;
+					}
+					tmp = tmp->next;
+				}
+			}
+			else if (category->maxInstanceBehavior == 2) /* Replace Oldest */
+			{
+				while (tmp != NULL)
+				{
+					if (	tmp != cue &&
+						tmp->playing.sound.sound->category == categoryIndex &&
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					{
+						wnr = tmp;
+						break;
+					}
+					tmp = tmp->next;
+				}
+			}
+			else if (category->maxInstanceBehavior == 3) /* Replace Quietest */
+			{
+				limitmax.maxf = FACTVOLUME_MAX;
+				while (tmp != NULL)
+				{
+					if (	tmp != cue &&
+						tmp->playing.sound.sound->category == categoryIndex &&
+						/*FIXME: tmp->playing.sound.volume < limitmax.maxf &&*/
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					{
+						wnr = tmp;
+						/* limitmax.maxf = tmp->playing.sound.volume; */
+					}
+					tmp = tmp->next;
+				}
+			}
+			else if (category->maxInstanceBehavior == 4) /* Replace Lowest Priority */
+			{
+				limitmax.maxi = 0xFF;
+				while (tmp != NULL)
+				{
+					if (	tmp != cue &&
+						tmp->playing.sound.sound->category == categoryIndex &&
+						tmp->playing.sound.sound->priority < limitmax.maxi &&
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					{
+						wnr = tmp;
+						limitmax.maxi = tmp->playing.sound.sound->priority;
+					}
+					tmp = tmp->next;
+				}
+			}
+			if (wnr != NULL)
+			{
+				fadeInMS = category->fadeInMS;
+				if (wnr->active & 0x02)
+				{
+					FACT_INTERNAL_BeginFadeOut(&wnr->playing.sound, category->fadeOutMS);
+				}
+				else
+				{
+					FACTCue_Stop(wnr, 0);
+				}
+			}
+		}
+		category->instanceCount += 1;
 
-				cue->playing.sound.tracks[i].events[j].timestamp =
-					cue->playing.sound.sound->tracks[i].events[j].timestamp;
-				cue->playing.sound.tracks[i].events[j].loopCount =
-					cue->playing.sound.sound->tracks[i].events[j].wave.loopCount;
-				cue->playing.sound.tracks[i].events[j].finished = 0;
-				cue->playing.sound.tracks[i].events[j].value = 0.0f;
+		newSound = &cue->playing.sound;
+		cue->active = 0x02;
+
+		newSound->parentCue = cue;
+		newSound->sound = baseSound;
+		newSound->rpcData.rpcVolume = 0.0f;
+		newSound->rpcData.rpcPitch = 0.0f;
+		newSound->rpcData.rpcReverbSend = 0.0f;
+		newSound->rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+		newSound->rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+		newSound->fadeType = (fadeInMS > 0);
+		if (newSound->fadeType)
+		{
+			newSound->fadeStart = FAudio_timems();
+			newSound->fadeTarget = fadeInMS;
+		}
+		else
+		{
+			newSound->fadeStart = 0;
+			newSound->fadeTarget = 0;
+		}
+		newSound->tracks = (FACTTrackInstance*) FAudio_malloc(
+			sizeof(FACTTrackInstance) * newSound->sound->trackCount
+		);
+		for (i = 0; i < newSound->sound->trackCount; i += 1)
+		{
+			newSound->tracks[i].rpcData.rpcVolume = 0.0f;
+			newSound->tracks[i].rpcData.rpcPitch = 0.0f;
+			newSound->tracks[i].rpcData.rpcReverbSend = 0.0f;
+			newSound->tracks[i].rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+			newSound->tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+
+			newSound->tracks[i].activeWave.wave = NULL;
+			newSound->tracks[i].activeWave.baseVolume = 0.0f;
+			newSound->tracks[i].activeWave.basePitch = 0;
+			newSound->tracks[i].activeWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+			newSound->tracks[i].activeWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+			newSound->tracks[i].upcomingWave.wave = NULL;
+			newSound->tracks[i].upcomingWave.baseVolume = 0.0f;
+			newSound->tracks[i].upcomingWave.basePitch = 0;
+			newSound->tracks[i].upcomingWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+			newSound->tracks[i].upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+
+			newSound->tracks[i].events = (FACTEventInstance*) FAudio_malloc(
+				sizeof(FACTEventInstance) * newSound->sound->tracks[i].eventCount
+			);
+			for (j = 0; j < newSound->sound->tracks[i].eventCount; j += 1)
+			{
+				evt = &newSound->sound->tracks[i].events[j];
+
+				newSound->tracks[i].events[j].timestamp =
+					newSound->sound->tracks[i].events[j].timestamp;
+				newSound->tracks[i].events[j].loopCount =
+					newSound->sound->tracks[i].events[j].wave.loopCount;
+				newSound->tracks[i].events[j].finished = 0;
+				newSound->tracks[i].events[j].value = 0.0f;
 
 				if (	evt->type == FACTEVENT_PLAYWAVE ||
 					evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
 					evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 					evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 				{
-					evtInst = &cue->playing.sound.tracks[i].events[j];
+					evtInst = &newSound->tracks[i].events[j];
 					if ((evt->wave.complex.variation & 0xF) == 1)
 					{
 						evtInst->valuei = 0;
@@ -525,54 +649,76 @@ void FACT_INTERNAL_SelectSound(FACTCue *cue)
 					}
 					FACT_INTERNAL_GetNextWave(
 						cue,
-						cue->playing.sound.sound,
-						&cue->playing.sound.sound->tracks[i],
-						&cue->playing.sound.tracks[i],
+						newSound->sound,
+						&newSound->sound->tracks[i],
+						&newSound->tracks[i],
 						evt,
 						evtInst
 					);
-					cue->playing.sound.tracks[i].waveEvt = evt;
-					cue->playing.sound.tracks[i].waveEvtInst = evtInst;
+					newSound->tracks[i].waveEvt = evt;
+					newSound->tracks[i].waveEvtInst = evtInst;
 				}
 			}
 		}
 	}
+
+	return 1;
 }
 
-void FACT_INTERNAL_DestroySound(FACTCue *cue)
+void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 {
 	uint8_t i;
-	for (i = 0; i < cue->playing.sound.sound->trackCount; i += 1)
+	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
-		if (cue->playing.sound.tracks[i].activeWave.wave != NULL)
+		if (sound->tracks[i].activeWave.wave != NULL)
 		{
 			FACTWave_Destroy(
-				cue->playing.sound.tracks[i].activeWave.wave
+				sound->tracks[i].activeWave.wave
 			);
 		}
-		if (cue->playing.sound.tracks[i].upcomingWave.wave != NULL)
+		if (sound->tracks[i].upcomingWave.wave != NULL)
 		{
 			FACTWave_Destroy(
-				cue->playing.sound.tracks[i].upcomingWave.wave
+				sound->tracks[i].upcomingWave.wave
 			);
 		}
-		FAudio_free(cue->playing.sound.tracks[i].events);
+		FAudio_free(sound->tracks[i].events);
 	}
-	FAudio_free(cue->playing.sound.tracks);
+	FAudio_free(sound->tracks);
 
-	cue->parentBank->parentEngine->categories[
-		cue->playing.sound.sound->category
+	sound->parentCue->parentBank->parentEngine->categories[
+		sound->sound->category
 	].instanceCount -= 1;
+
+	if (	!(sound->parentCue->data->flags & 0x04) &&
+		sound->parentCue->variation->flags == 3	)
+	{
+		/* Interactive Cues avoid autostopping... */
+		/* TODO: FAudio_free(sound); */
+		return;
+	}
+
+	sound->parentCue->active = 0;
+	/* TODO: if (sound->parentCue->playingSounds == NULL) */
+	{
+		sound->parentCue->state |= FACT_STATE_STOPPED;
+		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
+		sound->parentCue->data->instanceCount -= 1;
+	}
+	/* TODO: FAudio_free(sound); */
 }
 
-void FACT_INTERNAL_BeginFadeIn(FACTCue *cue)
+void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
 {
-	/* TODO */
-}
+	if (fadeOutMS == 0)
+	{
+		/* No fade? Screw it, just delete us */
+		FACT_INTERNAL_DestroySound(sound);
+	}
 
-void FACT_INTERNAL_BeginFadeOut(FACTCue *cue)
-{
-	/* TODO */
+	sound->fadeType = 2;
+	sound->fadeStart = FAudio_timems();
+	sound->fadeTarget = fadeOutMS;
 }
 
 /* RPC Helper Functions */
@@ -756,7 +902,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 /* Cue Update Functions */
 
 void FACT_INTERNAL_ActivateEvent(
-	FACTCue *cue,
+	FACTSoundInstance *sound,
 	FACTTrack *track,
 	FACTTrackInstance *trackInst,
 	FACTEvent *evt,
@@ -773,7 +919,7 @@ void FACT_INTERNAL_ActivateEvent(
 		/* Stop Cue */
 		if (evt->stop.flags & 0x02)
 		{
-			FACTCue_Stop(cue, evt->stop.flags & 0x01);
+			FACTCue_Stop(sound->parentCue, evt->stop.flags & 0x01);
 		}
 
 		/* Stop track */
@@ -934,29 +1080,182 @@ void FACT_INTERNAL_ActivateEvent(
 	evtInst->finished = 1;
 }
 
-void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
+uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 {
 	uint8_t i, j;
-	float next;
 	uint32_t waveState;
-	FACTSoundInstance *active;
 	FACTEventInstance *evtInst;
 	FAudioFilterParameters filterParams;
 	uint8_t finished = 1;
 
-	/* If we're not running, save some instructions... */
-	if (cue->state & (FACT_STATE_PAUSED | FACT_STATE_STOPPED))
+	/* Fade in/out (TODO: AttackTime/ReleaseTime, curves) */
+	float fadeVolume;
+	if (sound->fadeType == 1)
 	{
-		return;
+		if ((elapsed - sound->fadeStart) >= sound->fadeTarget)
+		{
+			/* We've faded in! */
+			fadeVolume = 1.0f;
+			sound->fadeStart = 0;
+			sound->fadeTarget = 0;
+			sound->fadeType = 0;
+		}
+		else
+		{
+			fadeVolume = (
+				(float) (elapsed - sound->fadeStart) /
+				(float) sound->fadeTarget
+			);
+		}
+	}
+	else if (sound->fadeType == 2)
+	{
+		if ((elapsed - sound->fadeStart) >= sound->fadeTarget)
+		{
+			/* We've faded out! */
+			return 1;
+		}
+		fadeVolume = 1.0f - (
+			(float) (elapsed - sound->fadeStart) /
+			(float) sound->fadeTarget
+		);
+	}
+	else
+	{
+		fadeVolume = 1.0f;
 	}
 
-	/* There's only something to do if we're a Sound. Waves are simple! */
-	if (cue->active & 0x01)
+	/* To get the time on a single Cue, subtract from the global time
+	 * the latest start time minus the total time elapsed (minus pause time)
+	 */
+	elapsed -= sound->parentCue->start - sound->parentCue->elapsed;
+
+	/* RPC updates */
+	FACT_INTERNAL_UpdateRPCs(
+		sound->parentCue,
+		sound->sound->rpcCodeCount,
+		sound->sound->rpcCodes,
+		&sound->rpcData
+	);
+	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
-		/* TODO: FadeIn/FadeOut? */
-		cue->state = cue->playing.wave->state;
-		return;
+		FACT_INTERNAL_UpdateRPCs(
+			sound->parentCue,
+			sound->sound->tracks[i].rpcCodeCount,
+			sound->sound->tracks[i].rpcCodes,
+			&sound->tracks[i].rpcData
+		);
 	}
+
+	/* Go through each event for each track */
+	for (i = 0; i < sound->sound->trackCount; i += 1)
+	{
+		/* Event updates */
+		for (j = 0; j < sound->sound->tracks[i].eventCount; j += 1)
+		{
+			evtInst = &sound->tracks[i].events[j];
+			if (!evtInst->finished)
+			{
+				/* Cue's not done yet...! */
+				finished = 0;
+
+				/* Trigger events at the right time */
+				if (elapsed > evtInst->timestamp)
+				{
+					FACT_INTERNAL_ActivateEvent(
+						sound,
+						&sound->sound->tracks[i],
+						&sound->tracks[i],
+						&sound->sound->tracks[i].events[j],
+						evtInst,
+						elapsed
+					);
+				}
+			}
+		}
+
+		/* Wave updates */
+		if (sound->tracks[i].activeWave.wave == NULL)
+		{
+			continue;
+		}
+		finished = 0;
+
+		/* Clear out Waves as they finish */
+		FACTWave_GetState(
+			sound->tracks[i].activeWave.wave,
+			&waveState
+		);
+		if (waveState & FACT_STATE_STOPPED)
+		{
+			FACTWave_Destroy(sound->tracks[i].activeWave.wave);
+			FAudio_memcpy(
+				&sound->tracks[i].activeWave,
+				&sound->tracks[i].upcomingWave,
+				sizeof(sound->tracks[i].activeWave)
+			);
+			sound->tracks[i].upcomingWave.wave = NULL;
+			if (sound->tracks[i].activeWave.wave == NULL)
+			{
+				continue;
+			}
+			FACTWave_Play(sound->tracks[i].activeWave.wave);
+		}
+
+		/* TODO: Event volume/pitch values */
+		FACTWave_SetVolume(
+			sound->tracks[i].activeWave.wave,
+			FACT_INTERNAL_CalculateAmplitudeRatio(
+				sound->tracks[i].activeWave.baseVolume +
+				sound->rpcData.rpcVolume +
+				sound->tracks[i].rpcData.rpcVolume
+			) * sound->parentCue->parentBank->parentEngine->categories[
+				sound->sound->category
+			].currentVolume *
+			fadeVolume
+		);
+		FACTWave_SetPitch(
+			sound->tracks[i].activeWave.wave,
+			(int16_t) (
+				sound->tracks[i].activeWave.basePitch +
+				sound->rpcData.rpcPitch +
+				sound->tracks[i].rpcData.rpcPitch
+			)
+		);
+		if (sound->sound->tracks[i].filter != 0xFF)
+		{
+			/* TODO: How are all the freq/QFactor values put together? */
+			filterParams.Type = (FAudioFilterType) sound->sound->tracks[i].filter;
+			filterParams.Frequency = (
+				sound->tracks[i].activeWave.baseFrequency *
+				sound->rpcData.rpcFilterFreq *
+				sound->tracks[i].rpcData.rpcFilterFreq
+			);
+			filterParams.OneOverQ = 1.0f / (
+				sound->tracks[i].activeWave.baseQFactor +
+				sound->rpcData.rpcFilterQFactor +
+				sound->tracks[i].rpcData.rpcFilterQFactor
+			);
+			FAudioVoice_SetFilterParameters(
+				sound->tracks[i].activeWave.wave->voice,
+				&filterParams,
+				0
+			);
+		}
+		/* TODO: Wave updates:
+		 * - ReverbSend (SetOutputMatrix on index 1, submix voice)
+		 * - Fade in/out
+		 */
+	}
+
+	return finished;
+}
+
+void FACT_INTERNAL_UpdateCue(FACTCue *cue)
+{
+	float next;
+	uint16_t fadeIn = 0;
+	uint16_t fadeOut = 0;
 
 	/* Interactive sound selection */
 	if (!(cue->data->flags & 0x04) && cue->variation->flags == 3)
@@ -985,153 +1284,18 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue, uint32_t elapsed)
 			/* New sound, time for death! */
 			if (cue->active)
 			{
-				FACT_INTERNAL_DestroySound(cue);
+				FACT_INTERNAL_BeginFadeOut(
+					&cue->playing.sound, fadeOut
+				);
 			}
+
+			/* TODO: Reset cue times? Transition tables...?
 			cue->start = elapsed;
 			cue->elapsed = 0;
+			 */
 
-			FACT_INTERNAL_SelectSound(cue);
+			FACT_INTERNAL_CreateSound(cue, fadeIn);
 		}
-	}
-
-	/* No sound, nothing to do... */
-	if (!cue->active)
-	{
-		return;
-	}
-
-	/* To get the time on a single Cue, subtract from the global time
-	 * the latest start time minus the total time elapsed (minus pause time)
-	 */
-	elapsed -= cue->start - cue->elapsed;
-
-	active = &cue->playing.sound;
-
-	/* RPC updates */
-	FACT_INTERNAL_UpdateRPCs(
-		cue,
-		active->sound->rpcCodeCount,
-		active->sound->rpcCodes,
-		&active->rpcData
-	);
-	for (i = 0; i < active->sound->trackCount; i += 1)
-	{
-		FACT_INTERNAL_UpdateRPCs(
-			cue,
-			active->sound->tracks[i].rpcCodeCount,
-			active->sound->tracks[i].rpcCodes,
-			&active->tracks[i].rpcData
-		);
-	}
-
-	/* Go through each event for each track */
-	for (i = 0; i < active->sound->trackCount; i += 1)
-	{
-		/* Event updates */
-		for (j = 0; j < active->sound->tracks[i].eventCount; j += 1)
-		{
-			evtInst = &active->tracks[i].events[j];
-			if (!evtInst->finished)
-			{
-				/* Cue's not done yet...! */
-				finished = 0;
-
-				/* Trigger events at the right time */
-				if (elapsed > evtInst->timestamp)
-				{
-					FACT_INTERNAL_ActivateEvent(
-						cue,
-						&active->sound->tracks[i],
-						&active->tracks[i],
-						&active->sound->tracks[i].events[j],
-						evtInst,
-						elapsed
-					);
-				}
-			}
-		}
-
-		/* Wave updates */
-		if (active->tracks[i].activeWave.wave == NULL)
-		{
-			continue;
-		}
-		finished = 0;
-
-		/* Clear out Waves as they finish */
-		FACTWave_GetState(
-			active->tracks[i].activeWave.wave,
-			&waveState
-		);
-		if (waveState & FACT_STATE_STOPPED)
-		{
-			FACTWave_Destroy(active->tracks[i].activeWave.wave);
-			FAudio_memcpy(
-				&active->tracks[i].activeWave,
-				&active->tracks[i].upcomingWave,
-				sizeof(active->tracks[i].activeWave)
-			);
-			active->tracks[i].upcomingWave.wave = NULL;
-			if (active->tracks[i].activeWave.wave == NULL)
-			{
-				continue;
-			}
-			FACTWave_Play(active->tracks[i].activeWave.wave);
-		}
-
-		/* TODO: Event volume/pitch values */
-		FACTWave_SetVolume(
-			active->tracks[i].activeWave.wave,
-			FACT_INTERNAL_CalculateAmplitudeRatio(
-				active->tracks[i].activeWave.baseVolume +
-				active->rpcData.rpcVolume +
-				active->tracks[i].rpcData.rpcVolume
-			) * cue->parentBank->parentEngine->categories[active->sound->category].currentVolume
-		);
-		FACTWave_SetPitch(
-			active->tracks[i].activeWave.wave,
-			(int16_t) (
-				active->tracks[i].activeWave.basePitch +
-				active->rpcData.rpcPitch +
-				active->tracks[i].rpcData.rpcPitch
-			)
-		);
-		if (active->sound->tracks[i].filter != 0xFF)
-		{
-			/* TODO: How are all the freq/QFactor values put together? */
-			filterParams.Type = (FAudioFilterType) active->sound->tracks[i].filter;
-			filterParams.Frequency = (
-				active->tracks[i].activeWave.baseFrequency *
-				active->rpcData.rpcFilterFreq *
-				active->tracks[i].rpcData.rpcFilterFreq
-			);
-			filterParams.OneOverQ = 1.0f / (
-				active->tracks[i].activeWave.baseQFactor +
-				active->rpcData.rpcFilterQFactor +
-				active->tracks[i].rpcData.rpcFilterQFactor
-			);
-			FAudioVoice_SetFilterParameters(
-				active->tracks[i].activeWave.wave->voice,
-				&filterParams,
-				0
-			);
-		}
-		/* TODO: Wave updates:
-		 * - ReverbSend (SetOutputMatrix on index 1, submix voice)
-		 * - Fade in/out
-		 */
-	}
-
-	/* If everything has been played and finished, set STOPPED */
-	if (finished)
-	{
-		cue->state |= FACT_STATE_STOPPED;
-		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
-
-		cue->parentBank->parentEngine->categories[
-			active->sound->category
-		].instanceCount -= 1;
-		cue->data->instanceCount -= 1;
 	}
 }
 
@@ -1141,8 +1305,8 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 {
 	FACTAudioEngineCallback *c = (FACTAudioEngineCallback*) callback;
 	FACTAudioEngine *engine = c->engine;
-	LinkedList *list;
-	FACTCue *cue, *backup;
+	LinkedList *sbList;
+	FACTCue *cue, *cBackup;
 	uint32_t timestamp;
 
 	/* We want the timestamp to be uniform across all Cues.
@@ -1155,27 +1319,47 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 
 	FACT_INTERNAL_UpdateEngine(engine);
 
-	list = engine->sbList;
-	while (list != NULL)
+	sbList = engine->sbList;
+	while (sbList != NULL)
 	{
-		cue = ((FACTSoundBank*) list->entry)->cueList;
+		cue = ((FACTSoundBank*) sbList->entry)->cueList;
 		while (cue != NULL)
 		{
-			FACT_INTERNAL_UpdateCue(cue, timestamp);
+			FACT_INTERNAL_UpdateCue(cue);
+
+			if (cue->state & FACT_STATE_PAUSED)
+			{
+				cue = cue->next;
+				continue;
+			}
+
+			/* There's only something to do if we're a Sound. Waves are simple! */
+			if (cue->active & 0x01)
+			{
+				/* TODO: FadeIn/FadeOut? */
+				cue->state = cue->playing.wave->state;
+			}
+			else if (cue->active & 0x02)
+			{
+				if (FACT_INTERNAL_UpdateSound(&cue->playing.sound, timestamp))
+				{
+					FACT_INTERNAL_DestroySound(&cue->playing.sound);
+				}
+			}
 
 			/* Destroy if it's done and not user-handled. */
 			if (cue->managed && (cue->state & FACT_STATE_STOPPED))
 			{
-				backup = cue->next;
+				cBackup = cue->next;
 				FACTCue_Destroy(cue);
-				cue = backup;
+				cue = cBackup;
 			}
 			else
 			{
 				cue = cue->next;
 			}
 		}
-		list = list->next;
+		sbList = sbList->next;
 	}
 }
 

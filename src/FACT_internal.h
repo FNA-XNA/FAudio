@@ -45,6 +45,7 @@ typedef struct FACTAudioCategory
 	int16_t parentCategory;
 	float volume;
 	uint8_t visibility;
+
 	uint8_t instanceCount;
 	float currentVolume;
 } FACTAudioCategory;
@@ -341,6 +342,14 @@ typedef struct FACTSoundInstance
 
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;
+
+	/* Fade data */
+	uint16_t fadeStart;
+	uint16_t fadeTarget;
+	uint8_t fadeType;
+
+	/* Engine references */
+	FACTCue *parentCue;
 } FACTSoundInstance;
 
 /* Internal Wave Types */
@@ -517,10 +526,9 @@ void FACT_INTERNAL_GetNextWave(
 	FACTEvent *evt,
 	FACTEventInstance *evtInst
 );
-void FACT_INTERNAL_SelectSound(FACTCue *cue);
-void FACT_INTERNAL_DestroySound(FACTCue *cue);
-void FACT_INTERNAL_BeginFadeIn(FACTCue *cue);
-void FACT_INTERNAL_BeginFadeOut(FACTCue *cue);
+uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
+void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
+void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 
 /* FAudio callbacks */
 

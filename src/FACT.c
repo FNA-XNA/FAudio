@@ -1523,125 +1523,113 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	{
 		float maxf;
 		uint8_t maxi;
-	} max;
+	} limitmax;
 	FACTCue *tmp, *wnr;
-	uint16_t categoryIndex;
-	FACTAudioCategory *category;
+	uint16_t fadeInMS = 0;
 	FACTCueData *data = &pCue->parentBank->cues[pCue->index];
 
 	FAudio_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 
 	FAudio_PlatformLockAudio(pCue->parentBank->parentEngine->audio);
 
-	/* Instance Limits */
-	#define INSTANCE_BEHAVIOR(obj, match) \
-		wnr = NULL; \
-		tmp = pCue->parentBank->cueList; \
-		if (obj->maxInstanceBehavior == 0) /* Fail */ \
-		{ \
-			pCue->state |= FACT_STATE_STOPPED; \
-			pCue->state &= ~( \
-				FACT_STATE_PLAYING | \
-				FACT_STATE_STOPPING | \
-				FACT_STATE_PAUSED \
-			); \
-			FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio); \
-			return 1; \
-		} \
-		else if (obj->maxInstanceBehavior == 1) /* Queue */ \
-		{ \
-			/* FIXME: How is this different from Replace Oldest? */ \
-			while (tmp != NULL) \
-			{ \
-				if (	tmp != pCue && \
-					match && \
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
-				{ \
-					wnr = tmp; \
-					break; \
-				} \
-				tmp = tmp->next; \
-			} \
-		} \
-		else if (obj->maxInstanceBehavior == 2) /* Replace Oldest */ \
-		{ \
-			while (tmp != NULL) \
-			{ \
-				if (	tmp != pCue && \
-					match && \
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
-				{ \
-					wnr = tmp; \
-					break; \
-				} \
-				tmp = tmp->next; \
-			} \
-		} \
-		else if (obj->maxInstanceBehavior == 3) /* Replace Quietest */ \
-		{ \
-			max.maxf = FACTVOLUME_MAX; \
-			while (tmp != NULL) \
-			{ \
-				if (	tmp != pCue && \
-					match && \
-					/*FIXME: tmp->playing.sound.volume < max.maxf &&*/ \
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
-				{ \
-					wnr = tmp; \
-					/* max.maxf = tmp->playing.sound.volume; */ \
-				} \
-				tmp = tmp->next; \
-			} \
-		} \
-		else if (obj->maxInstanceBehavior == 4) /* Replace Lowest Priority */ \
-		{ \
-			max.maxi = 0xFF; \
-			while (tmp != NULL) \
-			{ \
-				if (	tmp != pCue && \
-					match && \
-					tmp->playing.sound.sound->priority < max.maxi && \
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	) \
-				{ \
-					wnr = tmp; \
-					max.maxi = tmp->playing.sound.sound->priority; \
-				} \
-				tmp = tmp->next; \
-			} \
-		} \
-		if (wnr != NULL) \
-		{ \
-			if (obj->fadeInMS > 0) \
-			{ \
-				FACT_INTERNAL_BeginFadeIn(pCue); \
-			} \
-			FACTCue_Stop(wnr, 0); \
-		}
+	/* Cue Instance Limits */
 	if (data->instanceCount >= data->instanceLimit)
 	{
-		INSTANCE_BEHAVIOR(
-			data,
-			tmp->index == pCue->index
-		)
-	}
-	else if (pCue->active & 0x02)
-	{
-		categoryIndex = pCue->playing.sound.sound->category;
-		category = &pCue->parentBank->parentEngine->categories[categoryIndex];
-		if (category->instanceCount >= category->instanceLimit)
+		wnr = NULL;
+		tmp = pCue->parentBank->cueList;
+		if (data->maxInstanceBehavior == 0) /* Fail */
 		{
-			INSTANCE_BEHAVIOR(
-				category,
-				tmp->playing.sound.sound->category == categoryIndex
-			)
+			pCue->state |= FACT_STATE_STOPPED;
+			pCue->state &= ~(
+				FACT_STATE_PLAYING |
+				FACT_STATE_STOPPING |
+				FACT_STATE_PAUSED
+			);
+			FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
+			return 1;
 		}
-		category->instanceCount += 1;
+		else if (data->maxInstanceBehavior == 1) /* Queue */
+		{
+			/* FIXME: How is this different from Replace Oldest? */
+			while (tmp != NULL)
+			{
+				if (	tmp != pCue &&
+					tmp->index == pCue->index &&
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				{
+					wnr = tmp;
+					break;
+				}
+				tmp = tmp->next;
+			}
+		}
+		else if (data->maxInstanceBehavior == 2) /* Replace Oldest */
+		{
+			while (tmp != NULL)
+			{
+				if (	tmp != pCue &&
+					tmp->index == pCue->index &&
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				{
+					wnr = tmp;
+					break;
+				}
+				tmp = tmp->next;
+			}
+		}
+		else if (data->maxInstanceBehavior == 3) /* Replace Quietest */
+		{
+			limitmax.maxf = FACTVOLUME_MAX;
+			while (tmp != NULL)
+			{
+				if (	tmp != pCue &&
+					tmp->index == pCue->index &&
+					/*FIXME: tmp->playing.sound.volume < limitmax.maxf &&*/
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				{
+					wnr = tmp;
+					/* limitmax.maxf = tmp->playing.sound.volume; */
+				}
+				tmp = tmp->next;
+			}
+		}
+		else if (data->maxInstanceBehavior == 4) /* Replace Lowest Priority */
+		{
+			limitmax.maxi = 0xFF;
+			while (tmp != NULL)
+			{
+				if (	tmp != pCue &&
+					tmp->index == pCue->index &&
+					tmp->playing.sound.sound->priority < limitmax.maxi &&
+					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				{
+					wnr = tmp;
+					limitmax.maxi = tmp->playing.sound.sound->priority;
+				}
+				tmp = tmp->next;
+			}
+		}
+		if (wnr != NULL)
+		{
+			fadeInMS = data->fadeInMS;
+			if (wnr->active & 0x02)
+			{
+				FACT_INTERNAL_BeginFadeOut(&wnr->playing.sound, data->fadeOutMS);
+			}
+			else
+			{
+				FACTCue_Stop(wnr, 0);
+			}
+		}
 	}
-	data->instanceCount += 1;
-	#undef INSTANCE_BEHAVIOR
 
 	/* Need an initial sound to play */
-	FACT_INTERNAL_SelectSound(pCue);
+	if (!FACT_INTERNAL_CreateSound(pCue, fadeInMS))
+	{
+		FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
+		return 0;
+	}
+	data->instanceCount += 1;
 
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~(
@@ -1702,14 +1690,17 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		}
 		else if (pCue->active & 0x02)
 		{
-			FACT_INTERNAL_DestroySound(pCue);
+			FACT_INTERNAL_DestroySound(&pCue->playing.sound);
 		}
 		pCue->data->instanceCount -= 1;
 		pCue->active = 0;
 	}
 	else
 	{
-		FACT_INTERNAL_BeginFadeOut(pCue);
+		FACT_INTERNAL_BeginFadeOut(
+			&pCue->playing.sound,
+			pCue->parentBank->cues[pCue->index].fadeOutMS
+		);
 		pCue->state |= FACT_STATE_STOPPING;
 	}
 	return 0;
