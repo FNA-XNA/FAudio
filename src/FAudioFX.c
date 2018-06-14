@@ -316,6 +316,58 @@ uint32_t FAudioFXReverb_LockForProcess(
 	return 0;
 }
 
+static inline void FAudioFXReverb_CopyBuffer(FAudioFXReverb *fapo, const float *buffer_in, float *buffer_out, size_t frames_in)
+{
+	/* in-place processing ? */
+	if (buffer_in == buffer_out)
+	{
+		return;
+	}
+	
+	/* 1 -> 1 or 2 -> 2 */
+	if (fapo->inBlockAlign == fapo->outBlockAlign)
+	{
+		FAudio_memcpy(buffer_out, buffer_in, fapo->inBlockAlign * frames_in);
+		return;
+	}
+
+	/* 1 -> 5.1 */
+	FAudio_zero(buffer_out, fapo->outBlockAlign * frames_in);
+
+	if (fapo->inChannels == 1 && fapo->outChannels == 6)
+	{
+		const float *in_end = buffer_in + frames_in;
+		const float *in_ptr = buffer_in;
+		float *out_ptr = buffer_out;
+		
+		while (in_ptr < in_end)
+		{
+			*out_ptr++ = *in_ptr;
+			*out_ptr++ = *in_ptr++;
+			out_ptr += 4;
+		}
+		return;
+	}
+
+	/* 2 -> 5.1 */
+	if (fapo->inChannels == 2 && fapo->outChannels == 6)
+	{
+		const float *in_end = buffer_in + (frames_in * 2);
+		const float *in_ptr = buffer_in;
+		float *out_ptr = buffer_out;
+
+		while (in_ptr < in_end)
+		{
+			*out_ptr++ = *in_ptr++;
+			*out_ptr++ = *in_ptr++;
+			out_ptr += 4;
+		}
+		return;
+	}
+
+	FAudio_assert(0 && "Unsupported channel combination");
+}
+
 void FAudioFXReverb_Process(
 	FAudioFXReverb *fapo,
 	uint32_t InputProcessParameterCount,
@@ -324,30 +376,39 @@ void FAudioFXReverb_Process(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 ) {
+	FAudioFXReverbParameters *params;
 	uint8_t update_params = FAPOParametersBase_ParametersChanged(&fapo->base);
-
-	if (IsEnabled == 0)
+	float total;
+	
+	/* handle disabled filter */
+	if (IsEnabled == 0) 
 	{
-		if (pInputProcessParameters->pBuffer != pOutputProcessParameters->pBuffer)
+		pOutputProcessParameters->BufferFlags = pInputProcessParameters->BufferFlags;
+
+		if (pOutputProcessParameters->BufferFlags != FAPO_BUFFER_SILENT)
 		{
-			if (fapo->inBlockAlign == fapo->outBlockAlign)
-			{
-				FAudio_memcpy(
-					pOutputProcessParameters->pBuffer, 
-					pInputProcessParameters->pBuffer, 
-					fapo->inBlockAlign * pOutputProcessParameters->ValidFrameCount
-				);
-			}
-			else
-			{
-				FAudio_assert(0 && "5.1 output not supported yet!");
-			}
+			FAudioFXReverb_CopyBuffer(
+				fapo,
+				(const float *)pInputProcessParameters->pBuffer,
+				(float *)pOutputProcessParameters->pBuffer,
+				pInputProcessParameters->ValidFrameCount
+			);
 		}
+
 		return;
 	}
+	
+	/* XAudio2 passes a 'silent' buffer when no input buffer is available to play the effect tail */
+	if (pInputProcessParameters->BufferFlags == FAPO_BUFFER_SILENT)
+	{
+		/* make sure input data is usable */
+		FAudio_zero(
+			pInputProcessParameters->pBuffer, 
+			pInputProcessParameters->ValidFrameCount * fapo->inBlockAlign
+		);
+	}
 
-	FAudioFXReverbParameters *params = (FAudioFXReverbParameters*)
-		FAPOParametersBase_BeginProcess(&fapo->base);
+	params = (FAudioFXReverbParameters*) FAPOParametersBase_BeginProcess(&fapo->base);
 
 	/* update parameters  */
 	if (update_params)
@@ -356,7 +417,7 @@ void FAudioFXReverb_Process(
 	}
 
 	/* run reverb effect */
-	float total = DspReverb_Process(
+	total = DspReverb_Process(
 		fapo->reverb,
 		(const float *)pInputProcessParameters->pBuffer,
 		(float *)pOutputProcessParameters->pBuffer,
@@ -365,10 +426,7 @@ void FAudioFXReverb_Process(
 	);
 
 	/* set BufferFlags to silent so PLAY_TAILS knows when to stop */
-	if (total < 0.0000001f)
-	{
-		pOutputProcessParameters->BufferFlags = FAPO_BUFFER_SILENT;
-	}
+	pOutputProcessParameters->BufferFlags = (total < 0.0000001f) ? FAPO_BUFFER_SILENT : FAPO_BUFFER_VALID;
 
 	FAPOParametersBase_EndProcess(&fapo->base);
 }

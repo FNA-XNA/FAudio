@@ -515,7 +515,7 @@ Parameters:
 float WetDryMix;				0 - 100 (0 = fully dry, 100 = fully wet) 
 uint32_t ReflectionsDelay;		0 - 300 ms 
 uint8_t ReverbDelay;			0 - 85 ms 
-uint8_t RearDelay;				0 - 5 ms (NOT USED YET) 
+uint8_t RearDelay;				0 - 5 ms
 uint8_t PositionLeft;			0 - 30 
 uint8_t PositionRight;			0 - 30 
 uint8_t PositionMatrixLeft;		0 - 30 
@@ -567,8 +567,10 @@ static float APF_OUT_DELAYS[REVERB_COUNT_APF_OUT] =
 	7.73f
 };
 
-static const float STEREO_SPREAD[2] =
+static const float STEREO_SPREAD[4] =
 {
+	0.0f,
+	0.5216f,
 	0.0f,
 	0.5216f
 };
@@ -588,8 +590,10 @@ typedef struct DspReverb
 	DspDelay early_delay;
 	DspAllPass apf_in[REVERB_COUNT_APF_IN];
 	
+	int32_t in_channels;
 	int32_t out_channels;
-	DspReverbChannel channel[2];
+	int32_t reverb_channels;
+	DspReverbChannel channel[4];
 
 	float early_gain;
 	float reverb_gain;
@@ -600,9 +604,13 @@ typedef struct DspReverb
 
 DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out_channels)
 {
-	DspReverb *reverb = (DspReverb *)FAudio_malloc(sizeof(DspReverb));
+	DspReverb *reverb;
 	int32_t i, c;
 
+	FAudio_assert(in_channels == 1 || in_channels == 2);
+	FAudio_assert(out_channels == 1 || out_channels == 2 || out_channels == 6);
+
+	reverb = (DspReverb *)FAudio_malloc(sizeof(DspReverb));
 	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10);
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
@@ -610,7 +618,9 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 		DspAllPass_Initialize(&reverb->apf_in[i], sampleRate, APF_IN_DELAYS[i], 0.5f);
 	}
 
-	for (c = 0; c < out_channels; ++c)
+	reverb->reverb_channels = (out_channels == 6) ? 4 : out_channels;
+
+	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
 		DspDelay_Initialize(&reverb->channel[c].reverb_delay, sampleRate, 10);
 
@@ -653,6 +663,7 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 	reverb->reverb_gain = 1.0f;
 	reverb->dry_ratio = 0.0f;
 	reverb->wet_ratio = 1.0f;
+	reverb->in_channels = in_channels;
 	reverb->out_channels = out_channels;
 
 	return reverb;
@@ -661,6 +672,7 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params)
 {
 	float early_diffusion, late_diffusion;
+	float channel_delay[4] = { 0.0f, 0.0f, params->RearDelay, params->RearDelay };
 	int32_t i, c;
 
 	/* pre delay */
@@ -675,9 +687,9 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	}
 
 	/* reverberation */
-	for (c = 0; c < reverb->out_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
-		DspDelay_Change(&reverb->channel[c].reverb_delay, (float) params->ReverbDelay);
+		DspDelay_Change(&reverb->channel[c].reverb_delay, (float) params->ReverbDelay + channel_delay[c]);
 
 		for (i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
@@ -711,24 +723,29 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	/* late diffusion */
 	late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
 
-	for (c = 0; c < reverb->out_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
 		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 		{
 			DspAllPass_Change(
-				&reverb->channel[c].apf_out[i], 
-				APF_OUT_DELAYS[i] + STEREO_SPREAD[c], 
+				&reverb->channel[c].apf_out[i],
+				APF_OUT_DELAYS[i] + STEREO_SPREAD[c],
 				late_diffusion
 			);
 		}
-		
+
 		DspBiQuad_Change(
-			&reverb->channel[c].room_high_shelf, 
-			params->RoomFilterFreq, 
-			0.0f, 
+			&reverb->channel[c].room_high_shelf,
+			params->RoomFilterFreq,
+			0.0f,
 			params->RoomFilterMain + params->RoomFilterHF);
 
 		reverb->channel[c].gain = 1.5f - (((c % 2 == 0 ? params->PositionMatrixLeft : params->PositionMatrixRight) / 27.0f) * 0.5f);
+		if (c >= 2)
+		{
+			/* rear-channel attenuation */
+			reverb->channel[c].gain *= 0.75f;
+		}
 
 		reverb->channel[c].early_gain = 1.2f - (((c % 2 == 0 ? params->PositionLeft : params->PositionRight) / 6.0f) * 0.2f);
 		reverb->channel[c].early_gain = reverb->channel[c].early_gain * reverb->early_gain;
@@ -739,6 +756,199 @@ void DspReverb_SetParameters(DspReverb *reverb, FAudioFXReverbParameters *params
 	reverb->dry_ratio = 1.0f - reverb->wet_ratio;
 }
 
+static inline float DspReverb_INTERNAL_ProcessEarly(DspReverb *reverb, float sample_in)
+{
+	float delay_in, early;
+	int32_t i;
+
+	/* pre delay */
+	delay_in = DspDelay_Process(&reverb->early_delay, sample_in);
+
+	/* early reflections */
+	early = delay_in;
+
+	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	{
+		early = DspAllPass_Process(&reverb->apf_in[i], early);
+	}
+
+	return early;
+}
+
+static inline float DspReverb_INTERNAL_ProcessChannel(DspReverb *reverb, DspReverbChannel *channel, float sample_in)
+{
+	float revdelay, comb_out, comb_gain;
+	float late, early_late, out;
+	int32_t i;
+
+	revdelay = DspDelay_Process(&channel->reverb_delay, sample_in);
+
+	comb_out = 0.0f;
+	comb_gain = 1.0f / REVERB_COUNT_COMB;
+
+	for (i = 0; i < REVERB_COUNT_COMB; ++i)
+	{
+		comb_out += comb_gain * DspCombShelving_Process(&channel->lpf_comb[i], revdelay);
+	}
+
+	/* output diffusion */
+	late = comb_out;
+	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	{
+		late = DspAllPass_Process(&channel->apf_out[i], late);
+	}
+
+	/* combine early reflections and reverberation */
+	early_late = (channel->early_gain * sample_in) + (reverb->reverb_gain * late);
+
+	/* room filter */
+	out = early_late * reverb->room_gain;
+	out = DspBiQuad_Process(&channel->room_high_shelf, out);
+
+	/* PositionMatrixLeft/Rigth */
+	out = out * channel->gain;
+
+	return out;
+}
+
+#define OUTPUT_SAMPLE(x)	\
+	*out_ptr = (x);	\
+	squared_sum += *out_ptr * *out_ptr; \
+	out_ptr += 1;
+
+static inline float DspReverb_INTERNAL_Process_1_to_1(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count)
+{
+	float *out_ptr = samples_out;
+	const float *in_ptr = samples_in;
+	const float *in_end = samples_in + sample_count;
+	float squared_sum = 0;
+
+	while (in_ptr < in_end)
+	{
+		float early, late, out;
+
+		/* input */
+		float in = *in_ptr++;
+
+		/* early reflections */
+		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
+
+		/* reverberation */
+		late = DspReverb_INTERNAL_ProcessChannel(reverb, &reverb->channel[0], early);
+
+		/* wet/dry mix */
+		out = (late * reverb->wet_ratio) + (in * reverb->dry_ratio);
+
+		/* output */
+		OUTPUT_SAMPLE(out);
+	}
+
+	return squared_sum;
+}
+
+static inline float DspReverb_INTERNAL_Process_1_to_5p1(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count)
+{
+	float *out_ptr = samples_out;
+	const float *in_ptr = samples_in;
+	const float *in_end = samples_in + sample_count;
+	float squared_sum = 0;
+	int32_t c;
+
+	while (in_ptr < in_end)
+	{
+		float early, late[4];
+
+		/* input */
+		float in = *in_ptr++;
+
+		/* early reflections */
+		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
+
+		/* reverberation */
+		for (c = 0; c < 4; ++c)
+		{
+			late[c] = DspReverb_INTERNAL_ProcessChannel(reverb, &reverb->channel[c], early);
+		}
+
+		/* wet/dry mix -> output */
+		OUTPUT_SAMPLE((late[0] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* front-left */
+		OUTPUT_SAMPLE((late[1] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* front-right */
+		OUTPUT_SAMPLE(0.0f);															/* center */
+		OUTPUT_SAMPLE(0.0f);															/* lfe */
+		OUTPUT_SAMPLE((late[2] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* rear-left */
+		OUTPUT_SAMPLE((late[3] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* rear-right */
+	}
+
+	return squared_sum;
+}
+
+static inline float DspReverb_INTERNAL_Process_2_to_2(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count)
+{
+	float *out_ptr = samples_out;
+	const float *in_ptr = samples_in;
+	const float *in_end = samples_in + sample_count;
+	float squared_sum = 0;
+
+	while (in_ptr < in_end)
+	{
+		float early, late[2];
+
+		/* input - combine 2 channel in 1 */
+		float in = 0.5f * (*in_ptr++ + *in_ptr++);
+
+		/* early reflections */
+		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
+
+		/* reverberation */
+		late[0] = DspReverb_INTERNAL_ProcessChannel(reverb, &reverb->channel[0], early);
+		late[1] = DspReverb_INTERNAL_ProcessChannel(reverb, &reverb->channel[1], early);
+
+		/* wet/dry mix -> output */
+		OUTPUT_SAMPLE((late[0] * reverb->wet_ratio) + (in * reverb->dry_ratio));
+		OUTPUT_SAMPLE((late[1] * reverb->wet_ratio) + (in * reverb->dry_ratio));
+	}
+
+	return squared_sum;
+}
+
+static inline float DspReverb_INTERNAL_Process_2_to_5p1(DspReverb *reverb, const float *samples_in, float *samples_out, size_t sample_count)
+{
+	float *out_ptr = samples_out;
+	const float *in_ptr = samples_in;
+	const float *in_end = samples_in + sample_count;
+	float squared_sum = 0;
+	int32_t c;
+
+	while (in_ptr < in_end)
+	{
+		float early, late[4];
+
+		/* input - combine 2 channel in 1 */
+		float in = 0.5f * (*in_ptr++ + *in_ptr++);
+
+		/* early reflections */
+		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
+
+		/* reverberation */
+		for (c = 0; c < 4; ++c)
+		{
+			late[c] = DspReverb_INTERNAL_ProcessChannel(reverb, &reverb->channel[c], early);
+		}
+
+		/* wet/dry mix -> output */
+		OUTPUT_SAMPLE((late[0] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* front-left */
+		OUTPUT_SAMPLE((late[1] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* front-right */
+		OUTPUT_SAMPLE(0.0f);															/* center */
+		OUTPUT_SAMPLE(0.0f);															/* lfe */
+		OUTPUT_SAMPLE((late[2] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* rear-left */
+		OUTPUT_SAMPLE((late[3] * reverb->wet_ratio) + (in * reverb->dry_ratio));		/* rear-right */
+	}
+
+	return squared_sum;
+}
+
+#undef OUTPUT_SAMPLE
+
 float DspReverb_Process(
 	DspReverb *reverb, 
 	const float *samples_in, 
@@ -746,85 +956,26 @@ float DspReverb_Process(
 	size_t sample_count, 
 	int32_t num_channels
 ) {
-	size_t sample_idx = 0;
-	float *out_ptr = samples_out;
+	FAudio_assert(reverb != NULL);
+	FAudio_assert(samples_in != NULL);
+	FAudio_assert(samples_out != NULL);
 
-	FAudio_assert(num_channels == 1 || num_channels == 2);
-
-	float squared_sum = 0;
-
-	while (sample_idx < sample_count)
+	switch (reverb->out_channels)
 	{
-		float delay_in, early, revdelay, late;
-		float early_late, room_out[2];
-		float comb_out, comb_gain;
-		int32_t i, c;
-
-		/* get input, merging stereo samples */
-		float in = samples_in[sample_idx++];
-		if (num_channels == 2)
-		{
-			in = 0.5f * (in + samples_in[sample_idx++]);
-		}
-
-		/* pre delay */
-		delay_in = DspDelay_Process(&reverb->early_delay, in);
-
-		/* early reflections */
-		early = delay_in;
-
-		for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
-		{
-			early = DspAllPass_Process(&reverb->apf_in[i], early);
-		}
-
-		/* reverberation (per channel) */
-		for (c = 0; c < reverb->out_channels; ++c)
-		{
-			revdelay = DspDelay_Process(&reverb->channel[c].reverb_delay, early);
-
-			comb_out = 0.0f;
-			comb_gain = 1.0f / REVERB_COUNT_COMB;
-
-			for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		case 1:
+			return DspReverb_INTERNAL_Process_1_to_1(reverb, samples_in, samples_out, sample_count);
+		case 2:
+			return DspReverb_INTERNAL_Process_2_to_2(reverb, samples_in, samples_out, sample_count);
+		default:	/* 5.1 */
+			if (reverb->in_channels == 1)
 			{
-				comb_out += comb_gain * DspCombShelving_Process(&reverb->channel[c].lpf_comb[i], revdelay);
+				return DspReverb_INTERNAL_Process_1_to_5p1(reverb, samples_in, samples_out, sample_count);
 			}
-
-			/* output diffusion */
-			late = comb_out;
-			for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+			else
 			{
-				late = DspAllPass_Process(&reverb->channel[c].apf_out[i], late);
+				return DspReverb_INTERNAL_Process_2_to_5p1(reverb, samples_in, samples_out, sample_count);
 			}
-
-			/* combine early reflections and reverberation */
-			early_late = (reverb->channel[c].early_gain * early) + (reverb->reverb_gain * late);
-
-			/* room filter */
-			room_out[c] = early_late * reverb->room_gain;
-			room_out[c] = DspBiQuad_Process(&reverb->channel[c].room_high_shelf, room_out[c]);
-
-			/* PositionMatrixLeft/Rigth */
-			room_out[c] = room_out[c] * reverb->channel[c].gain;
-		}
-
-		/* wet/dry mix */
-		#define OUT_SAMPLE(x)	\
-			*out_ptr = (x);	\
-			squared_sum += *out_ptr * *out_ptr; \
-			out_ptr += 1;
-
-		OUT_SAMPLE((room_out[0] * reverb->wet_ratio) + (in * reverb->dry_ratio));
-		if (num_channels == 2)
-		{
-			OUT_SAMPLE((room_out[1] * reverb->wet_ratio) + (in * reverb->dry_ratio));
-		}
-
-		#undef OUT_SAMPLE
 	}
-
-	return squared_sum;
 }
 
 void DspReverb_Reset(DspReverb *reverb)
@@ -838,7 +989,7 @@ void DspReverb_Reset(DspReverb *reverb)
 		DspAllPass_Reset(&reverb->apf_in[i]);
 	}
 
-	for (c = 0; c < reverb->out_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
 		DspDelay_Reset(&reverb->channel[c].reverb_delay);
 
@@ -867,7 +1018,7 @@ void DspReverb_Destroy(DspReverb *reverb)
 		DspAllPass_Destroy(&reverb->apf_in[i]);
 	}
 
-	for (c = 0; c < reverb->out_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
 		DspDelay_Destroy(&reverb->channel[c].reverb_delay);
 
