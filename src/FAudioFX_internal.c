@@ -894,7 +894,8 @@ static inline float DspReverb_INTERNAL_Process_2_to_2(DspReverb *reverb, const f
 		float early, late[2];
 
 		/* input - combine 2 channel in 1 */
-		float in = 0.5f * (*in_ptr++ + *in_ptr++);
+		float in = *in_ptr++;
+		in = 0.5f * (in + *in_ptr++);
 
 		/* early reflections */
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
@@ -924,7 +925,8 @@ static inline float DspReverb_INTERNAL_Process_2_to_5p1(DspReverb *reverb, const
 		float early, late[4];
 
 		/* input - combine 2 channel in 1 */
-		float in = 0.5f * (*in_ptr++ + *in_ptr++);
+		float in = *in_ptr++;
+		in = 0.5f * (in + *in_ptr++);
 
 		/* early reflections */
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
