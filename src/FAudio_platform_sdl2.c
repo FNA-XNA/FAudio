@@ -135,9 +135,16 @@ void FAudio_PlatformInit(FAudio *audio)
 		want.callback = FAudio_INTERNAL_MixCallback;
 		want.userdata = device;
 
-		/* Open the device, finally */
+		/* Open the device, finally.
+		 * FIXME: SDL bug! The device list does not prioritize defaults!
+		 * Worse, there is no API to just pull in the default. The hack
+		 * to send NULL for index 0 sucks because the user may have
+		 * actually asked for that exact device!
+		 */
 		device->device = SDL_OpenAudioDevice(
-			device->name,
+			(audio->master->master.deviceIndex == 0) ?
+				NULL :
+				device->name,
 			0,
 			&want,
 			&have,
