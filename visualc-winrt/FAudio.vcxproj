@@ -12,28 +12,28 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\F3DAudio.c" />
+    <ClCompile Include="..\src\FAudio.c" />
+    <ClCompile Include="..\src\FAudio_internal.c" />
+    <ClCompile Include="..\src\FAudioFX.c" />
+    <ClCompile Include="..\src\FAudioFX_internal.c" />
     <ClCompile Include="..\src\FACT.c" />
     <ClCompile Include="..\src\FACT3D.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
     <ClCompile Include="..\src\FAPOBase.c" />
-    <ClCompile Include="..\src\FAudio.c" />
-    <ClCompile Include="..\src\FAudioFX.c" />
-    <ClCompile Include="..\src\FAudio_internal.c" />
-    <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
     <ClCompile Include="..\src\XNA_Song.c" />
+    <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\F3DAudio.h" />
+    <ClInclude Include="..\src\FAudio.h" />
+    <ClInclude Include="..\src\FAudio_internal.h" />
+    <ClInclude Include="..\src\FAudioFX.h" />
+    <ClInclude Include="..\src\FAudioFX_internal.h" />
     <ClInclude Include="..\src\FACT.h" />
     <ClInclude Include="..\src\FACT3D.h" />
     <ClInclude Include="..\src\FACT_internal.h" />
     <ClInclude Include="..\src\FAPO.h" />
     <ClInclude Include="..\src\FAPOBase.h" />
-    <ClInclude Include="..\src\FAudio.h" />
-    <ClInclude Include="..\src\FAudioFX.h" />
-    <ClInclude Include="..\src\FAudio_internal.h" />
-    <ClInclude Include="..\src\stb.h" />
-    <ClInclude Include="..\src\stb_vorbis.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{208f0a10-10fe-4c43-990f-3569169b1083}</ProjectGuid>

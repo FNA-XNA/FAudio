@@ -37,16 +37,16 @@ CFLAGS += -g -Wall -pedantic
 # Source lists
 FAUDIOSRC = \
 	src/F3DAudio.c \
-	src/FACT3D.c \
-	src/FAPOBase.c \
 	src/FAudio.c \
-	src/FAudioFX.c \
 	src/FAudio_internal.c \
+	src/FAudioFX.c \
+	src/FAudioFX_internal.c \
 	src/FACT.c \
+	src/FACT3D.c \
 	src/FACT_internal.c \
+	src/FAPOBase.c \
 	src/XNA_Song.c \
-	src/FAudio_platform_sdl2.c \
-	src/FAudioFX_internal.c
+	src/FAudio_platform_sdl2.c
 
 # Object code lists
 FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
