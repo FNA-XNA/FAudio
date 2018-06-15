@@ -185,6 +185,7 @@ uint32_t FACTAudioEngine_Initialize(
 		reverbChain.pEffectDescriptors = &reverbDesc;
 
 		/* Reverb submix voice... */
+		FAudio_PlatformLockAudio(pEngine->audio);
 		FAudio_CreateSubmixVoice(
 			pEngine->audio,
 			&pEngine->reverbVoice,
@@ -195,6 +196,7 @@ uint32_t FACTAudioEngine_Initialize(
 			NULL,
 			&reverbChain
 		);
+		FAudio_PlatformUnlockAudio(pEngine->audio);
 
 		/* We can release now, the submix owns this! */
 		FAPOBase_Release((FAPOBase*) reverbDesc.pEffect);
