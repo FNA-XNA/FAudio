@@ -255,9 +255,11 @@ void FAudio_zero(void *ptr, size_t size);
 void FAudio_memcpy(void *dst, const void *src, size_t size);
 void FAudio_memmove(void *dst, void *src, size_t size);
 int FAudio_memcmp(const void *ptr1, const void *ptr2, size_t size);
+
 size_t FAudio_strlen(const char *ptr);
 int FAudio_strcmp(const char *str1, const char *str2);
 void FAudio_strlcpy(char *dst, const char *src, size_t len);
+
 double FAudio_pow(double x, double y);
 double FAudio_log10(double x);
 double FAudio_sqrt(double x);
@@ -266,6 +268,15 @@ double FAudio_cos(double x);
 double FAudio_tan(double x);
 double FAudio_acos(double x);
 double FAudio_ceil(double x);
+double FAudio_fabs(double x);
+
+float FAudio_cosf(float x);
+float FAudio_sinf(float x);
+float FAudio_sqrtf(float x);
+float FAudio_acosf(float x);
+float FAudio_atan2f(float y, float x);
+float FAudio_fabsf(float x);
+
 uint32_t FAudio_timems();
 
 #define FAudio_min(val1, val2) \
