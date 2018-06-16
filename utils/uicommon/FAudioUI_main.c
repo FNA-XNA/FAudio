@@ -48,6 +48,9 @@
 /* Defined by the tools using this UI framework */
 
 extern const char* TOOL_NAME;
+extern int TOOL_WIDTH;
+extern int TOOL_HEIGHT;
+extern void FAudioTool_Init();
 extern void FAudioTool_Update();
 extern void FAudioTool_Quit();
 
@@ -206,8 +209,8 @@ int main(int argc, char **argv)
 		TOOL_NAME,
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
-		1280,
-		720,
+		TOOL_WIDTH,
+		TOOL_HEIGHT,
 		(
 			SDL_WINDOW_OPENGL |
 			SDL_WINDOW_RESIZABLE |

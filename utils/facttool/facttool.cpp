@@ -35,6 +35,8 @@
 #include <string>
 
 const char* TOOL_NAME = "FACT Auditioning Tool";
+int TOOL_WIDTH = 1280;
+int TOOL_HEIGHT = 720;
 
 bool openEngineShow = true;
 
@@ -52,6 +54,11 @@ std::vector<std::string> wavebankNames;
 std::vector<bool> wavebankShows;
 
 std::vector<FACTWave*> waves;
+
+void FAudioTool_Init()
+{
+	/* Nothing to do... */
+}
 
 void FAudioTool_Quit()
 {
