@@ -25,14 +25,14 @@
  */
 
 /* Unless you're trying to do ImGui interop work, you probably don't want this!
- * Go to FACTTool_fact.cpp to look at the actual Audition Tool.
+ * Go to the other folders to look at the actual tools.
  * -flibit
  */
 
 #include <stdint.h>
 #include "imgui.h"
 
-/* FACTTool_main.c */
+/* FAudioUI_main.c */
 
 extern const char* main_getclipboardtext(void* userdata);
 extern void main_setclipboardtext(void* userdata, const char *text);

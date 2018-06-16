@@ -28,11 +28,13 @@
 
 #include <FACT_internal.h> /* DO NOT INCLUDE THIS IN REAL CODE! */
 
-#include "imgui.h"
+#include "../uicommon/imgui.h"
 
 #include <SDL.h>
 #include <vector>
 #include <string>
+
+const char* TOOL_NAME = "FACT Auditioning Tool";
 
 bool openEngineShow = true;
 
@@ -51,7 +53,7 @@ std::vector<bool> wavebankShows;
 std::vector<FACTWave*> waves;
 
 bool show_test_window = false;
-void FACTTool_Update()
+void FAudioTool_Update()
 {
 	ImGui::ShowTestWindow(&show_test_window);
 

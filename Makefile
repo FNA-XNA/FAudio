@@ -20,16 +20,19 @@ endif
 ifeq ($(WINDOWS_TARGET),1)
 	TARGET_PREFIX = 
 	TARGET_SUFFIX = dll
+	UTIL_SUFFIX = .exe
 	LDFLAGS += -static-libgcc
 else ifeq ($(UNAME), Darwin)
 	CC = cc -arch i386 -arch x86_64 -mmacosx-version-min=10.6
 	CFLAGS += -fpic -fPIC
 	TARGET_PREFIX = lib
 	TARGET_SUFFIX = dylib
+	UTIL_SUFFIX = 
 else
 	CFLAGS += -fpic -fPIC
 	TARGET_PREFIX = lib
 	TARGET_SUFFIX = so
+	UTIL_SUFFIX = 
 endif
 
 CFLAGS += -g -Wall -pedantic 
@@ -60,12 +63,18 @@ all: $(FAUDIOOBJ)
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
 
 clean:
-	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
+	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX)
 
-.PHONY: test tool
+.PHONY: testparse facttool
 
-test:
-	$(CC) -g -Wall -pedantic test/testparse.c src/F*.c -Isrc `sdl2-config --cflags --libs`
+testparse:
+	$(CC) -g -Wall -pedantic -o testparse$(UTIL_SUFFIX) \
+		utils/testparse/testparse.c \
+		src/F*.c \
+		-Isrc `sdl2-config --cflags --libs`
 
-tool:
-	$(CXX) -g -Wall tool/*.c* src/*.c -Isrc `sdl2-config --cflags --libs`
+facttool:
+	$(CXX) -g -Wall -o facttool$(UTIL_SUFFIX) \
+		utils/facttool/facttool.cpp \
+		utils/uicommon/*.cpp utils/uicommon/*.c src/*.c \
+		-Isrc `sdl2-config --cflags --libs`

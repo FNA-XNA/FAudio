@@ -25,7 +25,7 @@
  */
 
 /* Unless you're trying to do SDL/OpenGL work, you probably don't want this!
- * Go to FACTTool_fact.cpp to look at the actual Audition Tool.
+ * Go to the other folders to look at the actual tools.
  * -flibit
  */
 
@@ -45,11 +45,12 @@
 /* Remap GL function names to internal entry points */
 #include "glmacros.h"
 
-/* FACTTool_FACT.cpp */
+/* Defined by the tools using this UI framework */
 
-extern void FACTTool_Update();
+extern const char* TOOL_NAME;
+extern void FAudioTool_Update();
 
-/* FACTTool_ui.cpp */
+/* FAudioUI_ui.cpp */
 
 extern void UI_Init(
 	int tab,
@@ -100,7 +101,7 @@ extern void UI_SubmitKey(
 extern void UI_SubmitText(char *text);
 extern void UI_SetFontTexture(void* texture);
 
-/* FACTTool_ui.cpp Callbacks */
+/* FAudioUI_ui.cpp Callbacks */
 
 void main_setupviewport(int fbw, int fbh, float dw, float dh)
 {
@@ -201,7 +202,7 @@ int main(int argc, char **argv)
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	window = SDL_CreateWindow(
-		"FACT Auditioning Tool",
+		TOOL_NAME,
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
 		1280,
@@ -345,7 +346,7 @@ int main(int argc, char **argv)
 		mouseWheel = 0;
 
 		/* The actual meat of the audition tool */
-		FACTTool_Update();
+		FAudioTool_Update();
 
 		/* Draw, draw, draw! */
 		glDisable(GL_SCISSOR_TEST);
