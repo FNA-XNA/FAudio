@@ -49,6 +49,7 @@
 
 extern const char* TOOL_NAME;
 extern void FAudioTool_Update();
+extern void FAudioTool_Quit();
 
 /* FAudioUI_ui.cpp */
 
@@ -355,6 +356,9 @@ int main(int argc, char **argv)
 		UI_Render();
 		SDL_GL_SwapWindow(window);
 	}
+
+	/* Clean up if we need to */
+	FAudioTool_Quit();
 
 	/* Clean up. We out. */
 	glBindTexture(GL_TEXTURE_2D, 0);

@@ -47,10 +47,32 @@ std::vector<std::string> soundbankNames;
 std::vector<bool> soundbankShows;
 
 std::vector<FACTWaveBank*> waveBanks;
+std::vector<uint8_t*> wavebankMems;
 std::vector<std::string> wavebankNames;
 std::vector<bool> wavebankShows;
 
 std::vector<FACTWave*> waves;
+
+void FAudioTool_Quit()
+{
+	for (size_t i = 0; i < soundBanks.size(); i += 1)
+	{
+		FACTSoundBank_Destroy(soundBanks[i]);
+	}
+	for (size_t i = 0; i < waves.size(); i += 1)
+	{
+		FACTWave_Destroy(waves[i]);
+	}
+	for (size_t i = 0; i < waveBanks.size(); i += 1)
+	{
+		FACTWaveBank_Destroy(waveBanks[i]);
+		SDL_free(wavebankMems[i]);
+	}
+	for (size_t i = 0; i < engines.size(); i += 1)
+	{
+		FACTAudioEngine_ShutDown(engines[i]);
+	}
+}
 
 bool show_test_window = false;
 void FAudioTool_Update()
@@ -58,14 +80,7 @@ void FAudioTool_Update()
 	ImGui::ShowTestWindow(&show_test_window);
 
 	uint8_t *buf;
-	uint32_t len;
-	SDL_RWops *fileIn;
-	#define OPENFILE(name) \
-		fileIn = SDL_RWFromFile(name, "rb"); \
-		len = SDL_RWsize(fileIn); \
-		buf = (uint8_t*) SDL_malloc(len); \
-		SDL_RWread(fileIn, buf, len, 1); \
-		SDL_RWclose(fileIn);
+	size_t len;
 
 	/* Menu bar */
 	if (ImGui::BeginMainMenuBar())
@@ -126,7 +141,7 @@ void FAudioTool_Update()
 				ImGuiInputTextFlags_EnterReturnsTrue
 			)) {
 				/* Load up file... */
-				OPENFILE(enginename)
+				buf = (uint8_t*) SDL_LoadFile(enginename, &len);
 				FACTRuntimeParameters params;
 				SDL_memset(
 					&params,
@@ -325,7 +340,7 @@ void FAudioTool_Update()
 				ImGuiInputTextFlags_EnterReturnsTrue
 			)) {
 				/* Load up file... */
-				OPENFILE(soundbankname)
+				buf = (uint8_t*) SDL_LoadFile(soundbankname, &len);
 
 				/* Create SoundBank... */
 				FACTSoundBank *sb;
@@ -355,7 +370,7 @@ void FAudioTool_Update()
 				ImGuiInputTextFlags_EnterReturnsTrue
 			)) {
 				/* Load up file... */
-				OPENFILE(wavebankname)
+				buf = (uint8_t*) SDL_LoadFile(wavebankname, &len);
 
 				/* Create WaveBank... */
 				FACTWaveBank *wb;
@@ -370,6 +385,7 @@ void FAudioTool_Update()
 
 				/* Add to UI... */
 				waveBanks.push_back(wb);
+				wavebankMems.push_back(buf);
 				wavebankNames.push_back(
 					"WaveBank: " + std::string(wb->name)
 				);
@@ -407,7 +423,9 @@ void FAudioTool_Update()
 						if (list->entry == waveBanks[j])
 						{
 							list = list->next;
+							// FIXME: SDL_free(wavebankMems[j]);
 							waveBanks.erase(waveBanks.begin() + j);
+							wavebankMems.erase(wavebankMems.begin() + j);
 							wavebankNames.erase(wavebankNames.begin() + j);
 							wavebankShows.erase(wavebankShows.begin() + j);
 							break;
@@ -986,7 +1004,9 @@ void FAudioTool_Update()
 		if (ImGui::Button("Close WaveBank"))
 		{
 			FACTWaveBank_Destroy(waveBanks[i]);
+			SDL_free(wavebankMems[i]);
 			waveBanks.erase(waveBanks.begin() + i);
+			wavebankMems.erase(wavebankMems.begin() + i);
 			wavebankNames.erase(wavebankNames.begin() + i);
 			wavebankShows.erase(wavebankShows.begin() + i);
 			i -= 1;
