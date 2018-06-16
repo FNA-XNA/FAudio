@@ -109,8 +109,10 @@ struct FAudio
 	#define EXTRA_DECODE_PADDING 2
 	uint32_t decodeSamples;
 	uint32_t resampleSamples;
+	uint32_t effectChainSamples;
 	float *decodeCache;
 	float *resampleCache;
+	float *effectChainCache;
 };
 
 struct FAudioVoice
@@ -128,12 +130,14 @@ struct FAudioVoice
 		void **parameters;
 		uint32_t *parameterSizes;
 		uint8_t *parameterUpdates;
+		uint8_t *inPlaceProcessing;
 	} effects;
 	FAudioFilterParameters filter;
 	FAudioFilterState *filterState;
 
 	float volume;
 	float *channelVolume;
+	uint32_t outputChannels;
 
 	union
 	{
@@ -193,6 +197,7 @@ struct FAudioVoice
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
+void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples);
 void FAudio_INTERNAL_SetDefaultMatrix(
 	float *matrix,
 	uint32_t srcChannels,

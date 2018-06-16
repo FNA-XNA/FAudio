@@ -63,6 +63,7 @@ uint32_t FAudio_Release(FAudio *audio)
 		FAudio_StopEngine(audio);
 		FAudio_free(audio->decodeCache);
 		FAudio_free(audio->resampleCache);
+		FAudio_free(audio->effectChainCache);
 		FAudio_free(audio);
 		FAudio_PlatformRelease();
 	}
@@ -139,16 +140,6 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->filter.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 	(*ppSourceVoice)->filter.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 
-	/* Default Levels */
-	(*ppSourceVoice)->volume = 1.0f;
-	(*ppSourceVoice)->channelVolume = (float*) FAudio_malloc(
-		sizeof(float) * pSourceFormat->nChannels
-	);
-	for (i = 0; i < pSourceFormat->nChannels; i += 1)
-	{
-		(*ppSourceVoice)->channelVolume[i] = 1.0f;
-	}
-
 	/* Source Properties */
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
@@ -218,8 +209,18 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 
 	/* Sends/Effects */
-	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
 	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
+	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
+
+	/* Default Levels */
+	(*ppSourceVoice)->volume = 1.0f;
+	(*ppSourceVoice)->channelVolume = (float*)FAudio_malloc(
+		sizeof(float) * (*ppSourceVoice)->outputChannels
+	);
+	for (i = 0; i < (*ppSourceVoice)->outputChannels; i += 1)
+	{
+		(*ppSourceVoice)->channelVolume[i] = 1.0f;
+	}
 
 	/* Filters */
 	if (Flags & FAUDIO_VOICE_USEFILTER)
@@ -272,16 +273,6 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->filter.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 	(*ppSubmixVoice)->filter.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 
-	/* Default Levels */
-	(*ppSubmixVoice)->volume = 1.0f;
-	(*ppSubmixVoice)->channelVolume = (float*) FAudio_malloc(
-		sizeof(float) * InputChannels
-	);
-	for (i = 0; i < InputChannels; i += 1)
-	{
-		(*ppSubmixVoice)->channelVolume[i] = 1.0f;
-	}
-
 	/* Submix Properties */
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
 	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
@@ -292,8 +283,18 @@ uint32_t FAudio_CreateSubmixVoice(
 	);
 
 	/* Sends/Effects */
-	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
+	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
+	
+	/* Default Levels */
+	(*ppSubmixVoice)->volume = 1.0f;
+	(*ppSubmixVoice)->channelVolume = (float*)FAudio_malloc(
+		sizeof(float) * (*ppSubmixVoice)->outputChannels
+	);
+	for (i = 0; i < (*ppSubmixVoice)->outputChannels; i += 1)
+	{
+		(*ppSubmixVoice)->channelVolume[i] = 1.0f;
+	}
 
 	/* Filters */
 	if (Flags & FAUDIO_VOICE_USEFILTER)
@@ -351,10 +352,6 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* Default Levels */
 	(*ppMasteringVoice)->volume = 1.0f;
 
-	/* Sends/Effects */
-	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
-	FAudioVoice_SetEffectChain(*ppMasteringVoice, pEffectChain);
-
 	/* Master Properties */
 	FAudio_GetDeviceDetails(audio, DeviceIndex, &details);
 	(*ppMasteringVoice)->master.inputChannels = (InputChannels == FAUDIO_DEFAULT_CHANNELS) ?
@@ -364,6 +361,10 @@ uint32_t FAudio_CreateMasteringVoice(
 		details.OutputFormat.Format.nSamplesPerSec :
 		InputSampleRate;
 	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
+
+	/* Sends/Effects */
+	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
+	FAudioVoice_SetEffectChain(*ppMasteringVoice, pEffectChain);
 
 	/* Platform Device */
 	audio->master = *ppMasteringVoice;
@@ -465,12 +466,12 @@ uint32_t FAudioVoice_SetOutputVoices(
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
 		outputSamples = &voice->src.resampleSamples;
-		inChannels = voice->src.format.nChannels;
+		inChannels = voice->outputChannels;
 	}
 	else
 	{
 		outputSamples = &voice->mix.outputSamples;
-		inChannels = voice->mix.inputChannels;
+		inChannels = voice->outputChannels;
 
 		/* FIXME: This is lazy... */
 		if (voice->mix.resampler != NULL)
@@ -576,16 +577,44 @@ uint32_t FAudioVoice_SetEffectChain(
 	const FAudioEffectChain *pEffectChain
 ) {
 	uint32_t i;
+	uint32_t channelCount;
+	FAudioVoiceDetails voiceDetails;
+
+	FAudioVoice_GetVoiceDetails(voice, &voiceDetails);
 
 	/* FIXME: Rules for changing effect chain are pretty complicated... */
 	FAudio_assert(voice->effects.count == 0);
 
+	/* SetEffectChain must not change the number of output channels once the voice has been created */
+	if (pEffectChain == NULL && voice->outputChannels != 0)
+	{
+		/* cannot remove an effect chain that changes the number of channels */
+		if (voice->outputChannels != voiceDetails.InputChannels)
+		{
+			return 1;
+		}
+	}
+
+	if (pEffectChain != NULL && voice->outputChannels != 0)
+	{
+		uint32_t lst = pEffectChain->EffectCount - 1;
+
+		/* new effect chain must have same number of output channels */
+		if (voice->outputChannels != pEffectChain->pEffectDescriptors[lst].OutputChannels)
+		{
+			return 1;
+		}
+	}
+
 	if (pEffectChain == NULL)
 	{
+		/* TODO: release memory from the old effect chain*/
 		FAudio_zero(&voice->effects, sizeof(voice->effects));
+		voice->outputChannels = voiceDetails.InputChannels;
 	}
 	else
 	{
+		/* TODO: validate incoming effect chain before changing the current chain */
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
 			/* TODO: Validation is done by calling
@@ -625,6 +654,28 @@ uint32_t FAudioVoice_SetEffectChain(
 			voice->effects.parameterUpdates,
 			pEffectChain->EffectCount * sizeof(uint8_t)
 		);
+		voice->effects.inPlaceProcessing = (uint8_t *)FAudio_malloc(
+			pEffectChain->EffectCount * sizeof(uint8_t)
+		);
+		FAudio_zero(
+			voice->effects.inPlaceProcessing,
+			pEffectChain->EffectCount * sizeof(uint8_t)
+		);
+		voice->outputChannels = voice->effects.desc[voice->effects.count - 1].OutputChannels;
+
+		channelCount = voiceDetails.InputChannels;
+		for (i = 0; i < voice->effects.count; i += 1)
+		{
+			FAPORegistrationProperties props;
+			FAPORegistrationProperties *pProps = &props;
+			FAPO *fapo = (FAPO *)voice->effects.desc[i].pEffect;
+
+			fapo->GetRegistrationProperties(fapo, &pProps);
+
+			voice->effects.inPlaceProcessing[i] = (props.Flags & FAPO_FLAG_INPLACE_SUPPORTED) == FAPO_FLAG_INPLACE_SUPPORTED;
+			voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
+			channelCount = voice->effects.desc[i].OutputChannels;
+		}
 	}
 	return 0;
 }
@@ -794,6 +845,8 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	const float *pVolumes,
 	uint32_t OperationSet
 ) {
+	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
+	FAudio_assert(Channels == voice->outputChannels);
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	FAudio_memcpy(
@@ -842,14 +895,8 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	FAudio_assert(i < voice->sends.SendCount);
 
 	/* Verify the Source/Destination channel count */
-	if (voice->type == FAUDIO_VOICE_SOURCE)
-	{
-		FAudio_assert(SourceChannels == voice->src.format.nChannels);
-	}
-	else
-	{
-		FAudio_assert(SourceChannels == voice->mix.inputChannels);
-	}
+	FAudio_assert(SourceChannels == voice->outputChannels);
+
 	if (pDestinationVoice->type == FAUDIO_VOICE_MASTER)
 	{
 		FAudio_assert(DestinationChannels == pDestinationVoice->master.inputChannels);
