@@ -329,7 +329,7 @@ static inline void FAudio_INTERNAL_FilterVoice(
 	}
 }
 
-static inline void FAudio_INTERNAL_ProcessEffectChain(
+static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	FAudioVoice *voice,
 	uint32_t channels,
 	uint32_t sampleRate,
@@ -338,32 +338,54 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(
 ) {
 	uint32_t i;
 	FAPOParametersBase *fapo;
-	FAudioWaveFormatEx fmt;
-	FAPOLockForProcessBufferParameters lockParams;
-	FAPOProcessBufferParameters params;
-
-	/* FIXME: This always assumes in-place processing is supported */
+	FAudioWaveFormatEx srcFmt, dstFmt;
+	FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
+	FAPOProcessBufferParameters srcParams, dstParams;
 
 	/* Lock in formats that the APO will expect for processing */
-	fmt.wBitsPerSample = 32;
-	fmt.wFormatTag = 3;
-	fmt.nChannels = channels;
-	fmt.nSamplesPerSec = sampleRate;
-	fmt.nBlockAlign = fmt.nChannels * (fmt.wBitsPerSample / 8);
-	fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
-	fmt.cbSize = 0;
-	lockParams.pFormat = &fmt;
-	lockParams.MaxFrameCount = samples;
+	srcFmt.wBitsPerSample = 32;
+	srcFmt.wFormatTag = 3;
+	srcFmt.nChannels = channels;
+	srcFmt.nSamplesPerSec = sampleRate;
+	srcFmt.nBlockAlign = srcFmt.nChannels * (srcFmt.wBitsPerSample / 8);
+	srcFmt.nAvgBytesPerSec = srcFmt.nSamplesPerSec * srcFmt.nBlockAlign;
+	srcFmt.cbSize = 0;
+	srcLockParams.pFormat = &srcFmt;
+	srcLockParams.MaxFrameCount = samples;
+
+	FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
+	dstLockParams.pFormat = &dstFmt;
+	dstLockParams.MaxFrameCount = samples;
 
 	/* Set up the buffer to be written into */
-	params.pBuffer = buffer;
-	params.BufferFlags = FAPO_BUFFER_VALID;
-	params.ValidFrameCount = samples;
+	srcParams.pBuffer = buffer;
+	srcParams.BufferFlags = FAPO_BUFFER_VALID;
+	srcParams.ValidFrameCount = samples;
+
+	FAudio_memcpy(&dstParams, &srcParams, sizeof(srcParams));
 
 	/* Update parameters, process! */
 	for (i = 0; i < voice->effects.count; i += 1)
 	{
 		fapo = (FAPOParametersBase*) voice->effects.desc[i].pEffect;
+
+		if (!voice->effects.inPlaceProcessing[i])
+		{
+			dstFmt.nChannels = voice->effects.desc[i].OutputChannels;
+			dstFmt.nBlockAlign = dstFmt.nChannels * (dstFmt.wBitsPerSample / 8);
+			dstFmt.nAvgBytesPerSec = dstFmt.nSamplesPerSec * dstFmt.nBlockAlign;
+			
+			if (dstParams.pBuffer == buffer)
+			{
+				FAudio_INTERNAL_ResizeEffectChainCache(voice->audio, dstFmt.nBlockAlign * samples);
+				dstParams.pBuffer = voice->audio->effectChainCache;
+			}
+			else
+			{
+				dstParams.pBuffer = buffer;
+			}
+		}
+
 		if (voice->effects.parameterUpdates[i])
 		{
 			fapo->parameters.SetParameters(
@@ -376,20 +398,25 @@ static inline void FAudio_INTERNAL_ProcessEffectChain(
 		fapo->base.base.LockForProcess(
 			fapo,
 			1,
-			&lockParams,
+			&srcLockParams,
 			1,
-			&lockParams
+			&dstLockParams
 		);
 		fapo->base.base.Process(
 			fapo,
 			1,
-			&params,
+			&srcParams,
 			1,
-			&params,
+			&dstParams,
 			voice->effects.desc[i].InitialState
 		);
 		fapo->base.base.UnlockForProcess(fapo);
+
+		FAudio_memcpy(&srcFmt, &dstFmt, sizeof(dstFmt));
+		FAudio_memcpy(&srcParams, &dstParams, sizeof(dstParams));
 	}
+
+	return (float *) dstParams.pBuffer;
 }
 
 static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
@@ -408,6 +435,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	FAudioVoice *out;
 	uint32_t outputRate;
 	double stepd;
+	float *effectOut;
 
 	/* Calculate the resample stepping value */
 	if (voice->src.resampleFreqRatio != voice->src.freqRatio)
@@ -528,9 +556,11 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Process effect chain */
+	effectOut = voice->audio->resampleCache;
+
 	if (voice->effects.count > 0)
 	{
-		FAudio_INTERNAL_ProcessEffectChain(
+		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
 			voice->src.format.nChannels,
 			voice->src.format.nSamplesPerSec,
@@ -557,17 +587,15 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		/* TODO: SSE */
 		for (j = 0; j < mixed; j += 1)
 		for (co = 0; co < oChan; co += 1)
-		for (ci = 0; ci < voice->src.format.nChannels; ci += 1)
+		for (ci = 0; ci < voice->outputChannels; ci += 1)
 		{
 			/* Include source/channel volumes in the mix! */
 			stream[j * oChan + co] += (
-				voice->audio->resampleCache[
-					j * voice->src.format.nChannels + ci
-				] *
+				effectOut[j * voice->outputChannels + ci] *
 				voice->channelVolume[ci] *
 				voice->volume *
 				voice->sendCoefficients[i][
-					co * voice->src.format.nChannels + ci
+					co * voice->outputChannels + ci
 				]
 			);
 			stream[j * oChan + co] = FAudio_clamp(
@@ -596,6 +624,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	uint32_t oChan;
 	FAudioVoice *out;
 	uint32_t resampled;
+	float *effectOut;
 
 	/* Nothing to do? */
 	if (voice->sends.SendCount == 0)
@@ -638,9 +667,11 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Process effect chain */
+	effectOut = voice->audio->resampleCache;
+
 	if (voice->effects.count > 0)
 	{
-		FAudio_INTERNAL_ProcessEffectChain(
+		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
 			voice->mix.inputChannels,
 			voice->mix.inputSampleRate,
@@ -667,15 +698,13 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		/* TODO: SSE */
 		for (j = 0; j < resampled; j += 1)
 		for (co = 0; co < oChan; co += 1)
-		for (ci = 0; ci < voice->mix.inputChannels; ci += 1)
+		for (ci = 0; ci < voice->outputChannels; ci += 1)
 		{
 			stream[j * oChan + co] += (
-				voice->audio->resampleCache[
-					j * voice->mix.inputChannels + ci
-				] *
+				effectOut[j * voice->outputChannels + ci] *
 				voice->channelVolume[ci] *
 				voice->sendCoefficients[i][
-					co * voice->mix.inputChannels + ci
+					co * voice->outputChannels + ci
 				]
 			);
 			stream[j * oChan + co] = FAudio_clamp(
@@ -767,13 +796,22 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	/* Process master effect chain */
 	if (audio->master->effects.count > 0)
 	{
-		FAudio_INTERNAL_ProcessEffectChain(
+		float *effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			audio->master,
 			audio->master->master.inputChannels,
 			audio->master->master.inputSampleRate,
 			output,
 			audio->updateSize
 		);
+
+		if (effectOut != output)
+		{
+			FAudio_memcpy(
+				output,
+				effectOut,
+				audio->updateSize * audio->master->outputChannels * sizeof(float)
+			);
+		}
 	}
 
 	/* OnProcessingPassEnd callbacks */
@@ -811,6 +849,18 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 		audio->resampleCache = (float*) FAudio_realloc(
 			audio->resampleCache,
 			sizeof(float) * audio->resampleSamples
+		);
+	}
+}
+
+void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples)
+{
+	if (samples > audio->effectChainSamples)
+	{
+		audio->effectChainSamples = samples;
+		audio->effectChainCache = (float*)FAudio_realloc(
+			audio->effectChainCache,
+			sizeof(float) * audio->effectChainSamples
 		);
 	}
 }
