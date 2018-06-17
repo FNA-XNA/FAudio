@@ -63,9 +63,9 @@ all: $(FAUDIOOBJ)
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
 
 clean:
-	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX)
+	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX)
 
-.PHONY: testparse facttool testreverb
+.PHONY: testparse facttool testreverb testfilter
 
 testparse:
 	$(CC) -g -Wall -pedantic -o testparse$(UTIL_SUFFIX) \
@@ -85,3 +85,8 @@ testreverb:
 		utils/uicommon/*.cpp utils/uicommon/*.c src/*.c \
 		-Isrc `sdl2-config --cflags --libs`
 
+testfilter:
+	$(CXX) -g -Wall -o testfilter$(UTIL_SUFFIX) \
+		utils/testfilter/*.cpp \
+		utils/uicommon/*.cpp utils/uicommon/*.c src/*.c \
+		-Isrc `sdl2-config --cflags --libs`
