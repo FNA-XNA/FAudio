@@ -13,14 +13,18 @@ struct AudioContext
 {
 	IXAudio2 *xaudio2;
 	uint32_t	output_5p1;
+	AudioVoiceType effect_on_voice;
+
 	IXAudio2MasteringVoice *mastering_voice;
+	IXAudio2SubmixVoice *submix_voice;
+	IXAudio2SourceVoice *source_voice;
+	IXAudio2Voice *voices[3];
 
 	unsigned int wav_channels;
 	unsigned int wav_samplerate;
 	drwav_uint64 wav_sample_count;
 	float *		 wav_samples;
 
-	struct AudioVoice *voice;
 	XAUDIO2_BUFFER    buffer;
 
 	XAUDIO2_EFFECT_DESCRIPTOR reverb_effect;
@@ -29,84 +33,126 @@ struct AudioContext
 	bool					  reverb_enabled;
 };
 
-struct AudioVoice
+void xaudio_destroy_context(AudioContext *context)
 {
-	AudioContext *context;
-	IXAudio2SourceVoice *voice;
-};
-
-struct AudioFilter
-{
-	AudioContext *context;
-	XAUDIO2_FILTER_PARAMETERS params;
-};
-
-void xaudio_destroy_context(AudioContext *p_context)
-{
-	if (p_context != NULL)
+	if (context != NULL)
 	{
-		p_context->mastering_voice->DestroyVoice();
-		p_context->xaudio2->Release();
-		delete p_context;
+		context->source_voice->DestroyVoice();
+		context->submix_voice->DestroyVoice();
+		context->mastering_voice->DestroyVoice();
+		context->xaudio2->Release();
+		delete context;
 	}
 }
 
-AudioVoice *xaudio_create_voice(AudioContext *p_context, float *p_buffer, size_t p_buffer_size, int p_sample_rate, int p_num_channels)
+void xaudio_create_voice(AudioContext *context, float *buffer, size_t buffer_size, int sample_rate, int num_channels)
 {
-	// create the effect chain
+	// create reverb effect
 	IUnknown *xapo = NULL;
 	HRESULT hr = XAudio2CreateReverb(&xapo);
 
 	if (FAILED(hr))
 	{
-		return NULL;
+		return;
 	}
 
 	// create effect chain
-	p_context->reverb_effect.InitialState = p_context->reverb_enabled;
-	p_context->reverb_effect.OutputChannels = (p_context->output_5p1) ? 6 : p_context->wav_channels;
-	p_context->reverb_effect.pEffect = xapo;
+	context->reverb_effect.InitialState = context->reverb_enabled;
+	context->reverb_effect.OutputChannels = (context->output_5p1) ? 6 : context->wav_channels;
+	context->reverb_effect.pEffect = xapo;
 
-	p_context->effect_chain.EffectCount = 1;
-	p_context->effect_chain.pEffectDescriptors = &p_context->reverb_effect;
+	context->effect_chain.EffectCount = 1;
+	context->effect_chain.pEffectDescriptors = &context->reverb_effect;
+
+	XAUDIO2_EFFECT_CHAIN *voice_effect[3] = {NULL, NULL, NULL};
+	voice_effect[context->effect_on_voice] = &context->effect_chain;
+
+	// create a mastering voice
+	uint32_t inChannels = context->wav_channels;
+	if (context->output_5p1 && context->effect_on_voice != AudioVoiceType_Master)
+	{
+		inChannels = 6;
+	}
+
+	hr = context->xaudio2->CreateMasteringVoice(
+		&context->mastering_voice, 
+		inChannels,
+		SAMPLERATE,
+		0,
+		0,
+		voice_effect[AudioVoiceType_Master]
+	);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	context->voices[AudioVoiceType_Master] = context->mastering_voice;
+
+	// create a submix voice
+	inChannels = context->wav_channels;
+	if (context->output_5p1 && context->effect_on_voice == AudioVoiceType_Source)
+	{
+		inChannels = 6;
+	}
+
+	hr = context->xaudio2->CreateSubmixVoice(
+		&context->submix_voice,
+		inChannels, 
+		SAMPLERATE,
+		0,
+		0,
+		NULL,
+		voice_effect[AudioVoiceType_Submix]
+	);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	context->voices[AudioVoiceType_Submix] = context->submix_voice;
+	context->submix_voice->SetVolume(1.0f);
 
 	// create a source voice
+	XAUDIO2_SEND_DESCRIPTOR desc = {0, context->submix_voice};
+	XAUDIO2_VOICE_SENDS sends = {1, &desc};
+
 	WAVEFORMATEX waveFormat;
 	waveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-	waveFormat.nChannels = p_num_channels;
-	waveFormat.nSamplesPerSec = p_sample_rate;
-	waveFormat.nBlockAlign = p_num_channels * 4;
+	waveFormat.nChannels = num_channels;
+	waveFormat.nSamplesPerSec = sample_rate;
+	waveFormat.nBlockAlign = num_channels * 4;
 	waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
 	waveFormat.wBitsPerSample = 32;
 	waveFormat.cbSize = 0;
 
-	IXAudio2SourceVoice *voice;
-	hr = p_context->xaudio2->CreateSourceVoice(&voice, &waveFormat, XAUDIO2_VOICE_USEFILTER, XAUDIO2_MAX_FREQ_RATIO, NULL, NULL, &p_context->effect_chain);
-	xapo->Release();
-
+	hr = context->xaudio2->CreateSourceVoice(
+		&context->source_voice, 
+		&waveFormat, 
+		XAUDIO2_VOICE_USEFILTER,
+		XAUDIO2_MAX_FREQ_RATIO, 
+		NULL, 
+		&sends, 
+		voice_effect[AudioVoiceType_Source]
+	);
 	if (FAILED(hr)) 
 	{
-		return NULL;
+		return;
 	}
+	context->voices[AudioVoiceType_Source] = context->source_voice;
 
-	voice->SetVolume(1.0f);
+	context->source_voice->SetVolume(1.0f);
+
+	xapo->Release();
 
 	// submit the array
-	SDL_zero(p_context->buffer);
-	p_context->buffer.AudioBytes = 4 * p_buffer_size * p_num_channels;
-	p_context->buffer.pAudioData = (byte *)p_buffer;
-	p_context->buffer.Flags = XAUDIO2_END_OF_STREAM;
-	p_context->buffer.PlayBegin = 0;
-	p_context->buffer.PlayLength = p_buffer_size;
-	p_context->buffer.LoopBegin = 0;
-	p_context->buffer.LoopLength = 0;
-	p_context->buffer.LoopCount = 0;
-
-	// return a voice struct
-	AudioVoice *result = new AudioVoice();
-	result->context = p_context;
-	result->voice = voice;
-	return result;
+	SDL_zero(context->buffer);
+	context->buffer.AudioBytes = 4 * buffer_size * num_channels;
+	context->buffer.pAudioData = (byte *)buffer;
+	context->buffer.Flags = XAUDIO2_END_OF_STREAM;
+	context->buffer.PlayBegin = 0;
+	context->buffer.PlayLength = buffer_size;
+	context->buffer.LoopBegin = 0;
+	context->buffer.LoopLength = 0;
+	context->buffer.LoopCount = 0;
 }
 
 void xaudio_reverb_set_params(AudioContext *context)
@@ -139,95 +185,75 @@ void xaudio_reverb_set_params(AudioContext *context)
 	/* 2.8+ only but zero-initialization catches this 
 	native_params.DisableLateField = 0; */
 
-	HRESULT hr = context->voice->voice->SetEffectParameters(
+	HRESULT hr = context->voices[context->effect_on_voice]->SetEffectParameters(
 		0, 
 		&native_params,
-		sizeof(XAUDIO2FX_REVERB_PARAMETERS));
+		sizeof(XAUDIO2FX_REVERB_PARAMETERS)
+	);
 }
 
-
-void xaudio_voice_destroy(AudioVoice *p_voice)
+void xaudio_wave_load(AudioContext *context, AudioSampleWave sample, bool stereo)
 {
-	drwav_free(p_voice->context->wav_samples);
-	p_voice->voice->DestroyVoice();
-}
-
-void xaudio_voice_set_volume(AudioVoice *p_voice, float p_volume)
-{
-	p_voice->voice->SetVolume(p_volume);
-}
-
-void xaudio_voice_set_frequency(AudioVoice *p_voice, float p_frequency)
-{
-	p_voice->voice->SetFrequencyRatio(p_frequency);
-}
-
-void xaudio_wave_load(AudioContext *p_context, AudioSampleWave sample, bool stereo)
-{
-	if (p_context->voice)
+	if (context->source_voice)
 	{
-		audio_voice_destroy(p_context->voice);
+		context->source_voice->DestroyVoice();
+		context->submix_voice->DestroyVoice();
+		context->mastering_voice->DestroyVoice();
 	}
 
-	p_context->wav_samples = drwav_open_and_read_file_f32(
+	context->wav_samples = drwav_open_and_read_file_f32(
 		(!stereo) ? audio_sample_filenames[sample] : audio_stereo_filenames[sample],
-		&p_context->wav_channels,
-		&p_context->wav_samplerate,
-		&p_context->wav_sample_count);
+		&context->wav_channels,
+		&context->wav_samplerate,
+		&context->wav_sample_count);
 
-	p_context->wav_sample_count /= p_context->wav_channels;
+	context->wav_sample_count /= context->wav_channels;
 
-	p_context->voice = audio_create_voice(p_context, p_context->wav_samples, p_context->wav_sample_count, p_context->wav_samplerate, p_context->wav_channels);
-	xaudio_reverb_set_params(p_context);
+	audio_create_voice(context, context->wav_samples, context->wav_sample_count, context->wav_samplerate, context->wav_channels);
+	xaudio_reverb_set_params(context);
 }
 
-void xaudio_wave_play(AudioContext *p_context)
+void xaudio_wave_play(AudioContext *context)
 {
-	p_context->voice->voice->Stop();
-	p_context->voice->voice->FlushSourceBuffers();
+	context->source_voice->Stop();
+	context->source_voice->FlushSourceBuffers();
 
-	HRESULT hr = p_context->voice->voice->SubmitSourceBuffer(&p_context->buffer);
+	HRESULT hr = context->source_voice->SubmitSourceBuffer(&context->buffer);
 
 	if (FAILED(hr)) 
 	{
 		return;
 	}
 
-	p_context->voice->voice->Start();
+	context->source_voice->Start();
 }
 
-void xaudio_effect_change(AudioContext *p_context, bool p_enabled, ReverbParameters *p_params)
+void xaudio_effect_change(AudioContext *context, bool enabled, ReverbParameters *params)
 {
 	HRESULT hr;
 
-	if (p_context->reverb_enabled && !p_enabled)
+	if (context->reverb_enabled && !enabled)
 	{
-		hr = p_context->voice->voice->DisableEffect(0);
-		p_context->reverb_enabled = p_enabled;
+		hr = context->voices[context->effect_on_voice]->DisableEffect(0);
+		context->reverb_enabled = enabled;
 	}
-	else if (!p_context->reverb_enabled && p_enabled)
+	else if (!context->reverb_enabled && enabled)
 	{
-		hr = p_context->voice->voice->EnableEffect(0);
-		p_context->reverb_enabled = p_enabled;
+		hr = context->voices[context->effect_on_voice]->EnableEffect(0);
+		context->reverb_enabled = enabled;
 	}
 
-	memcpy(&p_context->reverb_params, p_params, sizeof(ReverbParameters));
-	xaudio_reverb_set_params(p_context);
+	memcpy(&context->reverb_params, params, sizeof(ReverbParameters));
+	xaudio_reverb_set_params(context);
 }
 
-
-AudioContext *xaudio_create_context(bool output_5p1)
+AudioContext *xaudio_create_context(bool output_5p1, AudioVoiceType effect_on_voice)
 {
 	// setup function pointers
 	audio_destroy_context = xaudio_destroy_context;
 	audio_create_voice = xaudio_create_voice;
-	audio_voice_destroy = xaudio_voice_destroy;
-	audio_voice_set_volume = xaudio_voice_set_volume;
-	audio_voice_set_frequency = xaudio_voice_set_frequency;
-
 	audio_wave_load = xaudio_wave_load;
 	audio_wave_play = xaudio_wave_play;
-
 	audio_effect_change = xaudio_effect_change;
 
 	// create XAudio object
@@ -239,21 +265,14 @@ AudioContext *xaudio_create_context(bool output_5p1)
 		return NULL;
 	}
 
-	// create a mastering voice
-	IXAudio2MasteringVoice *mastering_voice;
-
-	hr = xaudio2->CreateMasteringVoice(&mastering_voice, output_5p1 ? 6 : 2);
-	if (FAILED(hr))
-	{
-		return NULL;
-	}
-
 	// return a context object
 	AudioContext *context = new AudioContext();
 	context->xaudio2 = xaudio2;
 	context->output_5p1 = output_5p1;
-	context->mastering_voice = mastering_voice;
-	context->voice = NULL;
+	context->effect_on_voice = effect_on_voice;
+	context->mastering_voice = NULL;
+	context->submix_voice = NULL;
+	context->source_voice = NULL;
 	context->wav_samples = NULL;
 	context->reverb_params = audio_reverb_presets[0];
 	context->reverb_enabled = false;

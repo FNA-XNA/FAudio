@@ -10,16 +10,19 @@ struct AudioContext
 {
 	FAudio *faudio;
 	bool output_5p1;
+	AudioVoiceType effect_on_voice;
+
 	FAudioMasteringVoice *mastering_voice;
+	FAudioSubmixVoice *submix_voice;
+	FAudioSourceVoice *source_voice;
+	FAudioVoice *voices[3];
 
 	unsigned int wav_channels;
 	unsigned int wav_samplerate;
 	drwav_uint64 wav_sample_count;
 	float *		 wav_samples;
 
-	struct AudioVoice *voice;
 	FAudioBuffer      buffer;
-	FAudioBuffer	  silence;
 
 	FAudioEffectDescriptor reverb_effect;
 	FAudioEffectChain	   effect_chain;
@@ -27,29 +30,19 @@ struct AudioContext
 	bool				   reverb_enabled;
 };
 
-struct AudioVoice
-{
-	AudioContext *context;
-	FAudioSourceVoice *voice;
-};
-
-struct AudioFilter
-{
-	AudioContext *context;
-	FAudioFilterParameters params;
-};
-
 void faudio_destroy_context(AudioContext *context)
 {
 	if (context != NULL)
 	{
+		FAudioVoice_DestroyVoice(context->source_voice);
+		FAudioVoice_DestroyVoice(context->submix_voice);
 		FAudioVoice_DestroyVoice(context->mastering_voice);
-		// FAudioDestroy(context->faudio);
+		FAudio_Release(context->faudio);
 		delete context;
 	}
 }
 
-AudioVoice *faudio_create_voice(AudioContext *context, float *buffer, size_t buffer_size, int sample_rate, int num_channels)
+void faudio_create_voice(AudioContext *context, float *buffer, size_t buffer_size, int sample_rate, int num_channels)
 {
 	// create reverb effect
 	void *fapo = NULL;
@@ -57,7 +50,7 @@ AudioVoice *faudio_create_voice(AudioContext *context, float *buffer, size_t buf
 
 	if (hr != 0)
 	{
-		return NULL;
+		return;
 	}
 
 	// create effect chain
@@ -68,7 +61,56 @@ AudioVoice *faudio_create_voice(AudioContext *context, float *buffer, size_t buf
 	context->effect_chain.EffectCount = 1;
 	context->effect_chain.pEffectDescriptors = &context->reverb_effect;
 
+	FAudioEffectChain *voice_effect[3] = {NULL, NULL, NULL};
+	voice_effect[context->effect_on_voice] = &context->effect_chain;
+
+	// create a mastering voice
+	uint32_t inChannels = context->wav_channels;
+	if (context->output_5p1 && context->effect_on_voice != AudioVoiceType_Master)
+	{
+		inChannels = 6;
+	}
+
+	hr = FAudio_CreateMasteringVoice(
+		context->faudio, 
+		&context->mastering_voice, 
+		inChannels, 
+		SAMPLERATE,
+		0, 
+		0, 
+		voice_effect[AudioVoiceType_Master]
+	);
+	if (hr != 0)
+	{
+		return;
+	}
+	context->voices[AudioVoiceType_Master] = context->mastering_voice;
+
+	// create a submix voice
+	inChannels = context->wav_channels;
+	if (context->output_5p1 && context->effect_on_voice == AudioVoiceType_Source)
+	{
+		inChannels = 6;
+	}
+
+	hr = FAudio_CreateSubmixVoice(
+		context->faudio,
+		&context->submix_voice,
+		inChannels,
+		SAMPLERATE,
+		0,
+		0,
+		NULL,
+		voice_effect[AudioVoiceType_Submix]
+	);
+	context->voices[AudioVoiceType_Submix] = context->submix_voice;
+
+	FAudioVoice_SetVolume(context->submix_voice, 1.0f, FAUDIO_COMMIT_NOW);
+
 	// create a source voice
+	FAudioSendDescriptor desc = {0, context->submix_voice};
+	FAudioVoiceSends sends = {1, &desc};
+
 	FAudioWaveFormatEx waveFormat;
 	waveFormat.wFormatTag = 3;
 	waveFormat.nChannels = num_channels;
@@ -78,15 +120,24 @@ AudioVoice *faudio_create_voice(AudioContext *context, float *buffer, size_t buf
 	waveFormat.wBitsPerSample = 32;
 	waveFormat.cbSize = 0;
 
-	FAudioSourceVoice *voice;
-	hr = FAudio_CreateSourceVoice(context->faudio, &voice, &waveFormat, FAUDIO_VOICE_USEFILTER, FAUDIO_MAX_FREQ_RATIO, NULL, NULL, &context->effect_chain);
+	hr = FAudio_CreateSourceVoice(
+		context->faudio, 
+		&context->source_voice, 
+		&waveFormat, 
+		FAUDIO_VOICE_USEFILTER, 
+		FAUDIO_MAX_FREQ_RATIO, 
+		NULL, 
+		&sends, 
+		voice_effect[AudioVoiceType_Source]
+	);
 
 	if (hr != 0) 
 	{
-		return NULL;
+		return;
 	}
+	context->voices[AudioVoiceType_Source] = context->source_voice;
 
-	FAudioVoice_SetVolume(voice, 1.0f, FAUDIO_COMMIT_NOW);
+	FAudioVoice_SetVolume(context->source_voice, 1.0f, FAUDIO_COMMIT_NOW);
 	
 	// submit the array
 	SDL_zero(context->buffer);
@@ -98,91 +149,68 @@ AudioVoice *faudio_create_voice(AudioContext *context, float *buffer, size_t buf
 	context->buffer.LoopBegin = 0;
 	context->buffer.LoopLength = 0;
 	context->buffer.LoopCount = 0;
-
-	
-	size_t silence_len = 2 * 48000 * num_channels;
-	float *silence_buffer = new float[silence_len];
-	for (uint32_t i = 0; i < silence_len; i += 1)
-	{
-		silence_buffer[i] = 0.0f;
-	}
-
-	SDL_zero(context->silence);
-	context->silence.AudioBytes = 4 * silence_len;
-	context->silence.pAudioData = (uint8_t *)silence_buffer;
-	context->silence.Flags = FAUDIO_END_OF_STREAM;
-	context->silence.PlayBegin = 0;
-	context->silence.PlayLength = silence_len / num_channels;
-	context->silence.LoopBegin = 0;
-	context->silence.LoopLength = 0;
-	context->silence.LoopCount = 0;
-
-	// return a voice struct
-	AudioVoice *result = new AudioVoice();
-	result->context = context;
-	result->voice = voice;
-	return result;
 }
 
 void faudio_reverb_set_params(AudioContext *context)
 {
-	FAudioVoice_SetEffectParameters(context->voice->voice, 0, &context->reverb_params, sizeof(context->reverb_params), FAUDIO_COMMIT_NOW);
-}
-
-void faudio_voice_destroy(AudioVoice *voice)
-{
-	FAudioVoice_DestroyVoice(voice->voice);
-}
-
-void faudio_voice_set_volume(AudioVoice *voice, float volume)
-{
-	FAudioVoice_SetVolume(voice->voice, volume, FAUDIO_COMMIT_NOW);
-}
-
-void faudio_voice_set_frequency(AudioVoice *voice, float frequency)
-{
-	FAudioSourceVoice_SetFrequencyRatio(voice->voice, frequency, FAUDIO_COMMIT_NOW);
+	FAudioVoice_SetEffectParameters(
+		context->voices[context->effect_on_voice], 
+		0, 
+		&context->reverb_params, 
+		sizeof(context->reverb_params), 
+		FAUDIO_COMMIT_NOW
+	);
 }
 
 void faudio_wave_load(AudioContext *context, AudioSampleWave sample, bool stereo)
 {
-	if (context->voice)
+	if (context->source_voice)
 	{
-		audio_voice_destroy(context->voice);
+		FAudioVoice_DestroyVoice(context->source_voice);
+		FAudioVoice_DestroyVoice(context->submix_voice);
+		FAudioVoice_DestroyVoice(context->mastering_voice);
 	}
 
 	context->wav_samples = drwav_open_and_read_file_f32(
 		(!stereo) ? audio_sample_filenames[sample] : audio_stereo_filenames[sample],
 		&context->wav_channels,
 		&context->wav_samplerate,
-		&context->wav_sample_count);
+		&context->wav_sample_count
+	);
 
 	context->wav_sample_count /= context->wav_channels;
 
-	context->voice = audio_create_voice(context, context->wav_samples, context->wav_sample_count, context->wav_samplerate, context->wav_channels);
+	audio_create_voice(context, context->wav_samples, context->wav_sample_count, context->wav_samplerate, context->wav_channels);
 	faudio_reverb_set_params(context);
 }
 
 void faudio_wave_play(AudioContext *context)
 {
-	FAudioSourceVoice_Stop(context->voice->voice, 0, FAUDIO_COMMIT_NOW);
-	FAudioSourceVoice_FlushSourceBuffers(context->voice->voice);
+	FAudioSourceVoice_Stop(context->source_voice, 0, FAUDIO_COMMIT_NOW);
+	FAudioSourceVoice_FlushSourceBuffers(context->source_voice);
 
-	FAudioSourceVoice_SubmitSourceBuffer(context->voice->voice, &context->buffer, NULL);
-	FAudioSourceVoice_SubmitSourceBuffer(context->voice->voice, &context->silence, NULL);
-	FAudioSourceVoice_Start(context->voice->voice, 0, FAUDIO_COMMIT_NOW);
+	FAudioSourceVoice_SubmitSourceBuffer(context->source_voice, &context->buffer, NULL);
+	FAudioSourceVoice_Start(context->source_voice, 0, FAUDIO_COMMIT_NOW);
 }
 
 void faudio_effect_change(AudioContext *context, bool enabled, ReverbParameters *params)
 {
 	if (context->reverb_enabled && !enabled)
 	{
-		FAudioVoice_DisableEffect(context->voice->voice, 0, FAUDIO_COMMIT_NOW);
+		FAudioVoice_DisableEffect(
+			context->voices[context->effect_on_voice], 
+			0, 
+			FAUDIO_COMMIT_NOW
+		);
 		context->reverb_enabled = enabled;
 	}
 	else if (!context->reverb_enabled && enabled)
 	{
-		FAudioVoice_EnableEffect(context->voice->voice, 0, FAUDIO_COMMIT_NOW);
+		FAudioVoice_EnableEffect(
+			context->voices[context->effect_on_voice], 
+			0, 
+			FAUDIO_COMMIT_NOW
+		);
 		context->reverb_enabled = enabled;
 	}
 
@@ -190,18 +218,13 @@ void faudio_effect_change(AudioContext *context, bool enabled, ReverbParameters 
 	faudio_reverb_set_params(context);
 }
 
-AudioContext *faudio_create_context(bool output_5p1)
+AudioContext *faudio_create_context(bool output_5p1, AudioVoiceType effect_on_voice)
 {
 	// setup function pointers
 	audio_destroy_context = faudio_destroy_context;
 	audio_create_voice = faudio_create_voice;
-	audio_voice_destroy = faudio_voice_destroy;
-	audio_voice_set_volume = faudio_voice_set_volume;
-	audio_voice_set_frequency = faudio_voice_set_frequency;
-
 	audio_wave_load = faudio_wave_load;
 	audio_wave_play = faudio_wave_play;
-
 	audio_effect_change = faudio_effect_change;
 
 	// create Faudio object
@@ -213,22 +236,15 @@ AudioContext *faudio_create_context(bool output_5p1)
 		return NULL;
 	}
 
-	// create a mastering voice
-	FAudioMasteringVoice *mastering_voice;
-
-	hr = FAudio_CreateMasteringVoice(faudio, &mastering_voice, output_5p1 ? 6 : 2, 44100, 0, 0, NULL);
-	if (hr != 0)
-	{
-		return NULL;
-	}
-
 	// return a context object
 	AudioContext *context = new AudioContext();
 	context->faudio = faudio;
 	context->output_5p1 = output_5p1;
-	context->mastering_voice = mastering_voice;
+	context->effect_on_voice = effect_on_voice;
 
-	context->voice = NULL;
+	context->source_voice = NULL;
+	context->submix_voice = NULL;
+	context->mastering_voice = NULL;
 	context->wav_samples = NULL;
 	SDL_zero(context->reverb_params);
 	context->reverb_enabled = false;

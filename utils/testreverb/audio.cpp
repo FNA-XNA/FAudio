@@ -7,6 +7,13 @@
 
 #define RESOURCE_PATH "utils/testreverb/resources"
 
+const char *audio_voice_type_names[3] = 
+{
+	"Source Voice",
+	"Submix Voice",
+	"Mastering Voice"
+};
+
 const char *audio_sample_filenames[] =
 {
 	RESOURCE_PATH"/snaredrum_forte.wav",
@@ -92,19 +99,14 @@ const size_t audio_reverb_preset_count = sizeof(audio_reverb_preset_names) / siz
 
 PFN_AUDIO_DESTROY_CONTEXT audio_destroy_context = NULL;
 PFN_AUDIO_CREATE_VOICE audio_create_voice = NULL;
-PFN_AUDIO_VOICE_DESTROY audio_voice_destroy = NULL;
-PFN_AUDIO_VOICE_SET_VOLUME audio_voice_set_volume = NULL;
-PFN_AUDIO_VOICE_SET_FREQUENCY audio_voice_set_frequency = NULL;
-
 PFN_AUDIO_WAVE_LOAD audio_wave_load = NULL;
 PFN_AUDIO_WAVE_PLAY audio_wave_play = NULL;
-
 PFN_AUDIO_EFFECT_CHANGE audio_effect_change = NULL;
 
-extern AudioContext *xaudio_create_context(bool output_5p1);
-extern AudioContext *faudio_create_context(bool output_5p1);
+extern AudioContext *xaudio_create_context(bool output_5p1, AudioVoiceType effect_on_voice);
+extern AudioContext *faudio_create_context(bool output_5p1, AudioVoiceType effect_on_voice);
 
-AudioContext *audio_create_context(AudioEngine p_engine, bool output_5p1)
+AudioContext *audio_create_context(AudioEngine p_engine, bool output_5p1, AudioVoiceType effect_on_voice)
 {
 	if (audio_reverb_presets == NULL)
 	{
@@ -122,11 +124,11 @@ AudioContext *audio_create_context(AudioEngine p_engine, bool output_5p1)
 	{
 		#ifdef HAVE_XAUDIO2
 		case AudioEngine_XAudio2:
-			return xaudio_create_context(output_5p1);
+			return xaudio_create_context(output_5p1, effect_on_voice);
 		#endif
 
 		case AudioEngine_FAudio:
-			return faudio_create_context(output_5p1);
+			return faudio_create_context(output_5p1, effect_on_voice);
 		
 		default:
 			return NULL;
