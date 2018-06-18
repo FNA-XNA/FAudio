@@ -609,7 +609,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		voice->mix.inputCache,
 		voice->mix.inputSamples,
 		voice->audio->resampleCache,
-		voice->mix.outputSamples
+		voice->mix.outputSamples * voice->mix.inputChannels
 	);
 
 	/* Submix overall volume is applied _before_ effects/filters, blech! */
