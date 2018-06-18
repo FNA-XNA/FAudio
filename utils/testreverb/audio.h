@@ -9,11 +9,10 @@
 #endif
 
 const float PI = 3.14159265358979323846f;
+const uint32_t SAMPLERATE = 44100;
 
 // types
 struct AudioContext;
-struct AudioVoice;
-struct AudioFilter;
 
 enum AudioEngine {
 	AudioEngine_XAudio2,
@@ -24,6 +23,12 @@ enum AudioSampleWave {
 	AudioWave_SnareDrum01 = 0,
 	AudioWave_SnareDrum02,
 	AudioWave_SnareDrum03,
+};
+
+enum AudioVoiceType {
+	AudioVoiceType_Source = 0,
+	AudioVoiceType_Submix,
+	AudioVoiceType_Master
 };
 
 #pragma pack(push, 1)
@@ -73,6 +78,8 @@ struct ReverbParameters
 
 #pragma pack(pop)
 
+extern const char *audio_voice_type_names[3];
+
 extern const char *audio_sample_filenames[];
 extern const char *audio_stereo_filenames[];
 extern const char *audio_reverb_preset_names[];
@@ -80,12 +87,8 @@ extern const ReverbI3DL2Parameters audio_reverb_presets_i3dl2[];
 extern const ReverbParameters	   *audio_reverb_presets;
 extern const size_t				   audio_reverb_preset_count;
 
-typedef void(*PFN_AUDIO_DESTROY_CONTEXT)(AudioContext *p_context);
-
-typedef AudioVoice *(*PFN_AUDIO_CREATE_VOICE)(AudioContext *p_context, float *p_buffer, size_t p_buffer_size, int p_sample_rate, int p_num_channels);
-typedef void (*PFN_AUDIO_VOICE_DESTROY)(AudioVoice *p_voice);
-typedef void (*PFN_AUDIO_VOICE_SET_VOLUME)(AudioVoice *p_voice, float p_volume);
-typedef void (*PFN_AUDIO_VOICE_SET_FREQUENCY)(AudioVoice *p_vioce, float p_frequency);
+typedef void (*PFN_AUDIO_DESTROY_CONTEXT)(AudioContext *p_context);
+typedef void (*PFN_AUDIO_CREATE_VOICE)(AudioContext *p_context, float *p_buffer, size_t p_buffer_size, int p_sample_rate, int p_num_channels);
 
 typedef void (*PFN_AUDIO_WAVE_LOAD)(AudioContext *p_context, AudioSampleWave sample, bool stereo);
 typedef void (*PFN_AUDIO_WAVE_PLAY)(AudioContext *p_context);
@@ -93,13 +96,10 @@ typedef void (*PFN_AUDIO_WAVE_PLAY)(AudioContext *p_context);
 typedef void(*PFN_AUDIO_EFFECT_CHANGE)(AudioContext *p_context, bool p_enabled, ReverbParameters *p_params);
 
 // API
-AudioContext *audio_create_context(AudioEngine p_engine, bool output_5p1);
+AudioContext *audio_create_context(AudioEngine p_engine, bool output_5p1, AudioVoiceType effect_on_voice);
 
 extern PFN_AUDIO_DESTROY_CONTEXT audio_destroy_context;
 extern PFN_AUDIO_CREATE_VOICE audio_create_voice;
-extern PFN_AUDIO_VOICE_DESTROY audio_voice_destroy;
-extern PFN_AUDIO_VOICE_SET_VOLUME audio_voice_set_volume;
-extern PFN_AUDIO_VOICE_SET_FREQUENCY audio_voice_set_frequency;
 
 extern PFN_AUDIO_WAVE_LOAD audio_wave_load;
 extern PFN_AUDIO_WAVE_PLAY audio_wave_play;

@@ -33,7 +33,7 @@ void FAudioTool_Update()
 	bool update_effect = false;
 
 	// gui
-	int window_y = next_window_dims(0, 50);
+	int window_y = next_window_dims(0, 80);
 	ImGui::Begin("Output Audio Engine");
 
 		static int audio_engine = (int)AudioEngine_FAudio;
@@ -44,6 +44,9 @@ void FAudioTool_Update()
 
 		static bool output_5p1 = false;
 		update_engine |= ImGui::Checkbox("5.1 channel output", &output_5p1);
+
+		static int32_t voice_index = (int32_t) AudioVoiceType_Submix;
+		update_engine |= ImGui::Combo("Apply effect to", &voice_index, audio_voice_type_names, 3);
 
 	ImGui::End();
 
@@ -67,8 +70,8 @@ void FAudioTool_Update()
 		
 		static bool effect_enabled = false;
 		update_effect |= ImGui::Checkbox("Enabled", &effect_enabled);
-		
-		static int preset_index = -1;
+
+		static int32_t preset_index = -1;
 		static ReverbParameters reverb_params = {
 			100.0f,
 			40,
@@ -97,7 +100,7 @@ void FAudioTool_Update()
 
 	ImGui::End();
 
-	window_y = next_window_dims(window_y, 630);
+	window_y = next_window_dims(window_y, 600);
 	ImGui::Begin("FAudio Tune Detail");
 
 		int ReverbDelay = reverb_params.ReverbDelay;
@@ -167,7 +170,7 @@ void FAudioTool_Update()
 		{
 			audio_destroy_context(player);
 		}
-		player = audio_create_context((AudioEngine) audio_engine, output_5p1);
+		player = audio_create_context((AudioEngine) audio_engine, output_5p1, (AudioVoiceType) voice_index);
 	}
 
 	if (update_wave | update_engine)
