@@ -136,18 +136,6 @@ uint32_t FACTAudioEngine_Initialize(
 		FAudioCreate(&pEngine->audio, 0, FAUDIO_DEFAULT_PROCESSOR);
 	}
 
-	/* We're being a bit dastardly and passing a struct that starts with
-	 * the type that FAudio expects, but with extras at the end so we can
-	 * do proper stuff with the engine
-	 */
-	pEngine->callback.callback.OnProcessingPassStart =
-		FACT_INTERNAL_OnProcessingPassStart;
-	pEngine->callback.engine = pEngine;
-	FAudio_RegisterForCallbacks(
-		pEngine->audio,
-		(FAudioEngineCallback*) &pEngine->callback
-	);
-
 	/* Create the audio device */
 	if (pParams->pRendererID == NULL)
 	{
@@ -185,7 +173,6 @@ uint32_t FACTAudioEngine_Initialize(
 		reverbChain.pEffectDescriptors = &reverbDesc;
 
 		/* Reverb submix voice... */
-		FAudio_PlatformLockAudio(pEngine->audio);
 		FAudio_CreateSubmixVoice(
 			pEngine->audio,
 			&pEngine->reverbVoice,
@@ -196,11 +183,22 @@ uint32_t FACTAudioEngine_Initialize(
 			NULL,
 			&reverbChain
 		);
-		FAudio_PlatformUnlockAudio(pEngine->audio);
 
 		/* We can release now, the submix owns this! */
 		FAPOBase_Release((FAPOBase*) reverbDesc.pEffect);
 	}
+
+	/* We're being a bit dastardly and passing a struct that starts with
+	 * the type that FAudio expects, but with extras at the end so we can
+	 * do proper stuff with the engine
+	 */
+	pEngine->callback.callback.OnProcessingPassStart =
+		FACT_INTERNAL_OnProcessingPassStart;
+	pEngine->callback.engine = pEngine;
+	FAudio_RegisterForCallbacks(
+		pEngine->audio,
+		(FAudioEngineCallback*) &pEngine->callback
+	);
 	return 0;
 }
 
@@ -1627,7 +1625,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	if (!FACT_INTERNAL_CreateSound(pCue, fadeInMS))
 	{
 		FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
-		return 0;
+		return 1;
 	}
 	data->instanceCount += 1;
 
