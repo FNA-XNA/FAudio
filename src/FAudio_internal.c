@@ -1147,7 +1147,28 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 
 /* The SSE/NEON converters are based on SDL_audiotypecvt:
  * https://hg.libsdl.org/SDL/file/default/src/audio/SDL_audiotypecvt.c
+ * The SSE/NEON detection comes from MojoAL:
+ * https://hg.icculus.org/icculus/mojoAL/file/default/mojoal.c
  */
+
+#if defined(__x86_64__)
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
+#elif __MACOSX__
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* Mac OS X/Intel guarantees SSE2. */
+#elif defined(__ARM_ARCH) && (__ARM_ARCH >= 8)
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* ARMv8+ promise NEON. */
+#elif defined(__APPLE__) && defined(__ARM_ARCH) && (__ARM_ARCH >= 7)
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* All Apple ARMv7 chips promise NEON support. */
+#else
+#define NEED_SCALAR_CONVERTER_FALLBACKS 1
+#endif
+
+/* Some platforms fail to define __ARM_NEON__, others need it or arm_neon.h will fail. */
+#if (defined(__ARM_ARCH) || defined(_M_ARM))
+#  if !NEED_SCALAR_CONVERTER_FALLBACKS && !defined(__ARM_NEON__)
+#    define __ARM_NEON__ 1
+#  endif
+#endif
 
 #ifdef __ARM_NEON__
 #include <arm_neon.h>
@@ -1157,21 +1178,6 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 #ifdef __SSE2__
 #include <emmintrin.h>
 #define HAVE_SSE2_INTRINSICS 1
-#endif
-
-#if defined(__x86_64__) && HAVE_SSE2_INTRINSICS
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
-#elif __MACOSX__ && HAVE_SSE2_INTRINSICS
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* Mac OS X/Intel guarantees SSE2. */
-#elif defined(__ARM_ARCH) && (__ARM_ARCH >= 8) && HAVE_NEON_INTRINSICS
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* ARMv8+ promise NEON. */
-#elif defined(__APPLE__) && defined(__ARM_ARCH) && (__ARM_ARCH >= 7) && HAVE_NEON_INTRINSICS
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* All Apple ARMv7 chips promise NEON support. */
-#endif
-
-/* Set to zero if platform is guaranteed to use a SIMD codepath here. */
-#ifndef NEED_SCALAR_CONVERTER_FALLBACKS
-#define NEED_SCALAR_CONVERTER_FALLBACKS 1
 #endif
 
 #define DIVBY128 0.0078125f
