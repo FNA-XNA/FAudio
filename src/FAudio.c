@@ -582,15 +582,13 @@ uint32_t FAudioVoice_SetEffectChain(
 
 	FAudioVoice_GetVoiceDetails(voice, &voiceDetails);
 
-	/* FIXME: Rules for changing effect chain are pretty complicated... */
-	FAudio_assert(voice->effects.count == 0);
-
 	/* SetEffectChain must not change the number of output channels once the voice has been created */
 	if (pEffectChain == NULL && voice->outputChannels != 0)
 	{
 		/* cannot remove an effect chain that changes the number of channels */
 		if (voice->outputChannels != voiceDetails.InputChannels)
 		{
+			FAudio_assert(0 && "Cannot remove effect chain that changes the number of channels");
 			return 1;
 		}
 	}
@@ -602,24 +600,48 @@ uint32_t FAudioVoice_SetEffectChain(
 		/* new effect chain must have same number of output channels */
 		if (voice->outputChannels != pEffectChain->pEffectDescriptors[lst].OutputChannels)
 		{
+			FAudio_assert(0 && "New effect chain must have same number of output channels as the old chain");
 			return 1;
 		}
 	}
 
 	if (pEffectChain == NULL)
 	{
-		/* TODO: release memory from the old effect chain*/
+		FAudioVoice_INTERNAL_FreeEffectChain(voice);
 		FAudio_zero(&voice->effects, sizeof(voice->effects));
 		voice->outputChannels = voiceDetails.InputChannels;
 	}
 	else
 	{
-		/* TODO: validate incoming effect chain before changing the current chain */
+		/* validate incoming effect chain before changing the current chain */
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
-			/* TODO: Validation is done by calling
-			 * IsOutputFormatSupported and GetRegistrationPropertiesFunc
-			 */
+			FAPO *fapo = (FAPO *)pEffectChain->pEffectDescriptors[i].pEffect;
+			FAudioWaveFormatEx srcFmt, dstFmt;
+
+			srcFmt.wBitsPerSample = 32;
+			srcFmt.wFormatTag = 3;
+			srcFmt.nChannels = voiceDetails.InputChannels;
+			srcFmt.nSamplesPerSec = voiceDetails.InputSampleRate;
+			srcFmt.nBlockAlign = srcFmt.nChannels * (srcFmt.wBitsPerSample / 8);
+			srcFmt.nAvgBytesPerSec = srcFmt.nSamplesPerSec * srcFmt.nBlockAlign;
+			srcFmt.cbSize = 0;
+
+			FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
+			dstFmt.nChannels = pEffectChain->pEffectDescriptors[i].OutputChannels;
+			dstFmt.nBlockAlign = dstFmt.nChannels * (dstFmt.wBitsPerSample / 8);
+			dstFmt.nAvgBytesPerSec = dstFmt.nSamplesPerSec * dstFmt.nBlockAlign;
+
+			if (fapo->IsOutputFormatSupported(fapo, &srcFmt, &dstFmt, NULL))
+			{
+				FAudio_assert(0 && "Effect: output format not supported");
+				return 1;
+			}
+		}
+		FAudioVoice_INTERNAL_FreeEffectChain(voice);
+
+		for (i = 0; i < pEffectChain->EffectCount; i += 1)
+		{
 			FAPOBase_AddRef(
 				(FAPOBase*) pEffectChain->pEffectDescriptors[i].pEffect
 			);
@@ -661,8 +683,8 @@ uint32_t FAudioVoice_SetEffectChain(
 			voice->effects.inPlaceProcessing,
 			pEffectChain->EffectCount * sizeof(uint8_t)
 		);
-		voice->outputChannels = voice->effects.desc[voice->effects.count - 1].OutputChannels;
 
+		/* check if in-place processing is supported */
 		channelCount = voiceDetails.InputChannels;
 		for (i = 0; i < voice->effects.count; i += 1)
 		{
@@ -676,6 +698,7 @@ uint32_t FAudioVoice_SetEffectChain(
 			voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
 			channelCount = voice->effects.desc[i].OutputChannels;
 		}
+		voice->outputChannels = channelCount;
 	}
 	return 0;
 }
