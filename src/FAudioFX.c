@@ -220,7 +220,6 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 	else
 	{
 		SET_SUPPORTED_FIELD(nChannels, 1);
-		result = 1;
 	}
 
 #undef SET_SUPPORTED_FIELD
@@ -259,22 +258,15 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	/* number of input / output channels */
 	if (pInputFormat->nChannels == 1 || pInputFormat->nChannels == 2)
 	{
-		if (pRequestedOutputFormat->nChannels != pInputFormat->nChannels)
+		if (pRequestedOutputFormat->nChannels != pInputFormat->nChannels &&
+			pRequestedOutputFormat->nChannels != 6)
 		{
 			SET_SUPPORTED_FIELD(nChannels, pInputFormat->nChannels);
-		}
-	}
-	else if (pInputFormat->nChannels == 6)
-	{
-		if (pRequestedOutputFormat->nChannels != 1 || pRequestedOutputFormat->nChannels != 2)
-		{
-			SET_SUPPORTED_FIELD(nChannels, 1);
 		}
 	}
 	else
 	{
 		SET_SUPPORTED_FIELD(nChannels, 1);
-		result = 1;
 	}
 
 #undef SET_SUPPORTED_FIELD
