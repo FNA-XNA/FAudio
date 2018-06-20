@@ -203,6 +203,7 @@ void FAudio_INTERNAL_SetDefaultMatrix(
 	uint32_t srcChannels,
 	uint32_t dstChannels
 );
+void FAudioVoice_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 
 #define DECODE_FUNC(type) \

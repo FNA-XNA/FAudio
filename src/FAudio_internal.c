@@ -884,6 +884,27 @@ void FAudio_INTERNAL_SetDefaultMatrix(
 	);
 }
 
+void FAudioVoice_INTERNAL_FreeEffectChain(FAudioVoice *voice)
+{
+	uint32_t i;
+
+	if (voice->effects.count == 0)
+	{
+		return;
+	}
+
+	for (i = 0; i < voice->effects.count; i += 1)
+	{
+		FAPOBase_Release((FAPOBase *)voice->effects.desc[i].pEffect);
+	}
+
+	FAudio_free(voice->effects.desc);
+	FAudio_free(voice->effects.parameters);
+	FAudio_free(voice->effects.parameterSizes);
+	FAudio_free(voice->effects.parameterUpdates);
+	FAudio_free(voice->effects.inPlaceProcessing);
+}
+
 /* PCM Decoding */
 
 void (*FAudio_INTERNAL_Convert_S8_To_F32)(
