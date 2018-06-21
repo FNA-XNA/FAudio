@@ -606,7 +606,7 @@ uint32_t FAudioVoice_SetEffectChain(
 
 	if (pEffectChain == NULL)
 	{
-		FAudioVoice_INTERNAL_FreeEffectChain(voice);
+		FAudio_INTERNAL_FreeEffectChain(voice);
 		FAudio_zero(&voice->effects, sizeof(voice->effects));
 		voice->outputChannels = voiceDetails.InputChannels;
 	}
@@ -637,7 +637,7 @@ uint32_t FAudioVoice_SetEffectChain(
 				return 1;
 			}
 		}
-		FAudioVoice_INTERNAL_FreeEffectChain(voice);
+		FAudio_INTERNAL_FreeEffectChain(voice);
 
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
@@ -645,42 +645,9 @@ uint32_t FAudioVoice_SetEffectChain(
 				(FAPOBase*) pEffectChain->pEffectDescriptors[i].pEffect
 			);
 		}
-		voice->effects.count = pEffectChain->EffectCount;
-		voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-		FAudio_memcpy(
-			voice->effects.desc,
-			pEffectChain->pEffectDescriptors,
-			pEffectChain->EffectCount * sizeof(FAudioEffectDescriptor)
-		);
-		voice->effects.parameters = (void**) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(void*)
-		);
-		FAudio_zero(
-			voice->effects.parameters,
-			pEffectChain->EffectCount * sizeof(void*)
-		);
-		voice->effects.parameterSizes = (uint32_t*) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(uint32_t)
-		);
-		FAudio_zero(
-			voice->effects.parameterSizes,
-			pEffectChain->EffectCount * sizeof(uint32_t)
-		);
-		voice->effects.parameterUpdates = (uint8_t*) FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(uint8_t)
-		);
-		FAudio_zero(
-			voice->effects.parameterUpdates,
-			pEffectChain->EffectCount * sizeof(uint8_t)
-		);
-		voice->effects.inPlaceProcessing = (uint8_t *)FAudio_malloc(
-			pEffectChain->EffectCount * sizeof(uint8_t)
-		);
-		FAudio_zero(
-			voice->effects.inPlaceProcessing,
-			pEffectChain->EffectCount * sizeof(uint8_t)
+		FAudio_INTERNAL_AllocEffectChain(
+			voice,
+			pEffectChain
 		);
 
 		/* check if in-place processing is supported */

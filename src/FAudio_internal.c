@@ -884,6 +884,34 @@ void FAudio_INTERNAL_SetDefaultMatrix(
 	);
 }
 
+void FAudio_INTERNAL_AllocEffectChain(
+	FAudioVoice *voice,
+	const FAudioEffectChain *pEffectChain
+) {
+	voice->effects.count = pEffectChain->EffectCount;
+	voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
+		voice->effects.count * sizeof(FAudioEffectDescriptor)
+	);
+	FAudio_memcpy(
+		voice->effects.desc,
+		pEffectChain->pEffectDescriptors,
+		voice->effects.count * sizeof(FAudioEffectDescriptor)
+	);
+	#define ALLOC_EFFECT_PROPERTY(prop, type) \
+		voice->effects.prop = (type*) FAudio_malloc( \
+			voice->effects.count * sizeof(type) \
+		); \
+		FAudio_zero( \
+			voice->effects.prop, \
+			voice->effects.count * sizeof(type) \
+		);
+	ALLOC_EFFECT_PROPERTY(parameters, void*)
+	ALLOC_EFFECT_PROPERTY(parameterSizes, uint32_t)
+	ALLOC_EFFECT_PROPERTY(parameterUpdates, uint8_t)
+	ALLOC_EFFECT_PROPERTY(inPlaceProcessing, uint8_t)
+	#undef ALLOC_EFFECT_PROPERTY
+}
+
 void FAudioVoice_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 {
 	uint32_t i;
