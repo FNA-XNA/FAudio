@@ -209,7 +209,7 @@ FAUDIOAPI void XNA_EnableVisualization(uint32_t enable)
 	/* TODO: Enable/Disable FAPO effect */
 }
 
-FAUDIOAPI uint8_t XNA_VisualizationEnabled()
+FAUDIOAPI uint32_t XNA_VisualizationEnabled()
 {
 	/* TODO: Query FAPO effect enabled */
 	return 0;
