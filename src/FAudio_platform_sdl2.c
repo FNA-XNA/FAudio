@@ -89,7 +89,7 @@ void FAudio_PlatformRelease()
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-void FAudio_PlatformInit(FAudio *audio)
+void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 {
 	FAudioEntry *entry, *entryList;
 	FAudioPlatformDevice *device, *deviceList;
@@ -104,7 +104,7 @@ void FAudio_PlatformInit(FAudio *audio)
 	/* Use the device that the engine tells us to use, then check to see if
 	 * another instance has opened the device.
 	 */
-	if (audio->master->master.deviceIndex == 0)
+	if (deviceIndex == 0)
 	{
 		name = NULL;
 		device = devlist;
@@ -119,10 +119,7 @@ void FAudio_PlatformInit(FAudio *audio)
 	}
 	else
 	{
-		name = SDL_GetAudioDeviceName(
-			audio->master->master.deviceIndex - 1,
-			0
-		);
+		name = SDL_GetAudioDeviceName(deviceIndex - 1, 0);
 		device = devlist;
 		while (device != NULL)
 		{

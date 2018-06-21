@@ -187,7 +187,6 @@ struct FAudioVoice
 			/* Read-only */
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;
-			uint32_t deviceIndex;
 		} master;
 	};
 };
@@ -225,7 +224,7 @@ DECODE_FUNC(StereoMSADPCM)
 
 void FAudio_PlatformAddRef();
 void FAudio_PlatformRelease();
-void FAudio_PlatformInit(FAudio *audio);
+void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
 void FAudio_PlatformStop(FAudio *audio);

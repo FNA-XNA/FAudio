@@ -360,7 +360,6 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->master.inputSampleRate = (InputSampleRate == FAUDIO_DEFAULT_SAMPLERATE) ?
 		details.OutputFormat.Format.nSamplesPerSec :
 		InputSampleRate;
-	(*ppMasteringVoice)->master.deviceIndex = DeviceIndex;
 
 	/* Sends/Effects */
 	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
@@ -369,7 +368,7 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* Platform Device */
 	audio->master = *ppMasteringVoice;
 	FAudio_AddRef(audio);
-	FAudio_PlatformInit(audio);
+	FAudio_PlatformInit(audio, DeviceIndex);
 	if (audio->active)
 	{
 		FAudio_PlatformStart(audio);
