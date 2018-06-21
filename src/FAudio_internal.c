@@ -927,7 +927,7 @@ void FAudio_INTERNAL_AllocEffectChain(
 	#undef ALLOC_EFFECT_PROPERTY
 }
 
-void FAudioVoice_INTERNAL_FreeEffectChain(FAudioVoice *voice)
+void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 {
 	uint32_t i;
 
