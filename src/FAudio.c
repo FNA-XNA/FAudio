@@ -637,14 +637,8 @@ uint32_t FAudioVoice_SetEffectChain(
 				return 1;
 			}
 		}
-		FAudio_INTERNAL_FreeEffectChain(voice);
 
-		for (i = 0; i < pEffectChain->EffectCount; i += 1)
-		{
-			FAPOBase_AddRef(
-				(FAPOBase*) pEffectChain->pEffectDescriptors[i].pEffect
-			);
-		}
+		FAudio_INTERNAL_FreeEffectChain(voice);
 		FAudio_INTERNAL_AllocEffectChain(
 			voice,
 			pEffectChain

@@ -888,7 +888,21 @@ void FAudio_INTERNAL_AllocEffectChain(
 	FAudioVoice *voice,
 	const FAudioEffectChain *pEffectChain
 ) {
+	uint32_t i;
+
 	voice->effects.count = pEffectChain->EffectCount;
+	if (voice->effects.count == 0)
+	{
+		return;
+	}
+
+	for (i = 0; i < pEffectChain->EffectCount; i += 1)
+	{
+		FAPOBase_AddRef(
+			(FAPOBase*) pEffectChain->pEffectDescriptors[i].pEffect
+		);
+	}
+
 	voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
 		voice->effects.count * sizeof(FAudioEffectDescriptor)
 	);
