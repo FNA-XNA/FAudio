@@ -168,7 +168,7 @@ uint32_t FACTAudioEngine_Initialize(
 		/* Reverb effect chain... */
 		FAudioCreateReverb(&reverbDesc.pEffect, 0);
 		reverbDesc.InitialState = 1;
-		reverbDesc.OutputChannels = 1;
+		reverbDesc.OutputChannels = (masterDetails.InputChannels == 6) ? 6 : 1;
 		reverbChain.EffectCount = 1;
 		reverbChain.pEffectDescriptors = &reverbDesc;
 
