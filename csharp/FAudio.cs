@@ -1957,6 +1957,13 @@ public static class FAudio
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint XNA_GetSongEnded();
 
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void XNA_GetSongVisualizationData(
+		float[] frequencies,
+		float[] samples,
+		uint count
+	);
+
 	#endregion
 
 	#region FAudio I/O API

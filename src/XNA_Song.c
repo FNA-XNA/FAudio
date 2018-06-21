@@ -203,3 +203,11 @@ FAUDIOAPI uint32_t XNA_GetSongEnded()
 	FAudioSourceVoice_GetState(songVoice, &state);
 	return state.BuffersQueued == 0;
 }
+
+FAUDIOAPI void XNA_GetSongVisualizationData(
+	float *frequencies,
+	float *samples,
+	uint32_t count
+) {
+	/* TODO: Visualization FAPO that reads in Song samples, FFT analysis */
+}
