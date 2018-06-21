@@ -101,18 +101,37 @@ void FAudio_PlatformInit(FAudio *audio)
 	entry->audio = audio;
 	entry->next = NULL;
 
-	/* Use the device that the engine tells us to use */
-	name = SDL_GetAudioDeviceName(audio->master->master.deviceIndex, 0);
-
-	/* Check to see if the device is already opened */
-	device = devlist;
-	while (device != NULL)
+	/* Use the device that the engine tells us to use, then check to see if
+	 * another instance has opened the device.
+	 */
+	if (audio->master->master.deviceIndex == 0)
 	{
-		if (FAudio_strcmp(device->name, name) == 0)
+		name = NULL;
+		device = devlist;
+		while (device != NULL)
 		{
-			break;
+			if (device->name == NULL)
+			{
+				break;
+			}
+			device = device->next;
 		}
-		device = device->next;
+	}
+	else
+	{
+		name = SDL_GetAudioDeviceName(
+			audio->master->master.deviceIndex - 1,
+			0
+		);
+		device = devlist;
+		while (device != NULL)
+		{
+			if (FAudio_strcmp(device->name, name) == 0)
+			{
+				break;
+			}
+			device = device->next;
+		}
 	}
 
 	/* Create a new device if the requested one is not in use yet */
@@ -135,16 +154,9 @@ void FAudio_PlatformInit(FAudio *audio)
 		want.callback = FAudio_INTERNAL_MixCallback;
 		want.userdata = device;
 
-		/* Open the device, finally.
-		 * FIXME: SDL bug! The device list does not prioritize defaults!
-		 * Worse, there is no API to just pull in the default. The hack
-		 * to send NULL for index 0 sucks because the user may have
-		 * actually asked for that exact device!
-		 */
+		/* Open the device, finally. */
 		device->device = SDL_OpenAudioDevice(
-			(audio->master->master.deviceIndex == 0) ?
-				NULL :
-				device->name,
+			device->name,
 			0,
 			&want,
 			&have,
@@ -398,7 +410,7 @@ void FAudio_PlatformUnlockAudio(FAudio *audio)
 
 uint32_t FAudio_PlatformGetDeviceCount()
 {
-	return SDL_GetNumAudioDevices(0);
+	return SDL_GetNumAudioDevices(0) + 1;
 }
 
 void FAudio_PlatformGetDeviceDetails(
@@ -416,16 +428,21 @@ void FAudio_PlatformGetDeviceDetails(
 
 	/* FIXME: wchar_t is an asshole */
 	details->DeviceID[0] = L'0' + index;
-	name = SDL_GetAudioDeviceName(index, 0);
+	if (index == 0)
+	{
+		name = "Default Device";
+		details->Role = GlobalDefaultDevice;
+	}
+	else
+	{
+		name = SDL_GetAudioDeviceName(index - 1, 0);
+		details->Role = NotDefaultDevice;
+	}
 	len = FAudio_min(FAudio_strlen(name), 0xFF);
 	for (i = 0; i < len; i += 1)
 	{
 		details->DisplayName[i] = name[i];
 	}
-
-	details->Role = (index == 0) ?
-		GlobalDefaultDevice :
-		NotDefaultDevice;
 
 	/* FIXME: SDL needs a device format query function! */
 	details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
