@@ -782,6 +782,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 
 	/* Apply master volume */
 	totalSamples = audio->updateSize * audio->master->master.inputChannels;
+	if (audio->master->volume != 1.0f)
 	for (i = 0; i < totalSamples; i += 1)
 	{
 		/* TODO: SSE */
