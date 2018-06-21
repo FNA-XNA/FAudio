@@ -1958,6 +1958,12 @@ public static class FAudio
 	public static extern uint XNA_GetSongEnded();
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void XNA_EnableVisualization(uint enable);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint XNA_VisualizationEnabled();
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void XNA_GetSongVisualizationData(
 		float[] frequencies,
 		float[] samples,

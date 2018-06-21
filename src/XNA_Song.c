@@ -204,6 +204,17 @@ FAUDIOAPI uint32_t XNA_GetSongEnded()
 	return state.BuffersQueued == 0;
 }
 
+FAUDIOAPI void XNA_EnableVisualization(uint32_t enable)
+{
+	/* TODO: Enable/Disable FAPO effect */
+}
+
+FAUDIOAPI uint8_t XNA_VisualizationEnabled()
+{
+	/* TODO: Query FAPO effect enabled */
+	return 0;
+}
+
 FAUDIOAPI void XNA_GetSongVisualizationData(
 	float *frequencies,
 	float *samples,
