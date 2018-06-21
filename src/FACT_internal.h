@@ -386,6 +386,8 @@ struct FACTAudioEngine
 	/* Engine references */
 	LinkedList *sbList;
 	LinkedList *wbList;
+	FAudioSpinLock sbLock;
+	FAudioSpinLock wbLock;
 	float *globalVariableValues;
 
 	/* FAudio references */
@@ -400,6 +402,7 @@ struct FACTSoundBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
+	FAudioSpinLock cueLock;
 	uint8_t notifyOnDestroy;
 
 	/* Array sizes */
@@ -429,6 +432,7 @@ struct FACTWaveBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	LinkedList *waveList;
+	FAudioSpinLock waveLock;
 	uint8_t notifyOnDestroy;
 
 	/* Actual WaveBank information */

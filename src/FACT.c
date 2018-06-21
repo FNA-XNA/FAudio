@@ -274,11 +274,15 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	uint8_t i;
 	FACTCue *cue;
 	LinkedList *list;
-	FAudio_PlatformLockAudio(pEngine->audio);
+	FACTSoundBank *sb;
+	FAudio_PlatformLock(&pEngine->sbLock);
 	list = pEngine->sbList;
 	while (list != NULL)
 	{
-		cue = ((FACTSoundBank*) list->entry)->cueList;
+		sb = (FACTSoundBank*) list->entry;
+
+		FAudio_PlatformLock(&sb->cueLock);
+		cue = sb->cueList;
 		while (cue != NULL)
 		{
 			if (cue->playingSound != NULL)
@@ -299,9 +303,10 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 			}
 			cue = cue->next;
 		}
+		FAudio_PlatformUnlock(&sb->cueLock);
 		list = list->next;
 	}
-	FAudio_PlatformUnlockAudio(pEngine->audio);
+	FAudio_PlatformUnlock(&pEngine->sbLock);
 	return 0;
 }
 
@@ -499,10 +504,14 @@ uint8_t FACT_INTERNAL_IsInCategory(
 
 #define ITERATE_CUES(action) \
 	FACTCue *cue; \
+	FACTSoundBank *sb; \
+	FAudio_PlatformLock(&pEngine->sbLock); \
 	LinkedList *list = pEngine->sbList; \
 	while (list != NULL) \
 	{ \
-		cue = ((FACTSoundBank*) list->entry)->cueList; \
+		sb = (FACTSoundBank*) list->entry; \
+		FAudio_PlatformLock(&sb->cueLock); \
+		cue = sb->cueList; \
 		while (cue != NULL) \
 		{ \
 			if (	cue->playingSound != NULL && \
@@ -516,8 +525,10 @@ uint8_t FACT_INTERNAL_IsInCategory(
 			} \
 			cue = cue->next; \
 		} \
+		FAudio_PlatformUnlock(&sb->cueLock); \
 		list = list->next; \
-	}
+	} \
+	FAudio_PlatformUnlock(&pEngine->sbLock);
 
 uint32_t FACTAudioEngine_Stop(
 	FACTAudioEngine *pEngine,
@@ -755,6 +766,7 @@ uint32_t FACTSoundBank_Prepare(
 	(*ppCue)->state = FACT_STATE_PREPARED;
 
 	/* Add to the SoundBank Cue list */
+	FAudio_PlatformLock(&pSoundBank->cueLock);
 	if (pSoundBank->cueList == NULL)
 	{
 		pSoundBank->cueList = *ppCue;
@@ -768,6 +780,7 @@ uint32_t FACTSoundBank_Prepare(
 		}
 		latest->next = *ppCue;
 	}
+	FAudio_PlatformUnlock(&pSoundBank->cueLock);
 
 	return 0;
 }
@@ -835,7 +848,9 @@ uint32_t FACTSoundBank_Stop(
 	uint16_t nCueIndex,
 	uint32_t dwFlags
 ) {
-	FACTCue *backup, *cue = pSoundBank->cueList;
+	FACTCue *backup, *cue;
+	FAudio_PlatformLock(&pSoundBank->cueLock);
+	cue = pSoundBank->cueList;
 	while (cue != NULL)
 	{
 		if (cue->index == nCueIndex)
@@ -860,6 +875,7 @@ uint32_t FACTSoundBank_Stop(
 			cue = cue->next;
 		}
 	}
+	FAudio_PlatformUnlock(&pSoundBank->cueLock);
 	return 0;
 }
 
@@ -869,7 +885,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	FACTNotification note;
 
 	/* Synchronously destroys all cues that are associated */
-	while (pSoundBank->cueList != NULL)
+	while (pSoundBank->cueList != NULL) /* FIXME: Can we lock this? */
 	{
 		FACTCue_Destroy(pSoundBank->cueList);
 	}
@@ -877,7 +893,11 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	if (pSoundBank->parentEngine != NULL)
 	{
 		/* Remove this SoundBank from the Engine list */
-		LinkedList_RemoveEntry(&pSoundBank->parentEngine->sbList, pSoundBank);
+		LinkedList_RemoveEntry(
+			&pSoundBank->parentEngine->sbList,
+			pSoundBank,
+			&pSoundBank->parentEngine->sbLock
+		);
 	}
 
 	/* SoundBank Name */
@@ -1012,7 +1032,11 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	if (pWaveBank->parentEngine != NULL)
 	{
 		/* Remove this WaveBank from the Engine list */
-		LinkedList_RemoveEntry(&pWaveBank->parentEngine->wbList, pWaveBank);
+		LinkedList_RemoveEntry(
+			&pWaveBank->parentEngine->wbList,
+			pWaveBank,
+			&pWaveBank->parentEngine->wbLock
+		);
 	}
 
 	/* Free everything, finally. */
@@ -1248,7 +1272,11 @@ uint32_t FACTWaveBank_Prepare(
 	}
 
 	/* Add to the WaveBank Wave list */
-	LinkedList_AddEntry(&pWaveBank->waveList, *ppWave);
+	LinkedList_AddEntry(
+		&pWaveBank->waveList,
+		*ppWave,
+		&pWaveBank->waveLock
+	);
 
 	return 0;
 }
@@ -1301,7 +1329,11 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	/* Stop before we start deleting everything */
 	FACTWave_Stop(pWave, FACT_FLAG_STOP_IMMEDIATE);
 
-	LinkedList_RemoveEntry(&pWave->parentBank->waveList, pWave);
+	LinkedList_RemoveEntry(
+		&pWave->parentBank->waveList,
+		pWave,
+		&pWave->parentBank->waveLock
+	);
 
 	FAudioVoice_DestroyVoice(pWave->voice);
 	if (pWave->notifyOnDestroy)
@@ -1480,6 +1512,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	if (pCue->parentBank != NULL)
 	{
 		/* Remove this Cue from the SoundBank list */
+		FAudio_PlatformLock(&pCue->parentBank->cueLock);
 		cue = pCue->parentBank->cueList;
 		prev = cue;
 		while (cue != NULL)
@@ -1499,6 +1532,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 			prev = cue;
 			cue = cue->next;
 		}
+		FAudio_PlatformUnlock(&pCue->parentBank->cueLock);
 		FAudio_assert(cue != NULL && "Could not find Cue reference!");
 	}
 
@@ -1526,7 +1560,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	FAudio_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
 
-	FAudio_PlatformLockAudio(pCue->parentBank->parentEngine->audio);
+	FAudio_PlatformLock(&pCue->parentBank->cueLock);
 
 	/* Cue Instance Limits */
 	if (data->instanceCount >= data->instanceLimit)
@@ -1541,7 +1575,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				FACT_STATE_STOPPING |
 				FACT_STATE_PAUSED
 			);
-			FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
+			FAudio_PlatformUnlock(&pCue->parentBank->cueLock);
 			return 1;
 		}
 		else if (data->maxInstanceBehavior == 1) /* Queue */
@@ -1624,7 +1658,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	/* Need an initial sound to play */
 	if (!FACT_INTERNAL_CreateSound(pCue, fadeInMS))
 	{
-		FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
+		FAudio_PlatformUnlock(&pCue->parentBank->cueLock);
 		return 1;
 	}
 	data->instanceCount += 1;
@@ -1651,7 +1685,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACTWave_Play(pCue->simpleWave);
 	}
 
-	FAudio_PlatformUnlockAudio(pCue->parentBank->parentEngine->audio);
+	FAudio_PlatformUnlock(&pCue->parentBank->cueLock);
 
 	return 0;
 }

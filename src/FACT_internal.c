@@ -1350,6 +1350,7 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 {
 	FACTAudioEngineCallback *c = (FACTAudioEngineCallback*) callback;
 	FACTAudioEngine *engine = c->engine;
+	FACTSoundBank *sb;
 	LinkedList *sbList;
 	FACTCue *cue, *cBackup;
 	uint32_t timestamp;
@@ -1364,10 +1365,14 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 
 	FACT_INTERNAL_UpdateEngine(engine);
 
+	FAudio_PlatformLock(&engine->sbLock);
 	sbList = engine->sbList;
 	while (sbList != NULL)
 	{
-		cue = ((FACTSoundBank*) sbList->entry)->cueList;
+		sb = (FACTSoundBank*) sbList->entry;
+
+		FAudio_PlatformLock(&sb->cueLock);
+		cue = sb->cueList;
 		while (cue != NULL)
 		{
 			FACT_INTERNAL_UpdateCue(cue);
@@ -1390,7 +1395,9 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 			if (cue->managed && (cue->state & FACT_STATE_STOPPED))
 			{
 				cBackup = cue->next;
+				FAudio_PlatformUnlock(&sb->cueLock); /* FIXME: Barf */
 				FACTCue_Destroy(cue);
+				FAudio_PlatformLock(&sb->cueLock); /* FIXME: Barf */
 				cue = cBackup;
 			}
 			else
@@ -1398,8 +1405,10 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 				cue = cue->next;
 			}
 		}
+		FAudio_PlatformUnlock(&sb->cueLock);
 		sbList = sbList->next;
 	}
+	FAudio_PlatformUnlock(&engine->sbLock);
 }
 
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
@@ -1413,8 +1422,9 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	uint32_t end = entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength;
 	uint32_t left = entry->PlayRegion.dwLength - (c->wave->streamOffset - entry->PlayRegion.dwOffset);
 
-	/* Don't bother if we're EOS */
-	if (c->wave->streamOffset >= end)
+	/* Don't bother if we're EOS or the Wave has stopped*/
+	if (	(c->wave->streamOffset >= end) ||
+		(c->wave->state & FACT_STATE_STOPPED)	)
 	{
 		return;
 	}
@@ -2024,10 +2034,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb = (FACTSoundBank*) FAudio_malloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
+	sb->cueLock = 0;
 	sb->notifyOnDestroy = 0;
-
-	/* Add to the Engine SoundBank list */
-	LinkedList_AddEntry(&pEngine->sbList, sb);
 
 	cueSimpleCount = read_u16(&ptr);
 	cueComplexCount = read_u16(&ptr);
@@ -2441,6 +2449,9 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		ptr += memsize;
 	}
 
+	/* Add to the Engine SoundBank list */
+	LinkedList_AddEntry(&pEngine->sbList, sb, &pEngine->sbLock);
+
 	/* Finally. */
 	FAudio_assert((ptr - start) == dwSize);
 	*ppSoundBank = sb;
@@ -2480,6 +2491,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb = (FACTWaveBank*) FAudio_malloc(sizeof(FACTWaveBank));
 	wb->parentEngine = pEngine;
 	wb->waveList = NULL;
+	wb->waveLock = 0;
 	wb->io = io;
 	wb->notifyOnDestroy = 0;
 
@@ -2600,7 +2612,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	*/
 
 	/* Add to the Engine WaveBank list */
-	LinkedList_AddEntry(&pEngine->wbList, wb);
+	LinkedList_AddEntry(&pEngine->wbList, wb, &pEngine->wbLock);
 
 	/* Finally. */
 	*ppWaveBank = wb;

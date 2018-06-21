@@ -26,12 +26,16 @@
 
 #include "FAudio_internal.h"
 
-void LinkedList_AddEntry(LinkedList **start, void* toAdd)
-{
+void LinkedList_AddEntry(
+	LinkedList **start,
+	void* toAdd,
+	FAudioSpinLock *lock
+) {
 	LinkedList *newEntry, *latest;
 	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
 	newEntry->entry = toAdd;
 	newEntry->next = NULL;
+	FAudio_PlatformLock(lock);
 	if (*start == NULL)
 	{
 		*start = newEntry;
@@ -45,13 +49,18 @@ void LinkedList_AddEntry(LinkedList **start, void* toAdd)
 		}
 		latest->next = newEntry;
 	}
+	FAudio_PlatformUnlock(lock);
 }
 
-void LinkedList_RemoveEntry(LinkedList **start, void* toRemove)
-{
+void LinkedList_RemoveEntry(
+	LinkedList **start,
+	void* toRemove,
+	FAudioSpinLock *lock
+) {
 	LinkedList *latest, *prev;
 	latest = *start;
 	prev = latest;
+	FAudio_PlatformLock(lock);
 	while (latest != NULL)
 	{
 		if (latest->entry == toRemove)
@@ -65,11 +74,13 @@ void LinkedList_RemoveEntry(LinkedList **start, void* toRemove)
 				prev->next = latest->next;
 			}
 			FAudio_free(latest);
+			FAudio_PlatformUnlock(lock);
 			return;
 		}
 		prev = latest;
 		latest = latest->next;
 	}
+	FAudio_PlatformUnlock(lock);
 	FAudio_assert(0 && "LinkedList element not found!");
 }
 
@@ -146,10 +157,12 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 			voice->src.callback != NULL &&
 			voice->src.callback->OnBufferStart != NULL	)
 		{
+			FAudio_PlatformUnlock(&voice->src.bufferLock); /* FIXME: Barf */
 			voice->src.callback->OnBufferStart(
 				voice->src.callback,
 				buffer->pContext
 			);
+			FAudio_PlatformLock(&voice->src.bufferLock); /* FIXME: Barf */
 		}
 
 		/* Check for end-of-buffer */
@@ -186,10 +199,12 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 				if (	voice->src.callback != NULL &&
 					voice->src.callback->OnLoopEnd != NULL	)
 				{
+					FAudio_PlatformUnlock(&voice->src.bufferLock); /* FIXME: Barf */
 					voice->src.callback->OnLoopEnd(
 						voice->src.callback,
 						buffer->pContext
 					);
+					FAudio_PlatformLock(&voice->src.bufferLock); /* FIXME: Barf */
 				}
 			}
 			else
@@ -203,6 +218,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 				/* Callbacks */
 				if (voice->src.callback != NULL)
 				{
+					FAudio_PlatformUnlock(&voice->src.bufferLock); /* FIXME: Barf */
 					if (voice->src.callback->OnBufferEnd != NULL)
 					{
 						voice->src.callback->OnBufferEnd(
@@ -217,6 +233,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 							voice->src.callback
 						);
 					}
+					FAudio_PlatformLock(&voice->src.bufferLock); /* FIXME: Barf */
 				}
 
 				/* Change active buffer, delete finished buffer */
@@ -465,9 +482,12 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		);
 	}
 
+	FAudio_PlatformLock(&voice->src.bufferLock);
+
 	/* Nothing to do? */
 	if (voice->src.bufferList == NULL)
 	{
+		FAudio_PlatformUnlock(&voice->src.bufferLock);
 		goto end;
 	}
 
@@ -532,10 +552,13 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		/* Finally. */
 		mixed += (uint32_t) toResample;
 	}
+	FAudio_PlatformUnlock(&voice->src.bufferLock);
 	if (mixed == 0)
 	{
 		goto end;
 	}
+
+	FAudio_PlatformLock(&voice->sendLock);
 
 	/* Nowhere to send it? Just skip resampling...*/
 	if (voice->sends.SendCount == 0)
@@ -546,6 +569,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
+		FAudio_PlatformLock(&voice->filterLock);
 		FAudio_INTERNAL_FilterVoice(
 			&voice->filter,
 			voice->filterState,
@@ -553,11 +577,13 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			mixed,
 			voice->src.format.nChannels
 		);
+		FAudio_PlatformUnlock(&voice->filterLock);
 	}
 
 	/* Process effect chain */
 	effectOut = voice->audio->resampleCache;
 
+	FAudio_PlatformLock(&voice->effectLock);
 	if (voice->effects.count > 0)
 	{
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
@@ -568,8 +594,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			mixed
 		);
 	}
+	FAudio_PlatformUnlock(&voice->effectLock);
 
 	/* Send float cache to sends */
+	FAudio_PlatformLock(&voice->volumeLock);
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		out = voice->sends.pSends[i].pOutputVoice;
@@ -605,9 +633,11 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			);
 		}
 	}
+	FAudio_PlatformUnlock(&voice->volumeLock);
 
 	/* Done, finally. */
 end:
+	FAudio_PlatformUnlock(&voice->sendLock);
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
 	{
@@ -625,6 +655,8 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	FAudioVoice *out;
 	uint32_t resampled;
 	float *effectOut;
+
+	FAudio_PlatformLock(&voice->sendLock);
 
 	/* Nothing to do? */
 	if (voice->sends.SendCount == 0)
@@ -657,6 +689,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
+		FAudio_PlatformLock(&voice->filterLock);
 		FAudio_INTERNAL_FilterVoice(
 			&voice->filter,
 			voice->filterState,
@@ -664,11 +697,13 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			resampled,
 			voice->mix.inputChannels
 		);
+		FAudio_PlatformUnlock(&voice->filterLock);
 	}
 
 	/* Process effect chain */
 	effectOut = voice->audio->resampleCache;
 
+	FAudio_PlatformLock(&voice->effectLock);
 	if (voice->effects.count > 0)
 	{
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
@@ -679,8 +714,10 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			resampled
 		);
 	}
+	FAudio_PlatformUnlock(&voice->effectLock);
 
 	/* Send float cache to sends */
+	FAudio_PlatformLock(&voice->volumeLock);
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		out = voice->sends.pSends[i].pOutputVoice;
@@ -714,9 +751,11 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			);
 		}
 	}
+	FAudio_PlatformUnlock(&voice->volumeLock);
 
 	/* Zero this at the end, for the next update */
 end:
+	FAudio_PlatformUnlock(&voice->sendLock);
 	FAudio_zero(
 		voice->mix.inputCache,
 		sizeof(float) * voice->mix.inputSamples
@@ -737,6 +776,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	}
 
 	/* ProcessingPassStart callbacks */
+	FAudio_PlatformLock(&audio->callbackLock);
 	list = audio->callbacks;
 	while (list != NULL)
 	{
@@ -749,11 +789,13 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		}
 		list = list->next;
 	}
+	FAudio_PlatformUnlock(&audio->callbackLock);
 
 	/* Writes to master will directly write to output */
 	audio->master->master.output = output;
 
 	/* Mix sources */
+	FAudio_PlatformLock(&audio->sourceLock);
 	list = audio->sources;
 	while (list != NULL)
 	{
@@ -764,8 +806,10 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		}
 		list = list->next;
 	}
+	FAudio_PlatformUnlock(&audio->sourceLock);
 
 	/* Mix submixes, ordered by processing stage */
+	FAudio_PlatformLock(&audio->submixLock);
 	for (i = 0; i <= audio->submixStages; i += 1)
 	{
 		list = audio->submixes;
@@ -779,6 +823,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 			list = list->next;
 		}
 	}
+	FAudio_PlatformUnlock(&audio->submixLock);
 
 	/* Apply master volume */
 	totalSamples = audio->updateSize * audio->master->master.inputChannels;
@@ -795,6 +840,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	}
 
 	/* Process master effect chain */
+	FAudio_PlatformLock(&audio->master->effectLock);
 	if (audio->master->effects.count > 0)
 	{
 		float *effectOut = FAudio_INTERNAL_ProcessEffectChain(
@@ -814,8 +860,10 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 			);
 		}
 	}
+	FAudio_PlatformUnlock(&audio->master->effectLock);
 
 	/* OnProcessingPassEnd callbacks */
+	FAudio_PlatformLock(&audio->callbackLock);
 	list = audio->callbacks;
 	while (list != NULL)
 	{
@@ -828,6 +876,7 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		}
 		list = list->next;
 	}
+	FAudio_PlatformUnlock(&audio->callbackLock);
 }
 
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t samples)

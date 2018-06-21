@@ -52,6 +52,10 @@
 #define restrict
 #endif
 
+/* Spinlock Type */
+
+typedef int FAudioSpinLock;
+
 /* Linked Lists */
 
 typedef struct LinkedList LinkedList;
@@ -60,8 +64,16 @@ struct LinkedList
 	void* entry;
 	LinkedList *next;
 };
-void LinkedList_AddEntry(LinkedList **start, void* toAdd);
-void LinkedList_RemoveEntry(LinkedList **start, void* toRemove);
+void LinkedList_AddEntry(
+	LinkedList **start,
+	void* toAdd,
+	FAudioSpinLock *lock
+);
+void LinkedList_RemoveEntry(
+	LinkedList **start,
+	void* toRemove,
+	FAudioSpinLock *lock
+);
 
 /* Internal FAudio Types */
 
@@ -100,9 +112,12 @@ struct FAudio
 	uint32_t updateSize;
 	uint32_t submixStages;
 	FAudioMasteringVoice *master;
-	LinkedList *submixes;
 	LinkedList *sources;
+	LinkedList *submixes;
 	LinkedList *callbacks;
+	FAudioSpinLock sourceLock;
+	FAudioSpinLock submixLock;
+	FAudioSpinLock callbackLock;
 	FAudioWaveFormatExtensible *mixFormat;
 
 	/* Temp storage for processing, interleaved PCM32F */
@@ -134,10 +149,14 @@ struct FAudioVoice
 	} effects;
 	FAudioFilterParameters filter;
 	FAudioFilterState *filterState;
+	FAudioSpinLock sendLock;
+	FAudioSpinLock effectLock;
+	FAudioSpinLock filterLock;
 
 	float volume;
 	float *channelVolume;
 	uint32_t outputChannels;
+	FAudioSpinLock volumeLock;
 
 	union
 	{
@@ -165,6 +184,7 @@ struct FAudioVoice
 			float freqRatio;
 			uint64_t totalSamples;
 			FAudioBufferEntry *bufferList;
+			FAudioSpinLock bufferLock;
 		} src;
 		struct
 		{
@@ -232,8 +252,8 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
 void FAudio_PlatformStop(FAudio *audio);
-void FAudio_PlatformLockAudio(FAudio *audio);
-void FAudio_PlatformUnlockAudio(FAudio *audio);
+void FAudio_PlatformLockAudio(FAudio *audio); /* FIXME: REMOVE ME! */
+void FAudio_PlatformUnlockAudio(FAudio *audio); /* FIXME: REMOVE ME! */
 
 uint32_t FAudio_PlatformGetDeviceCount();
 void FAudio_PlatformGetDeviceDetails(
@@ -254,6 +274,11 @@ uint32_t FAudio_PlatformResample(
 	float *output,
 	uint32_t outLen
 );
+
+/* Spinlocks */
+
+void FAudio_PlatformLock(FAudioSpinLock *lock);
+void FAudio_PlatformUnlock(FAudioSpinLock *lock);
 
 /* stdlib Functions */
 

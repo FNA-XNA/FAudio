@@ -365,7 +365,7 @@ void FAudio_PlatformStop(FAudio *audio)
 	}
 }
 
-void FAudio_PlatformLockAudio(FAudio *audio)
+void FAudio_PlatformLockAudio(FAudio *audio) /* FIXME: REMOVE ME! */
 {
 	FAudioEntry *entry;
 	FAudioPlatformDevice *dev = devlist;
@@ -385,7 +385,7 @@ void FAudio_PlatformLockAudio(FAudio *audio)
 	}
 }
 
-void FAudio_PlatformUnlockAudio(FAudio *audio)
+void FAudio_PlatformUnlockAudio(FAudio *audio) /* FIXME: REMOVE ME! */
 {
 	FAudioEntry *entry;
 	FAudioPlatformDevice *dev = devlist;
@@ -492,6 +492,18 @@ uint32_t FAudio_PlatformResample(
 		output,
 		outLen * sizeof(float)
 	) / sizeof(float);
+}
+
+/* Spinlocks */
+
+void FAudio_PlatformLock(FAudioSpinLock *lock)
+{
+	SDL_AtomicLock((SDL_SpinLock*) lock);
+}
+
+void FAudio_PlatformUnlock(FAudioSpinLock *lock)
+{
+	SDL_AtomicUnlock((SDL_SpinLock*) lock);
 }
 
 /* stdlib Functions */
