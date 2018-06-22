@@ -674,6 +674,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	);
 
 	/* Submix overall volume is applied _before_ effects/filters, blech! */
+	if (voice->volume != 1.0f)
 	for (i = 0; i < resampled; i += 1)
 	{
 		/* TODO: SSE */
