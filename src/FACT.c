@@ -212,11 +212,11 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	/* This method destroys all existing cues, sound banks, and wave banks.
 	 * It blocks until all cues are destroyed.
 	 */
-	while (pEngine->wbList != NULL)
+	while (pEngine->wbList != NULL) /* FIXME: Can we lock this? */
 	{
 		FACTWaveBank_Destroy((FACTWaveBank*) pEngine->wbList->entry);
 	}
-	while (pEngine->sbList != NULL)
+	while (pEngine->sbList != NULL) /* FIXME: Can we lock this? */
 	{
 		FACTSoundBank_Destroy((FACTSoundBank*) pEngine->sbList->entry);
 	}
@@ -1015,7 +1015,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FACTNotification note;
 
 	/* Synchronously destroys any cues that are using the wavebank */
-	while (pWaveBank->waveList != NULL)
+	while (pWaveBank->waveList != NULL) /* FIXME: Can we lock this? */
 	{
 		wave = (FACTWave*) pWaveBank->waveList->entry;
 		if (wave->parentCue != NULL)
@@ -1307,7 +1307,10 @@ uint32_t FACTWaveBank_Stop(
 	uint32_t dwFlags
 ) {
 	FACTWave *wave;
-	LinkedList *list = pWaveBank->waveList;
+	LinkedList *list;
+
+	FAudio_PlatformLock(&pWaveBank->waveLock);
+	list = pWaveBank->waveList;
 	while (list != NULL)
 	{
 		wave = (FACTWave*) list->entry;
@@ -1317,6 +1320,7 @@ uint32_t FACTWaveBank_Stop(
 		}
 		list = list->next;
 	}
+	FAudio_PlatformUnlock(&pWaveBank->waveLock);
 	return 0;
 }
 

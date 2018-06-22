@@ -444,6 +444,7 @@ struct FACTWaveBank
 	/* I/O information */
 	uint16_t streaming;
 	FAudioIOStream *io;
+	FAudioSpinLock ioLock;
 };
 
 struct FACTWave

@@ -135,6 +135,7 @@ void FACT_INTERNAL_GetNextWave(
 		wbTrack = evt->wave.simple.track;
 	}
 	wbName = cue->parentBank->wavebankNames[wbIndex];
+	FAudio_PlatformLock(&cue->parentBank->parentEngine->wbLock);
 	list = cue->parentBank->parentEngine->wbList;
 	while (list != NULL)
 	{
@@ -145,6 +146,7 @@ void FACT_INTERNAL_GetNextWave(
 		}
 		list = list->next;
 	}
+	FAudio_PlatformUnlock(&cue->parentBank->parentEngine->wbLock);
 	FAudio_assert(wb != NULL);
 
 	/* Generate the Wave */
@@ -445,6 +447,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			wbName = cue->parentBank->wavebankNames[
 				cue->variation->entries[i].simple.wavebank
 			];
+			FAudio_PlatformLock(&cue->parentBank->parentEngine->wbLock);
 			list = cue->parentBank->parentEngine->wbList;
 			while (list != NULL)
 			{
@@ -455,6 +458,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				}
 				list = list->next;
 			}
+			FAudio_PlatformUnlock(&cue->parentBank->parentEngine->wbLock);
 			FAudio_assert(wb != NULL);
 
 			/* Generate the wave... */
@@ -490,7 +494,6 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 						FACT_STATE_STOPPING |
 						FACT_STATE_PAUSED
 					);
-					FAudio_PlatformUnlockAudio(cue->parentBank->parentEngine->audio);
 					return 0;
 				}
 				else if (category->maxInstanceBehavior == 1) /* Queue */
@@ -1448,6 +1451,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	}
 
 	/* Read! */
+	FAudio_PlatformLock(&c->wave->parentBank->ioLock);
 	c->wave->parentBank->io->seek(
 		c->wave->parentBank->io->data,
 		c->wave->streamOffset,
@@ -1459,6 +1463,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		buffer.AudioBytes,
 		1
 	);
+	FAudio_PlatformUnlock(&c->wave->parentBank->ioLock);
 
 	/* Loop if applicable */
 	c->wave->streamOffset += buffer.AudioBytes;
@@ -2493,6 +2498,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->waveList = NULL;
 	wb->waveLock = 0;
 	wb->io = io;
+	wb->ioLock = 0;
 	wb->notifyOnDestroy = 0;
 
 	/* WaveBank Data */
