@@ -745,8 +745,8 @@ static inline void FindSpeakerAzimuths(
 	uint8_t skipCenter,
 	const SpeakerInfo **speakerInfo
 ) {
-	uint32_t i, nexti;
-	float a0, a1;
+	uint32_t i, nexti = 0;
+	float a0 = 0.0f, a1 = 0.0f;
 
 	FAudio_assert(config != NULL);
 

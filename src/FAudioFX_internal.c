@@ -45,13 +45,24 @@ static inline uint32_t FAudioFX_INTERNAL_MsToSamples(float msec, int32_t sampleR
 
 static inline float FAudioFX_INTERNAL_undenormalize(float sample_in)
 {
-	/* set denormal (or subnormal) float values (see https://en.wikipedia.org/wiki/Denormal_number) to zero.
-	based upon code available from http://www.musicdsp.org/archive.php?classid=5#191) */
-	uint32_t int_sample = *((uint32_t *)&sample_in);
-	uint32_t exponent = int_sample & 0x7F800000;
+	union
+	{
+		float f;
+		uint32_t i;
+	} sampleHack;
+	uint32_t exponent;
+	int32_t denormal_factor;
+
+	/* Set denormal (or subnormal) float values to zero.
+	 * (See: https://en.wikipedia.org/wiki/Denormal_number)
+	 * Based upon code available from:
+	 * http://www.musicdsp.org/archive.php?classid=5#191)
+	 */
+	sampleHack.f = sample_in;
+	exponent = sampleHack.i & 0x7F800000;
 
 	/* exponent > 0 is 0 if denormalized, otherwise 1 */
-	int32_t denormal_factor = exponent > 0;
+	denormal_factor = exponent > 0;
 
 	return sample_in * denormal_factor;
 }
