@@ -170,18 +170,36 @@ uint32_t FAudio_CreateSourceVoice(
 	else if (pSourceFormat->wFormatTag == 0xFFFE)
 	{
 		/* WaveFormatExtensible, match GUID */
-		#define MAKE_SUBFORMAT_GUID(guid, fmt)	FAudioGUID KSDATAFORMAT_SUBTYPE_##guid = {(uint16_t)(fmt), 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}}
+		#define MAKE_SUBFORMAT_GUID(guid, fmt) \
+			FAudioGUID KSDATAFORMAT_SUBTYPE_##guid = \
+			{ \
+				(uint16_t) (fmt), \
+				0x0000, \
+				0x0010, \
+				{ \
+					0x80, \
+					0x00, \
+					0x00, \
+					0xAA, \
+					0x00, \
+					0x38, \
+					0x9B, \
+					0x71 \
+				} \
+			}
 		MAKE_SUBFORMAT_GUID(PCM, 1);
 		MAKE_SUBFORMAT_GUID(ADPCM, 2);
 		MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
 		#undef MAKE_SUBFORMAT_GUID
 
 		#define COMPARE_GUID(guid, realFmt) \
-		if (FAudio_memcmp(&((FAudioWaveFormatExtensible *)pSourceFormat)->SubFormat, &KSDATAFORMAT_SUBTYPE_##guid, sizeof(FAudioGUID)) == 0) \
-		{ \
+		if (FAudio_memcmp( \
+			&((FAudioWaveFormatExtensible*) pSourceFormat)->SubFormat, \
+			&KSDATAFORMAT_SUBTYPE_##guid, \
+			sizeof(FAudioGUID) \
+		) == 0) { \
 			realFormat = realFmt; \
 		}
-
 		COMPARE_GUID(PCM, 1)
 		else COMPARE_GUID(ADPCM, 2)
 		else COMPARE_GUID(IEEE_FLOAT, 3)
@@ -190,7 +208,7 @@ uint32_t FAudio_CreateSourceVoice(
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
 			realFormat = 0;
 		}
-		#undef MAKE_GUID
+		#undef COMPARE_GUID
 	}
 	else
 	{
@@ -222,7 +240,7 @@ uint32_t FAudio_CreateSourceVoice(
 
 	/* Default Levels */
 	(*ppSourceVoice)->volume = 1.0f;
-	(*ppSourceVoice)->channelVolume = (float*)FAudio_malloc(
+	(*ppSourceVoice)->channelVolume = (float*) FAudio_malloc(
 		sizeof(float) * (*ppSourceVoice)->outputChannels
 	);
 	for (i = 0; i < (*ppSourceVoice)->outputChannels; i += 1)
@@ -471,30 +489,12 @@ uint32_t FAudioVoice_SetOutputVoices(
 	const FAudioVoiceSends *pSendList
 ) {
 	uint32_t i;
-	uint32_t *outputSamples;
-	uint32_t inChannels, outChannels;
+	uint32_t outChannels;
 	uint32_t outSampleRate;
+	uint32_t newResampleSamples;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
-
-	if (voice->type == FAUDIO_VOICE_SOURCE)
-	{
-		outputSamples = &voice->src.resampleSamples;
-		inChannels = voice->outputChannels;
-	}
-	else
-	{
-		outputSamples = &voice->mix.outputSamples;
-		inChannels = voice->outputChannels;
-
-		/* FIXME: This is lazy... */
-		if (voice->mix.resampler != NULL)
-		{
-			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
-			voice->mix.resampler = NULL;
-		}
-	}
 
 	FAudio_PlatformLock(&voice->sendLock);
 
@@ -555,11 +555,11 @@ uint32_t FAudioVoice_SetOutputVoices(
 			outChannels = pSendList->pSends[i].pOutputVoice->mix.inputChannels;
 		}
 		voice->sendCoefficients[i] = (float*) FAudio_malloc(
-			sizeof(float) * inChannels * outChannels
+			sizeof(float) * voice->outputChannels * outChannels
 		);
 		FAudio_INTERNAL_SetDefaultMatrix(
 			voice->sendCoefficients[i],
-			inChannels,
+			voice->outputChannels,
 			outChannels
 		);
 	}
@@ -568,19 +568,29 @@ uint32_t FAudioVoice_SetOutputVoices(
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
-	*outputSamples = (uint32_t) FAudio_ceil(
+	newResampleSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
 	FAudio_INTERNAL_ResizeResampleCache(
 		voice->audio,
-		*outputSamples * inChannels
+		newResampleSamples * voice->outputChannels
 	);
-
-	/* Init fixed-rate SRC if applicable */
-	if (voice->type == FAUDIO_VOICE_SUBMIX)
+	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
+		voice->src.resampleSamples = newResampleSamples;
+	}
+	else
+	{
+		voice->mix.outputSamples = newResampleSamples;
+
+		/* Init fixed-rate SRC if applicable */
+		if (voice->mix.resampler != NULL)
+		{
+			/* FIXME: This is lazy... */
+			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
+		}
 		voice->mix.resampler = FAudio_PlatformInitFixedRateSRC(
 			voice->mix.inputChannels,
 			voice->mix.inputSampleRate,
@@ -696,7 +706,9 @@ uint32_t FAudioVoice_EnableEffect(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
+	FAudio_PlatformLock(&voice->effectLock);
 	voice->effects.desc[EffectIndex].InitialState = 1;
+	FAudio_PlatformUnlock(&voice->effectLock);
 	return 0;
 }
 
@@ -707,7 +719,9 @@ uint32_t FAudioVoice_DisableEffect(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
+	FAudio_PlatformLock(&voice->effectLock);
 	voice->effects.desc[EffectIndex].InitialState = 0;
+	FAudio_PlatformUnlock(&voice->effectLock);
 	return 0;
 }
 
@@ -716,7 +730,9 @@ void FAudioVoice_GetEffectState(
 	uint32_t EffectIndex,
 	uint8_t *pEnabled
 ) {
+	FAudio_PlatformLock(&voice->effectLock);
 	*pEnabled = voice->effects.desc[EffectIndex].InitialState;
+	FAudio_PlatformUnlock(&voice->effectLock);
 }
 
 uint32_t FAudioVoice_SetEffectParameters(
@@ -1371,6 +1387,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	uint32_t NewSourceSampleRate
 ) {
 	uint32_t outSampleRate;
+	uint32_t newDecodeSamples, newResampleSamples;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_assert(	NewSourceSampleRate >= FAUDIO_MIN_SAMPLE_RATE &&
@@ -1378,7 +1395,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	voice->src.format.nSamplesPerSec = NewSourceSampleRate;
 
 	/* Resize decode cache */
-	voice->src.decodeSamples = (uint32_t) FAudio_ceil(
+	newDecodeSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		(double) voice->src.maxFreqRatio *
 		(double) NewSourceSampleRate /
@@ -1386,8 +1403,9 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	) + EXTRA_DECODE_PADDING * 2;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		voice->audio,
-		voice->src.decodeSamples * voice->src.format.nChannels
+		newDecodeSamples * voice->src.format.nChannels
 	);
+	voice->src.decodeSamples = newDecodeSamples;
 
 	FAudio_PlatformLock(&voice->sendLock);
 
@@ -1399,18 +1417,20 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
+
 	FAudio_PlatformUnlock(&voice->sendLock);
 
 	/* Resize resample cache */
-	voice->src.resampleSamples = (uint32_t) FAudio_ceil(
+	newResampleSamples = (uint32_t) FAudio_ceil(
 		voice->audio->updateSize *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
 	FAudio_INTERNAL_ResizeResampleCache(
 		voice->audio,
-		voice->src.resampleSamples * voice->src.format.nChannels
+		newResampleSamples * voice->src.format.nChannels
 	);
+	voice->src.resampleSamples = newResampleSamples;
 	return 0;
 }
 
