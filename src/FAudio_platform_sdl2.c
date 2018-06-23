@@ -308,6 +308,7 @@ void FAudio_PlatformStart(FAudio *audio)
 	dev = devlist;
 	while (dev != NULL)
 	{
+		FAudio_PlatformLock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
 		while (entry != NULL)
 		{
@@ -317,11 +318,13 @@ void FAudio_PlatformStart(FAudio *audio)
 					((FAudioPlatformDevice*) dev->entry)->device,
 					0
 				);
+				FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 				FAudio_PlatformUnlock(&devlock);
 				return;
 			}
 			entry = entry->next;
 		}
+		FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		dev = dev->next;
 	}
 	FAudio_PlatformUnlock(&devlock);
@@ -335,6 +338,7 @@ void FAudio_PlatformStop(FAudio *audio)
 	dev = devlist;
 	while (dev != NULL)
 	{
+		FAudio_PlatformLock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
 		while (entry != NULL)
 		{
@@ -344,11 +348,13 @@ void FAudio_PlatformStop(FAudio *audio)
 					((FAudioPlatformDevice*) dev->entry)->device,
 					1
 				);
+				FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 				FAudio_PlatformUnlock(&devlock);
 				return;
 			}
 			entry = entry->next;
 		}
+		FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		dev = dev->next;
 	}
 	FAudio_PlatformUnlock(&devlock);
