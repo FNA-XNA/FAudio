@@ -30,45 +30,40 @@
 
 /* Internal Types */
 
-typedef struct FAudioEntry FAudioEntry;
-struct FAudioEntry
-{
-	FAudio *audio;
-	FAudioEntry *next;
-};
-
-typedef struct FAudioPlatformDevice FAudioPlatformDevice;
-struct FAudioPlatformDevice
+typedef struct FAudioPlatformDevice
 {
 	const char *name;
 	uint32_t bufferSize;
 	SDL_AudioDeviceID device;
 	FAudioWaveFormatExtensible format;
-	FAudioEntry *engineList;
-	FAudioPlatformDevice *next;
-};
+	LinkedList *engineList;
+	FAudioSpinLock engineLock;
+} FAudioPlatformDevice;
 
 /* Globals */
 
-FAudioPlatformDevice *devlist = NULL;
+LinkedList *devlist = NULL;
+FAudioSpinLock devlock = 0;
 
 /* Mixer Thread */
 
 void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
 	FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata;
-	FAudioEntry *audio;
+	LinkedList *audio;
 
 	FAudio_zero(stream, len);
+	FAudio_PlatformLock(&device->engineLock);
 	audio = device->engineList;
 	while (audio != NULL)
 	{
 		FAudio_INTERNAL_UpdateEngine(
-			audio->audio,
+			(FAudio*) audio->entry,
 			(float*) stream
 		);
 		audio = audio->next;
 	}
+	FAudio_PlatformUnlock(&device->engineLock);
 }
 
 /* Platform Functions */
@@ -91,56 +86,58 @@ void FAudio_PlatformRelease()
 
 void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 {
-	FAudioEntry *entry, *entryList;
-	FAudioPlatformDevice *device, *deviceList;
+	LinkedList *deviceList;
+	FAudioPlatformDevice *device;
 	SDL_AudioSpec want, have;
 	const char *name;
-
-	/* The entry to be added to the audio device */
-	entry = (FAudioEntry*) FAudio_malloc(sizeof(FAudioEntry));
-	entry->audio = audio;
-	entry->next = NULL;
 
 	/* Use the device that the engine tells us to use, then check to see if
 	 * another instance has opened the device.
 	 */
+	FAudio_PlatformLock(&devlock);
 	if (deviceIndex == 0)
 	{
 		name = NULL;
-		device = devlist;
-		while (device != NULL)
+		deviceList = devlist;
+		while (deviceList != NULL)
 		{
-			if (device->name == NULL)
+			if (((FAudioPlatformDevice*) deviceList->entry)->name == NULL)
 			{
 				break;
 			}
-			device = device->next;
+			deviceList = deviceList->next;
 		}
 	}
 	else
 	{
 		name = SDL_GetAudioDeviceName(deviceIndex - 1, 0);
-		device = devlist;
-		while (device != NULL)
+		deviceList = devlist;
+		while (deviceList != NULL)
 		{
-			if (FAudio_strcmp(device->name, name) == 0)
+			if (FAudio_strcmp(((FAudioPlatformDevice*) deviceList->entry)->name, name) == 0)
 			{
 				break;
 			}
-			device = device->next;
+			deviceList = deviceList->next;
 		}
 	}
+	FAudio_PlatformUnlock(&devlock);
 
 	/* Create a new device if the requested one is not in use yet */
-	if (device == NULL)
+	if (deviceList == NULL)
 	{
 		/* Allocate a new device container*/
 		device = (FAudioPlatformDevice*) FAudio_malloc(
 			sizeof(FAudioPlatformDevice)
 		);
 		device->name = name;
-		device->engineList = entry;
-		device->next = NULL;
+		device->engineList = NULL;
+		device->engineLock = 0;
+		LinkedList_AddEntry(
+			&device->engineList,
+			audio,
+			&device->engineLock
+		);
 
 		/* Build the device format */
 		want.freq = audio->master->master.inputSampleRate;
@@ -161,8 +158,12 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		);
 		if (device->device == 0)
 		{
+			LinkedList_RemoveEntry(
+				&device->engineList,
+				audio,
+				&device->engineLock
+			);
 			FAudio_free(device);
-			FAudio_free(entry);
 			SDL_Log("%s\n", SDL_GetError());
 			FAudio_assert(0 && "Failed to open audio device!");
 			return;
@@ -227,22 +228,12 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		audio->master->master.inputSampleRate = have.freq;
 
 		/* Add to the device list */
-		if (devlist == NULL)
-		{
-			devlist = device;
-		}
-		else
-		{
-			deviceList = devlist;
-			while (deviceList->next != NULL)
-			{
-				deviceList = deviceList->next;
-			}
-			deviceList->next = device;
-		}
+		LinkedList_AddEntry(&devlist, device, &devlock);
 	}
 	else /* Just add us to the existing device */
 	{
+		device = (FAudioPlatformDevice*) deviceList->entry;
+
 		/* But give us the output format first! */
 		audio->updateSize = device->bufferSize;
 		audio->mixFormat = &device->format;
@@ -253,116 +244,114 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		audio->master->master.inputSampleRate =
 			device->format.Format.nSamplesPerSec;
 
-		entryList = device->engineList;
-		while (entryList->next != NULL)
-		{
-			entryList = entryList->next;
-		}
-		entryList->next = entry;
+		LinkedList_AddEntry(
+			&device->engineList,
+			audio,
+			&device->engineLock
+		);
 	}
 }
 
 void FAudio_PlatformQuit(FAudio *audio)
 {
-	FAudioEntry *entry, *prevEntry;
-	FAudioPlatformDevice *dev = devlist;
-	FAudioPlatformDevice *prevDev = devlist;
+	FAudioPlatformDevice *device;
+	LinkedList *dev, *entry;
 	uint8_t found = 0;
+
+	dev = devlist;
 	while (dev != NULL)
 	{
-		entry = dev->engineList;
-		prevEntry = dev->engineList;
+		device = (FAudioPlatformDevice*) dev->entry;
+		entry = device->engineList;
 		while (entry != NULL)
 		{
-			if (entry->audio == audio)
+			if (entry->entry == audio)
 			{
-				if (entry == prevEntry) /* First in list */
-				{
-					dev->engineList = entry->next;
-					FAudio_free(entry);
-					entry = dev->engineList;
-					prevEntry = dev->engineList;
-				}
-				else
-				{
-					prevEntry->next = entry->next;
-					FAudio_free(entry);
-					entry = prevEntry->next;
-				}
 				found = 1;
 				break;
 			}
-			else
-			{
-				prevEntry = entry;
-				entry = entry->next;
-			}
+			entry = entry->next;
 		}
 
 		if (found)
 		{
-			/* No more engines? We're done with this device. */
-			if (dev->engineList == NULL)
+			LinkedList_RemoveEntry(
+				&device->engineList,
+				audio,
+				&device->engineLock
+			);
+
+			if (device->engineList == NULL)
 			{
-				SDL_CloseAudioDevice(dev->device);
-				if (dev == prevDev) /* First in list */
-				{
-					devlist = dev->next;
-				}
-				else
-				{
-					prevDev = dev->next;
-				}
-				FAudio_free(dev);
+				SDL_CloseAudioDevice(
+					device->device
+				);
+				LinkedList_RemoveEntry(
+					&devlist,
+					device,
+					&devlock
+				);
+				FAudio_free(device);
 			}
-			dev = NULL;
+
+			return;
 		}
-		else
-		{
-			prevDev = dev;
-			dev = dev->next;
-		}
+		dev = dev->next;
 	}
 }
 
 void FAudio_PlatformStart(FAudio *audio)
 {
-	FAudioEntry *entry;
-	FAudioPlatformDevice *dev = devlist;
+	LinkedList *dev, *entry;
+
+	FAudio_PlatformLock(&devlock);
+	dev = devlist;
 	while (dev != NULL)
 	{
-		entry = dev->engineList;
+		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
 		while (entry != NULL)
 		{
-			if (entry->audio == audio)
+			if (((FAudio*) entry->entry) == audio)
 			{
-				SDL_PauseAudioDevice(dev->device, 0);
+				SDL_PauseAudioDevice(
+					((FAudioPlatformDevice*) dev->entry)->device,
+					0
+				);
+				FAudio_PlatformUnlock(&devlock);
 				return;
 			}
 			entry = entry->next;
 		}
 		dev = dev->next;
 	}
+	FAudio_PlatformUnlock(&devlock);
 }
 
 void FAudio_PlatformStop(FAudio *audio)
 {
-	FAudioEntry *entry;
-	FAudioPlatformDevice *dev = devlist;
+	LinkedList *dev, *entry;
+
+	FAudio_PlatformLock(&devlock);
+	dev = devlist;
 	while (dev != NULL)
 	{
-		entry = dev->engineList;
+		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
 		while (entry != NULL)
 		{
-			if (entry->audio == audio)
+			if (((FAudio*) entry->entry) == audio)
 			{
-				SDL_PauseAudioDevice(dev->device, 1);
+				SDL_PauseAudioDevice(
+					((FAudioPlatformDevice*) dev->entry)->device,
+					1
+				);
+				FAudio_PlatformUnlock(&devlock);
 				return;
 			}
 			entry = entry->next;
 		}
 		dev = dev->next;
 	}
+	FAudio_PlatformUnlock(&devlock);
 }
 
 uint32_t FAudio_PlatformGetDeviceCount()
