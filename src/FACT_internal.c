@@ -135,7 +135,6 @@ void FACT_INTERNAL_GetNextWave(
 		wbTrack = evt->wave.simple.track;
 	}
 	wbName = cue->parentBank->wavebankNames[wbIndex];
-	FAudio_PlatformLock(&cue->parentBank->parentEngine->wbLock);
 	list = cue->parentBank->parentEngine->wbList;
 	while (list != NULL)
 	{
@@ -146,7 +145,6 @@ void FACT_INTERNAL_GetNextWave(
 		}
 		list = list->next;
 	}
-	FAudio_PlatformUnlock(&cue->parentBank->parentEngine->wbLock);
 	FAudio_assert(wb != NULL);
 
 	/* Generate the Wave */
@@ -447,7 +445,6 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			wbName = cue->parentBank->wavebankNames[
 				cue->variation->entries[i].simple.wavebank
 			];
-			FAudio_PlatformLock(&cue->parentBank->parentEngine->wbLock);
 			list = cue->parentBank->parentEngine->wbList;
 			while (list != NULL)
 			{
@@ -458,7 +455,6 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				}
 				list = list->next;
 			}
-			FAudio_PlatformUnlock(&cue->parentBank->parentEngine->wbLock);
 			FAudio_assert(wb != NULL);
 
 			/* Generate the wave... */
@@ -1353,10 +1349,11 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 {
 	FACTAudioEngineCallback *c = (FACTAudioEngineCallback*) callback;
 	FACTAudioEngine *engine = c->engine;
-	FACTSoundBank *sb;
 	LinkedList *sbList;
 	FACTCue *cue, *cBackup;
 	uint32_t timestamp;
+
+	FAudio_PlatformLockAudio(engine->audio);
 
 	/* We want the timestamp to be uniform across all Cues.
 	 * Oftentimes many Cues are played at once with the expectation
@@ -1368,14 +1365,10 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 
 	FACT_INTERNAL_UpdateEngine(engine);
 
-	FAudio_PlatformLock(&engine->sbLock);
 	sbList = engine->sbList;
 	while (sbList != NULL)
 	{
-		sb = (FACTSoundBank*) sbList->entry;
-
-		FAudio_PlatformLock(&sb->cueLock);
-		cue = sb->cueList;
+		cue = ((FACTSoundBank*) sbList->entry)->cueList;
 		while (cue != NULL)
 		{
 			FACT_INTERNAL_UpdateCue(cue);
@@ -1398,9 +1391,7 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 			if (cue->managed && (cue->state & FACT_STATE_STOPPED))
 			{
 				cBackup = cue->next;
-				FAudio_PlatformUnlock(&sb->cueLock); /* FIXME: Barf */
 				FACTCue_Destroy(cue);
-				FAudio_PlatformLock(&sb->cueLock); /* FIXME: Barf */
 				cue = cBackup;
 			}
 			else
@@ -1408,27 +1399,36 @@ void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback)
 				cue = cue->next;
 			}
 		}
-		FAudio_PlatformUnlock(&sb->cueLock);
 		sbList = sbList->next;
 	}
-	FAudio_PlatformUnlock(&engine->sbLock);
+
+	FAudio_PlatformUnlockAudio(engine->audio);
 }
 
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 {
 	FAudioBuffer buffer;
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
-	FACTWaveBankEntry *entry = &c->wave->parentBank->entries[c->wave->index];
-	uint16_t align = (entry->Format.wBlockAlign + 22) * entry->Format.nChannels;
+	FACTWaveBankEntry *entry;
+	uint32_t end, left;
+	uint16_t align;
+
+	FAudio_PlatformLockAudio(c->wave->parentBank->parentEngine->audio);
+
+	entry = &c->wave->parentBank->entries[c->wave->index];
+	align = (entry->Format.wBlockAlign + 22) * entry->Format.nChannels;
 
 	/* TODO: Loop regions */
-	uint32_t end = entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength;
-	uint32_t left = entry->PlayRegion.dwLength - (c->wave->streamOffset - entry->PlayRegion.dwOffset);
+	end = entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength;
+	left = entry->PlayRegion.dwLength - (c->wave->streamOffset - entry->PlayRegion.dwOffset);
 
 	/* Don't bother if we're EOS or the Wave has stopped*/
 	if (	(c->wave->streamOffset >= end) ||
 		(c->wave->state & FACT_STATE_STOPPED)	)
 	{
+		FAudio_PlatformUnlockAudio(
+			c->wave->parentBank->parentEngine->audio
+		);
 		return;
 	}
 
@@ -1451,7 +1451,6 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	}
 
 	/* Read! */
-	FAudio_PlatformLock(&c->wave->parentBank->ioLock);
 	c->wave->parentBank->io->seek(
 		c->wave->parentBank->io->data,
 		c->wave->streamOffset,
@@ -1463,7 +1462,6 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		buffer.AudioBytes,
 		1
 	);
-	FAudio_PlatformUnlock(&c->wave->parentBank->ioLock);
 
 	/* Loop if applicable */
 	c->wave->streamOffset += buffer.AudioBytes;
@@ -1505,11 +1503,16 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 
 	/* Submit, finally. */
 	FAudioSourceVoice_SubmitSourceBuffer(c->wave->voice, &buffer, NULL);
+
+	FAudio_PlatformUnlockAudio(c->wave->parentBank->parentEngine->audio);
 }
 
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 {
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
+
+	FAudio_PlatformLockAudio(c->wave->parentBank->parentEngine->audio);
+
 	c->wave->state = FACT_STATE_STOPPED;
 
 	if (	c->wave->parentCue != NULL &&
@@ -1522,6 +1525,8 @@ void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 		);
 		c->wave->parentCue->data->instanceCount -= 1;
 	}
+
+	FAudio_PlatformUnlockAudio(c->wave->parentBank->parentEngine->audio);
 }
 
 /* Parsing functions */
@@ -2039,7 +2044,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb = (FACTSoundBank*) FAudio_malloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
-	sb->cueLock = 0;
 	sb->notifyOnDestroy = 0;
 
 	cueSimpleCount = read_u16(&ptr);
@@ -2498,7 +2502,6 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->waveList = NULL;
 	wb->waveLock = 0;
 	wb->io = io;
-	wb->ioLock = 0;
 	wb->notifyOnDestroy = 0;
 
 	/* WaveBank Data */

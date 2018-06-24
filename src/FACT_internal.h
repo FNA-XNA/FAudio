@@ -402,7 +402,6 @@ struct FACTSoundBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
-	FAudioSpinLock cueLock;
 	uint8_t notifyOnDestroy;
 
 	/* Array sizes */
@@ -444,7 +443,6 @@ struct FACTWaveBank
 	/* I/O information */
 	uint16_t streaming;
 	FAudioIOStream *io;
-	FAudioSpinLock ioLock;
 };
 
 struct FACTWave

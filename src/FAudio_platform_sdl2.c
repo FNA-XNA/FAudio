@@ -53,7 +53,6 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	LinkedList *audio;
 
 	FAudio_zero(stream, len);
-	FAudio_PlatformLock(&device->engineLock);
 	audio = device->engineList;
 	while (audio != NULL)
 	{
@@ -63,7 +62,6 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 		);
 		audio = audio->next;
 	}
-	FAudio_PlatformUnlock(&device->engineLock);
 }
 
 /* Platform Functions */
@@ -94,7 +92,6 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 	/* Use the device that the engine tells us to use, then check to see if
 	 * another instance has opened the device.
 	 */
-	FAudio_PlatformLock(&devlock);
 	if (deviceIndex == 0)
 	{
 		name = NULL;
@@ -121,7 +118,6 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			deviceList = deviceList->next;
 		}
 	}
-	FAudio_PlatformUnlock(&devlock);
 
 	/* Create a new device if the requested one is not in use yet */
 	if (deviceList == NULL)
@@ -304,11 +300,9 @@ void FAudio_PlatformStart(FAudio *audio)
 {
 	LinkedList *dev, *entry;
 
-	FAudio_PlatformLock(&devlock);
 	dev = devlist;
 	while (dev != NULL)
 	{
-		FAudio_PlatformLock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
 		while (entry != NULL)
 		{
@@ -318,27 +312,21 @@ void FAudio_PlatformStart(FAudio *audio)
 					((FAudioPlatformDevice*) dev->entry)->device,
 					0
 				);
-				FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
-				FAudio_PlatformUnlock(&devlock);
 				return;
 			}
 			entry = entry->next;
 		}
-		FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		dev = dev->next;
 	}
-	FAudio_PlatformUnlock(&devlock);
 }
 
 void FAudio_PlatformStop(FAudio *audio)
 {
 	LinkedList *dev, *entry;
 
-	FAudio_PlatformLock(&devlock);
 	dev = devlist;
 	while (dev != NULL)
 	{
-		FAudio_PlatformLock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
 		while (entry != NULL)
 		{
@@ -348,16 +336,58 @@ void FAudio_PlatformStop(FAudio *audio)
 					((FAudioPlatformDevice*) dev->entry)->device,
 					1
 				);
-				FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
-				FAudio_PlatformUnlock(&devlock);
 				return;
 			}
 			entry = entry->next;
 		}
-		FAudio_PlatformUnlock(&((FAudioPlatformDevice*) dev->entry)->engineLock);
 		dev = dev->next;
 	}
-	FAudio_PlatformUnlock(&devlock);
+}
+
+void FAudio_PlatformLockAudio(FAudio *audio)
+{
+	LinkedList *dev, *entry;
+
+	dev = devlist;
+	while (dev != NULL)
+	{
+		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
+		while (entry != NULL)
+		{
+			if (((FAudio*) entry->entry) == audio)
+			{
+				SDL_LockAudioDevice(
+					((FAudioPlatformDevice*) dev->entry)->device
+				);
+				return;
+			}
+			entry = entry->next;
+		}
+		dev = dev->next;
+	}
+}
+
+void FAudio_PlatformUnlockAudio(FAudio *audio)
+{
+	LinkedList *dev, *entry;
+
+	dev = devlist;
+	while (dev != NULL)
+	{
+		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
+		while (entry != NULL)
+		{
+			if (((FAudio*) entry->entry) == audio)
+			{
+				SDL_UnlockAudioDevice(
+					((FAudioPlatformDevice*) dev->entry)->device
+				);
+				return;
+			}
+			entry = entry->next;
+		}
+		dev = dev->next;
+	}
 }
 
 uint32_t FAudio_PlatformGetDeviceCount()
