@@ -1350,7 +1350,7 @@ int32_t FACT_INTERNAL_APIThread(void* enginePtr)
 	FACTAudioEngine *engine = (FACTAudioEngine*) enginePtr;
 	LinkedList *sbList;
 	FACTCue *cue, *cBackup;
-	uint32_t timestamp;
+	uint32_t timestamp, updateTime;
 
 threadstart:
 	FAudio_PlatformLockMutex(engine->apiLock);
@@ -1407,7 +1407,11 @@ threadstart:
 	if (engine->initialized)
 	{
 		/* FIXME: 10ms is based on the XAudio2 update time...? */
-		FAudio_sleep(10 - (FAudio_timems() - timestamp));
+		uint32_t updateTime = FAudio_timems() - timestamp;
+		if (updateTime < 10)
+		{
+			FAudio_sleep(10 - updateTime);
+		}
 		goto threadstart;
 	}
 
