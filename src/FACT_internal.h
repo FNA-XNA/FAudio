@@ -30,12 +30,6 @@
 
 /* Internal AudioEngine Types */
 
-typedef struct FACTAudioEngineCallback
-{
-	FAudioEngineCallback callback;
-	FACTAudioEngine *engine;
-} FACTAudioEngineCallback;
-
 typedef struct FACTAudioCategory
 {
 	uint8_t instanceLimit;
@@ -394,7 +388,11 @@ struct FACTAudioEngine
 	FAudio *audio;
 	FAudioMasteringVoice *master;
 	FAudioSubmixVoice *reverbVoice;
-	FACTAudioEngineCallback callback;
+
+	/* Engine thread */
+	FAudioThread apiThread;
+	FAudioMutex apiLock;
+	uint8_t initialized;
 };
 
 struct FACTSoundBank
@@ -443,6 +441,7 @@ struct FACTWaveBank
 	/* I/O information */
 	uint16_t streaming;
 	FAudioIOStream *io;
+	FAudioSpinLock ioLock;
 };
 
 struct FACTWave
@@ -529,9 +528,12 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 
+/* FACT Thread */
+
+int32_t FACT_INTERNAL_APIThread(void* enginePtr);
+
 /* FAudio callbacks */
 
-void FACT_INTERNAL_OnProcessingPassStart(FAudioEngineCallback *callback);
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext);
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback);
 

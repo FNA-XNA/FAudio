@@ -344,52 +344,6 @@ void FAudio_PlatformStop(FAudio *audio)
 	}
 }
 
-void FAudio_PlatformLockAudio(FAudio *audio)
-{
-	LinkedList *dev, *entry;
-
-	dev = devlist;
-	while (dev != NULL)
-	{
-		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
-		while (entry != NULL)
-		{
-			if (((FAudio*) entry->entry) == audio)
-			{
-				SDL_LockAudioDevice(
-					((FAudioPlatformDevice*) dev->entry)->device
-				);
-				return;
-			}
-			entry = entry->next;
-		}
-		dev = dev->next;
-	}
-}
-
-void FAudio_PlatformUnlockAudio(FAudio *audio)
-{
-	LinkedList *dev, *entry;
-
-	dev = devlist;
-	while (dev != NULL)
-	{
-		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
-		while (entry != NULL)
-		{
-			if (((FAudio*) entry->entry) == audio)
-			{
-				SDL_UnlockAudioDevice(
-					((FAudioPlatformDevice*) dev->entry)->device
-				);
-				return;
-			}
-			entry = entry->next;
-		}
-		dev = dev->next;
-	}
-}
-
 uint32_t FAudio_PlatformGetDeviceCount()
 {
 	return SDL_GetNumAudioDevices(0) + 1;
@@ -489,6 +443,50 @@ void FAudio_PlatformLock(FAudioSpinLock *lock)
 void FAudio_PlatformUnlock(FAudioSpinLock *lock)
 {
 	SDL_AtomicUnlock((SDL_SpinLock*) lock);
+}
+
+/* Threading */
+
+FAudioThread FAudio_PlatformCreateThread(
+	FAudioThreadFunc func,
+	const char *name,
+	void* data
+) {
+	return (FAudioThread) SDL_CreateThread(
+		(SDL_ThreadFunction) func,
+		name,
+		data
+	);
+}
+
+void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval)
+{
+	SDL_WaitThread((SDL_Thread*) thread, retval);
+}
+
+FAudioMutex FAudio_PlatformCreateMutex()
+{
+	return (FAudioMutex) SDL_CreateMutex();
+}
+
+void FAudio_PlatformDestroyMutex(FAudioMutex mutex)
+{
+	SDL_DestroyMutex((SDL_mutex*) mutex);
+}
+
+void FAudio_PlatformLockMutex(FAudioMutex mutex)
+{
+	SDL_LockMutex((SDL_mutex*) mutex);
+}
+
+void FAudio_PlatformUnlockMutex(FAudioMutex mutex)
+{
+	SDL_UnlockMutex((SDL_mutex*) mutex);
+}
+
+void FAudio_sleep(uint32_t ms)
+{
+	SDL_Delay(ms);
 }
 
 /* stdlib Functions */

@@ -56,6 +56,12 @@
 
 typedef int FAudioSpinLock;
 
+/* Threading Types */
+
+typedef void* FAudioThread;
+typedef void* FAudioMutex;
+typedef int32_t (FAUDIOCALL * FAudioThreadFunc)(void* data);
+
 /* Linked Lists */
 
 typedef struct LinkedList LinkedList;
@@ -252,8 +258,6 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
 void FAudio_PlatformStop(FAudio *audio);
-void FAudio_PlatformLockAudio(FAudio *audio);
-void FAudio_PlatformUnlockAudio(FAudio *audio);
 
 uint32_t FAudio_PlatformGetDeviceCount();
 void FAudio_PlatformGetDeviceDetails(
@@ -279,6 +283,20 @@ uint32_t FAudio_PlatformResample(
 
 void FAudio_PlatformLock(FAudioSpinLock *lock);
 void FAudio_PlatformUnlock(FAudioSpinLock *lock);
+
+/* Threading */
+
+FAudioThread FAudio_PlatformCreateThread(
+	FAudioThreadFunc func,
+	const char *name,
+	void* data
+);
+void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval);
+FAudioMutex FAudio_PlatformCreateMutex();
+void FAudio_PlatformDestroyMutex(FAudioMutex mutex);
+void FAudio_PlatformLockMutex(FAudioMutex mutex);
+void FAudio_PlatformUnlockMutex(FAudioMutex mutex);
+void FAudio_sleep(uint32_t ms);
 
 /* stdlib Functions */
 
