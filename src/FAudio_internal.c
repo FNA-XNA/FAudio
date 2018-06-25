@@ -563,6 +563,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Nowhere to send it? Just skip resampling...*/
 	if (voice->sends.SendCount == 0)
 	{
+		FAudio_PlatformUnlock(&voice->sendLock);
 		goto end;
 	}
 
@@ -635,9 +636,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 	FAudio_PlatformUnlock(&voice->volumeLock);
 
+	FAudio_PlatformUnlock(&voice->sendLock);
+
 	/* Done, finally. */
 end:
-	FAudio_PlatformUnlock(&voice->sendLock);
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
 	{

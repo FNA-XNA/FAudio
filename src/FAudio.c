@@ -744,7 +744,6 @@ uint32_t FAudioVoice_SetEffectParameters(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_PlatformLock(&voice->effectLock);
 	if (voice->effects.parameters[EffectIndex] == NULL)
 	{
 		voice->effects.parameters[EffectIndex] = FAudio_malloc(
@@ -752,6 +751,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 		);
 		voice->effects.parameterSizes[EffectIndex] = ParametersByteSize;
 	}
+	FAudio_PlatformLock(&voice->effectLock);
 	if (voice->effects.parameterSizes[EffectIndex] < ParametersByteSize)
 	{
 		voice->effects.parameters[EffectIndex] = FAudio_realloc(

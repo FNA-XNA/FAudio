@@ -1407,7 +1407,7 @@ threadstart:
 	if (engine->initialized)
 	{
 		/* FIXME: 10ms is based on the XAudio2 update time...? */
-		uint32_t updateTime = FAudio_timems() - timestamp;
+		updateTime = FAudio_timems() - timestamp;
 		if (updateTime < 10)
 		{
 			FAudio_sleep(10 - updateTime);
