@@ -1352,6 +1352,12 @@ int32_t FACT_INTERNAL_APIThread(void* enginePtr)
 	FACTCue *cue, *cBackup;
 	uint32_t timestamp, updateTime;
 
+	/* Needs to match the audio thread priority, or else the scheduler will
+	 * let this thread sit around with a lock while the audio thread spins
+	 * infinitely!
+	 */
+	FAudio_PlatformThreadPriority(FAUDIO_THREAD_PRIORITY_HIGH);
+
 threadstart:
 	FAudio_PlatformLockMutex(engine->apiLock);
 

@@ -61,6 +61,12 @@ typedef int FAudioSpinLock;
 typedef void* FAudioThread;
 typedef void* FAudioMutex;
 typedef int32_t (FAUDIOCALL * FAudioThreadFunc)(void* data);
+typedef enum FAudioThreadPriority
+{
+	FAUDIO_THREAD_PRIORITY_LOW,
+	FAUDIO_THREAD_PRIORITY_NORMAL,
+	FAUDIO_THREAD_PRIORITY_HIGH,
+} FAudioThreadPriority;
 
 /* Linked Lists */
 
@@ -292,6 +298,7 @@ FAudioThread FAudio_PlatformCreateThread(
 	void* data
 );
 void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval);
+void FAudio_PlatformThreadPriority(FAudioThreadPriority priority);
 FAudioMutex FAudio_PlatformCreateMutex();
 void FAudio_PlatformDestroyMutex(FAudioMutex mutex);
 void FAudio_PlatformLockMutex(FAudioMutex mutex);

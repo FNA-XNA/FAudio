@@ -464,6 +464,11 @@ void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval)
 	SDL_WaitThread((SDL_Thread*) thread, retval);
 }
 
+void FAudio_PlatformThreadPriority(FAudioThreadPriority priority)
+{
+	SDL_SetThreadPriority((SDL_ThreadPriority) priority);
+}
+
 FAudioMutex FAudio_PlatformCreateMutex()
 {
 	return (FAudioMutex) SDL_CreateMutex();
