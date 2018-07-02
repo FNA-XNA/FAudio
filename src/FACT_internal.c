@@ -671,6 +671,32 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 {
 	uint8_t i;
+	sound->parentCue->playingSound = NULL;
+
+	if (sound->sound == NULL)
+	{
+		/* What in the hell? Uhhh just free what we can */
+		if (sound->tracks[0].activeWave.wave != NULL)
+		{
+			FACTWave_Destroy(
+				sound->tracks[0].activeWave.wave
+			);
+		}
+		if (sound->tracks[0].upcomingWave.wave != NULL)
+		{
+			FACTWave_Destroy(
+				sound->tracks[0].upcomingWave.wave
+			);
+		}
+		FAudio_free(sound->tracks[0].events);
+		FAudio_free(sound->tracks);
+		sound->parentCue->state |= FACT_STATE_STOPPED;
+		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
+		sound->parentCue->data->instanceCount -= 1;
+		FAudio_free(sound);
+		return;
+	}
+
 	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
 		if (sound->tracks[i].activeWave.wave != NULL)
@@ -700,7 +726,6 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 		sound->parentCue->variation->flags == 3	)
 	{
 		/* Interactive Cues avoid autostopping... */
-		sound->parentCue->playingSound = NULL;
 		FAudio_free(sound);
 		return;
 	}
@@ -711,7 +736,6 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
 		sound->parentCue->data->instanceCount -= 1;
 	}
-	sound->parentCue->playingSound = NULL;
 	FAudio_free(sound);
 }
 
@@ -1172,6 +1196,12 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 	 * the latest start time minus the total time elapsed (minus pause time)
 	 */
 	elapsed -= sound->parentCue->start - sound->parentCue->elapsed;
+
+	/* FIXME: What the hell? */
+	if (sound->sound == NULL)
+	{
+		return 0;
+	}
 
 	/* RPC updates */
 	FACT_INTERNAL_UpdateRPCs(

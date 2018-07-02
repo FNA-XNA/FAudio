@@ -306,7 +306,8 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 		cue = ((FACTSoundBank*) list->entry)->cueList;
 		while (cue != NULL)
 		{
-			if (cue->playingSound != NULL)
+			/* FIXME: Why do we need to check ->sound?! */
+			if (cue->playingSound != NULL && cue->playingSound->sound != NULL)
 			for (i = 0; i < cue->playingSound->sound->trackCount; i += 1)
 			{
 				if (	cue->playingSound->tracks[i].upcomingWave.wave == NULL &&
