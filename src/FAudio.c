@@ -1230,10 +1230,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->buffer.PlayLength = playLength;
 	entry->buffer.LoopBegin = loopBegin;
 	entry->buffer.LoopLength = loopLength;
+	entry->next = NULL;
 
 	/* Submit! */
 	FAudio_PlatformLock(&voice->src.bufferLock);
-	entry->next = NULL;
 	if (voice->src.bufferList == NULL)
 	{
 		voice->src.bufferList = entry;
@@ -1247,6 +1247,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 			list = list->next;
 		}
 		list->next = entry;
+
+		/* For some bizarre reason we get scenarios where a buffer is freed, only to
+		 * have the allocator give us the exact same address and somehow get a single
+		 * buffer referencing itself. I don't even know.
+		 */
+		FAudio_assert(list != entry);
 	}
 	FAudio_PlatformUnlock(&voice->src.bufferLock);
 	return 0;

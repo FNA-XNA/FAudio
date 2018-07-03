@@ -141,6 +141,7 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 ) {
 	uint32_t end, endRead, decoding, decoded = 0, resetOffset = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
+	FAudioBufferEntry *toDelete;
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
 	*toDecode += EXTRA_DECODE_PADDING;
@@ -237,8 +238,9 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 				}
 
 				/* Change active buffer, delete finished buffer */
+				toDelete = voice->src.bufferList;
 				voice->src.bufferList = voice->src.bufferList->next;
-				FAudio_free(buffer);
+				FAudio_free(toDelete);
 				if (voice->src.bufferList != NULL)
 				{
 					buffer = &voice->src.bufferList->buffer;
