@@ -37,13 +37,13 @@ typedef struct FAudioPlatformDevice
 	SDL_AudioDeviceID device;
 	FAudioWaveFormatExtensible format;
 	LinkedList *engineList;
-	FAudioSpinLock engineLock;
+	FAudioMutex engineLock;
 } FAudioPlatformDevice;
 
 /* Globals */
 
 LinkedList *devlist = NULL;
-FAudioSpinLock devlock = 0;
+FAudioMutex devlock = NULL;
 
 /* Mixer Thread */
 
@@ -74,6 +74,10 @@ void FAudio_PlatformAddRef()
 		SDL_HasSSE2(),
 		SDL_HasNEON()
 	);
+	if (devlock == NULL)
+	{
+		devlock = FAudio_PlatformCreateMutex();
+	}
 }
 
 void FAudio_PlatformRelease()
@@ -128,11 +132,11 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		);
 		device->name = name;
 		device->engineList = NULL;
-		device->engineLock = 0;
+		device->engineLock = FAudio_PlatformCreateMutex();
 		LinkedList_AddEntry(
 			&device->engineList,
 			audio,
-			&device->engineLock
+			device->engineLock
 		);
 
 		/* Build the device format */
@@ -157,8 +161,9 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			LinkedList_RemoveEntry(
 				&device->engineList,
 				audio,
-				&device->engineLock
+				device->engineLock
 			);
+			FAudio_PlatformDestroyMutex(device->engineLock);
 			FAudio_free(device);
 			SDL_Log("%s\n", SDL_GetError());
 			FAudio_assert(0 && "Failed to open audio device!");
@@ -224,7 +229,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		audio->master->master.inputSampleRate = have.freq;
 
 		/* Add to the device list */
-		LinkedList_AddEntry(&devlist, device, &devlock);
+		LinkedList_AddEntry(&devlist, device, devlock);
 	}
 	else /* Just add us to the existing device */
 	{
@@ -243,7 +248,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		LinkedList_AddEntry(
 			&device->engineList,
 			audio,
-			&device->engineLock
+			device->engineLock
 		);
 	}
 }
@@ -274,7 +279,7 @@ void FAudio_PlatformQuit(FAudio *audio)
 			LinkedList_RemoveEntry(
 				&device->engineList,
 				audio,
-				&device->engineLock
+				device->engineLock
 			);
 
 			if (device->engineList == NULL)
@@ -285,8 +290,9 @@ void FAudio_PlatformQuit(FAudio *audio)
 				LinkedList_RemoveEntry(
 					&devlist,
 					device,
-					&devlock
+					devlock
 				);
+				FAudio_PlatformDestroyMutex(device->engineLock);
 				FAudio_free(device);
 			}
 
@@ -431,18 +437,6 @@ uint32_t FAudio_PlatformResample(
 		output,
 		outLen * sizeof(float)
 	) / sizeof(float);
-}
-
-/* Spinlocks */
-
-void FAudio_PlatformLock(FAudioSpinLock *lock)
-{
-	SDL_AtomicLock((SDL_SpinLock*) lock);
-}
-
-void FAudio_PlatformUnlock(FAudioSpinLock *lock)
-{
-	SDL_AtomicUnlock((SDL_SpinLock*) lock);
 }
 
 /* Threading */

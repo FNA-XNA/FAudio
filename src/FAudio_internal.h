@@ -52,10 +52,6 @@
 #define restrict
 #endif
 
-/* Spinlock Type */
-
-typedef int FAudioSpinLock;
-
 /* Threading Types */
 
 typedef void* FAudioThread;
@@ -79,12 +75,12 @@ struct LinkedList
 void LinkedList_AddEntry(
 	LinkedList **start,
 	void* toAdd,
-	FAudioSpinLock *lock
+	FAudioMutex lock
 );
 void LinkedList_RemoveEntry(
 	LinkedList **start,
 	void* toRemove,
-	FAudioSpinLock *lock
+	FAudioMutex lock
 );
 
 /* Internal FAudio Types */
@@ -127,9 +123,9 @@ struct FAudio
 	LinkedList *sources;
 	LinkedList *submixes;
 	LinkedList *callbacks;
-	FAudioSpinLock sourceLock;
-	FAudioSpinLock submixLock;
-	FAudioSpinLock callbackLock;
+	FAudioMutex sourceLock;
+	FAudioMutex submixLock;
+	FAudioMutex callbackLock;
 	FAudioWaveFormatExtensible *mixFormat;
 
 	/* Temp storage for processing, interleaved PCM32F */
@@ -161,14 +157,14 @@ struct FAudioVoice
 	} effects;
 	FAudioFilterParameters filter;
 	FAudioFilterState *filterState;
-	FAudioSpinLock sendLock;
-	FAudioSpinLock effectLock;
-	FAudioSpinLock filterLock;
+	FAudioMutex sendLock;
+	FAudioMutex effectLock;
+	FAudioMutex filterLock;
 
 	float volume;
 	float *channelVolume;
 	uint32_t outputChannels;
-	FAudioSpinLock volumeLock;
+	FAudioMutex volumeLock;
 
 	union
 	{
@@ -196,7 +192,7 @@ struct FAudioVoice
 			float freqRatio;
 			uint64_t totalSamples;
 			FAudioBufferEntry *bufferList;
-			FAudioSpinLock bufferLock;
+			FAudioMutex bufferLock;
 		} src;
 		struct
 		{
@@ -284,11 +280,6 @@ uint32_t FAudio_PlatformResample(
 	float *output,
 	uint32_t outLen
 );
-
-/* Spinlocks */
-
-void FAudio_PlatformLock(FAudioSpinLock *lock);
-void FAudio_PlatformUnlock(FAudioSpinLock *lock);
 
 /* Threading */
 

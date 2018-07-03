@@ -39,6 +39,8 @@ uint32_t FACTCreateEngine(
 		return -1; /* TODO: E_OUTOFMEMORY */
 	}
 	FAudio_zero(*ppEngine, sizeof(FACTAudioEngine));
+	(*ppEngine)->sbLock = FAudio_PlatformCreateMutex();
+	(*ppEngine)->wbLock = FAudio_PlatformCreateMutex();
 	(*ppEngine)->apiLock = FAudio_PlatformCreateMutex();
 	(*ppEngine)->refcount = 1;
 	return 0;
@@ -62,6 +64,8 @@ uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine)
 		return pEngine->refcount;
 	}
 	FACTAudioEngine_ShutDown(pEngine);
+	FAudio_PlatformDestroyMutex(pEngine->sbLock);
+	FAudio_PlatformDestroyMutex(pEngine->wbLock);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	FAudio_PlatformDestroyMutex(pEngine->apiLock);
 	FAudio_free(pEngine);
@@ -1021,7 +1025,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		LinkedList_RemoveEntry(
 			&pSoundBank->parentEngine->sbList,
 			pSoundBank,
-			&pSoundBank->parentEngine->sbLock
+			pSoundBank->parentEngine->sbLock
 		);
 	}
 
@@ -1185,7 +1189,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		LinkedList_RemoveEntry(
 			&pWaveBank->parentEngine->wbList,
 			pWaveBank,
-			&pWaveBank->parentEngine->wbLock
+			pWaveBank->parentEngine->wbLock
 		);
 	}
 
@@ -1200,6 +1204,8 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		note.waveBank.pWaveBank = pWaveBank;
 		pWaveBank->parentEngine->notificationCallback(&note);
 	}
+	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
+	FAudio_PlatformDestroyMutex(pWaveBank->ioLock);
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
 	FAudio_free(pWaveBank);
@@ -1469,7 +1475,7 @@ uint32_t FACTWaveBank_Prepare(
 	LinkedList_AddEntry(
 		&pWaveBank->waveList,
 		*ppWave,
-		&pWaveBank->waveLock
+		pWaveBank->waveLock
 	);
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
@@ -1547,7 +1553,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	LinkedList_RemoveEntry(
 		&pWave->parentBank->waveList,
 		pWave,
-		&pWave->parentBank->waveLock
+		pWave->parentBank->waveLock
 	);
 
 	FAudioVoice_DestroyVoice(pWave->voice);

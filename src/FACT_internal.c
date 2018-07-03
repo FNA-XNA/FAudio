@@ -1467,7 +1467,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	}
 
 	/* Read! */
-	FAudio_PlatformLock(&c->wave->parentBank->ioLock);
+	FAudio_PlatformLockMutex(c->wave->parentBank->ioLock);
 	c->wave->parentBank->io->seek(
 		c->wave->parentBank->io->data,
 		c->wave->streamOffset,
@@ -1479,7 +1479,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		buffer.AudioBytes,
 		1
 	);
-	FAudio_PlatformUnlock(&c->wave->parentBank->ioLock);
+	FAudio_PlatformUnlockMutex(c->wave->parentBank->ioLock);
 
 	/* Loop if applicable */
 	c->wave->streamOffset += buffer.AudioBytes;
@@ -2471,7 +2471,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	}
 
 	/* Add to the Engine SoundBank list */
-	LinkedList_AddEntry(&pEngine->sbList, sb, &pEngine->sbLock);
+	LinkedList_AddEntry(&pEngine->sbList, sb, pEngine->sbLock);
 
 	/* Finally. */
 	FAudio_assert((ptr - start) == dwSize);
@@ -2512,9 +2512,9 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb = (FACTWaveBank*) FAudio_malloc(sizeof(FACTWaveBank));
 	wb->parentEngine = pEngine;
 	wb->waveList = NULL;
-	wb->waveLock = 0;
+	wb->waveLock = FAudio_PlatformCreateMutex();
 	wb->io = io;
-	wb->ioLock = 0;
+	wb->ioLock = FAudio_PlatformCreateMutex();
 	wb->notifyOnDestroy = 0;
 
 	/* WaveBank Data */
@@ -2634,7 +2634,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	*/
 
 	/* Add to the Engine WaveBank list */
-	LinkedList_AddEntry(&pEngine->wbList, wb, &pEngine->wbLock);
+	LinkedList_AddEntry(&pEngine->wbList, wb, pEngine->wbLock);
 
 	/* Finally. */
 	*ppWaveBank = wb;

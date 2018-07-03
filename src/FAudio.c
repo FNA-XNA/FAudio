@@ -43,6 +43,9 @@ uint32_t FAudio_Construct(FAudio **ppFAudio)
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
+	(*ppFAudio)->sourceLock = FAudio_PlatformCreateMutex();
+	(*ppFAudio)->submixLock = FAudio_PlatformCreateMutex();
+	(*ppFAudio)->callbackLock = FAudio_PlatformCreateMutex();
 	(*ppFAudio)->refcount = 1;
 	return 0;
 }
@@ -64,6 +67,9 @@ uint32_t FAudio_Release(FAudio *audio)
 		FAudio_free(audio->decodeCache);
 		FAudio_free(audio->resampleCache);
 		FAudio_free(audio->effectChainCache);
+		FAudio_PlatformDestroyMutex(audio->sourceLock);
+		FAudio_PlatformDestroyMutex(audio->submixLock);
+		FAudio_PlatformDestroyMutex(audio->callbackLock);
 		FAudio_free(audio);
 		FAudio_PlatformRelease();
 	}
@@ -110,7 +116,7 @@ uint32_t FAudio_RegisterForCallbacks(
 	LinkedList_AddEntry(
 		&audio->callbacks,
 		pCallback,
-		&audio->callbackLock
+		audio->callbackLock
 	);
 	return 0;
 }
@@ -122,7 +128,7 @@ void FAudio_UnregisterForCallbacks(
 	LinkedList_RemoveEntry(
 		&audio->callbacks,
 		pCallback,
-		&audio->callbackLock
+		audio->callbackLock
 	);
 }
 
@@ -147,6 +153,10 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->filter.Type = FAUDIO_DEFAULT_FILTER_TYPE;
 	(*ppSourceVoice)->filter.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 	(*ppSourceVoice)->filter.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+	(*ppSourceVoice)->sendLock = FAudio_PlatformCreateMutex();
+	(*ppSourceVoice)->effectLock = FAudio_PlatformCreateMutex();
+	(*ppSourceVoice)->filterLock = FAudio_PlatformCreateMutex();
+	(*ppSourceVoice)->volumeLock = FAudio_PlatformCreateMutex();
 
 	/* Source Properties */
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
@@ -161,6 +171,7 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
+	(*ppSourceVoice)->src.bufferLock = FAudio_PlatformCreateMutex();
 		
 	if (pSourceFormat->wFormatTag >= 1 && pSourceFormat->wFormatTag <= 3)
 	{
@@ -276,7 +287,7 @@ uint32_t FAudio_CreateSourceVoice(
 	LinkedList_AddEntry(
 		&audio->sources,
 		*ppSourceVoice,
-		&audio->sourceLock
+		audio->sourceLock
 	);
 	FAudio_AddRef(audio);
 	return 0;
@@ -302,6 +313,10 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->filter.Type = FAUDIO_DEFAULT_FILTER_TYPE;
 	(*ppSubmixVoice)->filter.Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 	(*ppSubmixVoice)->filter.OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+	(*ppSubmixVoice)->sendLock = FAudio_PlatformCreateMutex();
+	(*ppSubmixVoice)->effectLock = FAudio_PlatformCreateMutex();
+	(*ppSubmixVoice)->filterLock = FAudio_PlatformCreateMutex();
+	(*ppSubmixVoice)->volumeLock = FAudio_PlatformCreateMutex();
 
 	/* Submix Properties */
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
@@ -357,7 +372,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	LinkedList_AddEntry(
 		&audio->submixes,
 		*ppSubmixVoice,
-		&audio->submixLock
+		audio->submixLock
 	);
 	FAudio_AddRef(audio);
 	return 0;
@@ -382,6 +397,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->audio = audio;
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
 	(*ppMasteringVoice)->flags = Flags;
+	(*ppMasteringVoice)->effectLock = FAudio_PlatformCreateMutex();
+	(*ppMasteringVoice)->volumeLock = FAudio_PlatformCreateMutex();
 
 	/* Default Levels */
 	(*ppMasteringVoice)->volume = 1.0f;
@@ -496,7 +513,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	FAudioSendDescriptor defaultSend;
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 
-	FAudio_PlatformLock(&voice->sendLock);
+	FAudio_PlatformLockMutex(voice->sendLock);
 
 	/* FIXME: This is lazy... */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -525,7 +542,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		/* No sends? Nothing to do... */
 		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
-		FAudio_PlatformUnlock(&voice->sendLock);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
 		return 0;
 	}
 
@@ -598,7 +615,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 		);
 	}
 
-	FAudio_PlatformUnlock(&voice->sendLock);
+	FAudio_PlatformUnlockMutex(voice->sendLock);
 	return 0;
 }
 
@@ -635,7 +652,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		}
 	}
 
-	FAudio_PlatformLock(&voice->effectLock);
+	FAudio_PlatformLockMutex(voice->effectLock);
 
 	if (pEffectChain == NULL)
 	{
@@ -667,7 +684,7 @@ uint32_t FAudioVoice_SetEffectChain(
 			if (fapo->IsOutputFormatSupported(fapo, &srcFmt, &dstFmt, NULL))
 			{
 				FAudio_assert(0 && "Effect: output format not supported");
-				FAudio_PlatformUnlock(&voice->effectLock);
+				FAudio_PlatformUnlockMutex(voice->effectLock);
 				return 1;
 			}
 		}
@@ -695,7 +712,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		voice->outputChannels = channelCount;
 	}
 
-	FAudio_PlatformUnlock(&voice->effectLock);
+	FAudio_PlatformUnlockMutex(voice->effectLock);
 	return 0;
 }
 
@@ -706,9 +723,9 @@ uint32_t FAudioVoice_EnableEffect(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_PlatformLock(&voice->effectLock);
+	FAudio_PlatformLockMutex(voice->effectLock);
 	voice->effects.desc[EffectIndex].InitialState = 1;
-	FAudio_PlatformUnlock(&voice->effectLock);
+	FAudio_PlatformUnlockMutex(voice->effectLock);
 	return 0;
 }
 
@@ -719,9 +736,9 @@ uint32_t FAudioVoice_DisableEffect(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_PlatformLock(&voice->effectLock);
+	FAudio_PlatformLockMutex(voice->effectLock);
 	voice->effects.desc[EffectIndex].InitialState = 0;
-	FAudio_PlatformUnlock(&voice->effectLock);
+	FAudio_PlatformUnlockMutex(voice->effectLock);
 	return 0;
 }
 
@@ -730,9 +747,9 @@ void FAudioVoice_GetEffectState(
 	uint32_t EffectIndex,
 	uint8_t *pEnabled
 ) {
-	FAudio_PlatformLock(&voice->effectLock);
+	FAudio_PlatformLockMutex(voice->effectLock);
 	*pEnabled = voice->effects.desc[EffectIndex].InitialState;
-	FAudio_PlatformUnlock(&voice->effectLock);
+	FAudio_PlatformUnlockMutex(voice->effectLock);
 }
 
 uint32_t FAudioVoice_SetEffectParameters(
@@ -751,7 +768,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 		);
 		voice->effects.parameterSizes[EffectIndex] = ParametersByteSize;
 	}
-	FAudio_PlatformLock(&voice->effectLock);
+	FAudio_PlatformLockMutex(voice->effectLock);
 	if (voice->effects.parameterSizes[EffectIndex] < ParametersByteSize)
 	{
 		voice->effects.parameters[EffectIndex] = FAudio_realloc(
@@ -766,7 +783,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 		ParametersByteSize
 	);
 	voice->effects.parameterUpdates[EffectIndex] = 1;
-	FAudio_PlatformUnlock(&voice->effectLock);
+	FAudio_PlatformUnlockMutex(voice->effectLock);
 	return 0;
 }
 
@@ -776,11 +793,11 @@ uint32_t FAudioVoice_GetEffectParameters(
 	void *pParameters,
 	uint32_t ParametersByteSize
 ) {
-	FAudio_PlatformLock(&voice->effectLock);
+	FAudio_PlatformLockMutex(voice->effectLock);
 	FAPOParametersBase *fapo = (FAPOParametersBase*)
 		voice->effects.desc[EffectIndex].pEffect;
 	fapo->parameters.GetParameters(fapo, pParameters, ParametersByteSize);
-	FAudio_PlatformUnlock(&voice->effectLock);
+	FAudio_PlatformUnlockMutex(voice->effectLock);
 	return 0;
 }
 
@@ -804,13 +821,13 @@ uint32_t FAudioVoice_SetFilterParameters(
 		return 0;
 	}
 
-	FAudio_PlatformLock(&voice->filterLock);
+	FAudio_PlatformLockMutex(voice->filterLock);
 	FAudio_memcpy(
 		&voice->filter,
 		pParameters,
 		sizeof(FAudioFilterParameters)
 	);
-	FAudio_PlatformUnlock(&voice->filterLock);
+	FAudio_PlatformUnlockMutex(voice->filterLock);
 
 	return 0;
 }
@@ -819,13 +836,13 @@ void FAudioVoice_GetFilterParameters(
 	FAudioVoice *voice,
 	FAudioFilterParameters *pParameters
 ) {
-	FAudio_PlatformLock(&voice->filterLock);
+	FAudio_PlatformLockMutex(voice->filterLock);
 	FAudio_memcpy(
 		pParameters,
 		&voice->filter,
 		sizeof(FAudioFilterParameters)
 	);
-	FAudio_PlatformUnlock(&voice->filterLock);
+	FAudio_PlatformUnlockMutex(voice->filterLock);
 }
 
 uint32_t FAudioVoice_SetOutputFilterParameters(
@@ -883,13 +900,13 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	FAudio_assert(Channels == voice->outputChannels);
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_PlatformLock(&voice->volumeLock);
+	FAudio_PlatformLockMutex(voice->volumeLock);
 	FAudio_memcpy(
 		voice->channelVolume,
 		pVolumes,
 		sizeof(float) * Channels
 	);
-	FAudio_PlatformUnlock(&voice->volumeLock);
+	FAudio_PlatformUnlockMutex(voice->volumeLock);
 	return 0;
 }
 
@@ -898,13 +915,13 @@ void FAudioVoice_GetChannelVolumes(
 	uint32_t Channels,
 	float *pVolumes
 ) {
-	FAudio_PlatformLock(&voice->volumeLock);
+	FAudio_PlatformLockMutex(voice->volumeLock);
 	FAudio_memcpy(
 		pVolumes,
 		voice->channelVolume,
 		sizeof(float) * Channels
 	);
-	FAudio_PlatformUnlock(&voice->volumeLock);
+	FAudio_PlatformUnlockMutex(voice->volumeLock);
 }
 
 uint32_t FAudioVoice_SetOutputMatrix(
@@ -918,7 +935,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	uint32_t i;
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	FAudio_PlatformLock(&voice->sendLock);
+	FAudio_PlatformLockMutex(voice->sendLock);
 
 	/* Find the send index */
 	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
@@ -953,7 +970,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 		sizeof(float) * SourceChannels * DestinationChannels
 	);
 
-	FAudio_PlatformUnlock(&voice->sendLock);
+	FAudio_PlatformUnlockMutex(voice->sendLock);
 	return 0;
 }
 
@@ -966,7 +983,7 @@ void FAudioVoice_GetOutputMatrix(
 ) {
 	uint32_t i;
 
-	FAudio_PlatformLock(&voice->sendLock);
+	FAudio_PlatformLockMutex(voice->sendLock);
 
 	/* Find the send index */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -1003,7 +1020,7 @@ void FAudioVoice_GetOutputMatrix(
 		sizeof(float) * SourceChannels * DestinationChannels
 	);
 
-	FAudio_PlatformUnlock(&voice->sendLock);
+	FAudio_PlatformUnlockMutex(voice->sendLock);
 }
 
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
@@ -1018,8 +1035,9 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		LinkedList_RemoveEntry(
 			&voice->audio->sources,
 			voice,
-			&voice->audio->sourceLock
+			voice->audio->sourceLock
 		);
+		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -1027,7 +1045,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		LinkedList_RemoveEntry(
 			&voice->audio->submixes,
 			voice,
-			&voice->audio->submixLock
+			voice->audio->submixLock
 		);
 
 		/* Check submix stage count */
@@ -1056,50 +1074,66 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		voice->audio->master = NULL;
 	}
 
-	FAudio_PlatformLock(&voice->sendLock);
-	for (i = 0; i < voice->sends.SendCount; i += 1)
+	if (voice->sendLock != NULL)
 	{
-		FAudio_free(voice->sendCoefficients[i]);
-	}
-	if (voice->sendCoefficients != NULL)
-	{
-		FAudio_free(voice->sendCoefficients);
-	}
-	if (voice->sends.pSends != NULL)
-	{
-		FAudio_free(voice->sends.pSends);
-	}
-	FAudio_PlatformUnlock(&voice->sendLock);
-
-	FAudio_PlatformLock(&voice->effectLock);
-	if (voice->effects.desc != NULL)
-	{
-		for (i = 0; i < voice->effects.count; i += 1)
+		FAudio_PlatformLockMutex(voice->sendLock);
+		for (i = 0; i < voice->sends.SendCount; i += 1)
 		{
-			FAPOBase_Release(
-				(FAPOBase*) voice->effects.desc[i].pEffect
-			);
+			FAudio_free(voice->sendCoefficients[i]);
 		}
-		FAudio_free(voice->effects.parameters);
-		FAudio_free(voice->effects.parameterSizes);
-		FAudio_free(voice->effects.parameterUpdates);
-		FAudio_free(voice->effects.desc);
+		if (voice->sendCoefficients != NULL)
+		{
+			FAudio_free(voice->sendCoefficients);
+		}
+		if (voice->sends.pSends != NULL)
+		{
+			FAudio_free(voice->sends.pSends);
+		}
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		FAudio_PlatformDestroyMutex(voice->sendLock);
 	}
-	FAudio_PlatformUnlock(&voice->effectLock);
 
-	FAudio_PlatformLock(&voice->filterLock);
-	if (voice->filterState != NULL)
+	if (voice->effectLock != NULL)
 	{
-		FAudio_free(voice->filterState);
+		FAudio_PlatformLockMutex(voice->effectLock);
+		if (voice->effects.desc != NULL)
+		{
+			for (i = 0; i < voice->effects.count; i += 1)
+			{
+				FAPOBase_Release(
+					(FAPOBase*) voice->effects.desc[i].pEffect
+				);
+			}
+			FAudio_free(voice->effects.parameters);
+			FAudio_free(voice->effects.parameterSizes);
+			FAudio_free(voice->effects.parameterUpdates);
+			FAudio_free(voice->effects.desc);
+		}
+		FAudio_PlatformUnlockMutex(voice->effectLock);
+		FAudio_PlatformDestroyMutex(voice->effectLock);
 	}
-	FAudio_PlatformUnlock(&voice->filterLock);
 
-	FAudio_PlatformLock(&voice->volumeLock);
-	if (voice->channelVolume != NULL)
+	if (voice->filterLock != NULL)
 	{
-		FAudio_free(voice->channelVolume);
+		FAudio_PlatformLockMutex(voice->filterLock);
+		if (voice->filterState != NULL)
+		{
+			FAudio_free(voice->filterState);
+		}
+		FAudio_PlatformUnlockMutex(voice->filterLock);
+		FAudio_PlatformDestroyMutex(voice->filterLock);
 	}
-	FAudio_PlatformUnlock(&voice->volumeLock);
+
+	if (voice->volumeLock != NULL)
+	{
+		FAudio_PlatformLockMutex(voice->volumeLock);
+		if (voice->channelVolume != NULL)
+		{
+			FAudio_free(voice->channelVolume);
+		}
+		FAudio_PlatformUnlockMutex(voice->volumeLock);
+		FAudio_PlatformDestroyMutex(voice->volumeLock);
+	}
 
 	FAudio_Release(voice->audio);
 	FAudio_free(voice);
@@ -1233,7 +1267,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->next = NULL;
 
 	/* Submit! */
-	FAudio_PlatformLock(&voice->src.bufferLock);
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	if (voice->src.bufferList == NULL)
 	{
 		voice->src.bufferList = entry;
@@ -1254,7 +1288,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		 */
 		FAudio_assert(list != entry);
 	}
-	FAudio_PlatformUnlock(&voice->src.bufferLock);
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	return 0;
 }
 
@@ -1264,7 +1298,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudioBufferEntry *entry, *next;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
-	FAudio_PlatformLock(&voice->src.bufferLock);
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
 
 	/* If the source is playing, don't flush the active buffer */
 	entry = voice->src.bufferList;
@@ -1294,7 +1328,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 		entry = next;
 	}
 
-	FAudio_PlatformUnlock(&voice->src.bufferLock);
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	return 0;
 }
 
@@ -1318,14 +1352,14 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
-	FAudio_PlatformLock(&voice->src.bufferLock);
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
 
 	if (voice->src.bufferList != NULL)
 	{
 		voice->src.bufferList->buffer.LoopCount = 0;
 	}
 
-	FAudio_PlatformUnlock(&voice->src.bufferLock);
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	return 0;
 }
 
@@ -1336,7 +1370,7 @@ void FAudioSourceVoice_GetState(
 	FAudioBufferEntry *entry;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
-	FAudio_PlatformLock(&voice->src.bufferLock);
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
 
 	pVoiceState->BuffersQueued = 0;
 	pVoiceState->SamplesPlayed = voice->src.totalSamples;
@@ -1355,7 +1389,7 @@ void FAudioSourceVoice_GetState(
 		pVoiceState->pCurrentBufferContext = NULL;
 	}
 
-	FAudio_PlatformUnlock(&voice->src.bufferLock);
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 }
 
 uint32_t FAudioSourceVoice_SetFrequencyRatio(
@@ -1413,18 +1447,18 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	);
 	voice->src.decodeSamples = newDecodeSamples;
 
-	FAudio_PlatformLock(&voice->sendLock);
+	FAudio_PlatformLockMutex(voice->sendLock);
 
 	if (voice->sends.SendCount == 0)
 	{
-		FAudio_PlatformUnlock(&voice->sendLock);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
 		return 0;
 	}
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
 
-	FAudio_PlatformUnlock(&voice->sendLock);
+	FAudio_PlatformUnlockMutex(voice->sendLock);
 
 	/* Resize resample cache */
 	newResampleSamples = (uint32_t) FAudio_ceil(
