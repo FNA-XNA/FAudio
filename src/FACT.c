@@ -552,47 +552,50 @@ uint8_t FACT_INTERNAL_IsInCategory(
 	return 0;
 }
 
-#define ITERATE_CUES(action) \
-	FACTCue *cue; \
-	LinkedList *list = pEngine->sbList; \
-	while (list != NULL) \
-	{ \
-		cue = ((FACTSoundBank*) list->entry)->cueList; \
-		while (cue != NULL) \
-		{ \
-			if (	cue->playingSound != NULL && \
-				FACT_INTERNAL_IsInCategory( \
-					cue->parentBank->parentEngine, \
-					nCategory, \
-					cue->playingSound->sound->category \
-				)	) \
-			{ \
-				action \
-			} \
-			cue = cue->next; \
-		} \
-		list = list->next; \
-	}
-
 uint32_t FACTAudioEngine_Stop(
 	FACTAudioEngine *pEngine,
 	uint16_t nCategory,
 	uint32_t dwFlags
 ) {
+	FACTCue *cue, *backup;
+	LinkedList *list;
+
 	FAudio_PlatformLockMutex(pEngine->apiLock);
-	ITERATE_CUES(
-		if (	dwFlags == FACT_FLAG_STOP_IMMEDIATE &&
-			cue->managed	)
+	list = pEngine->sbList;
+	while (list != NULL)
+	{
+		cue = ((FACTSoundBank*) list->entry)->cueList;
+		while (cue != NULL)
 		{
-			/* Just blow this up now */
-			FACTCue_Destroy(cue);
+			if (	cue->playingSound != NULL &&
+				FACT_INTERNAL_IsInCategory(
+					pEngine,
+					nCategory,
+					cue->playingSound->sound->category
+				)	)
+			{
+				if (	dwFlags == FACT_FLAG_STOP_IMMEDIATE &&
+					cue->managed	)
+				{
+					/* Just blow this up now */
+					backup = cue->next;
+					FACTCue_Destroy(cue);
+					cue = backup;
+				}
+				else
+				{
+					/* If managed, the mixer will destroy for us */
+					FACTCue_Stop(cue, dwFlags);
+					cue = cue->next;
+				}
+			}
+			else
+			{
+				cue = cue->next;
+			}
 		}
-		else
-		{
-			/* If managed, the mixer will destroy for us */
-			FACTCue_Stop(cue, dwFlags);
-		}
-	)
+		list = list->next;
+	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return 0;
 }
@@ -628,13 +631,32 @@ uint32_t FACTAudioEngine_Pause(
 	uint16_t nCategory,
 	int32_t fPause
 ) {
+	FACTCue *cue;
+	LinkedList *list;
+
 	FAudio_PlatformLockMutex(pEngine->apiLock);
-	ITERATE_CUES(FACTCue_Pause(cue, fPause);)
+	list = pEngine->sbList;
+	while (list != NULL)
+	{
+		cue = ((FACTSoundBank*) list->entry)->cueList;
+		while (cue != NULL)
+		{
+			if (	cue->playingSound != NULL &&
+				FACT_INTERNAL_IsInCategory(
+					pEngine,
+					nCategory,
+					cue->playingSound->sound->category
+				)	)
+			{
+				FACTCue_Pause(cue, fPause);
+			}
+			cue = cue->next;
+		}
+		list = list->next;
+	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return 0;
 }
-
-#undef ITERATE_CUES
 
 uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	FACTAudioEngine *pEngine,
