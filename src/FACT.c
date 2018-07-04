@@ -1401,7 +1401,7 @@ uint32_t FACTWaveBank_Prepare(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
 		&format.wfx,
-		0,
+		FAUDIO_VOICE_USEFILTER, /* FIXME: Can this be optional? */
 		4.0f,
 		(FAudioVoiceCallback*) &(*ppWave)->callback,
 		&sends,

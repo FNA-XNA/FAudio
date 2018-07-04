@@ -581,7 +581,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		newSound->rpcData.rpcVolume = 0.0f;
 		newSound->rpcData.rpcPitch = 0.0f;
 		newSound->rpcData.rpcReverbSend = 0.0f;
-		newSound->rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+		newSound->rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		newSound->rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 		newSound->fadeType = (fadeInMS > 0);
 		if (newSound->fadeType)
@@ -602,18 +602,18 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			newSound->tracks[i].rpcData.rpcVolume = 0.0f;
 			newSound->tracks[i].rpcData.rpcPitch = 0.0f;
 			newSound->tracks[i].rpcData.rpcReverbSend = 0.0f;
-			newSound->tracks[i].rpcData.rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+			newSound->tracks[i].rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 			newSound->tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
 			newSound->tracks[i].activeWave.wave = NULL;
 			newSound->tracks[i].activeWave.baseVolume = 0.0f;
 			newSound->tracks[i].activeWave.basePitch = 0;
-			newSound->tracks[i].activeWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+			newSound->tracks[i].activeWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 			newSound->tracks[i].activeWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 			newSound->tracks[i].upcomingWave.wave = NULL;
 			newSound->tracks[i].upcomingWave.baseVolume = 0.0f;
 			newSound->tracks[i].upcomingWave.basePitch = 0;
-			newSound->tracks[i].upcomingWave.baseQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+			newSound->tracks[i].upcomingWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 			newSound->tracks[i].upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
 			newSound->tracks[i].events = (FACTEventInstance*) FAudio_malloc(
@@ -805,7 +805,7 @@ void FACT_INTERNAL_UpdateRPCs(
 		data->rpcPitch = 0.0f;
 		data->rpcReverbSend = 0.0f;
 		data->rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
-		data->rpcFilterQFactor = FAUDIO_MAX_FILTER_ONEOVERQ;
+		data->rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		for (i = 0; i < codeCount; i += 1)
 		{
 			rpc = FACT_INTERNAL_GetRPC(
@@ -1274,11 +1274,11 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 				sound->rpcData.rpcFilterFreq *
 				sound->tracks[i].rpcData.rpcFilterFreq
 			);
-			filterParams.OneOverQ = 1.0f / (
+			filterParams.OneOverQ = (
 				sound->tracks[i].activeWave.baseQFactor +
 				sound->rpcData.rpcFilterQFactor +
 				sound->tracks[i].rpcData.rpcFilterQFactor
-			);
+			) / 3.0f; /* FIXME: How do we combine QFactor params? */
 			FAudioVoice_SetFilterParameters(
 				sound->tracks[i].activeWave.wave->voice,
 				&filterParams,
