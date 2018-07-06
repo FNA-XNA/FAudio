@@ -704,6 +704,63 @@ public static class FAudio
 
 	/* TODO */
 
+	/* Structures */
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioFXReverbParameters
+	{
+		public float WetDryMix;
+		public uint ReflectionsDelay;
+		public byte ReverbDelay;
+		public byte RearDelay;
+		public byte PositionLeft;
+		public byte PositionRight;
+		public byte PositionMatrixLeft;
+		public byte PositionMatrixRight;
+		public byte EarlyDiffusion;
+		public byte LateDiffusion;
+		public byte LowEQGain;
+		public byte LowEQCutoff;
+		public byte HighEQGain;
+		public byte HighEQCutoff;
+		public float RoomFilterFreq;
+		public float RoomFilterMain;
+		public float RoomFilterHF;
+		public float ReflectionsGain;
+		public float ReverbGain;
+		public float DecayTime;
+		public float Density;
+		public float RoomSize;
+	}
+
+	/* Constants */
+
+	public const float FAUDIOFX_REVERB_DEFAULT_WET_DRY_MIX =	100.0f;
+	public const uint FAUDIOFX_REVERB_DEFAULT_REFLECTIONS_DELAY =	5;
+	public const byte FAUDIOFX_REVERB_DEFAULT_REVERB_DELAY =	5;
+	public const byte FAUDIOFX_REVERB_DEFAULT_REAR_DELAY =		5;
+	public const byte FAUDIOFX_REVERB_DEFAULT_POSITION =		6;
+	public const byte FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX =	27;
+	public const byte FAUDIOFX_REVERB_DEFAULT_EARLY_DIFFUSION =	8;
+	public const byte FAUDIOFX_REVERB_DEFAULT_LATE_DIFFUSION =	8;
+	public const byte FAUDIOFX_REVERB_DEFAULT_LOW_EQ_GAIN =		8;
+	public const byte FAUDIOFX_REVERB_DEFAULT_LOW_EQ_CUTOFF =	4;
+	public const byte FAUDIOFX_REVERB_DEFAULT_HIGH_EQ_GAIN =	8;
+	public const byte FAUDIOFX_REVERB_DEFAULT_HIGH_EQ_CUTOFF =	4;
+	public const float FAUDIOFX_REVERB_DEFAULT_ROOM_FILTER_FREQ =	5000.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_ROOM_FILTER_MAIN =	0.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_ROOM_FILTER_HF =	0.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_REFLECTIONS_GAIN =	0.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_REVERB_GAIN =	0.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_DECAY_TIME =		1.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_DENSITY =		100.0f;
+	public const float FAUDIOFX_REVERB_DEFAULT_ROOM_SIZE =		100.0f;
+
+	/* Functions */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateReverb(out IntPtr ppApo, uint Flags);
+
 	#endregion
 
 	#region FAPO API
@@ -715,6 +772,9 @@ public static class FAudio
 	#region FAPOBase API
 
 	/* TODO */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAPOBase_Release(IntPtr fapo);
 
 	#endregion
 
