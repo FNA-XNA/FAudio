@@ -334,7 +334,7 @@ void FACT_INTERNAL_GetNextWave(
 
 uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 {
-	uint16_t i, j, k;
+	int32_t i, j, k;
 	float max, next, weight;
 	const char *wbName;
 	FACTWaveBank *wb = NULL;
@@ -636,7 +636,8 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 				{
 					evtInst = &newSound->tracks[i].events[j];
-					if ((evt->wave.complex.variation & 0xF) == 1)
+					if (	!evt->wave.isComplex ||
+						(evt->wave.complex.variation & 0xF) == 1	)
 					{
 						evtInst->valuei = 0;
 					}
