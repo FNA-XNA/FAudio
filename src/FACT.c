@@ -1724,7 +1724,7 @@ uint32_t FACTWave_SetVolume(FACTWave *pWave, float volume)
 	);
 	FAudioVoice_SetVolume(
 		pWave->voice,
-		volume,
+		pWave->volume,
 		0
 	);
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
@@ -1989,7 +1989,6 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACT_STATE_STOPPED
 	);
 	pCue->start = FAudio_timems();
-
 	/* If it's a simple wave, just play it! */
 	if (pCue->simpleWave != NULL)
 	{
