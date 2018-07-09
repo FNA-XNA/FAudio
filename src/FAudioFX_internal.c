@@ -610,6 +610,7 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 	FAudio_assert(out_channels == 1 || out_channels == 2 || out_channels == 6);
 
 	reverb = (DspReverb *)FAudio_malloc(sizeof(DspReverb));
+	FAudio_zero(reverb, sizeof(DspReverb));
 	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10);
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
