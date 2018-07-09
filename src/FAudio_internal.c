@@ -518,7 +518,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			FAudio_memcpy(
 				resampleCache,
 				voice->audio->decodeCache,
-				toResample * voice->src.format.nChannels * sizeof(float)
+				(size_t) toResample * voice->src.format.nChannels * sizeof(float)
 			);
 			resampleCache += toResample * voice->src.format.nChannels;
 		}

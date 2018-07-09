@@ -648,7 +648,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 						{
 							max += evt->wave.complex.weights[k];
 						}
-						const float next = FACT_INTERNAL_rng() * max;
+						next = FACT_INTERNAL_rng() * max;
 						for (k = evt->wave.complex.trackCount - 1; k >= 0; k -= 1)
 						{
 							if (next > (max - evt->wave.complex.weights[k]))
@@ -921,19 +921,19 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 	if (engine->reverbVoice != NULL)
 	{
 		rvbPar.WetDryMix = engine->dspPresets[0].parameters[21].value;
-		rvbPar.ReflectionsDelay = engine->dspPresets[0].parameters[0].value;
-		rvbPar.ReverbDelay = engine->dspPresets[0].parameters[1].value;
-		rvbPar.RearDelay = engine->dspPresets[0].parameters[12].value;
-		rvbPar.PositionLeft = engine->dspPresets[0].parameters[2].value;
-		rvbPar.PositionRight = engine->dspPresets[0].parameters[3].value;
-		rvbPar.PositionMatrixLeft = engine->dspPresets[0].parameters[4].value;
-		rvbPar.PositionMatrixRight = engine->dspPresets[0].parameters[5].value;
-		rvbPar.HighEQGain = engine->dspPresets[0].parameters[10].value;
-		rvbPar.LowEQCutoff = engine->dspPresets[0].parameters[9].value;
-		rvbPar.LowEQGain = engine->dspPresets[0].parameters[8].value;
-		rvbPar.LateDiffusion = engine->dspPresets[0].parameters[7].value;
-		rvbPar.EarlyDiffusion = engine->dspPresets[0].parameters[6].value;
-		rvbPar.HighEQCutoff = engine->dspPresets[0].parameters[11].value;
+		rvbPar.ReflectionsDelay = (uint32_t) engine->dspPresets[0].parameters[0].value;
+		rvbPar.ReverbDelay = (uint8_t) engine->dspPresets[0].parameters[1].value;
+		rvbPar.RearDelay = (uint8_t) engine->dspPresets[0].parameters[12].value;
+		rvbPar.PositionLeft = (uint8_t) engine->dspPresets[0].parameters[2].value;
+		rvbPar.PositionRight = (uint8_t) engine->dspPresets[0].parameters[3].value;
+		rvbPar.PositionMatrixLeft = (uint8_t) engine->dspPresets[0].parameters[4].value;
+		rvbPar.PositionMatrixRight = (uint8_t) engine->dspPresets[0].parameters[5].value;
+		rvbPar.HighEQGain = (uint8_t) engine->dspPresets[0].parameters[10].value;
+		rvbPar.LowEQCutoff = (uint8_t) engine->dspPresets[0].parameters[9].value;
+		rvbPar.LowEQGain = (uint8_t) engine->dspPresets[0].parameters[8].value;
+		rvbPar.LateDiffusion = (uint8_t) engine->dspPresets[0].parameters[7].value;
+		rvbPar.EarlyDiffusion = (uint8_t) engine->dspPresets[0].parameters[6].value;
+		rvbPar.HighEQCutoff = (uint8_t) engine->dspPresets[0].parameters[11].value;
 		rvbPar.RoomFilterMain = engine->dspPresets[0].parameters[14].value;
 		rvbPar.RoomFilterFreq = engine->dspPresets[0].parameters[13].value;
 		rvbPar.RoomFilterHF = engine->dspPresets[0].parameters[15].value;
