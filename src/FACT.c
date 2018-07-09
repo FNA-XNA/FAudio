@@ -1989,6 +1989,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACT_STATE_STOPPED
 	);
 	pCue->start = FAudio_timems();
+
 	/* If it's a simple wave, just play it! */
 	if (pCue->simpleWave != NULL)
 	{
