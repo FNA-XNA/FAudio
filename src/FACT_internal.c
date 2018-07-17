@@ -1506,12 +1506,12 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	}
 
 	/* Assign length based on buffer read size */
-	if (entry->Format.wFormatTag == 1)
+	if (entry->Format.wFormatTag == 0)
 	{
 		buffer.PlayLength = (
 			buffer.AudioBytes /
 			entry->Format.nChannels /
-			(entry->Format.wBitsPerSample / 8)
+			(entry->Format.wBitsPerSample + 1)
 		);
 	}
 	else if (entry->Format.wFormatTag == 2)
