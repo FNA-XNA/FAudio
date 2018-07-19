@@ -149,16 +149,13 @@ void LinkedList_RemoveEntry(
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
 )
 
-static uint32_t FAudio_INTERNAL_DecodeBuffers(
+static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
-	uint32_t end, endRead, decoding, decoded = 0, resetOffset = 0;
+	uint32_t end, endRead, decoding, decoded = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
 	FAudioBufferEntry *toDelete;
-
-	/* ... FIXME: I keep going past the buffer so fuck it */
-	*toDecode += EXTRA_DECODE_PADDING;
 
 	/* This should never go past the max ratio size */
 	FAudio_assert(*toDecode <= voice->src.decodeSamples);
@@ -198,10 +195,11 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 			&voice->src.format
 		);
 
+		voice->src.curBufferOffset += endRead;
+
 		/* End-of-buffer behavior */
 		if (endRead < decoding)
 		{
-			resetOffset += endRead;
 			if (buffer->LoopCount > 0)
 			{
 				voice->src.curBufferOffset = buffer->LoopBegin;
@@ -278,8 +276,53 @@ static uint32_t FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
-	*toDecode = decoded - EXTRA_DECODE_PADDING;
-	return resetOffset;
+	if (buffer)
+	{
+		end = (buffer->LoopCount > 0) ?
+			(buffer->LoopBegin + buffer->LoopLength) :
+			buffer->PlayLength;
+		endRead = FAudio_min(
+			end - voice->src.curBufferOffset,
+			EXTRA_DECODE_PADDING
+		);
+
+		voice->src.decode(
+			buffer,
+			voice->src.curBufferOffset,
+			voice->audio->decodeCache + (
+				decoded * voice->src.format.nChannels
+			),
+			endRead,
+			&voice->src.format
+		);
+
+		if (endRead < EXTRA_DECODE_PADDING)
+		{
+			FAudio_zero(
+				voice->audio->decodeCache + (
+					decoded * voice->src.format.nChannels
+				),
+				sizeof(float) * (
+					EXTRA_DECODE_PADDING - endRead *
+					voice->src.format.nChannels
+				)
+			);
+		}
+	}
+	else
+	{
+		FAudio_zero(
+			voice->audio->decodeCache + (
+				decoded * voice->src.format.nChannels
+			),
+			sizeof(float) * (
+				EXTRA_DECODE_PADDING *
+				voice->src.format.nChannels
+			)
+		);
+	}
+
+	*toDecode = decoded;
 }
 
 static void FAudio_INTERNAL_ResamplePCM(
@@ -453,7 +496,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Decode/Resample variables */
 	uint64_t toDecode;
 	uint64_t toResample;
-	uint32_t resetOffset;
 	float *resampleCache;
 	/* Output mix variables */
 	float *stream;
@@ -514,7 +556,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		toDecode >>= FIXED_PRECISION;
 
 		/* Decode... */
-		resetOffset = FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
+		FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
 
 		/* int to fixed... */
 		toResample = toDecode << FIXED_PRECISION;
@@ -546,10 +588,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		{
 			/* Increment fixed offset by resample size, int to fixed... */
 			voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
-			/* ... increment int offset by fixed offset, may be 0! */
-			voice->src.curBufferOffset += voice->src.curBufferOffsetDec >> FIXED_PRECISION;
-			/* ... subtract any increment not applicable to our possibly new buffer... */
-			voice->src.curBufferOffset -= FAudio_min(resetOffset, voice->src.curBufferOffset);
 			/* ... chop off any ints we got from the above increment */
 			voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
 		}
