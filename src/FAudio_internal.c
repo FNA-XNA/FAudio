@@ -196,6 +196,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		);
 
 		voice->src.curBufferOffset += endRead;
+		voice->src.totalSamples += endRead;
 
 		/* End-of-buffer behavior */
 		if (endRead < decoding)
@@ -222,6 +223,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				if (buffer->Flags & FAUDIO_END_OF_STREAM)
 				{
 					voice->src.curBufferOffsetDec = 0;
+					voice->src.totalSamples = 0;
 				}
 
 				/* Callbacks */
