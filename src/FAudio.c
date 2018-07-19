@@ -1201,14 +1201,14 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 				pBuffer->AudioBytes /
 				voice->src.format.nBlockAlign *
 				(((voice->src.format.nBlockAlign / voice->src.format.nChannels) - 6) * 2)
-			);
+			) - playBegin;
 		}
 		else
 		{
 			playLength = (
 				pBuffer->AudioBytes /
 				voice->src.format.nBlockAlign
-			);
+			) - playBegin;
 		}
 	}
 
