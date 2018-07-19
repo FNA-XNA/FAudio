@@ -348,10 +348,10 @@ static inline void FAudio_INTERNAL_FilterVoice(
 	for (j = 0; j < numSamples; j += 1)
 	for (ci = 0; ci < numChannels; ci += 1)
 	{
-		filterState[ci][LowPassFilter] = filterState[ci][LowPassFilter] + (filter->Frequency * filterState[ci][BandPassFilter]);
-		filterState[ci][HighPassFilter] = samples[j * numChannels + ci] - filterState[ci][LowPassFilter] - (filter->OneOverQ * filterState[ci][BandPassFilter]);
-		filterState[ci][BandPassFilter] = (filter->Frequency * filterState[ci][HighPassFilter]) + filterState[ci][BandPassFilter];
-		filterState[ci][NotchFilter] = filterState[ci][HighPassFilter] + filterState[ci][LowPassFilter];
+		filterState[ci][FAudioLowPassFilter] = filterState[ci][FAudioLowPassFilter] + (filter->Frequency * filterState[ci][FAudioBandPassFilter]);
+		filterState[ci][FAudioHighPassFilter] = samples[j * numChannels + ci] - filterState[ci][FAudioLowPassFilter] - (filter->OneOverQ * filterState[ci][FAudioBandPassFilter]);
+		filterState[ci][FAudioBandPassFilter] = (filter->Frequency * filterState[ci][FAudioHighPassFilter]) + filterState[ci][FAudioBandPassFilter];
+		filterState[ci][FAudioNotchFilter] = filterState[ci][FAudioHighPassFilter] + filterState[ci][FAudioLowPassFilter];
 		samples[j * numChannels + ci] = filterState[ci][filter->Type];
 	}
 }

@@ -56,21 +56,21 @@ typedef struct FAudioVoiceCallback FAudioVoiceCallback;
 
 typedef enum FAudioDeviceRole
 {
-	NotDefaultDevice =		0x0,
-	DefaultConsoleDevice =		0x1,
-	DefaultMultimediaDevice =	0x2,
-	DefaultCommunicationsDevice =	0x4,
-	DefaultGameDevice =		0x8,
-	GlobalDefaultDevice =		0xF,
-	InvalidDeviceRole = ~GlobalDefaultDevice
+	FAudioNotDefaultDevice =		0x0,
+	FAudioDefaultConsoleDevice =		0x1,
+	FAudioDefaultMultimediaDevice =	0x2,
+	FAudioDefaultCommunicationsDevice =	0x4,
+	FAudioDefaultGameDevice =		0x8,
+	FAudioGlobalDefaultDevice =		0xF,
+	FAudioInvalidDeviceRole = ~FAudioGlobalDefaultDevice
 } FAudioDeviceRole;
 
 typedef enum FAudioFilterType
 {
-	LowPassFilter,
-	BandPassFilter,
-	HighPassFilter,
-	NotchFilter
+	FAudioLowPassFilter,
+	FAudioBandPassFilter,
+	FAudioHighPassFilter,
+	FAudioNotchFilter
 } FAudioFilterType;
 
 /* FIXME: The original enum violates ISO C and is platform specific anyway... */
@@ -274,7 +274,7 @@ typedef struct FAudioDebugConfiguration
 #define FAUDIO_END_OF_STREAM		0x40
 #define FAUDIO_SEND_USEFILTER		0x80
 
-#define FAUDIO_DEFAULT_FILTER_TYPE	LowPassFilter
+#define FAUDIO_DEFAULT_FILTER_TYPE	FAudioLowPassFilter
 #define FAUDIO_DEFAULT_FILTER_FREQUENCY	FAUDIO_MAX_FILTER_FREQUENCY
 #define FAUDIO_DEFAULT_FILTER_ONEOVERQ	1.0f
 
