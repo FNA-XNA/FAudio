@@ -1195,12 +1195,6 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* PlayLength Default */
 	if (playLength == 0)
 	{
-		/* "PlayBegin must be zero as well" */
-		if (playBegin > 0)
-		{
-			return 1;
-		}
-
 		if (voice->src.format.wFormatTag == 2)
 		{
 			playLength = (
