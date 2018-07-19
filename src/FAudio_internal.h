@@ -318,14 +318,14 @@ DECODE_FUNC(StereoMSADPCM)
 
 /* Platform Functions */
 
-void FAudio_PlatformAddRef();
-void FAudio_PlatformRelease();
+void FAudio_PlatformAddRef(void);
+void FAudio_PlatformRelease(void);
 void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex);
 void FAudio_PlatformQuit(FAudio *audio);
 void FAudio_PlatformStart(FAudio *audio);
 void FAudio_PlatformStop(FAudio *audio);
 
-uint32_t FAudio_PlatformGetDeviceCount();
+uint32_t FAudio_PlatformGetDeviceCount(void);
 void FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
@@ -354,7 +354,7 @@ FAudioThread FAudio_PlatformCreateThread(
 );
 void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval);
 void FAudio_PlatformThreadPriority(FAudioThreadPriority priority);
-FAudioMutex FAudio_PlatformCreateMutex();
+FAudioMutex FAudio_PlatformCreateMutex(void);
 void FAudio_PlatformDestroyMutex(FAudioMutex mutex);
 void FAudio_PlatformLockMutex(FAudioMutex mutex);
 void FAudio_PlatformUnlockMutex(FAudioMutex mutex);
@@ -362,7 +362,7 @@ void FAudio_sleep(uint32_t ms);
 
 /* Time */
 
-uint32_t FAudio_timems();
+uint32_t FAudio_timems(void);
 
 /* Easy Macros */
 
