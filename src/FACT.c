@@ -1845,7 +1845,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	}
 
 	FAudio_free(pCue->variableValues);
-	if (!pCue->managed && pCue->notifyOnDestroy)
+	if (pCue->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
 		note.cue.pCue = pCue;
