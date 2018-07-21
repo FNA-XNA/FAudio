@@ -31,6 +31,37 @@
 #include <assert.h>
 #define FAudio_assert assert
 #else
+#include <SDL_stdinc.h>
+
+#define FAudio_malloc SDL_malloc
+#define FAudio_realloc SDL_realloc
+#define FAudio_free SDL_free
+#define FAudio_zero(ptr, size) SDL_memset(ptr, '\0', size)
+#define FAudio_memcpy(dst, src, size) SDL_memcpy(dst, src, size)
+#define FAudio_memmove(dst, src, size) SDL_memmove(dst, src, size)
+#define FAudio_memcmp(ptr1, ptr2, size) SDL_memcmp(ptr1, ptr2, size)
+
+#define FAudio_strlen(ptr) SDL_strlen(ptr)
+#define FAudio_strcmp(str1, str2) SDL_strcmp(str1, str2)
+#define FAudio_strlcpy(ptr1, ptr2, size) SDL_strlcpy(ptr1, ptr2, size)
+
+#define FAudio_pow(x, y) SDL_pow(x, y)
+#define FAudio_log10(x) SDL_log10(x)
+#define FAudio_sqrt(x) SDL_sqrt(x)
+#define FAudio_sin(x) SDL_sin(x)
+#define FAudio_cos(x) SDL_cos(x)
+#define FAudio_tan(x) SDL_tan(x)
+#define FAudio_acos(x) SDL_acos(x)
+#define FAudio_ceil(x) SDL_ceil(x)
+#define FAudio_fabs(x) SDL_fabs(x)
+
+#define FAudio_cosf(x) SDL_cosf(x)
+#define FAudio_sinf(x) SDL_sinf(x)
+#define FAudio_sqrtf(x) SDL_sqrtf(x)
+#define FAudio_acosf(x) SDL_acosf(x)
+#define FAudio_atan2f(y, x) SDL_atan2f(y, x)
+#define FAudio_fabsf(x) SDL_fabsf(x)
+
 #include <SDL_assert.h>
 #define FAudio_assert SDL_assert
 #endif
@@ -296,38 +327,11 @@ void FAudio_PlatformLockMutex(FAudioMutex mutex);
 void FAudio_PlatformUnlockMutex(FAudioMutex mutex);
 void FAudio_sleep(uint32_t ms);
 
-/* stdlib Functions */
-
-void* FAudio_malloc(size_t size);
-void* FAudio_realloc(void* ptr, size_t size);
-void FAudio_free(void *ptr);
-void FAudio_zero(void *ptr, size_t size);
-void FAudio_memcpy(void *dst, const void *src, size_t size);
-void FAudio_memmove(void *dst, void *src, size_t size);
-int FAudio_memcmp(const void *ptr1, const void *ptr2, size_t size);
-
-size_t FAudio_strlen(const char *ptr);
-int FAudio_strcmp(const char *str1, const char *str2);
-void FAudio_strlcpy(char *dst, const char *src, size_t len);
-
-double FAudio_pow(double x, double y);
-double FAudio_log10(double x);
-double FAudio_sqrt(double x);
-double FAudio_sin(double x);
-double FAudio_cos(double x);
-double FAudio_tan(double x);
-double FAudio_acos(double x);
-double FAudio_ceil(double x);
-double FAudio_fabs(double x);
-
-float FAudio_cosf(float x);
-float FAudio_sinf(float x);
-float FAudio_sqrtf(float x);
-float FAudio_acosf(float x);
-float FAudio_atan2f(float y, float x);
-float FAudio_fabsf(float x);
+/* Time */
 
 uint32_t FAudio_timems();
+
+/* Easy Macros */
 
 #define FAudio_min(val1, val2) \
 	(val1 < val2 ? val1 : val2)
