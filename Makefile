@@ -35,7 +35,7 @@ else
 	UTIL_SUFFIX = 
 endif
 
-CFLAGS += -g -Wall -pedantic 
+CFLAGS += -g -Wall -pedantic
 
 # Source lists
 FAUDIOSRC = \
