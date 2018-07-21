@@ -28,10 +28,44 @@
 #include "FAPOBase.h"
 
 #ifdef FAUDIO_UNKNOWN_PLATFORM
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <assert.h>
+
+#define FAudio_malloc malloc
+#define FAudio_realloc realloc
+#define FAudio_free free
+#define FAudio_zero(ptr, size) memset(ptr, '\0', size)
+#define FAudio_memcpy(dst, src, size) memcpy(dst, src, size)
+#define FAudio_memmove(dst, src, size) memmove(dst, src, size)
+#define FAudio_memcmp(ptr1, ptr2, size) memcmp(ptr1, ptr2, size)
+
+#define FAudio_strlen(ptr) strlen(ptr)
+#define FAudio_strcmp(str1, str2) strcmp(str1, str2)
+#define FAudio_strlcpy(ptr1, ptr2, size) strlcpy(ptr1, ptr2, size)
+
+#define FAudio_pow(x, y) pow(x, y)
+#define FAudio_log10(x) log10(x)
+#define FAudio_sqrt(x) sqrt(x)
+#define FAudio_sin(x) sin(x)
+#define FAudio_cos(x) cos(x)
+#define FAudio_tan(x) tan(x)
+#define FAudio_acos(x) acos(x)
+#define FAudio_ceil(x) ceil(x)
+#define FAudio_fabs(x) fabs(x)
+
+#define FAudio_cosf(x) cosf(x)
+#define FAudio_sinf(x) sinf(x)
+#define FAudio_sqrtf(x) sqrtf(x)
+#define FAudio_acosf(x) acosf(x)
+#define FAudio_atan2f(y, x) atan2f(y, x)
+#define FAudio_fabsf(x) fabsf(x)
+
 #define FAudio_assert assert
 #else
 #include <SDL_stdinc.h>
+#include <SDL_assert.h>
 
 #define FAudio_malloc SDL_malloc
 #define FAudio_realloc SDL_realloc
@@ -62,7 +96,6 @@
 #define FAudio_atan2f(y, x) SDL_atan2f(y, x)
 #define FAudio_fabsf(x) SDL_fabsf(x)
 
-#include <SDL_assert.h>
 #define FAudio_assert SDL_assert
 #endif
 
