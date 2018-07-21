@@ -26,8 +26,32 @@
 
 #include "FAudio_internal.h"
 
-#define STB_VORBIS_NO_INTEGER_CONVERSION
-#include "stb_vorbis.h" /* TODO: Remove CRT dependency */
+#if 0 /* TODO: Remove CRT dependency */
+#define STB_VORBIS_NO_CRT 1
+#define STB_VORBIS_NO_PUSHDATA_API 1
+#define STB_VORBIS_NO_INTEGER_CONVERSION 1
+#define assert FAudio_assert
+#define memset FAudio_memset
+#define memcmp FAudio_memcmp
+#define memcpy FAudio_memcpy
+#define qsort FAudio_qsort
+#define pow FAudio_pow
+#define floor FAudio_floor
+#define malloc FAudio_malloc
+#define realloc FAudio_realloc
+#define free FAudio_free
+#define alloca(x) FAudio_alloca((x))
+#define dealloca(x) FAudio_dealloca((x))
+#define ldexp(v, e) FAudio_ldexp((v), (e))
+#define abs(x) FAudio_abs(x)
+#define cos(x) FAudio_cos(x)
+#define sin(x) FAudio_sin(x)
+#define log(x) FAudio_log(x)
+#else
+#define STB_VORBIS_NO_PUSHDATA_API 1
+#define STB_VORBIS_NO_INTEGER_CONVERSION 1
+#endif
+#include "stb_vorbis.h"
 
 /* Globals */
 
