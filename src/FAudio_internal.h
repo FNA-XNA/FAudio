@@ -33,9 +33,9 @@
 #include <math.h>
 #include <assert.h>
 
-#define FAudio_malloc malloc
-#define FAudio_realloc realloc
-#define FAudio_free free
+#define FAudio_malloc(size) malloc(size)
+#define FAudio_realloc(mem, size) realloc(mem, size)
+#define FAudio_free(mem) free(mem)
 #define FAudio_zero(ptr, size) memset(ptr, '\0', size)
 #define FAudio_memcpy(dst, src, size) memcpy(dst, src, size)
 #define FAudio_memmove(dst, src, size) memmove(dst, src, size)
@@ -67,9 +67,9 @@
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
 
-#define FAudio_malloc SDL_malloc
-#define FAudio_realloc SDL_realloc
-#define FAudio_free SDL_free
+#define FAudio_malloc(size) SDL_malloc(size)
+#define FAudio_realloc(mem, size) SDL_realloc(mem, size)
+#define FAudio_free(mem) SDL_free(mem)
 #define FAudio_zero(ptr, size) SDL_memset(ptr, '\0', size)
 #define FAudio_memcpy(dst, src, size) SDL_memcpy(dst, src, size)
 #define FAudio_memmove(dst, src, size) SDL_memmove(dst, src, size)
