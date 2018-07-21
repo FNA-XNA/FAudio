@@ -313,6 +313,10 @@ typedef struct FACTTrackInstance
 	/* RPC instance data */
 	FACTInstanceRPCData rpcData;
 
+	/* SetPitch/SetVolume data */
+	float evtPitch;
+	float evtVolume;
+
 	/* Wave playback */
 	struct
 	{

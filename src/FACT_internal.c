@@ -605,6 +605,9 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			newSound->tracks[i].rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 			newSound->tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
+			newSound->tracks[i].evtVolume = 0.0f;
+			newSound->tracks[i].evtPitch = 0.0f;
+
 			newSound->tracks[i].activeWave.wave = NULL;
 			newSound->tracks[i].activeWave.baseVolume = 0.0f;
 			newSound->tracks[i].activeWave.basePitch = 0;
@@ -1084,11 +1087,11 @@ void FACT_INTERNAL_ActivateEvent(
 		if (	evt->type == FACTEVENT_PITCH ||
 			evt->type == FACTEVENT_PITCHREPEATING	)
 		{
-			/* TODO: FACT_INTERNAL_SetPitch(evt->value*) */
+			trackInst->evtPitch = evtInst->value;
 		}
 		else
 		{
-			/* TODO: FACT_INTERNAL_SetVolume(evt->value*) */
+			trackInst->evtVolume = evtInst->value;
 		}
 
 		if (skipLoopCheck)
@@ -1262,7 +1265,8 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 			FACT_INTERNAL_CalculateAmplitudeRatio(
 				sound->tracks[i].activeWave.baseVolume +
 				sound->rpcData.rpcVolume +
-				sound->tracks[i].rpcData.rpcVolume
+				sound->tracks[i].rpcData.rpcVolume +
+				sound->tracks[i].evtVolume
 			) * sound->parentCue->parentBank->parentEngine->categories[
 				sound->sound->category
 			].currentVolume *
@@ -1273,7 +1277,8 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 			(int16_t) (
 				sound->tracks[i].activeWave.basePitch +
 				sound->rpcData.rpcPitch +
-				sound->tracks[i].rpcData.rpcPitch
+				sound->tracks[i].rpcData.rpcPitch +
+				sound->tracks[i].evtPitch
 			)
 		);
 		if (sound->sound->tracks[i].filter != 0xFF)
@@ -1298,7 +1303,6 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 		}
 		/* TODO: Wave updates:
 		 * - ReverbSend (SetOutputMatrix on index 1, submix voice)
-		 * - Fade in/out
 		 */
 	}
 
