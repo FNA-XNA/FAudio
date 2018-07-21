@@ -208,7 +208,9 @@ CREDITS
  * Also changed is the use of uint64_t instead of unsigned long.
  * -flibit
  */
+#ifndef FAUDIO_UNKNOWN_PLATFORM
 #define memcpy FAudio_memcpy
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 //
