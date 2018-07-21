@@ -1259,7 +1259,6 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 			FACTWave_Play(sound->tracks[i].activeWave.wave);
 		}
 
-		/* TODO: Event volume/pitch values */
 		FACTWave_SetVolume(
 			sound->tracks[i].activeWave.wave,
 			FACT_INTERNAL_CalculateAmplitudeRatio(
