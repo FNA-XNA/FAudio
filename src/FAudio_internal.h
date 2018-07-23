@@ -141,6 +141,11 @@ void LinkedList_AddEntry(
 	void* toAdd,
 	FAudioMutex lock
 );
+void LinkedList_PrependEntry(
+	LinkedList **start,
+	void* toAdd,
+	FAudioMutex lock
+);
 void LinkedList_RemoveEntry(
 	LinkedList **start,
 	void* toRemove,

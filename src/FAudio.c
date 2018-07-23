@@ -284,7 +284,7 @@ uint32_t FAudio_CreateSourceVoice(
 	);
 
 	/* Add to list, finally. */
-	LinkedList_AddEntry(
+	LinkedList_PrependEntry(
 		&audio->sources,
 		*ppSourceVoice,
 		audio->sourceLock
