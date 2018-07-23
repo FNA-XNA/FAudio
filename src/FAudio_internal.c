@@ -226,29 +226,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					voice->src.totalSamples = 0;
 				}
 
-				/* Callbacks */
-				if (voice->src.callback != NULL)
-				{
-					if (voice->src.callback->OnBufferEnd != NULL)
-					{
-						voice->src.callback->OnBufferEnd(
-							voice->src.callback,
-							buffer->pContext
-						);
-					}
-					if (	buffer->Flags & FAUDIO_END_OF_STREAM &&
-						voice->src.callback->OnStreamEnd != NULL	)
-					{
-						voice->src.callback->OnStreamEnd(
-							voice->src.callback
-						);
-					}
-				}
-
 				/* Change active buffer, delete finished buffer */
 				toDelete = voice->src.bufferList;
 				voice->src.bufferList = voice->src.bufferList->next;
-				FAudio_free(toDelete);
 				if (voice->src.bufferList != NULL)
 				{
 					buffer = &voice->src.bufferList->buffer;
@@ -270,6 +250,27 @@ static void FAudio_INTERNAL_DecodeBuffers(
 						)
 					);
 				}
+
+				/* Callbacks */
+				if (voice->src.callback != NULL)
+				{
+					if (voice->src.callback->OnBufferEnd != NULL)
+					{
+						voice->src.callback->OnBufferEnd(
+							voice->src.callback,
+							toDelete->buffer.pContext
+						);
+					}
+					if (	toDelete->buffer.Flags & FAUDIO_END_OF_STREAM &&
+						voice->src.callback->OnStreamEnd != NULL	)
+					{
+						voice->src.callback->OnStreamEnd(
+							voice->src.callback
+						);
+					}
+				}
+
+				FAudio_free(toDelete);
 			}
 		}
 
