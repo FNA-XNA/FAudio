@@ -120,7 +120,7 @@ uint32_t FAPOBase_IsInputFormatSupported(
 			(*ppSupportedInputFormat)->wBitsPerSample =
 				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
 		}
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 	return 0;
 }
@@ -155,7 +155,7 @@ uint32_t FAPOBase_IsOutputFormatSupported(
 			(*ppSupportedOutputFormat)->wBitsPerSample =
 				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
 		}
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 	return 0;
 }
@@ -185,7 +185,7 @@ uint32_t FAPOBase_LockForProcess(
 		OutputLockedParameterCount < fapo->m_pRegistrationProperties->MinOutputBufferCount ||
 		OutputLockedParameterCount > fapo->m_pRegistrationProperties->MaxOutputBufferCount	)
 	{
-		return 1;
+		return FAUDIO_E_INVALID_ARG;
 	}
 
 
@@ -194,7 +194,7 @@ uint32_t FAPOBase_LockForProcess(
 		if (	(fapo->m_pRegistrationProperties->Flags & flag) && \
 			(pInputLockedParameters->pFormat->prop != pOutputLockedParameters->pFormat->prop)	) \
 		{ \
-			return 1; \
+			return FAUDIO_E_INVALID_ARG; \
 		}
 	VERIFY_FORMAT_FLAG(FAPO_FLAG_CHANNELS_MUST_MATCH, nChannels)
 	VERIFY_FORMAT_FLAG(FAPO_FLAG_FRAMERATE_MUST_MATCH, nSamplesPerSec)
@@ -203,7 +203,7 @@ uint32_t FAPOBase_LockForProcess(
 	if (	(fapo->m_pRegistrationProperties->Flags & FAPO_FLAG_BUFFERCOUNT_MUST_MATCH) &&
 		(InputLockedParameterCount != OutputLockedParameterCount)	)
 	{
-		return 1;
+		return FAUDIO_E_INVALID_ARG;
 	}
 	fapo->m_fIsLocked = 1;
 	return 0;
@@ -253,7 +253,7 @@ uint32_t FAPOBase_ValidateFormatDefault(
 			pFormat->wBitsPerSample =
 				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
 		}
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 	return 0;
 }
@@ -288,7 +288,7 @@ uint32_t FAPOBase_ValidateFormatPair(
 			pRequestedFormat->wBitsPerSample =
 				FAPOBASE_DEFAULT_FORMAT_BITSPERSAMPLE;
 		}
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 	return 0;
 }
