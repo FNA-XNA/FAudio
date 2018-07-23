@@ -284,13 +284,13 @@ uint32_t FAudioFXReverb_LockForProcess(
 	/* reverb specific validation */
 	if (!IsFloatFormat(pInputLockedParameters->pFormat))
 	{
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 
 	if (pInputLockedParameters->pFormat->nSamplesPerSec < FAUDIOFX_REVERB_MIN_FRAMERATE ||
 		pInputLockedParameters->pFormat->nSamplesPerSec > FAUDIOFX_REVERB_MAX_FRAMERATE)
 	{
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 
 	if (!((pInputLockedParameters->pFormat->nChannels == 1 &&
@@ -300,7 +300,7 @@ uint32_t FAudioFXReverb_LockForProcess(
 			(pOutputLockedParameters->pFormat->nChannels == 2 ||
 			 pOutputLockedParameters->pFormat->nChannels == 6))))
 	{
-		return 1;
+		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 
 	/* save the things we care about */

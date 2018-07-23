@@ -638,7 +638,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		if (voice->outputChannels != voiceDetails.InputChannels)
 		{
 			FAudio_assert(0 && "Cannot remove effect chain that changes the number of channels");
-			return 1;
+			return FAUDIO_E_INVALID_CALL;
 		}
 	}
 
@@ -650,7 +650,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		if (voice->outputChannels != pEffectChain->pEffectDescriptors[lst].OutputChannels)
 		{
 			FAudio_assert(0 && "New effect chain must have same number of output channels as the old chain");
-			return 1;
+			return FAUDIO_E_INVALID_CALL;
 		}
 	}
 
@@ -687,7 +687,7 @@ uint32_t FAudioVoice_SetEffectChain(
 			{
 				FAudio_assert(0 && "Effect: output format not supported");
 				FAudio_PlatformUnlockMutex(voice->effectLock);
-				return 1;
+				return FAUDIO_E_UNSUPPORTED_FORMAT;
 			}
 		}
 
@@ -903,10 +903,10 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	if (!pVolumes)
-		return 1;
+		return FAUDIO_E_INVALID_CALL;
 
 	if (voice->audio->version > 7 && Channels != voice->outputChannels)
-		return 1;
+		return FAUDIO_E_INVALID_CALL;
 
 	FAudio_PlatformLockMutex(voice->volumeLock);
 	FAudio_memcpy(
@@ -1195,7 +1195,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* "LoopBegin/LoopLength must be zero if LoopCount is 0" */
 	if (pBuffer->LoopCount == 0 && (loopBegin > 0 || loopLength > 0))
 	{
-		return 1;
+		return FAUDIO_E_INVALID_CALL;
 	}
 
 	/* PlayLength Default */
@@ -1223,7 +1223,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
 		if (loopBegin >= (playBegin + playLength))
 		{
-			return 1;
+			return FAUDIO_E_INVALID_CALL;
 		}
 
 		/* LoopLength Default */
@@ -1239,7 +1239,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 			(loopBegin + loopLength) <= playBegin ||
 			(loopBegin + loopLength) > (playBegin + playLength))	)
 		{
-			return 1;
+			return FAUDIO_E_INVALID_CALL;
 		}
 	}
 
