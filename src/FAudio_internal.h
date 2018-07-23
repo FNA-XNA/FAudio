@@ -184,6 +184,7 @@ typedef float FAudioFilterState[4];
 
 struct FAudio
 {
+	uint8_t version;
 	uint8_t active;
 	uint32_t refcount;
 	uint32_t updateSize;

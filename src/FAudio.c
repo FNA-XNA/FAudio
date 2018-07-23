@@ -33,16 +33,17 @@ uint32_t FAudioCreate(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
-	FAudio_Construct(ppFAudio);
+	FAudio_Construct(ppFAudio, FAUDIO_TARGET_VERSION);
 	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
 	return 0;
 }
 
-uint32_t FAudio_Construct(FAudio **ppFAudio)
+uint32_t FAudio_Construct(FAudio **ppFAudio, uint8_t version)
 {
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
+	(*ppFAudio)->version = version;
 	(*ppFAudio)->sourceLock = FAudio_PlatformCreateMutex();
 	(*ppFAudio)->submixLock = FAudio_PlatformCreateMutex();
 	(*ppFAudio)->callbackLock = FAudio_PlatformCreateMutex();
