@@ -52,6 +52,20 @@ void LinkedList_AddEntry(
 	FAudio_PlatformUnlockMutex(lock);
 }
 
+void LinkedList_PrependEntry(
+	LinkedList **start,
+	void* toAdd,
+	FAudioMutex lock
+) {
+	LinkedList *newEntry;
+	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
+	newEntry->entry = toAdd;
+	FAudio_PlatformLockMutex(lock);
+	newEntry->next = *start;
+	*start = newEntry;
+	FAudio_PlatformUnlockMutex(lock);
+}
+
 void LinkedList_RemoveEntry(
 	LinkedList **start,
 	void* toRemove,
