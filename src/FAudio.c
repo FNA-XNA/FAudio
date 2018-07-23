@@ -900,8 +900,13 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	uint32_t OperationSet
 ) {
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
-	FAudio_assert(Channels == voice->outputChannels);
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (!pVolumes)
+		return 1;
+
+	if (voice->audio->version > 7 && Channels != voice->outputChannels)
+		return 1;
 
 	FAudio_PlatformLockMutex(voice->volumeLock);
 	FAudio_memcpy(
