@@ -1230,8 +1230,9 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		/* "The value of LoopBegin + LoopLength must be greater than PlayBegin
 		 * and less than PlayBegin + PlayLength"
 		 */
-		if (	(loopBegin + loopLength) <= playBegin ||
-			(loopBegin + loopLength) > (playBegin + playLength)	)
+		if (	voice->audio->version > 7 && (
+			(loopBegin + loopLength) <= playBegin ||
+			(loopBegin + loopLength) > (playBegin + playLength))	)
 		{
 			return 1;
 		}
@@ -1262,6 +1263,13 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->buffer.LoopBegin = loopBegin;
 	entry->buffer.LoopLength = loopLength;
 	entry->next = NULL;
+
+	if (	voice->audio->version <= 7 && (
+		entry->buffer.LoopCount > 0 &&
+		entry->buffer.LoopBegin + entry->buffer.LoopLength <= entry->buffer.PlayBegin))
+	{
+		entry->buffer.LoopCount = 0;
+	}
 
 	/* Submit! */
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
