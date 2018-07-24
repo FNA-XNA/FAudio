@@ -876,8 +876,9 @@ uint32_t FAudioVoice_SetVolume(
 ) {
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	voice->volume = FAudio_min(
+	voice->volume = FAudio_clamp(
 		Volume,
+		-FAUDIO_MAX_VOLUME_LEVEL,
 		FAUDIO_MAX_VOLUME_LEVEL
 	);
 	return 0;
