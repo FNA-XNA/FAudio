@@ -998,8 +998,8 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 
 /* PCM Decoding */
 
-void (*FAudio_INTERNAL_Convert_S8_To_F32)(
-	const int8_t *restrict src,
+void (*FAudio_INTERNAL_Convert_U8_To_F32)(
+	const uint8_t *restrict src,
 	float *restrict dst,
 	uint32_t len
 );
@@ -1016,8 +1016,8 @@ void FAudio_INTERNAL_DecodePCM8(
 	uint32_t samples,
 	FAudioWaveFormatEx *format
 ) {
-	FAudio_INTERNAL_Convert_S8_To_F32(
-		((int8_t*) buffer->pAudioData) + (
+	FAudio_INTERNAL_Convert_U8_To_F32(
+		((uint8_t*) buffer->pAudioData) + (
 			curOffset * format->nChannels
 		),
 		decodeCache,
@@ -1346,15 +1346,15 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 #define DIVBY32768 0.000030517578125f
 
 #if NEED_SCALAR_CONVERTER_FALLBACKS
-void FAudio_INTERNAL_Convert_S8_To_F32_Scalar(
-	const int8_t *restrict src,
+void FAudio_INTERNAL_Convert_U8_To_F32_Scalar(
+	const uint8_t *restrict src,
 	float *restrict dst,
 	uint32_t len
 ) {
 	uint32_t i;
 	for (i = 0; i < len; i += 1)
 	{
-		*dst++ = *src++ * DIVBY128;
+		*dst++ = (*src++ * DIVBY128) - 1.0f;
 	}
 }
 
@@ -1372,8 +1372,8 @@ void FAudio_INTERNAL_Convert_S16_To_F32_Scalar(
 #endif /* NEED_SCALAR_CONVERTER_FALLBACKS */
 
 #if HAVE_SSE2_INTRINSICS
-void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
-	const int8_t *restrict src,
+void FAudio_INTERNAL_Convert_U8_To_F32_SSE2(
+	const uint8_t *restrict src,
 	float *restrict dst,
 	uint32_t len
 ) {
@@ -1383,7 +1383,7 @@ void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
 
     /* Get dst aligned to 16 bytes (since buffer is growing, we don't have to worry about overreading from src) */
     for (i = len; i && (((size_t) (dst-15)) & 15); --i, --src, --dst) {
-        *dst = ((float) *src) * DIVBY128;
+        *dst = (((float) *src) * DIVBY128) - 1.0f;
     }
 
     src -= 15; dst -= 15;  /* adjust to read SSE blocks from the start. */
@@ -1395,17 +1395,19 @@ void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
         const __m128i *mmsrc = (const __m128i *) src;
         const __m128i zero = _mm_setzero_si128();
         const __m128 divby128 = _mm_set1_ps(DIVBY128);
+        const __m128 minus1 = _mm_set1_ps(-1.0f);
         while (i >= 16) {   /* 16 * 8-bit */
-            const __m128i bytes = _mm_load_si128(mmsrc);  /* get 16 sint8 into an XMM register. */
-            /* treat as int16, shift left to clear every other sint16, then back right with sign-extend. Now sint16. */
-            const __m128i shorts1 = _mm_srai_epi16(_mm_slli_epi16(bytes, 8), 8);
-            /* right-shift-sign-extend gets us sint16 with the other set of values. */
-            const __m128i shorts2 = _mm_srai_epi16(bytes, 8);
-            /* unpack against zero to make these int32, shift to make them sign-extend, convert to float, multiply. Whew! */
-            const __m128 floats1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpacklo_epi16(shorts1, zero), 16), 16)), divby128);
-            const __m128 floats2 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpacklo_epi16(shorts2, zero), 16), 16)), divby128);
-            const __m128 floats3 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpackhi_epi16(shorts1, zero), 16), 16)), divby128);
-            const __m128 floats4 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_slli_epi32(_mm_unpackhi_epi16(shorts2, zero), 16), 16)), divby128);
+            const __m128i bytes = _mm_load_si128(mmsrc);  /* get 16 uint8 into an XMM register. */
+            /* treat as int16, shift left to clear every other sint16, then back right with zero-extend. Now uint16. */
+            const __m128i shorts1 = _mm_srli_epi16(_mm_slli_epi16(bytes, 8), 8);
+            /* right-shift-zero-extend gets us uint16 with the other set of values. */
+            const __m128i shorts2 = _mm_srli_epi16(bytes, 8);
+            /* unpack against zero to make these int32, convert to float, multiply, add. Whew! */
+            /* Note that AVX2 can do floating point multiply+add in one instruction, fwiw. SSE2 cannot. */
+            const __m128 floats1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(shorts1, zero)), divby128), minus1);
+            const __m128 floats2 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(shorts2, zero)), divby128), minus1);
+            const __m128 floats3 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(shorts1, zero)), divby128), minus1);
+            const __m128 floats4 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(shorts2, zero)), divby128), minus1);
             /* Interleave back into correct order, store. */
             _mm_store_ps(dst, _mm_unpacklo_ps(floats1, floats2));
             _mm_store_ps(dst+4, _mm_unpackhi_ps(floats1, floats2));
@@ -1414,14 +1416,14 @@ void FAudio_INTERNAL_Convert_S8_To_F32_SSE2(
             i -= 16; mmsrc--; dst -= 16;
         }
 
-        src = (const int8_t *) mmsrc;
+        src = (const uint8_t *) mmsrc;
     }
 
     src += 15; dst += 15;  /* adjust for any scalar finishing. */
 
     /* Finish off any leftovers with scalar operations. */
     while (i) {
-        *dst = ((float) *src) * DIVBY128;
+        *dst = (((float) *src) * DIVBY128) - 1.0f;
         i--; src--; dst--;
     }
 }
@@ -1471,8 +1473,8 @@ void FAudio_INTERNAL_Convert_S16_To_F32_SSE2(
 #endif /* HAVE_SSE2_INTRINSICS */
 
 #if HAVE_NEON_INTRINSICS
-void FAudio_INTERNAL_Convert_S8_To_F32_NEON(
-	const int8_t *restrict src,
+void FAudio_INTERNAL_Convert_U8_To_F32_NEON(
+	const uint8_t *restrict src,
 	float *restrict dst,
 	uint32_t len
 ) {
@@ -1482,7 +1484,7 @@ void FAudio_INTERNAL_Convert_S8_To_F32_NEON(
 
     /* Get dst aligned to 16 bytes (since buffer is growing, we don't have to worry about overreading from src) */
     for (i = len; i && (((size_t) (dst-15)) & 15); --i, --src, --dst) {
-        *dst = ((float) *src) * DIVBY128;
+        *dst = (((float) *src) * DIVBY128) - 1.0f;
     }
 
     src -= 15; dst -= 15;  /* adjust to read NEON blocks from the start. */
@@ -1491,28 +1493,29 @@ void FAudio_INTERNAL_Convert_S8_To_F32_NEON(
     /* Make sure src is aligned too. */
     if ((((size_t) src) & 15) == 0) {
         /* Aligned! Do NEON blocks as long as we have 16 bytes available. */
-        const int8_t *mmsrc = (const int8_t *) src;
+        const uint8_t *mmsrc = (const uint8_t *) src;
         const float32x4_t divby128 = vdupq_n_f32(DIVBY128);
+        const float32x4_t one = vdupq_n_f32(1.0f);
         while (i >= 16) {   /* 16 * 8-bit */
-            const int8x16_t bytes = vld1q_s8(mmsrc);  /* get 16 sint8 into a NEON register. */
-            const int16x8_t int16hi = vmovl_s8(vget_high_s8(bytes));  /* convert top 8 bytes to 8 int16 */
-            const int16x8_t int16lo = vmovl_s8(vget_low_s8(bytes));   /* convert bottom 8 bytes to 8 int16 */
-            /* split int16 to two int32, then convert to float, then multiply to normalize, store. */
-            vst1q_f32(dst, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(int16hi))), divby128));
-            vst1q_f32(dst+4, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(int16hi))), divby128));
-            vst1q_f32(dst+8, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(int16lo))), divby128));
-            vst1q_f32(dst+12, vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(int16lo))), divby128));
+            const uint8x16_t bytes = vld1q_u8(mmsrc);  /* get 16 uint8 into a NEON register. */
+            const uint16x8_t uint16hi = vmovl_u8(vget_high_u8(bytes));  /* convert top 8 bytes to 8 uint16 */
+            const uint16x8_t uint16lo = vmovl_u8(vget_low_u8(bytes));   /* convert bottom 8 bytes to 8 uint16 */
+            /* split uint16 to two uint32, then convert to float, then multiply to normalize, subtract to adjust for sign, store. */
+            vst1q_f32(dst, vmlsq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(uint16hi))), divby128, one));
+            vst1q_f32(dst+4, vmlsq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(uint16hi))), divby128, one));
+            vst1q_f32(dst+8, vmlsq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(uint16lo))), divby128, one));
+            vst1q_f32(dst+12, vmlsq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(uint16lo))), divby128, one));
             i -= 16; mmsrc -= 16; dst -= 16;
         }
 
-        src = (const int8_t *) mmsrc;
+        src = (const uint8_t *) mmsrc;
     }
 
     src += 15; dst += 15;  /* adjust for any scalar finishing. */
 
     /* Finish off any leftovers with scalar operations. */
     while (i) {
-        *dst = ((float) *src) * DIVBY128;
+        *dst = (((float) *src) * DIVBY128) - 1.0f;
         i--; src--; dst--;
     }
 }
@@ -1562,7 +1565,7 @@ void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 #if HAVE_SSE2_INTRINSICS
 	if (hasSSE2)
 	{
-		FAudio_INTERNAL_Convert_S8_To_F32 = FAudio_INTERNAL_Convert_S8_To_F32_SSE2;
+		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_SSE2;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_SSE2;
 		return;
 	}
@@ -1570,13 +1573,13 @@ void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 #if HAVE_NEON_INTRINSICS
 	if (hasNEON)
 	{
-		FAudio_INTERNAL_Convert_S8_To_F32 = FAudio_INTERNAL_Convert_S8_To_F32_NEON;
+		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_NEON;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
 		return;
 	}
 #endif
 #if NEED_SCALAR_CONVERTER_FALLBACKS
-	FAudio_INTERNAL_Convert_S8_To_F32 = FAudio_INTERNAL_Convert_S8_To_F32_Scalar;
+	FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_Scalar;
 	FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_Scalar;
 #else
 	FAudio_assert(0 && "Need converter functions!");
