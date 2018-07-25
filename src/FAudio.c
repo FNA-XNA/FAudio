@@ -1442,6 +1442,16 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 
 	FAudio_assert(	NewSourceSampleRate >= FAUDIO_MIN_SAMPLE_RATE &&
 			NewSourceSampleRate <= FAUDIO_MAX_SAMPLE_RATE	);
+
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
+	if (	voice->audio->version > 7 &&
+		voice->src.bufferList != NULL)
+	{
+		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+		return FAUDIO_E_INVALID_CALL;
+	}
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+
 	voice->src.format.nSamplesPerSec = NewSourceSampleRate;
 
 	/* Resize decode cache */
