@@ -149,6 +149,7 @@ typedef struct FAudioDeviceDetails
 typedef struct FAudioVoiceDetails
 {
 	uint32_t CreationFlags;
+	uint32_t ActiveFlags;
 	uint32_t InputChannels;
 	uint32_t InputSampleRate;
 } FAudioVoiceDetails;
