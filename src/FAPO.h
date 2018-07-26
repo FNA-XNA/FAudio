@@ -154,6 +154,16 @@ typedef uint32_t (FAPOCALL * CalcOutputFramesFunc)(
 	void* fapo,
 	uint32_t InputFrameCount
 );
+typedef void (FAPOCALL * SetParametersFunc)(
+	void* fapo,
+	const void* pParameters,
+	uint32_t ParameterByteSize
+);
+typedef void (FAPOCALL * GetParametersFunc)(
+	void* fapo,
+	void* pParameters,
+	uint32_t ParameterByteSize
+);
 
 struct FAPO
 {
@@ -169,25 +179,6 @@ struct FAPO
 	ProcessFunc Process;
 	CalcInputFramesFunc CalcInputFrames;
 	CalcOutputFramesFunc CalcOutputFrames;
-};
-
-/* FAPOParameters Interface */
-
-typedef struct FAPOParameters FAPOParameters;
-
-typedef void (FAPOCALL * SetParametersFunc)(
-	void* fapoParameters,
-	const void* pParameters,
-	uint32_t ParameterByteSize
-);
-typedef void (FAPOCALL * GetParametersFunc)(
-	void* fapoParameters,
-	void* pParameters,
-	uint32_t ParameterByteSize
-);
-
-struct FAPOParameters
-{
 	SetParametersFunc SetParameters;
 	GetParametersFunc GetParameters;
 };

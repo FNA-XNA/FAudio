@@ -8,7 +8,7 @@ class XAudio2VolumeMeter : public CXAPOParametersBase
 {
 public:
 	XAudio2VolumeMeter(void *object) : fapo_object(object),
-									   CXAPOParametersBase(reinterpret_cast<FAPOParametersBase *>(object)) 
+									   CXAPOParametersBase(reinterpret_cast<FAPOBase *>(object)) 
 	{
 	}
 
@@ -36,7 +36,7 @@ class XAudio2Reverb : public CXAPOParametersBase
 {
 public:
 	XAudio2Reverb(void *object) : fapo_object(object),
-								  CXAPOParametersBase(reinterpret_cast<FAPOParametersBase *>(object)) 
+								  CXAPOParametersBase(reinterpret_cast<FAPOBase *>(object)) 
 	{
 	}
 

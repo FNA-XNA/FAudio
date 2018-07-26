@@ -13,7 +13,11 @@ protected:
 	CXAPOBase(FAPOBase *base);
 
 public:
-	CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties);
+	CXAPOBase(
+		const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties, 
+		BYTE* pParameterBlocks = NULL, 
+		UINT32 uParameterBlockByteSize = 0, 
+		BOOL fProducer = 0);
 	virtual ~CXAPOBase();
 
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void** ppInterface);
@@ -66,7 +70,7 @@ class CXAPOParametersBase : public CXAPOBase, public IXAPOParameters
 {
 protected:
 	// for derived classes that wrap FAPO structs
-	CXAPOParametersBase(FAPOParametersBase *param_base);
+	CXAPOParametersBase(FAPOBase *base);
 public:
 	CXAPOParametersBase(
 		const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties, 
@@ -87,11 +91,6 @@ public:
 	BOOL ParametersChanged();
 	BYTE* BeginProcess();
 	void EndProcess();
-
-private:
-	FAPOParametersBase *fapo_param_base;
-	bool own_fapo_param_base;
-
 };
 
 #endif // FACT_CPP_XAPOBASE_H

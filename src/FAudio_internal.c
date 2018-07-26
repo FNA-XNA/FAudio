@@ -410,7 +410,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	uint32_t samples
 ) {
 	uint32_t i;
-	FAPOParametersBase *fapo;
+	FAPO *fapo;
 	FAudioWaveFormatEx srcFmt, dstFmt;
 	FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
 	FAPOProcessBufferParameters srcParams, dstParams;
@@ -440,7 +440,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	/* Update parameters, process! */
 	for (i = 0; i < voice->effects.count; i += 1)
 	{
-		fapo = (FAPOParametersBase*) voice->effects.desc[i].pEffect;
+		fapo = voice->effects.desc[i].pEffect;
 
 		if (!voice->effects.inPlaceProcessing[i])
 		{
@@ -461,21 +461,21 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 		if (voice->effects.parameterUpdates[i])
 		{
-			fapo->parameters.SetParameters(
+			fapo->SetParameters(
 				fapo,
 				voice->effects.parameters[i],
 				voice->effects.parameterSizes[i]
 			);
 			voice->effects.parameterUpdates[i] = 0;
 		}
-		fapo->base.base.LockForProcess(
+		fapo->LockForProcess(
 			fapo,
 			1,
 			&srcLockParams,
 			1,
 			&dstLockParams
 		);
-		fapo->base.base.Process(
+		fapo->Process(
 			fapo,
 			1,
 			&srcParams,
@@ -483,7 +483,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			&dstParams,
 			voice->effects.desc[i].InitialState
 		);
-		fapo->base.base.UnlockForProcess(fapo);
+		fapo->UnlockForProcess(fapo);
 
 		FAudio_memcpy(&srcFmt, &dstFmt, sizeof(dstFmt));
 		FAudio_memcpy(&srcParams, &dstParams, sizeof(dstParams));

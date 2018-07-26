@@ -795,10 +795,10 @@ uint32_t FAudioVoice_GetEffectParameters(
 	void *pParameters,
 	uint32_t ParametersByteSize
 ) {
-	FAPOParametersBase *fapo;
+	FAPO *fapo;
 	FAudio_PlatformLockMutex(voice->effectLock);
-	fapo = (FAPOParametersBase*) voice->effects.desc[EffectIndex].pEffect;
-	fapo->parameters.GetParameters(fapo, pParameters, ParametersByteSize);
+	fapo = voice->effects.desc[EffectIndex].pEffect;
+	fapo->GetParameters(fapo, pParameters, ParametersByteSize);
 	FAudio_PlatformUnlockMutex(voice->effectLock);
 	return 0;
 }

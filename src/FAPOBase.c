@@ -31,7 +31,10 @@
 
 void CreateFAPOBase(
 	FAPOBase *fapo,
-	const FAPORegistrationProperties *pRegistrationProperties
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer
 ) {
 	/* Base Classes/Interfaces */
 	#define ASSIGN_VT(name) \
@@ -47,7 +50,13 @@ void CreateFAPOBase(
 	ASSIGN_VT(UnlockForProcess)
 	ASSIGN_VT(CalcInputFrames)
 	ASSIGN_VT(CalcOutputFrames)
+	ASSIGN_VT(SetParameters)
+	ASSIGN_VT(GetParameters)
 	#undef ASSIGN_VT
+
+	/* Public Virtual Functions */
+	fapo->OnSetParameters = (OnSetParametersFunc)
+		FAPOBase_OnSetParameters;
 
 	/* Private Variables */
 	fapo->m_pRegistrationProperties = pRegistrationProperties; /* FIXME */
@@ -56,6 +65,13 @@ void CreateFAPOBase(
 	fapo->m_nSrcFormatType = 0; /* FIXME */
 	fapo->m_fIsScalarMatrix = 0; /* FIXME: */
 	fapo->m_fIsLocked = 0;
+	fapo->m_pParameterBlocks = pParameterBlocks;
+	fapo->m_pCurrentParameters = pParameterBlocks;
+	fapo->m_pCurrentParametersInternal = pParameterBlocks;
+	fapo->m_uCurrentParametersIndex = 0;
+	fapo->m_uParameterBlockByteSize = uParameterBlockByteSize;
+	fapo->m_fNewerResultsReady = 0;
+	fapo->m_fProducer = fProducer;
 
 	/* Protected Variables */
 	fapo->m_lReferenceCount = 1;
@@ -77,8 +93,6 @@ int32_t FAPOBase_Release(FAPOBase *fapo)
 	}
 	return fapo->m_lReferenceCount;
 }
-
-/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
 uint32_t FAPOBase_GetRegistrationProperties(
 	FAPOBase *fapo,
@@ -343,116 +357,73 @@ void FAPOBase_ProcessThru(
 	}
 }
 
-/* FAPOParametersBase Interface */
-
-void CreateFAPOParametersBase(
-	FAPOParametersBase *fapoParameters,
-	const FAPORegistrationProperties *pRegistrationProperties,
-	uint8_t *pParameterBlocks,
-	uint32_t uParameterBlockByteSize,
-	uint8_t fProducer
-) {
-	/* Base Classes/Interfaces */
-	CreateFAPOBase(&fapoParameters->base, pRegistrationProperties);
-	#define ASSIGN_VT(name) \
-		fapoParameters->parameters.name = (name##Func) FAPOParametersBase_##name;
-	ASSIGN_VT(SetParameters)
-	ASSIGN_VT(GetParameters)
-	#undef ASSIGN_VT
-
-	/* Public Virtual Functions */
-	fapoParameters->OnSetParameters = (OnSetParametersFunc)
-		FAPOParametersBase_OnSetParameters;
-
-	/* Private Variables */
-	fapoParameters->m_pParameterBlocks = pParameterBlocks;
-	fapoParameters->m_pCurrentParameters = pParameterBlocks;
-	fapoParameters->m_pCurrentParametersInternal = pParameterBlocks;
-	fapoParameters->m_uCurrentParametersIndex = 0;
-	fapoParameters->m_uParameterBlockByteSize = uParameterBlockByteSize;
-	fapoParameters->m_fNewerResultsReady = 0;
-	fapoParameters->m_fProducer = fProducer;
-}
-
-int32_t FAPOParametersBase_AddRef(FAPOParametersBase *fapoParameters)
-{
-	return FAPOBase_AddRef(&fapoParameters->base);
-}
-
-int32_t FAPOParametersBase_Release(FAPOParametersBase *fapoParameters)
-{
-	return FAPOBase_Release(&fapoParameters->base);
-}
-
-/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
-
-void FAPOParametersBase_SetParameters(
-	FAPOParametersBase *fapoParameters,
+void FAPOBase_SetParameters(
+	FAPOBase *fapo,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 ) {
-	FAudio_assert(!fapoParameters->m_fProducer);
+	FAudio_assert(!fapo->m_fProducer);
 
 	/* User callback for validation */
-	fapoParameters->OnSetParameters(
-		fapoParameters,
+	fapo->OnSetParameters(
+		fapo,
 		pParameters,
 		ParameterByteSize
 	);
 
 	/* Increment parameter block index... */
-	fapoParameters->m_uCurrentParametersIndex += 1;
-	if (fapoParameters->m_uCurrentParametersIndex == 3)
+	fapo->m_uCurrentParametersIndex += 1;
+	if (fapo->m_uCurrentParametersIndex == 3)
 	{
-		fapoParameters->m_uCurrentParametersIndex = 0;
+		fapo->m_uCurrentParametersIndex = 0;
 	}
-	fapoParameters->m_pCurrentParametersInternal = fapoParameters->m_pParameterBlocks + (
-		fapoParameters->m_uParameterBlockByteSize *
-		fapoParameters->m_uCurrentParametersIndex
+	fapo->m_pCurrentParametersInternal = fapo->m_pParameterBlocks + (
+		fapo->m_uParameterBlockByteSize *
+		fapo->m_uCurrentParametersIndex
 	);
 
 	/* Copy to what will eventually be the next parameter update */
 	FAudio_memcpy(
-		fapoParameters->m_pCurrentParametersInternal,
+		fapo->m_pCurrentParametersInternal,
 		pParameters,
 		ParameterByteSize
 	);
 }
 
-void FAPOParametersBase_GetParameters(
-	FAPOParametersBase *fapoParameters,
+void FAPOBase_GetParameters(
+	FAPOBase *fapo,
 	void* pParameters,
 	uint32_t ParameterByteSize
 ) {
 	/* Copy what's current as of the last Process */
 	FAudio_memcpy(
 		pParameters,
-		fapoParameters->m_pCurrentParameters,
+		fapo->m_pCurrentParameters,
 		ParameterByteSize
 	);
 }
 
-void FAPOParametersBase_OnSetParameters(
-	FAPOParametersBase *fapoParameters,
+void FAPOBase_OnSetParameters(
+	FAPOBase *fapo,
 	const void* parameters,
 	uint32_t parametersSize
 ) {
 }
 
-uint8_t FAPOParametersBase_ParametersChanged(FAPOParametersBase *fapoParameters)
+uint8_t FAPOBase_ParametersChanged(FAPOBase *fapo)
 {
 	/* Internal will get updated when SetParameters is called */
-	return fapoParameters->m_pCurrentParametersInternal != fapoParameters->m_pCurrentParameters;
+	return fapo->m_pCurrentParametersInternal != fapo->m_pCurrentParameters;
 }
 
-uint8_t* FAPOParametersBase_BeginProcess(FAPOParametersBase *fapoParameters)
+uint8_t* FAPOBase_BeginProcess(FAPOBase *fapo)
 {
 	/* Set the latest block as "current", this is what Process will use now */
-	fapoParameters->m_pCurrentParameters = fapoParameters->m_pCurrentParametersInternal;
-	return fapoParameters->m_pCurrentParameters;
+	fapo->m_pCurrentParameters = fapo->m_pCurrentParametersInternal;
+	return fapo->m_pCurrentParameters;
 }
 
-void FAPOParametersBase_EndProcess(FAPOParametersBase *fapoParameters)
+void FAPOBase_EndProcess(FAPOBase *fapo)
 {
 	/* I'm 100% sure my parameter block increment is wrong... */
 }

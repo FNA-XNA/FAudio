@@ -54,12 +54,23 @@ extern "C" {
 
 /* FAPOBase Interface */
 
+typedef struct FAPOBase FAPOBase;
+
+typedef void (FAPOCALL * OnSetParametersFunc)(
+	FAPOBase *fapo,
+	const void* parameters,
+	uint32_t parametersSize
+);
+
 #pragma pack(push, 8)
-typedef struct FAPOBase
+struct FAPOBase
 {
 	/* Base Classes/Interfaces */
 	FAPO base;
 	void (FAPOCALL *Destructor)(void*);
+
+	/* Public Virtual Functions */
+	OnSetParametersFunc OnSetParameters;
 
 	/* Private Variables */
 	const FAPORegistrationProperties *m_pRegistrationProperties;
@@ -68,22 +79,30 @@ typedef struct FAPOBase
 	uint32_t m_nSrcFormatType;
 	uint8_t m_fIsScalarMatrix;
 	uint8_t m_fIsLocked;
+	uint8_t *m_pParameterBlocks;
+	uint8_t *m_pCurrentParameters;
+	uint8_t *m_pCurrentParametersInternal;
+	uint32_t m_uCurrentParametersIndex;
+	uint32_t m_uParameterBlockByteSize;
+	uint8_t m_fNewerResultsReady;
+	uint8_t m_fProducer;
 
 	/* Protected Variables */
 	int32_t m_lReferenceCount; /* LONG */
-} FAPOBase;
+};
 #pragma pack(pop)
 
 FAPOAPI void CreateFAPOBase(
 	FAPOBase *fapo,
-	const FAPORegistrationProperties *pRegistrationProperties
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer
 );
 
 FAPOAPI int32_t FAPOBase_AddRef(FAPOBase *fapo);
 
 FAPOAPI int32_t FAPOBase_Release(FAPOBase *fapo);
-
-/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
 
 FAPOAPI uint32_t FAPOBase_GetRegistrationProperties(
 	FAPOBase *fapo,
@@ -155,76 +174,29 @@ FAPOAPI void FAPOBase_ProcessThru(
 	uint8_t MixWithOutput
 );
 
-/* FAPOParametersBase Interface */
-
-#pragma pack(push, 8)
-
-typedef struct FAPOParametersBase FAPOParametersBase;
-
-typedef void (FAPOCALL * OnSetParametersFunc)(
-	FAPOParametersBase *fapoParameters,
-	const void* parameters,
-	uint32_t parametersSize
-);
-
-struct FAPOParametersBase
-{
-	/* Base Classes/Interfaces */
-	FAPOBase base;
-	FAPOParameters parameters;
-
-	/* Public Virtual Functions */
-	OnSetParametersFunc OnSetParameters;
-
-	/* Private Variables */
-	uint8_t *m_pParameterBlocks;
-	uint8_t *m_pCurrentParameters;
-	uint8_t *m_pCurrentParametersInternal;
-	uint32_t m_uCurrentParametersIndex;
-	uint32_t m_uParameterBlockByteSize;
-	uint8_t m_fNewerResultsReady;
-	uint8_t m_fProducer;
-};
-
-#pragma pack(pop)
-
-FAPOAPI void CreateFAPOParametersBase(
-	FAPOParametersBase *fapoParameters,
-	const FAPORegistrationProperties *pRegistrationProperties,
-	uint8_t *pParameterBlocks,
-	uint32_t uParameterBlockByteSize,
-	uint8_t fProducer
-);
-
-FAPOAPI int32_t FAPOParametersBase_AddRef(FAPOParametersBase *fapoParameters);
-
-FAPOAPI int32_t FAPOParametersBase_Release(FAPOParametersBase *fapoParameters);
-
-/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
-
-FAPOAPI void FAPOParametersBase_SetParameters(
-	FAPOParametersBase *fapoParameters,
+FAPOAPI void FAPOBase_SetParameters(
+	FAPOBase *fapo,
 	const void* pParameters,
 	uint32_t ParameterByteSize
 );
 
-FAPOAPI void FAPOParametersBase_GetParameters(
-	FAPOParametersBase *fapoParameters,
+FAPOAPI void FAPOBase_GetParameters(
+	FAPOBase *fapo,
 	void* pParameters,
 	uint32_t ParameterByteSize
 );
 
-FAPOAPI void FAPOParametersBase_OnSetParameters(
-	FAPOParametersBase *fapoParameters,
+FAPOAPI void FAPOBase_OnSetParameters(
+	FAPOBase *fapo,
 	const void* parameters,
 	uint32_t parametersSize
 );
 
-FAPOAPI uint8_t FAPOParametersBase_ParametersChanged(FAPOParametersBase *fapoParameters);
+FAPOAPI uint8_t FAPOBase_ParametersChanged(FAPOBase *fapo);
 
-FAPOAPI uint8_t* FAPOParametersBase_BeginProcess(FAPOParametersBase *fapoParameters);
+FAPOAPI uint8_t* FAPOBase_BeginProcess(FAPOBase *fapo);
 
-FAPOAPI void FAPOParametersBase_EndProcess(FAPOParametersBase *fapoParameters);
+FAPOAPI void FAPOBase_EndProcess(FAPOBase *fapo);
 
 #ifdef __cplusplus
 }

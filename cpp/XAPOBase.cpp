@@ -12,11 +12,18 @@ CXAPOBase::CXAPOBase(FAPOBase *base)
 {
 }
 
-CXAPOBase::CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties) 
+CXAPOBase::CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties
+	BYTE* pParameterBlocks,
+	UINT32 uParameterBlockByteSize,
+	BOOL fProducer) 
 	: fapo_base(new FAPOBase()),
 	own_fapo_base(true) 
 {
-	CreateFAPOBase(fapo_base, pRegistrationProperties);
+	CreateFAPOBase(fapo_base,
+		pRegistrationProperties, 
+		pParameterBlocks, 
+		uParameterBlockByteSize, 
+		fProducer);
 }
 
 CXAPOBase::~CXAPOBase() 
@@ -199,10 +206,8 @@ BOOL CXAPOBase::IsLocked()
 // CXAPOParametersBase
 //
 
-CXAPOParametersBase::CXAPOParametersBase(FAPOParametersBase *param_base)
-	: fapo_param_base(param_base),
-	  own_fapo_param_base(false),
-	  CXAPOBase(&param_base->base) 
+CXAPOParametersBase::CXAPOParametersBase(FAPOBase *base)
+	: CXAPOBase(base) 
 {
 }
 
@@ -211,24 +216,13 @@ CXAPOParametersBase::CXAPOParametersBase(
 	BYTE* pParameterBlocks,
 	UINT32 uParameterBlockByteSize,
 	BOOL fProducer) 
-	: fapo_param_base(new FAPOParametersBase()),
-	  own_fapo_param_base(true),
-	  CXAPOBase(&fapo_param_base->base) 
+	: CXAPOBase(pRegistrationProperties, pParameterBlocks,
+		uParameterBlockByteSize, fProducer)
 {
-	CreateFAPOParametersBase(
-		fapo_param_base, 
-		pRegistrationProperties, 
-		pParameterBlocks, 
-		uParameterBlockByteSize, 
-		fProducer);
 }
 
 CXAPOParametersBase::~CXAPOParametersBase() 
 {
-	if (own_fapo_param_base) 
-	{
-		delete fapo_param_base;
-	}
 }
 
 HRESULT CXAPOParametersBase::QueryInterface(REFIID riid, void** ppInterface) 
@@ -257,24 +251,24 @@ ULONG CXAPOParametersBase::Release()
 
 void CXAPOParametersBase::SetParameters(const void* pParameters, UINT32 ParameterByteSize) 
 {
-	FAudio_assert(fapo_param_base->parameters.SetParameters);
-	fapo_param_base->parameters.SetParameters(fapo_param_base, pParameters, ParameterByteSize);
+	FAudio_assert(fapo_base->base.SetParameters);
+	fapo_base->base.SetParameters(fapo_base, pParameters, ParameterByteSize);
 }
 
 void CXAPOParametersBase::GetParameters(void* pParameters, UINT32 ParameterByteSize) {
-	FAudio_assert(fapo_param_base->parameters.GetParameters);
-	fapo_param_base->parameters.GetParameters(fapo_param_base, pParameters, ParameterByteSize);
+	FAudio_assert(fapo_base->base.GetParameters);
+	fapo_base->base.GetParameters(fapo_base, pParameters, ParameterByteSize);
 }
 
 void CXAPOParametersBase::OnSetParameters(const void* pParameters, UINT32 ParameterByteSize) 
 {
-	FAudio_assert(fapo_param_base->OnSetParameters);
-	fapo_param_base->OnSetParameters(fapo_param_base, pParameters, ParameterByteSize);
+	FAudio_assert(fapo_base->OnSetParameters);
+	fapo_base->OnSetParameters(fapo_base, pParameters, ParameterByteSize);
 }
 
 BOOL CXAPOParametersBase::ParametersChanged() 
 {
-	return FAPOParametersBase_ParametersChanged(fapo_param_base);
+	return FAPOParametersBase_ParametersChanged(fapo_base);
 }
 
 BYTE* CXAPOParametersBase::BeginProcess() 
