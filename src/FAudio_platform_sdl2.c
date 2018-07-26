@@ -373,12 +373,12 @@ void FAudio_PlatformGetDeviceDetails(
 	if (index == 0)
 	{
 		name = "Default Device";
-		details->Role = GlobalDefaultDevice;
+		details->Role = FAudioGlobalDefaultDevice;
 	}
 	else
 	{
 		name = SDL_GetAudioDeviceName(index - 1, 0);
-		details->Role = NotDefaultDevice;
+		details->Role = FAudioNotDefaultDevice;
 	}
 	FAudio_UTF8_To_UTF16(
 		name,

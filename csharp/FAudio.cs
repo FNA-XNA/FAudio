@@ -59,21 +59,21 @@ public static class FAudio
 	[Flags]
 	public enum FAudioDeviceRole
 	{
-		NotDefaultDevice =		0x0,
-		DefaultConsoleDevice =		0x1,
-		DefaultMultimediaDevice =	0x2,
-		DefaultCommunicationsDevice =	0x4,
-		DefaultGameDevice =		0x8,
-		GlobalDefaultDevice =		0xF,
-		InvalidDeviceRole = ~GlobalDefaultDevice
+		FAudioNotDefaultDevice =		0x0,
+		FAudioDefaultConsoleDevice =		0x1,
+		FAudioDefaultMultimediaDevice =		0x2,
+		FAudioDefaultCommunicationsDevice =	0x4,
+		FAudioDefaultGameDevice =		0x8,
+		FAudioGlobalDefaultDevice =		0xF,
+		FAudioInvalidDeviceRole = ~GlobalDefaultDevice
 	}
 
 	public enum FAudioFilterType
 	{
-		LowPassFilter,
-		BandPassFilter,
-		HighPassFilter,
-		NotchFilter
+		FAudioLowPassFilter,
+		FAudioBandPassFilter,
+		FAudioHighPassFilter,
+		FAudioNotchFilter
 	}
 
 	/* FIXME: The original enum violates ISO C and is platform specific anyway... */
@@ -284,7 +284,7 @@ public static class FAudio
 	public const byte FAUDIO_END_OF_STREAM =	0x40;
 	public const byte FAUDIO_SEND_USEFILTER =	0x80;
 
-	public const FAudioFilterType FAUDIO_DEFAULT_FILTER_TYPE =	FAudioFilterType.LowPassFilter;
+	public const FAudioFilterType FAUDIO_DEFAULT_FILTER_TYPE =	FAudioFilterType.FAudioLowPassFilter;
 	public const float FAUDIO_DEFAULT_FILTER_FREQUENCY =		FAUDIO_MAX_FILTER_FREQUENCY;
 	public const float FAUDIO_DEFAULT_FILTER_ONEOVERQ =		1.0f;
 

@@ -58,7 +58,7 @@ typedef enum FAudioDeviceRole
 {
 	FAudioNotDefaultDevice =		0x0,
 	FAudioDefaultConsoleDevice =		0x1,
-	FAudioDefaultMultimediaDevice =	0x2,
+	FAudioDefaultMultimediaDevice =		0x2,
 	FAudioDefaultCommunicationsDevice =	0x4,
 	FAudioDefaultGameDevice =		0x8,
 	FAudioGlobalDefaultDevice =		0xF,

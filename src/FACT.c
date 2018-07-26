@@ -107,8 +107,8 @@ uint32_t FACTAudioEngine_GetRendererDetails(
 	);
 	/* FIXME: Which defaults does it care about...? */
 	pRendererDetails->defaultDevice = (deviceDetails.Role & (
-		GlobalDefaultDevice |
-		DefaultGameDevice
+		FAudioGlobalDefaultDevice |
+		FAudioDefaultGameDevice
 	)) != 0;
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
