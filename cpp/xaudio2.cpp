@@ -192,9 +192,9 @@ static void free_voice_sends(FAudioVoiceSends *f_sends)
 // XAUDIO2_EFFECT_CHAIN / XAUDIO2_EFFECT_DESCRIPTOR => FAudio
 //
 
-struct FAPOCppParametersBase
+struct FAPOCppBase
 {
-	FAPOParametersBase fapo;
+	FAPOBase fapo;
 	IXAPO *xapo;
 	IXAPOParameters *xapo_params;
 };
@@ -204,7 +204,7 @@ static uint32_t FAPOCALL GetRegistrationProperties(
 	FAPORegistrationProperties **ppRegistrationProperties)
 {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->GetRegistrationProperties(ppRegistrationProperties);
 }
 
@@ -215,7 +215,7 @@ static uint32_t FAPOCALL IsInputFormatSupported(
 	FAudioWaveFormatEx **ppSupportedInputFormat
 ) {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->IsInputFormatSupported(
 		pOutputFormat, 
 		pRequestedInputFormat, 
@@ -229,7 +229,7 @@ static uint32_t FAPOCALL IsOutputFormatSupported(
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 ) {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->IsOutputFormatSupported(
 		pInputFormat, 
 		pRequestedOutputFormat, 
@@ -239,14 +239,14 @@ static uint32_t FAPOCALL IsOutputFormatSupported(
 static uint32_t FAPOCALL Initialize(void *fapo, const void *pData, uint32_t DataByteSize)
 {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->Initialize(pData, DataByteSize);
 }
 
 static void FAPOCALL Reset(void *fapo)
 {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	xapo->Reset();
 }
 
@@ -258,7 +258,7 @@ static uint32_t FAPOCALL LockForProcess(
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 ) {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->LockForProcess(
 		InputLockedParameterCount,
 		pInputLockedParameters,
@@ -269,7 +269,7 @@ static uint32_t FAPOCALL LockForProcess(
 static void FAPOCALL UnlockForProcess(void *fapo)
 {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	xapo->UnlockForProcess();
 }
 
@@ -282,7 +282,7 @@ static void FAPOCALL Process(
 	uint8_t IsEnabled
 ) {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	xapo->Process(
 		InputProcessParameterCount,
 		pInputProcessParameters,
@@ -294,14 +294,14 @@ static void FAPOCALL Process(
 static uint32_t FAPOCALL CalcInputFrames(void *fapo, uint32_t OutputFrameCount)
 {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->CalcInputFrames(OutputFrameCount);
 }
 
 static uint32_t FAPOCALL CalcOutputFrames(void *fapo, uint32_t InputFrameCount)
 {
 	TRACE_FUNC();
-	IXAPO *xapo = reinterpret_cast<FAPOCppParametersBase *>(fapo)->xapo;
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->CalcOutputFrames(InputFrameCount);
 }
 
@@ -311,21 +311,21 @@ static void FAPOCALL SetParameters(
 	uint32_t ParameterByteSize
 ) {
 	TRACE_FUNC();
-	IXAPOParameters *xapo_params = reinterpret_cast<FAPOCppParametersBase *>(fapoParameters)->xapo_params;
+	IXAPOParameters *xapo_params = reinterpret_cast<FAPOCppBase *>(fapoParameters)->xapo_params;
 	return xapo_params->SetParameters(pParameters, ParameterByteSize); 
 }
 
 static void FAPOCALL GetParameters(void *fapoParameters, void *pParameters, uint32_t ParameterByteSize)
 {
 	TRACE_FUNC();
-	IXAPOParameters *xapo_params = reinterpret_cast<FAPOCppParametersBase *>(fapoParameters)->xapo_params;
+	IXAPOParameters *xapo_params = reinterpret_cast<FAPOCppBase *>(fapoParameters)->xapo_params;
 	return xapo_params->GetParameters(pParameters, ParameterByteSize);
 }
 
 static void FAPOCALL Destructor(void *fapo)
 {
 	TRACE_FUNC();
-	delete reinterpret_cast<FAPOCppParametersBase *>(fapo);
+	delete reinterpret_cast<FAPOCppBase *>(fapo);
 }
 
 static FAPO *wrap_xapo_effect(IUnknown *xapo)
@@ -338,28 +338,28 @@ static FAPO *wrap_xapo_effect(IUnknown *xapo)
 	TRACE_FUNC();
 
 	// FIXME: assumes that all effects are derived from CXAPOParametersBase
-	FAPOCppParametersBase *f_effect = new FAPOCppParametersBase;
+	FAPOCppBase *f_effect = new FAPOCppBase;
 	xapo->QueryInterface(IID_IXAPO, (void **)&f_effect->xapo);
 	xapo->QueryInterface(IID_IXAPOParameters, (void **)&f_effect->xapo_params);
 
 	TRACE_MSG("IXAPO: %x; IXAPOParameters: %x", f_effect->xapo, f_effect->xapo_params);
 
-	f_effect->fapo.base.base.GetRegistrationProperties = GetRegistrationProperties;
-	f_effect->fapo.base.base.IsInputFormatSupported = IsInputFormatSupported;
-	f_effect->fapo.base.base.IsOutputFormatSupported = IsOutputFormatSupported;
-	f_effect->fapo.base.base.Initialize = Initialize;
-	f_effect->fapo.base.base.Reset = Reset;
-	f_effect->fapo.base.base.LockForProcess = LockForProcess;
-	f_effect->fapo.base.base.UnlockForProcess = UnlockForProcess;
-	f_effect->fapo.base.base.Process = Process;
-	f_effect->fapo.base.base.CalcInputFrames = CalcInputFrames;
-	f_effect->fapo.base.base.CalcOutputFrames = CalcOutputFrames;
+	f_effect->fapo.base.GetRegistrationProperties = GetRegistrationProperties;
+	f_effect->fapo.base.IsInputFormatSupported = IsInputFormatSupported;
+	f_effect->fapo.base.IsOutputFormatSupported = IsOutputFormatSupported;
+	f_effect->fapo.base.Initialize = Initialize;
+	f_effect->fapo.base.Reset = Reset;
+	f_effect->fapo.base.LockForProcess = LockForProcess;
+	f_effect->fapo.base.UnlockForProcess = UnlockForProcess;
+	f_effect->fapo.base.Process = Process;
+	f_effect->fapo.base.CalcInputFrames = CalcInputFrames;
+	f_effect->fapo.base.CalcOutputFrames = CalcOutputFrames;
 
-	f_effect->fapo.parameters.GetParameters = GetParameters;
-	f_effect->fapo.parameters.SetParameters = SetParameters;
+	f_effect->fapo.base.GetParameters = GetParameters;
+	f_effect->fapo.base.SetParameters = SetParameters;
 
-	f_effect->fapo.base.Destructor = Destructor;
-	return &f_effect->fapo.base.base;
+	f_effect->fapo.Destructor = Destructor;
+	return &f_effect->fapo.base;
 }
 
 static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain)

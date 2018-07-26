@@ -58,7 +58,7 @@ static FAPORegistrationProperties VolumeMeterProperties =
 
 typedef struct FAudioFXVolumeMeter
 {
-	FAPOParametersBase base;
+	FAPOBase base;
 
 	/* TODO */
 } FAudioFXVolumeMeter;
@@ -72,12 +72,12 @@ void FAudioFXVolumeMeter_Process(
 	uint8_t IsEnabled
 ) {
 	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
-		FAPOParametersBase_BeginProcess(&fapo->base);
+		FAPOBase_BeginProcess(&fapo->base);
 
 	/* TODO */
 	(void) levels;
 
-	FAPOParametersBase_EndProcess(&fapo->base);
+	FAPOBase_EndProcess(&fapo->base);
 }
 
 void FAudioFXVolumeMeter_Free(void* fapo)
@@ -93,7 +93,7 @@ uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 	);
 
 	/* Initialize... */
-	CreateFAPOParametersBase(
+	CreateFAPOBase(
 		&result->base,
 		&VolumeMeterProperties,
 		NULL, /* FIXME */
@@ -102,9 +102,9 @@ uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 	);
 
 	/* Function table... */
-	result->base.base.base.Process = (ProcessFunc)
+	result->base.base.Process = (ProcessFunc)
 		FAudioFXVolumeMeter_Process;
-	result->base.base.Destructor = FAudioFXVolumeMeter_Free;
+	result->base.Destructor = FAudioFXVolumeMeter_Free;
 
 	/* Finally. */
 	*ppApo = &result->base.base;
@@ -140,7 +140,7 @@ static FAPORegistrationProperties ReverbProperties =
 
 typedef struct FAudioFXReverb
 {
-	FAPOParametersBase base;
+	FAPOBase base;
 
 	uint16_t inChannels;
 	uint16_t outChannels;
@@ -318,7 +318,7 @@ uint32_t FAudioFXReverb_LockForProcess(
 
 	/* call	parent to do basic validation */
 	return FAPOBase_LockForProcess(
-		&fapo->base.base,
+		&fapo->base,
 		InputLockedParameterCount,
 		pInputLockedParameters,
 		OutputLockedParameterCount,
@@ -387,7 +387,7 @@ void FAudioFXReverb_Process(
 	uint8_t IsEnabled
 ) {
 	FAudioFXReverbParameters *params;
-	uint8_t update_params = FAPOParametersBase_ParametersChanged(&fapo->base);
+	uint8_t update_params = FAPOBase_ParametersChanged(&fapo->base);
 	float total;
 	
 	/* handle disabled filter */
@@ -418,7 +418,7 @@ void FAudioFXReverb_Process(
 		);
 	}
 
-	params = (FAudioFXReverbParameters*) FAPOParametersBase_BeginProcess(&fapo->base);
+	params = (FAudioFXReverbParameters*) FAPOBase_BeginProcess(&fapo->base);
 
 	/* update parameters  */
 	if (update_params)
@@ -438,12 +438,12 @@ void FAudioFXReverb_Process(
 	/* set BufferFlags to silent so PLAY_TAILS knows when to stop */
 	pOutputProcessParameters->BufferFlags = (total < 0.0000001f) ? FAPO_BUFFER_SILENT : FAPO_BUFFER_VALID;
 
-	FAPOParametersBase_EndProcess(&fapo->base);
+	FAPOBase_EndProcess(&fapo->base);
 }
 
 void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 {
-	FAPOBase_Reset(&fapo->base.base);
+	FAPOBase_Reset(&fapo->base);
 
 	/* reset the cached state of the reverb filter */
 	DspReverb_Reset(fapo->reverb);
@@ -466,7 +466,7 @@ uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags)
 	);
 
 	/* Initialize... */
-	CreateFAPOParametersBase(
+	CreateFAPOBase(
 		&result->base,
 		&ReverbProperties,
 		params,
@@ -481,13 +481,13 @@ uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags)
 
 	/* Function table... */
 	#define ASSIGN_VT(name) \
-		result->base.base.base.name = (name##Func) FAudioFXReverb_##name;
+		result->base.base.name = (name##Func) FAudioFXReverb_##name;
 	ASSIGN_VT(LockForProcess);
 	ASSIGN_VT(IsInputFormatSupported);
 	ASSIGN_VT(IsOutputFormatSupported);
 	ASSIGN_VT(Reset);
 	ASSIGN_VT(Process);
-	result->base.base.Destructor = FAudioFXReverb_Free;
+	result->base.Destructor = FAudioFXReverb_Free;
 	#undef ASSIGN_VT
 
 	/* Finally. */
