@@ -98,6 +98,12 @@ typedef struct FAPOProcessBufferParameters
 
 typedef struct FAPO FAPO;
 
+typedef int32_t (FAPOCALL * AddRefFunc)(
+	void *fapo
+);
+typedef int32_t (FAPOCALL * ReleaseFunc)(
+	void *fapo
+);
 typedef uint32_t (FAPOCALL * GetRegistrationPropertiesFunc)(
 	void* fapo,
 	FAPORegistrationProperties **ppRegistrationProperties
@@ -151,6 +157,8 @@ typedef uint32_t (FAPOCALL * CalcOutputFramesFunc)(
 
 struct FAPO
 {
+	AddRefFunc AddRef;
+	ReleaseFunc Release;
 	GetRegistrationPropertiesFunc GetRegistrationProperties;
 	IsInputFormatSupportedFunc IsInputFormatSupported;
 	IsOutputFormatSupportedFunc IsOutputFormatSupported;

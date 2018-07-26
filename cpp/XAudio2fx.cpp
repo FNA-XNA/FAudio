@@ -69,14 +69,14 @@ private:
 
 void *CreateAudioVolumeMeterInternal() 
 {
-	void *fapo_object = NULL;
+	FAPO *fapo_object = NULL;
 	FAudioCreateVolumeMeter(&fapo_object, 0);
 	return new XAudio2VolumeMeter(fapo_object);
 }
 
 void *CreateAudioReverbInternal() 
 {
-	void *fapo_object = NULL;
+	FAPO *fapo_object = NULL;
 	FAudioCreateReverb(&fapo_object, 0);
 	return new XAudio2Reverb(fapo_object);
 }
