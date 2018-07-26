@@ -151,6 +151,7 @@ public static class FAudio
 	public struct FAudioVoiceDetails
 	{
 		public uint CreationFlags;
+		public uint ActiveFlags;
 		public uint InputChannels;
 		public uint InputSampleRate;
 	}

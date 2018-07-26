@@ -436,13 +436,12 @@ public:
 	COM_METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS *pVoiceDetails)
 	{
 		TRACE_FUNC();
-#if XAUDIO2_VERSION <= 7
+#if XAUDIO2_VERSION > 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
 #else
 		FAudioVoiceDetails fDetails;
 		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
 		pVoiceDetails->CreationFlags = fDetails.CreationFlags;
-		pVoiceDetails->ActiveFlags = fDetails.CreationFlags;
 		pVoiceDetails->InputChannels = fDetails.InputChannels;
 		pVoiceDetails->InputSampleRate = fDetails.InputSampleRate;
 #endif // XAUDIO2_VERSION <= 7
@@ -752,16 +751,15 @@ public:
 	COM_METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS *pVoiceDetails)
 	{
 		TRACE_FUNC();
-#if XAUDIO2_VERSION <= 7
+#if XAUDIO2_VERSION > 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
 #else
 		FAudioVoiceDetails fDetails;
 		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
 		pVoiceDetails->CreationFlags = fDetails.CreationFlags;
-		pVoiceDetails->ActiveFlags = fDetails.CreationFlags;
 		pVoiceDetails->InputChannels = fDetails.InputChannels;
 		pVoiceDetails->InputSampleRate = fDetails.InputSampleRate;
-#endif
+#endif // XAUDIO2_VERSION <= 7
 	}
 
 	COM_METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS *pSendList)
@@ -1026,16 +1024,15 @@ public:
 	COM_METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS *pVoiceDetails)
 	{
 		TRACE_FUNC();
-#if XAUDIO2_VERSION <= 7
+#if XAUDIO2_VERSION > 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
 #else
 		FAudioVoiceDetails fDetails;
 		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
 		pVoiceDetails->CreationFlags = fDetails.CreationFlags;
-		pVoiceDetails->ActiveFlags = fDetails.CreationFlags;
 		pVoiceDetails->InputChannels = fDetails.InputChannels;
 		pVoiceDetails->InputSampleRate = fDetails.InputSampleRate;
-#endif
+#endif // XAUDIO2_VERSION <= 7
 	}
 
 	COM_METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS *pSendList)

@@ -480,6 +480,7 @@ void FAudioVoice_GetVoiceDetails(
 	FAudioVoiceDetails *pVoiceDetails
 ) {
 	pVoiceDetails->CreationFlags = voice->flags;
+	pVoiceDetails->ActiveFlags = voice->flags;
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
 		pVoiceDetails->InputChannels = voice->src.format.nChannels;
