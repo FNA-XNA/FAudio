@@ -1004,9 +1004,7 @@ void FAudio_INTERNAL_AllocEffectChain(
 
 	for (i = 0; i < pEffectChain->EffectCount; i += 1)
 	{
-		FAPOBase_AddRef(
-			(FAPOBase*) pEffectChain->pEffectDescriptors[i].pEffect
-		);
+		pEffectChain->pEffectDescriptors[i].pEffect->AddRef(pEffectChain->pEffectDescriptors[i].pEffect);
 	}
 
 	voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
@@ -1043,7 +1041,7 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 
 	for (i = 0; i < voice->effects.count; i += 1)
 	{
-		FAPOBase_Release((FAPOBase *)voice->effects.desc[i].pEffect);
+		voice->effects.desc[i].pEffect->Release(voice->effects.desc[i].pEffect);
 	}
 
 	FAudio_free(voice->effects.desc);

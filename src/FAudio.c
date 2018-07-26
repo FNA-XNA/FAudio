@@ -667,7 +667,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		/* validate incoming effect chain before changing the current chain */
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
-			FAPO *fapo = (FAPO *)pEffectChain->pEffectDescriptors[i].pEffect;
+			FAPO *fapo = pEffectChain->pEffectDescriptors[i].pEffect;
 			FAudioWaveFormatEx srcFmt, dstFmt;
 
 			srcFmt.wBitsPerSample = 32;
@@ -703,7 +703,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		{
 			FAPORegistrationProperties props;
 			FAPORegistrationProperties *pProps = &props;
-			FAPO *fapo = (FAPO *)voice->effects.desc[i].pEffect;
+			FAPO *fapo = voice->effects.desc[i].pEffect;
 
 			fapo->GetRegistrationProperties(fapo, &pProps);
 
@@ -1112,9 +1112,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		{
 			for (i = 0; i < voice->effects.count; i += 1)
 			{
-				FAPOBase_Release(
-					(FAPOBase*) voice->effects.desc[i].pEffect
-				);
+				voice->effects.desc[i].pEffect->Release(voice->effects.desc[i].pEffect);
 			}
 			FAudio_free(voice->effects.parameters);
 			FAudio_free(voice->effects.parameterSizes);

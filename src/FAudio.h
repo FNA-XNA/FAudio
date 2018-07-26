@@ -166,9 +166,12 @@ typedef struct FAudioVoiceSends
 	FAudioSendDescriptor *pSends;
 } FAudioVoiceSends;
 
+struct FAPO;
+typedef struct FAPO FAPO;
+
 typedef struct FAudioEffectDescriptor
 {
-	void *pEffect;
+	FAPO *pEffect;
 	uint8_t InitialState;
 	uint32_t OutputChannels;
 } FAudioEffectDescriptor;

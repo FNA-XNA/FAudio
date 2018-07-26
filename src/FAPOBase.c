@@ -36,6 +36,8 @@ void CreateFAPOBase(
 	/* Base Classes/Interfaces */
 	#define ASSIGN_VT(name) \
 		fapo->base.name = (name##Func) FAPOBase_##name;
+	ASSIGN_VT(AddRef)
+	ASSIGN_VT(Release)
 	ASSIGN_VT(GetRegistrationProperties)
 	ASSIGN_VT(IsInputFormatSupported)
 	ASSIGN_VT(IsOutputFormatSupported)

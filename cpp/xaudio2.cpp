@@ -328,7 +328,7 @@ static void FAPOCALL Destructor(void *fapo)
 	delete reinterpret_cast<FAPOCppParametersBase *>(fapo);
 }
 
-static void *wrap_xapo_effect(IUnknown *xapo)
+static FAPO *wrap_xapo_effect(IUnknown *xapo)
 {
 	if (xapo == NULL)
 	{
@@ -359,7 +359,7 @@ static void *wrap_xapo_effect(IUnknown *xapo)
 	f_effect->fapo.parameters.SetParameters = SetParameters;
 
 	f_effect->fapo.base.Destructor = Destructor;
-	return f_effect;
+	return &f_effect->fapo.base.base;
 }
 
 static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain)
