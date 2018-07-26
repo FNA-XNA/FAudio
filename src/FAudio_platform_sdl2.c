@@ -355,12 +355,13 @@ uint32_t FAudio_PlatformGetDeviceCount()
 	return SDL_GetNumAudioDevices(0) + 1;
 }
 
+void FAudio_UTF8_To_UTF16(const char *src, uint16_t *dst, size_t len);
+
 void FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
 ) {
 	const char *name;
-	size_t len, i;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 	if (index > FAudio_PlatformGetDeviceCount())
@@ -368,7 +369,6 @@ void FAudio_PlatformGetDeviceDetails(
 		return;
 	}
 
-	/* FIXME: wchar_t is an asshole */
 	details->DeviceID[0] = L'0' + index;
 	if (index == 0)
 	{
@@ -380,11 +380,11 @@ void FAudio_PlatformGetDeviceDetails(
 		name = SDL_GetAudioDeviceName(index - 1, 0);
 		details->Role = NotDefaultDevice;
 	}
-	len = FAudio_min(FAudio_strlen(name), 0xFF);
-	for (i = 0; i < len; i += 1)
-	{
-		details->DisplayName[i] = name[i];
-	}
+	FAudio_UTF8_To_UTF16(
+		name,
+		(uint16_t*) details->DisplayName,
+		sizeof(details->DisplayName)
+	);
 
 	/* FIXME: SDL needs a device format query function! */
 	details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
@@ -534,4 +534,195 @@ void FAudio_close(FAudioIOStream *io)
 {
 	io->close(io->data);
 	SDL_free(io);
+}
+
+/* UTF8->UTF16 Conversion, taken from PhysicsFS */
+
+#define UNICODE_BOGUS_CHAR_VALUE 0xFFFFFFFF
+#define UNICODE_BOGUS_CHAR_CODEPOINT '?'
+
+static uint32_t FAudio_UTF8_CodePoint(const char **_str)
+{
+    const char *str = *_str;
+    uint32_t retval = 0;
+    uint32_t octet = (uint32_t) ((uint8_t) *str);
+    uint32_t octet2, octet3, octet4;
+
+    if (octet == 0)  /* null terminator, end of string. */
+        return 0;
+
+    else if (octet < 128)  /* one octet char: 0 to 127 */
+    {
+        (*_str)++;  /* skip to next possible start of codepoint. */
+        return octet;
+    } /* else if */
+
+    else if ((octet > 127) && (octet < 192))  /* bad (starts with 10xxxxxx). */
+    {
+        /*
+         * Apparently each of these is supposed to be flagged as a bogus
+         *  char, instead of just resyncing to the next valid codepoint.
+         */
+        (*_str)++;  /* skip to next possible start of codepoint. */
+        return UNICODE_BOGUS_CHAR_VALUE;
+    } /* else if */
+
+    else if (octet < 224)  /* two octets */
+    {
+        (*_str)++;  /* advance at least one byte in case of an error */
+        octet -= (128+64);
+        octet2 = (uint32_t) ((uint8_t) *(++str));
+        if ((octet2 & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        *_str += 1;  /* skip to next possible start of codepoint. */
+        retval = ((octet << 6) | (octet2 - 128));
+        if ((retval >= 0x80) && (retval <= 0x7FF))
+            return retval;
+    } /* else if */
+
+    else if (octet < 240)  /* three octets */
+    {
+        (*_str)++;  /* advance at least one byte in case of an error */
+        octet -= (128+64+32);
+        octet2 = (uint32_t) ((uint8_t) *(++str));
+        if ((octet2 & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet3 = (uint32_t) ((uint8_t) *(++str));
+        if ((octet3 & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        *_str += 2;  /* skip to next possible start of codepoint. */
+        retval = ( ((octet << 12)) | ((octet2-128) << 6) | ((octet3-128)) );
+
+        /* There are seven "UTF-16 surrogates" that are illegal in UTF-8. */
+        switch (retval)
+        {
+            case 0xD800:
+            case 0xDB7F:
+            case 0xDB80:
+            case 0xDBFF:
+            case 0xDC00:
+            case 0xDF80:
+            case 0xDFFF:
+                return UNICODE_BOGUS_CHAR_VALUE;
+        } /* switch */
+
+        /* 0xFFFE and 0xFFFF are illegal, too, so we check them at the edge. */
+        if ((retval >= 0x800) && (retval <= 0xFFFD))
+            return retval;
+    } /* else if */
+
+    else if (octet < 248)  /* four octets */
+    {
+        (*_str)++;  /* advance at least one byte in case of an error */
+        octet -= (128+64+32+16);
+        octet2 = (uint32_t) ((uint8_t) *(++str));
+        if ((octet2 & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet3 = (uint32_t) ((uint8_t) *(++str));
+        if ((octet3 & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet4 = (uint32_t) ((uint8_t) *(++str));
+        if ((octet4 & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        *_str += 3;  /* skip to next possible start of codepoint. */
+        retval = ( ((octet << 18)) | ((octet2 - 128) << 12) |
+                   ((octet3 - 128) << 6) | ((octet4 - 128)) );
+        if ((retval >= 0x10000) && (retval <= 0x10FFFF))
+            return retval;
+    } /* else if */
+
+    /*
+     * Five and six octet sequences became illegal in rfc3629.
+     *  We throw the codepoint away, but parse them to make sure we move
+     *  ahead the right number of bytes and don't overflow the buffer.
+     */
+
+    else if (octet < 252)  /* five octets */
+    {
+        (*_str)++;  /* advance at least one byte in case of an error */
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        *_str += 4;  /* skip to next possible start of codepoint. */
+        return UNICODE_BOGUS_CHAR_VALUE;
+    } /* else if */
+
+    else  /* six octets */
+    {
+        (*_str)++;  /* advance at least one byte in case of an error */
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        octet = (uint32_t) ((uint8_t) *(++str));
+        if ((octet & (128+64)) != 128)  /* Format isn't 10xxxxxx? */
+            return UNICODE_BOGUS_CHAR_VALUE;
+
+        *_str += 6;  /* skip to next possible start of codepoint. */
+        return UNICODE_BOGUS_CHAR_VALUE;
+    } /* else if */
+
+    return UNICODE_BOGUS_CHAR_VALUE;
+}
+
+void FAudio_UTF8_To_UTF16(const char *src, uint16_t *dst, size_t len)
+{
+    len -= sizeof (uint16_t);   /* save room for null char. */
+    while (len >= sizeof (uint16_t))
+    {
+        uint32_t cp = FAudio_UTF8_CodePoint(&src);
+        if (cp == 0)
+            break;
+        else if (cp == UNICODE_BOGUS_CHAR_VALUE)
+            cp = UNICODE_BOGUS_CHAR_CODEPOINT;
+
+        if (cp > 0xFFFF)  /* encode as surrogate pair */
+        {
+            if (len < (sizeof (uint16_t) * 2))
+                break;  /* not enough room for the pair, stop now. */
+
+            cp -= 0x10000;  /* Make this a 20-bit value */
+
+            *(dst++) = 0xD800 + ((cp >> 10) & 0x3FF);
+            len -= sizeof (uint16_t);
+
+            cp = 0xDC00 + (cp & 0x3FF);
+        } /* if */
+
+        *(dst++) = cp;
+        len -= sizeof (uint16_t);
+    } /* while */
+
+    *dst = 0;
 }

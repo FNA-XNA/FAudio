@@ -166,7 +166,6 @@ uint32_t FACTAudioEngine_Initialize(
 	}
 	else
 	{
-		/* FIXME: wchar_t is an asshole */
 		deviceIndex = pParams->pRendererID[0] - L'0';
 		if (deviceIndex > FAudio_PlatformGetDeviceCount())
 		{
