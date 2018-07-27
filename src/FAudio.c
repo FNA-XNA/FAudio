@@ -903,10 +903,14 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	if (!pVolumes)
+	{
 		return FAUDIO_E_INVALID_CALL;
+	}
 
 	if (voice->audio->version > 7 && Channels != voice->outputChannels)
+	{
 		return FAUDIO_E_INVALID_CALL;
+	}
 
 	FAudio_PlatformLockMutex(voice->volumeLock);
 	FAudio_memcpy(
@@ -1445,7 +1449,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	if (	voice->audio->version > 7 &&
-		voice->src.bufferList != NULL)
+		voice->src.bufferList != NULL	)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		return FAUDIO_E_INVALID_CALL;
