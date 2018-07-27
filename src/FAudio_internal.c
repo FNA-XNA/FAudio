@@ -512,9 +512,11 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Calculate the resample stepping value */
 	if (voice->src.resampleFreqRatio != voice->src.freqRatio)
 	{
+		FAudio_PlatformLockMutex(voice->sendLock);
 		out = (voice->sends.SendCount == 0) ?
 			voice->audio->master : /* Barf */
 			voice->sends.pSends->pOutputVoice;
+		FAudio_PlatformUnlockMutex(voice->sendLock);
 		outputRate = (out->type == FAUDIO_VOICE_MASTER) ?
 			out->master.inputSampleRate :
 			out->mix.inputSampleRate;
