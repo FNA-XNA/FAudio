@@ -65,7 +65,7 @@ public static class FAudio
 		FAudioDefaultCommunicationsDevice =	0x4,
 		FAudioDefaultGameDevice =		0x8,
 		FAudioGlobalDefaultDevice =		0xF,
-		FAudioInvalidDeviceRole = ~GlobalDefaultDevice
+		FAudioInvalidDeviceRole = ~FAudioGlobalDefaultDevice
 	}
 
 	public enum FAudioFilterType
