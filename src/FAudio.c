@@ -701,15 +701,17 @@ uint32_t FAudioVoice_SetEffectChain(
 		channelCount = voiceDetails.InputChannels;
 		for (i = 0; i < voice->effects.count; i += 1)
 		{
-			FAPORegistrationProperties props;
-			FAPORegistrationProperties *pProps = &props;
+			FAPORegistrationProperties *pProps;
 			FAPO *fapo = voice->effects.desc[i].pEffect;
+			uint32_t r;
 
-			fapo->GetRegistrationProperties(fapo, &pProps);
-
-			voice->effects.inPlaceProcessing[i] = (props.Flags & FAPO_FLAG_INPLACE_SUPPORTED) == FAPO_FLAG_INPLACE_SUPPORTED;
-			voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
-			channelCount = voice->effects.desc[i].OutputChannels;
+			r = fapo->GetRegistrationProperties(fapo, &pProps);
+			if(r == 0){
+				voice->effects.inPlaceProcessing[i] = (pProps->Flags & FAPO_FLAG_INPLACE_SUPPORTED) == FAPO_FLAG_INPLACE_SUPPORTED;
+				voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
+				channelCount = voice->effects.desc[i].OutputChannels;
+				FAudio_free(pProps);
+			}
 		}
 		voice->outputChannels = channelCount;
 	}
