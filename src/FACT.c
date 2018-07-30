@@ -1455,6 +1455,8 @@ uint32_t FACTWaveBank_Prepare(
 	}
 	else
 	{
+		(*ppWave)->streamCache = NULL;
+
 		buffer.Flags = FAUDIO_END_OF_STREAM;
 		buffer.AudioBytes = entry->PlayRegion.dwLength;
 		buffer.pAudioData = FAudio_memptr(
@@ -1586,6 +1588,10 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	}
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
+	if (pWave->streamCache != NULL)
+	{
+		FAudio_free(pWave->streamCache);
+	}
 	FAudio_free(pWave);
 	return 0;
 }
