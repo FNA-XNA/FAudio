@@ -671,7 +671,7 @@ uint32_t FAudioVoice_SetEffectChain(
 			FAudioWaveFormatEx srcFmt, dstFmt;
 
 			srcFmt.wBitsPerSample = 32;
-			srcFmt.wFormatTag = 3;
+			srcFmt.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
 			srcFmt.nChannels = voiceDetails.InputChannels;
 			srcFmt.nSamplesPerSec = voiceDetails.InputSampleRate;
 			srcFmt.nBlockAlign = srcFmt.nChannels * (srcFmt.wBitsPerSample / 8);
@@ -1206,7 +1206,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* PlayLength Default */
 	if (playLength == 0)
 	{
-		if (voice->src.format->wFormatTag == 2)
+		if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 		{
 			playLength = (
 				pBuffer->AudioBytes /
@@ -1249,7 +1249,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 
 	/* For ADPCM, round down to the nearest sample block size */
-	if (voice->src.format->wFormatTag == 2)
+	if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		adpcmMask = ((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2;
 		adpcmMask -= 1;

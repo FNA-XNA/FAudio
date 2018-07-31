@@ -153,13 +153,13 @@ typedef struct FAudioFXReverb
 
 static inline int8_t IsFloatFormat(const FAudioWaveFormatEx *format)
 {
-	if (format->wFormatTag == 3)
+	if (format->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
 	{
 		/* Plain ol' WaveFormatEx */
 		return 1;
 	}
 
-	if (format->wFormatTag == 0xFFFE)
+	if (format->wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
 	{
 		/* WaveFormatExtensible, match GUID */
 #define MAKE_SUBFORMAT_GUID(guid, fmt)	static FAudioGUID KSDATAFORMAT_SUBTYPE_##guid = {(uint16_t)(fmt), 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}}
@@ -199,7 +199,7 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 	/* data type */
 	if (!IsFloatFormat(pRequestedInputFormat))
 	{
-		SET_SUPPORTED_FIELD(wFormatTag, 3);
+		SET_SUPPORTED_FIELD(wFormatTag, FAUDIO_FORMAT_IEEE_FLOAT);
 	}
 
 	/* number of input / output channels */
@@ -252,7 +252,7 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	/* data type */
 	if (!IsFloatFormat(pRequestedOutputFormat))
 	{
-		SET_SUPPORTED_FIELD(wFormatTag, 3);
+		SET_SUPPORTED_FIELD(wFormatTag, FAUDIO_FORMAT_IEEE_FLOAT);
 	}
 
 	/* number of input / output channels */

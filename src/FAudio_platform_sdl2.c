@@ -192,7 +192,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		/* Write up the format */
 		device->format.Samples.wValidBitsPerSample = 32;
 		device->format.Format.wBitsPerSample = 32;
-		device->format.Format.wFormatTag = 3;
+		device->format.Format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
 		device->format.Format.nChannels = have.channels;
 		device->format.Format.nSamplesPerSec = have.freq;
 		device->format.Format.nBlockAlign = (
@@ -409,7 +409,7 @@ void FAudio_PlatformGetDeviceDetails(
 	details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
 	details->OutputFormat.Samples.wValidBitsPerSample = 32;
 	details->OutputFormat.Format.wBitsPerSample = 32;
-	details->OutputFormat.Format.wFormatTag = 3;
+	details->OutputFormat.Format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
 	details->OutputFormat.Format.nChannels = 2;
 	details->OutputFormat.Format.nSamplesPerSec = 48000;
 	details->OutputFormat.Format.nBlockAlign = (

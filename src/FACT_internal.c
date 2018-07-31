@@ -1555,7 +1555,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 			(entry->Format.wBitsPerSample + 1)
 		);
 	}
-	else if (entry->Format.wFormatTag == 2)
+	else if (entry->Format.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		buffer.PlayLength = (
 			buffer.AudioBytes /

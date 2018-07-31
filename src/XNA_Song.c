@@ -168,7 +168,7 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 
 	/* Set format info */
 	activeSongInfo = stb_vorbis_get_info(activeSong);
-	format.wFormatTag = 3;
+	format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
 	format.nChannels = activeSongInfo.channels;
 	format.nSamplesPerSec = activeSongInfo.sample_rate;
 	format.wBitsPerSample = sizeof(float) * 8;

@@ -417,7 +417,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 	/* Lock in formats that the APO will expect for processing */
 	srcFmt.wBitsPerSample = 32;
-	srcFmt.wFormatTag = 3;
+	srcFmt.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
 	srcFmt.nChannels = channels;
 	srcFmt.nSamplesPerSec = sampleRate;
 	srcFmt.nBlockAlign = srcFmt.nChannels * (srcFmt.wBitsPerSample / 8);

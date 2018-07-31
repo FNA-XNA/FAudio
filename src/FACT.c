@@ -1388,11 +1388,11 @@ uint32_t FACTWaveBank_Prepare(
 	format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
 	if (format.wfx.wFormatTag == 0)
 	{
-		format.wfx.wFormatTag = 1; /* PCM */
+		format.wfx.wFormatTag = FAUDIO_FORMAT_PCM;
 		format.wfx.nBlockAlign = format.wfx.nChannels * format.wfx.wBitsPerSample / 8;
 		format.wfx.cbSize = 0;
 	}
-	else if (format.wfx.wFormatTag == 2)
+	else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
 		format.wfx.cbSize = (
@@ -1431,7 +1431,7 @@ uint32_t FACTWaveBank_Prepare(
 	if (pWaveBank->streaming)
 	{
 		/* Init stream cache info */
-		if (format.wfx.wFormatTag == 1)
+		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
 		{
 			(*ppWave)->streamSize = (
 				format.wfx.nSamplesPerSec *
@@ -1439,7 +1439,7 @@ uint32_t FACTWaveBank_Prepare(
 				(format.wfx.wBitsPerSample / 8)
 			);
 		}
-		else if (format.wfx.wFormatTag == 2)
+		else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 		{
 			(*ppWave)->streamSize = (
 				format.wfx.nSamplesPerSec /
@@ -1465,12 +1465,12 @@ uint32_t FACTWaveBank_Prepare(
 		);
 		buffer.PlayBegin = (*ppWave)->initialPosition;
 		buffer.PlayLength = entry->PlayRegion.dwLength;
-		if (format.wfx.wFormatTag == 1)
+		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
 		{
 			buffer.PlayLength /= format.wfx.wBitsPerSample / 8;
 			buffer.PlayLength /= format.wfx.nChannels;
 		}
-		else if (format.wfx.wFormatTag == 2)
+		else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 		{
 			buffer.PlayLength = (
 				buffer.PlayLength /
