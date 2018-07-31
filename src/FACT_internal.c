@@ -313,7 +313,7 @@ void FACT_INTERNAL_GetNextWave(
 	}
 	else
 	{
-		trackInst->upcomingWave.baseQFactor = track->qfactor;
+		trackInst->upcomingWave.baseQFactor = 1.0f / (float) track->qfactor;
 		trackInst->upcomingWave.baseFrequency = track->frequency / 20000.0f;
 	}
 
