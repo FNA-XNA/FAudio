@@ -815,10 +815,10 @@ void FACT_INTERNAL_UpdateRPCs(
 
 	if (codeCount > 0)
 	{
+		/* Do NOT overwrite Frequency! */
 		data->rpcVolume = 0.0f;
 		data->rpcPitch = 0.0f;
 		data->rpcReverbSend = 0.0f;
-		data->rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 		data->rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		for (i = 0; i < codeCount; i += 1)
 		{
@@ -871,12 +871,13 @@ void FACT_INTERNAL_UpdateRPCs(
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
 			{
-				data->rpcFilterFreq *= rpcResult / 20000.0f;
+				/* Yes, just overwrite... */
+				data->rpcFilterFreq = rpcResult / 20000.0f;
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERQFACTOR)
 			{
 				/* TODO: How do we combine these? */
-				data->rpcFilterQFactor += rpcResult;
+				data->rpcFilterQFactor += 1.0f / rpcResult;
 			}
 			else
 			{
@@ -1188,6 +1189,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 	elapsed -= sound->parentCue->start - sound->parentCue->elapsed;
 
 	/* RPC updates */
+	sound->rpcData.rpcFilterFreq = -1.0f;
 	FACT_INTERNAL_UpdateRPCs(
 		sound->parentCue,
 		sound->sound->rpcCodeCount,
@@ -1196,6 +1198,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 	);
 	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
+		sound->tracks[i].rpcData.rpcFilterFreq = sound->rpcData.rpcFilterFreq;
 		FACT_INTERNAL_UpdateRPCs(
 			sound->parentCue,
 			sound->sound->tracks[i].rpcCodeCount,
@@ -1282,13 +1285,19 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 		);
 		if (sound->sound->tracks[i].filter != 0xFF)
 		{
-			/* TODO: How are all the freq/QFactor values put together? */
+			/* FIXME: From what I can gather, filter parameters get
+			 * overwritten by the RPC value if a filter RPC exists.
+			 * Priority is Sound < Sound RPC < Track RPC, I think?
+			 */
 			filterParams.Type = (FAudioFilterType) sound->sound->tracks[i].filter;
-			filterParams.Frequency = (
-				sound->tracks[i].activeWave.baseFrequency *
-				sound->rpcData.rpcFilterFreq *
-				sound->tracks[i].rpcData.rpcFilterFreq
-			);
+			if (sound->tracks[i].rpcData.rpcFilterFreq >= 0.0f)
+			{
+				filterParams.Frequency = sound->tracks[i].rpcData.rpcFilterFreq;
+			}
+			else
+			{
+				filterParams.Frequency = sound->tracks[i].activeWave.baseFrequency;
+			}
 			filterParams.OneOverQ = (
 				sound->tracks[i].activeWave.baseQFactor +
 				sound->rpcData.rpcFilterQFactor +
