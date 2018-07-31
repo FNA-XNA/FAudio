@@ -4,11 +4,6 @@ XAudio2, X3DAudio, XAPO, and XACT3.
 
 Project Website: http://fna-xna.github.io/
 
-NOTE TO DEVELOPERS
-------------------
-This project is extremely early in development! Do not use this until it has
-been fully integrated into FNA, unless you really like broken software.
-
 License
 -------
 FAudio is released under the zlib license. See LICENSE for details.
@@ -34,4 +29,4 @@ Found an issue?
 ---------------
 Issues and patches can be reported via GitHub:
 
-https://github.com/flibitijibibo/FACT/issues
+https://github.com/FNA-XNA/FAudio/issues
