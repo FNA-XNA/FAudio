@@ -411,23 +411,26 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 ) {
 	uint32_t i;
 	FAPO *fapo;
-	FAudioWaveFormatEx srcFmt, dstFmt;
+	FAudioWaveFormatExtensible srcFmt, dstFmt;
 	FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
 	FAPOProcessBufferParameters srcParams, dstParams;
 
 	/* Lock in formats that the APO will expect for processing */
-	srcFmt.wBitsPerSample = 32;
-	srcFmt.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
-	srcFmt.nChannels = channels;
-	srcFmt.nSamplesPerSec = sampleRate;
-	srcFmt.nBlockAlign = srcFmt.nChannels * (srcFmt.wBitsPerSample / 8);
-	srcFmt.nAvgBytesPerSec = srcFmt.nSamplesPerSec * srcFmt.nBlockAlign;
-	srcFmt.cbSize = 0;
-	srcLockParams.pFormat = &srcFmt;
+	srcFmt.Format.wBitsPerSample = 32;
+	srcFmt.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
+	srcFmt.Format.nChannels = channels;
+	srcFmt.Format.nSamplesPerSec = sampleRate;
+	srcFmt.Format.nBlockAlign = srcFmt.Format.nChannels * (srcFmt.Format.wBitsPerSample / 8);
+	srcFmt.Format.nAvgBytesPerSec = srcFmt.Format.nSamplesPerSec * srcFmt.Format.nBlockAlign;
+	srcFmt.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+	srcFmt.Samples.wValidBitsPerSample = srcFmt.Format.wBitsPerSample;
+	srcFmt.dwChannelMask = 0; /* FIXME */
+	FAudio_memcpy(&srcFmt.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+	srcLockParams.pFormat = &srcFmt.Format;
 	srcLockParams.MaxFrameCount = samples;
 
 	FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
-	dstLockParams.pFormat = &dstFmt;
+	dstLockParams.pFormat = &dstFmt.Format;
 	dstLockParams.MaxFrameCount = samples;
 
 	/* Set up the buffer to be written into */
@@ -444,13 +447,13 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 		if (!voice->effects.inPlaceProcessing[i])
 		{
-			dstFmt.nChannels = voice->effects.desc[i].OutputChannels;
-			dstFmt.nBlockAlign = dstFmt.nChannels * (dstFmt.wBitsPerSample / 8);
-			dstFmt.nAvgBytesPerSec = dstFmt.nSamplesPerSec * dstFmt.nBlockAlign;
+			dstFmt.Format.nChannels = voice->effects.desc[i].OutputChannels;
+			dstFmt.Format.nBlockAlign = dstFmt.Format.nChannels * (dstFmt.Format.wBitsPerSample / 8);
+			dstFmt.Format.nAvgBytesPerSec = dstFmt.Format.nSamplesPerSec * dstFmt.Format.nBlockAlign;
 			
 			if (dstParams.pBuffer == buffer)
 			{
-				FAudio_INTERNAL_ResizeEffectChainCache(voice->audio, dstFmt.nBlockAlign * samples);
+				FAudio_INTERNAL_ResizeEffectChainCache(voice->audio, dstFmt.Format.nBlockAlign * samples);
 				dstParams.pBuffer = voice->audio->effectChainCache;
 			}
 			else
