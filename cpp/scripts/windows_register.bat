@@ -13,7 +13,7 @@ EXIT /B %ERRORLEVEL%
 
 :: a function to register a DLL
 :register
-regsvr32 /s %CD%\%* && goto :register_ok
+regsvr32 /s "%CD%"\%* && goto :register_ok
 echo %* failed
 goto :register_end
 :register_ok

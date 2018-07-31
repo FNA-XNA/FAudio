@@ -12,7 +12,7 @@ CXAPOBase::CXAPOBase(FAPOBase *base)
 {
 }
 
-CXAPOBase::CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties
+CXAPOBase::CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties,
 	BYTE* pParameterBlocks,
 	UINT32 uParameterBlockByteSize,
 	BOOL fProducer) 
@@ -268,15 +268,15 @@ void CXAPOParametersBase::OnSetParameters(const void* pParameters, UINT32 Parame
 
 BOOL CXAPOParametersBase::ParametersChanged() 
 {
-	return FAPOParametersBase_ParametersChanged(fapo_base);
+	return FAPOBase_ParametersChanged(fapo_base);
 }
 
 BYTE* CXAPOParametersBase::BeginProcess() 
 {
-	return FAPOParametersBase_BeginProcess(fapo_param_base);
+	return FAPOBase_BeginProcess(fapo_base);
 }
 
 void CXAPOParametersBase::EndProcess() 
 {
-	FAPOParametersBase_EndProcess(fapo_param_base);
+	FAPOBase_EndProcess(fapo_base);
 }

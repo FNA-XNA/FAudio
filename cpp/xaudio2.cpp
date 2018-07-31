@@ -437,7 +437,7 @@ public:
 	{
 		TRACE_FUNC();
 #if XAUDIO2_VERSION > 7
-		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
+		FAudioVoice_GetVoiceDetails(faudio_voice, (FAudioVoiceDetails*) pVoiceDetails);
 #else
 		FAudioVoiceDetails fDetails;
 		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
@@ -752,7 +752,7 @@ public:
 	{
 		TRACE_FUNC();
 #if XAUDIO2_VERSION > 7
-		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
+		FAudioVoice_GetVoiceDetails(faudio_voice, (FAudioVoiceDetails*) pVoiceDetails);
 #else
 		FAudioVoiceDetails fDetails;
 		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
@@ -1025,7 +1025,7 @@ public:
 	{
 		TRACE_FUNC();
 #if XAUDIO2_VERSION > 7
-		FAudioVoice_GetVoiceDetails(faudio_voice, pVoiceDetails);
+		FAudioVoice_GetVoiceDetails(faudio_voice, (FAudioVoiceDetails*) pVoiceDetails);
 #else
 		FAudioVoiceDetails fDetails;
 		FAudioVoice_GetVoiceDetails(faudio_voice, &fDetails);
