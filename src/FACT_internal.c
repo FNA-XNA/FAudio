@@ -272,7 +272,7 @@ void FACT_INTERNAL_GetNextWave(
 	/* Filter Variation, QFactor/Freq are always together */
 	if (evt->wave.variationFlags & 0xC000)
 	{
-		const float rngQFactor = (
+		const float rngQFactor = 1.0f / (
 			FACT_INTERNAL_rng() *
 			(evt->wave.maxQFactor - evt->wave.minQFactor)
 		);

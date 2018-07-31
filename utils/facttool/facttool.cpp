@@ -764,8 +764,7 @@ void FAudioTool_Update()
 												evt->wave.maxVolume
 											);
 										}
-										/* FIXME: Frequency/QFactor flags???
-										if (evt->wave.variationFlags & 0x4000)
+										if (evt->wave.variationFlags & 0xC000)
 										{
 											ImGui::Text(
 												"Min Frequency: %f",
@@ -775,9 +774,6 @@ void FAudioTool_Update()
 												"Max Frequency: %f",
 												evt->wave.maxFrequency
 											);
-										}
-										if (evt->wave.variationFlags & 0x8000)
-										{
 											ImGui::Text(
 												"Min Q-Factor: %f",
 												evt->wave.minQFactor
@@ -787,7 +783,6 @@ void FAudioTool_Update()
 												evt->wave.maxQFactor
 											);
 										}
-										*/
 									}
 								}
 								else if (	evt->type == FACTEVENT_PITCH ||
