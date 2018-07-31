@@ -26,6 +26,28 @@
 
 #include "FAudio_internal.h"
 
+#define MAKE_SUBFORMAT_GUID(guid, fmt) \
+	FAudioGUID DATAFORMAT_SUBTYPE_##guid = \
+	{ \
+		(uint16_t) (fmt), \
+		0x0000, \
+		0x0010, \
+		{ \
+			0x80, \
+			0x00, \
+			0x00, \
+			0xAA, \
+			0x00, \
+			0x38, \
+			0x9B, \
+			0x71 \
+		} \
+	}
+MAKE_SUBFORMAT_GUID(PCM, 1);
+MAKE_SUBFORMAT_GUID(ADPCM, 2);
+MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
+#undef MAKE_SUBFORMAT_GUID
+
 /* FAudio Interface */
 
 uint32_t FAudioCreate(
@@ -144,7 +166,6 @@ uint32_t FAudio_CreateSourceVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	uint32_t i;
-	uint16_t realFormat;
 
 	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
@@ -162,88 +183,67 @@ uint32_t FAudio_CreateSourceVoice(
 	/* Source Properties */
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
-	FAudio_memcpy(
-		&(*ppSourceVoice)->src.format,
-		pSourceFormat,
-		sizeof(FAudioWaveFormatEx)
-	);
+
+	if(pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
+			pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT){
+		FAudioWaveFormatExtensible *fmtex = FAudio_malloc(sizeof(FAudioWaveFormatExtensible));
+		/* convert PCM to EXTENSIBLE */
+		fmtex->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
+		fmtex->Format.nChannels = pSourceFormat->nChannels;
+		fmtex->Format.nSamplesPerSec = pSourceFormat->nSamplesPerSec;
+		fmtex->Format.nAvgBytesPerSec = pSourceFormat->nAvgBytesPerSec;
+		fmtex->Format.nBlockAlign = pSourceFormat->nBlockAlign;
+		fmtex->Format.wBitsPerSample = pSourceFormat->wBitsPerSample;
+		fmtex->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+		fmtex->Samples.wValidBitsPerSample = pSourceFormat->wBitsPerSample;
+		fmtex->dwChannelMask = 0;
+		if(pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM)
+			memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID));
+		else if(pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
+			memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+		(*ppSourceVoice)->src.format = &fmtex->Format;
+	}else{
+		/* direct copy anything else */
+		(*ppSourceVoice)->src.format = FAudio_malloc(sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize);
+		memcpy((*ppSourceVoice)->src.format, pSourceFormat, sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize);
+	}
+
 	(*ppSourceVoice)->src.callback = pCallback;
 	(*ppSourceVoice)->src.active = 0;
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
 	(*ppSourceVoice)->src.bufferLock = FAudio_PlatformCreateMutex();
-		
-	if (pSourceFormat->wFormatTag >= 1 && pSourceFormat->wFormatTag <= 3)
-	{
-		/* Plain ol' WaveFormatEx */
-		realFormat = pSourceFormat->wFormatTag;
-	}
-	else if (pSourceFormat->wFormatTag == 0xFFFE)
-	{
-		/* WaveFormatExtensible, match GUID */
-		#define MAKE_SUBFORMAT_GUID(guid, fmt) \
-			FAudioGUID KSDATAFORMAT_SUBTYPE_##guid = \
-			{ \
-				(uint16_t) (fmt), \
-				0x0000, \
-				0x0010, \
-				{ \
-					0x80, \
-					0x00, \
-					0x00, \
-					0xAA, \
-					0x00, \
-					0x38, \
-					0x9B, \
-					0x71 \
-				} \
-			}
-		MAKE_SUBFORMAT_GUID(PCM, 1);
-		MAKE_SUBFORMAT_GUID(ADPCM, 2);
-		MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
-		#undef MAKE_SUBFORMAT_GUID
 
-		#define COMPARE_GUID(guid, realFmt) \
-		if (FAudio_memcmp( \
-			&((FAudioWaveFormatExtensible*) pSourceFormat)->SubFormat, \
-			&KSDATAFORMAT_SUBTYPE_##guid, \
-			sizeof(FAudioGUID) \
-		) == 0) { \
-			realFormat = realFmt; \
+	if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
+	{
+		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*)(*ppSourceVoice)->src.format;
+
+		if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)) == 0)
+		{
+			(*ppSourceVoice)->src.decode = (fmtex->Format.wBitsPerSample == 16) ?
+				FAudio_INTERNAL_DecodePCM16 : FAudio_INTERNAL_DecodePCM8;
 		}
-		COMPARE_GUID(PCM, 1)
-		else COMPARE_GUID(ADPCM, 2)
-		else COMPARE_GUID(IEEE_FLOAT, 3)
+		else if(FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)) == 0)
+		{
+			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
+		}
 		else
 		{
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
-			realFormat = 0;
 		}
-		#undef COMPARE_GUID
 	}
-	else
+	else if((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
-		FAudio_assert(0 && "Unsupported wFormatTag!");
-		realFormat = 0;
-	}
-
-	if (realFormat == 1)
-	{
-		(*ppSourceVoice)->src.decode = (pSourceFormat->wBitsPerSample == 16) ?
-			FAudio_INTERNAL_DecodePCM16 :
-			FAudio_INTERNAL_DecodePCM8;
-	}
-	else if (realFormat == 2)
-	{
-		(*ppSourceVoice)->src.decode = (pSourceFormat->nChannels == 2) ?
+		(*ppSourceVoice)->src.decode = ((*ppSourceVoice)->src.format->nChannels == 2) ?
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
 			FAudio_INTERNAL_DecodeMonoMSADPCM;
 	}
-	else if (realFormat == 3)
+	else
 	{
-		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
+		FAudio_assert(0 && "Unsupported format tag!");
 	}
+
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 
 	/* Sends/Effects */
@@ -264,11 +264,11 @@ uint32_t FAudio_CreateSourceVoice(
 	if (Flags & FAUDIO_VOICE_USEFILTER)
 	{
 		(*ppSourceVoice)->filterState = (FAudioFilterState*) FAudio_malloc(
-			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format.nChannels
+			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format->nChannels
 		);
 		FAudio_zero(
 			(*ppSourceVoice)->filterState,
-			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format.nChannels
+			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format->nChannels
 		);
 	}
 
@@ -276,12 +276,12 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.decodeSamples = (uint32_t) FAudio_ceil(
 		audio->updateSize *
 		(double) MaxFrequencyRatio *
-		(double) pSourceFormat->nSamplesPerSec /
+		(double) (*ppSourceVoice)->src.format->nSamplesPerSec /
 		(double) audio->master->master.inputSampleRate
 	) + EXTRA_DECODE_PADDING * 2;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		audio,
-		(*ppSourceVoice)->src.decodeSamples * pSourceFormat->nChannels
+		(*ppSourceVoice)->src.decodeSamples * (*ppSourceVoice)->src.format->nChannels
 	);
 
 	/* Add to list, finally. */
@@ -484,8 +484,8 @@ void FAudioVoice_GetVoiceDetails(
 	pVoiceDetails->ActiveFlags = voice->flags;
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
-		pVoiceDetails->InputChannels = voice->src.format.nChannels;
-		pVoiceDetails->InputSampleRate = voice->src.format.nSamplesPerSec;
+		pVoiceDetails->InputChannels = voice->src.format->nChannels;
+		pVoiceDetails->InputSampleRate = voice->src.format->nSamplesPerSec;
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -1012,7 +1012,7 @@ void FAudioVoice_GetOutputMatrix(
 	/* Verify the Source/Destination channel count */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
-		FAudio_assert(SourceChannels == voice->src.format.nChannels);
+		FAudio_assert(SourceChannels == voice->src.format->nChannels);
 	}
 	else
 	{
@@ -1051,6 +1051,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 			voice,
 			voice->audio->sourceLock
 		);
+		FAudio_free(voice->src.format);
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
@@ -1205,19 +1206,19 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* PlayLength Default */
 	if (playLength == 0)
 	{
-		if (voice->src.format.wFormatTag == 2)
+		if (voice->src.format->wFormatTag == 2)
 		{
 			playLength = (
 				pBuffer->AudioBytes /
-				voice->src.format.nBlockAlign *
-				(((voice->src.format.nBlockAlign / voice->src.format.nChannels) - 6) * 2)
+				voice->src.format->nBlockAlign *
+				(((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2)
 			) - playBegin;
 		}
 		else
 		{
 			playLength = (
 				pBuffer->AudioBytes /
-				voice->src.format.nBlockAlign
+				voice->src.format->nBlockAlign
 			) - playBegin;
 		}
 	}
@@ -1248,9 +1249,9 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 
 	/* For ADPCM, round down to the nearest sample block size */
-	if (voice->src.format.wFormatTag == 2)
+	if (voice->src.format->wFormatTag == 2)
 	{
-		adpcmMask = ((voice->src.format.nBlockAlign / voice->src.format.nChannels) - 6) * 2;
+		adpcmMask = ((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2;
 		adpcmMask -= 1;
 		playBegin &= ~adpcmMask;
 		playLength &= ~adpcmMask;
@@ -1260,8 +1261,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		/* This is basically a const_cast... */
 		adpcmByteCount = (uint32_t*) &pBuffer->AudioBytes;
 		*adpcmByteCount = (
-			pBuffer->AudioBytes / voice->src.format.nBlockAlign
-		) * voice->src.format.nBlockAlign;
+			pBuffer->AudioBytes / voice->src.format->nBlockAlign
+		) * voice->src.format->nBlockAlign;
 	}
 
 	/* Allocate, now that we have valid input */
@@ -1456,7 +1457,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	}
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 
-	voice->src.format.nSamplesPerSec = NewSourceSampleRate;
+	voice->src.format->nSamplesPerSec = NewSourceSampleRate;
 
 	/* Resize decode cache */
 	newDecodeSamples = (uint32_t) FAudio_ceil(
@@ -1467,7 +1468,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	) + EXTRA_DECODE_PADDING * 2;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		voice->audio,
-		newDecodeSamples * voice->src.format.nChannels
+		newDecodeSamples * voice->src.format->nChannels
 	);
 	voice->src.decodeSamples = newDecodeSamples;
 
@@ -1492,7 +1493,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	);
 	FAudio_INTERNAL_ResizeResampleCache(
 		voice->audio,
-		newResampleSamples * voice->src.format.nChannels
+		newResampleSamples * voice->src.format->nChannels
 	);
 	voice->src.resampleSamples = newResampleSamples;
 	return 0;

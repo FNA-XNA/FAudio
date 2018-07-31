@@ -189,10 +189,10 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			buffer,
 			voice->src.curBufferOffset,
 			voice->audio->decodeCache + (
-				decoded * voice->src.format.nChannels
+				decoded * voice->src.format->nChannels
 			),
 			endRead,
-			&voice->src.format
+			voice->src.format
 		);
 
 		voice->src.curBufferOffset += endRead;
@@ -242,11 +242,11 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					FAudio_zero(
 						voice->audio->decodeCache + (
 							(decoded + endRead) *
-							voice->src.format.nChannels
+							voice->src.format->nChannels
 						),
 						sizeof(float) * (
 							(decoding - endRead) *
-							voice->src.format.nChannels
+							voice->src.format->nChannels
 						)
 					);
 				}
@@ -293,21 +293,21 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			buffer,
 			voice->src.curBufferOffset,
 			voice->audio->decodeCache + (
-				decoded * voice->src.format.nChannels
+				decoded * voice->src.format->nChannels
 			),
 			endRead,
-			&voice->src.format
+			voice->src.format
 		);
 
 		if (endRead < EXTRA_DECODE_PADDING)
 		{
 			FAudio_zero(
 				voice->audio->decodeCache + (
-					decoded * voice->src.format.nChannels
+					decoded * voice->src.format->nChannels
 				),
 				sizeof(float) * (
 					EXTRA_DECODE_PADDING - endRead *
-					voice->src.format.nChannels
+					voice->src.format->nChannels
 				)
 			);
 		}
@@ -316,11 +316,11 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	{
 		FAudio_zero(
 			voice->audio->decodeCache + (
-				decoded * voice->src.format.nChannels
+				decoded * voice->src.format->nChannels
 			),
 			sizeof(float) * (
 				EXTRA_DECODE_PADDING *
-				voice->src.format.nChannels
+				voice->src.format->nChannels
 			)
 		);
 	}
@@ -340,12 +340,12 @@ static void FAudio_INTERNAL_ResamplePCM(
 	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
-		for (j = 0; j < voice->src.format.nChannels; j += 1)
+		for (j = 0; j < voice->src.format->nChannels; j += 1)
 		{
 			/* lerp, then convert to float value */
 			*(*resampleCache)++ = (float) (
 				dCache[j] +
-				(dCache[j + voice->src.format.nChannels] - dCache[j]) *
+				(dCache[j + voice->src.format->nChannels] - dCache[j]) *
 				FIXED_TO_DOUBLE(cur)
 			);
 		}
@@ -358,7 +358,7 @@ static void FAudio_INTERNAL_ResamplePCM(
 		 * Sometimes this will be 0 until cur accumulates
 		 * enough steps, especially for "slow" rates.
 		 */
-		dCache += (cur >> FIXED_PRECISION) * voice->src.format.nChannels;
+		dCache += (cur >> FIXED_PRECISION) * voice->src.format->nChannels;
 
 		/* Now that any integer has been added, drop it.
 		 * The offset pointer will preserve the total.
@@ -522,7 +522,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			out->mix.inputSampleRate;
 		stepd = (
 			voice->src.freqRatio *
-			(double) voice->src.format.nSamplesPerSec /
+			(double) voice->src.format->nSamplesPerSec /
 			(double) outputRate
 		);
 		voice->src.resampleStep = DOUBLE_TO_FIXED(stepd);
@@ -579,9 +579,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			FAudio_memcpy(
 				resampleCache,
 				voice->audio->decodeCache,
-				(size_t) toResample * voice->src.format.nChannels * sizeof(float)
+				(size_t) toResample * voice->src.format->nChannels * sizeof(float)
 			);
-			resampleCache += toResample * voice->src.format.nChannels;
+			resampleCache += toResample * voice->src.format->nChannels;
 		}
 		else
 		{
@@ -629,7 +629,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->filterState,
 			voice->audio->resampleCache,
 			mixed,
-			voice->src.format.nChannels
+			voice->src.format->nChannels
 		);
 		FAudio_PlatformUnlockMutex(voice->filterLock);
 	}
@@ -642,8 +642,8 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
-			voice->src.format.nChannels,
-			voice->src.format.nSamplesPerSec,
+			voice->src.format->nChannels,
+			voice->src.format->nSamplesPerSec,
 			voice->audio->resampleCache,
 			mixed
 		);

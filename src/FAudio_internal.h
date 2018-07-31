@@ -273,7 +273,7 @@ struct FAudioVoice
 
 			/* Read-only */
 			float maxFreqRatio;
-			FAudioWaveFormatEx format; /* TODO: WaveFormatExtensible! */
+			FAudioWaveFormatEx *format;
 			FAudioDecodeCallback decode;
 			FAudioVoiceCallback *callback;
 

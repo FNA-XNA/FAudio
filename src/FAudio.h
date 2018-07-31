@@ -380,6 +380,14 @@ typedef struct FAudioDebugConfiguration
 #define _SPEAKER_COMBINATIONS_
 #endif
 
+#define FAUDIO_FORMAT_PCM 1
+#define FAUDIO_FORMAT_MSADPCM 2
+#define FAUDIO_FORMAT_IEEE_FLOAT 3
+#define FAUDIO_FORMAT_EXTENSIBLE 0xFFFE
+
+extern FAudioGUID DATAFORMAT_SUBTYPE_PCM;
+extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
+
 /* FAudio Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
