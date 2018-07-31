@@ -192,7 +192,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		/* Write up the format */
 		device->format.Samples.wValidBitsPerSample = 32;
 		device->format.Format.wBitsPerSample = 32;
-		device->format.Format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
+		device->format.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
 		device->format.Format.nChannels = have.channels;
 		device->format.Format.nSamplesPerSec = have.freq;
 		device->format.Format.nBlockAlign = (
@@ -203,7 +203,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			device->format.Format.nSamplesPerSec *
 			device->format.Format.nBlockAlign
 		);
-		device->format.Format.cbSize = 0;
+		device->format.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
 		if (have.channels == 1)
 		{
 			device->format.dwChannelMask = SPEAKER_MONO;
@@ -236,7 +236,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		{
 			FAudio_assert(0 && "Unrecognized speaker layout!");
 		}
-		FAudio_zero(&device->format.SubFormat, sizeof(FAudioGUID)); /* ? */
+		FAudio_memcpy(&device->format.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
 		device->bufferSize = have.samples;
 
 		/* Give the output format to the engine */
