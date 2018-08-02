@@ -144,9 +144,28 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		want.format = AUDIO_F32;
 		want.channels = audio->master->master.inputChannels;
 		want.silence = 0;
-		want.samples = 1024;
 		want.callback = FAudio_INTERNAL_MixCallback;
 		want.userdata = device;
+
+		/* FIXME: SDL's WASAPI implementation does not overwrite the
+		 * samples value when it really REALLY should. WASAPI is
+		 * extremely sensitive and wants the sample period to be a VERY
+		 * VERY EXACT VALUE and if you fail to write the correct length,
+		 * you will get lots and lots of glitches.
+		 * The math on how to get the right value is very unclear, but
+		 * this post seems to have the math that matches my setups best:
+		 * https://github.com/kinetiknz/cubeb/issues/324#issuecomment-345472582
+		 * -flibit
+		 */
+		if (FAudio_strcmp(SDL_GetCurrentAudioDriver(), "wasapi") == 0)
+		{
+			FAudio_assert(want.freq == 48000);
+			want.samples = 528;
+		}
+		else
+		{
+			want.samples = 1024;
+		}
 
 		/* Open the device, finally. */
 		device->device = SDL_OpenAudioDevice(
