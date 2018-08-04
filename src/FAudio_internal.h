@@ -36,7 +36,10 @@
 #define FAudio_malloc(size) malloc(size)
 #define FAudio_realloc(mem, size) realloc(mem, size)
 #define FAudio_free(mem) free(mem)
+#define FAudio_alloca(x) alloca(uint8_t, x)
+#define FAudio_dealloca(x) dealloca(x)
 #define FAudio_zero(ptr, size) memset(ptr, '\0', size)
+#define FAudio_memset(ptr, val, size) memset(ptr, val, size)
 #define FAudio_memcpy(dst, src, size) memcpy(dst, src, size)
 #define FAudio_memmove(dst, src, size) memmove(dst, src, size)
 #define FAudio_memcmp(ptr1, ptr2, size) memcmp(ptr1, ptr2, size)
@@ -46,6 +49,7 @@
 #define FAudio_strlcpy(ptr1, ptr2, size) strlcpy(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) pow(x, y)
+#define FAudio_log(x) log(x)
 #define FAudio_log10(x) log10(x)
 #define FAudio_sqrt(x) sqrt(x)
 #define FAudio_sin(x) sin(x)
@@ -53,7 +57,11 @@
 #define FAudio_tan(x) tan(x)
 #define FAudio_acos(x) acos(x)
 #define FAudio_ceil(x) ceil(x)
+#define FAudio_floor(x) floor(x)
+#define FAudio_abs(x) abs(x)
 #define FAudio_fabs(x) fabs(x)
+#define FAudio_ldexp(v, e) ldexp(v, e)
+#define FAudio_exp(x) exp(x)
 
 #define FAudio_cosf(x) cosf(x)
 #define FAudio_sinf(x) sinf(x)
@@ -61,6 +69,8 @@
 #define FAudio_acosf(x) acosf(x)
 #define FAudio_atan2f(y, x) atan2f(y, x)
 #define FAudio_fabsf(x) fabsf(x)
+
+#define FAudio_qsort qsort
 
 #define FAudio_assert assert
 #else
@@ -70,7 +80,10 @@
 #define FAudio_malloc(size) SDL_malloc(size)
 #define FAudio_realloc(mem, size) SDL_realloc(mem, size)
 #define FAudio_free(mem) SDL_free(mem)
+#define FAudio_alloca(x) SDL_stack_alloc(uint8_t, x)
+#define FAudio_dealloca(x) SDL_stack_free(x)
 #define FAudio_zero(ptr, size) SDL_memset(ptr, '\0', size)
+#define FAudio_memset(ptr, val, size) SDL_memset(ptr, val, size)
 #define FAudio_memcpy(dst, src, size) SDL_memcpy(dst, src, size)
 #define FAudio_memmove(dst, src, size) SDL_memmove(dst, src, size)
 #define FAudio_memcmp(ptr1, ptr2, size) SDL_memcmp(ptr1, ptr2, size)
@@ -80,6 +93,7 @@
 #define FAudio_strlcpy(ptr1, ptr2, size) SDL_strlcpy(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) SDL_pow(x, y)
+#define FAudio_log(x) SDL_log(x)
 #define FAudio_log10(x) SDL_log10(x)
 #define FAudio_sqrt(x) SDL_sqrt(x)
 #define FAudio_sin(x) SDL_sin(x)
@@ -87,7 +101,11 @@
 #define FAudio_tan(x) SDL_tan(x)
 #define FAudio_acos(x) SDL_acos(x)
 #define FAudio_ceil(x) SDL_ceil(x)
+#define FAudio_floor(x) SDL_floor(x)
+#define FAudio_abs(x) SDL_abs(x)
 #define FAudio_fabs(x) SDL_fabs(x)
+#define FAudio_ldexp(v, e) SDL_scalbn(v, e)
+#define FAudio_exp(x) exp(x) /* TODO: SDL_exp */
 
 #define FAudio_cosf(x) SDL_cosf(x)
 #define FAudio_sinf(x) SDL_sinf(x)
@@ -95,6 +113,8 @@
 #define FAudio_acosf(x) SDL_acosf(x)
 #define FAudio_atan2f(y, x) SDL_atan2f(y, x)
 #define FAudio_fabsf(x) SDL_fabsf(x)
+
+#define FAudio_qsort SDL_qsort
 
 #define FAudio_assert SDL_assert
 #endif

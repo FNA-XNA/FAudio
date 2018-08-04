@@ -67,8 +67,10 @@
 #define STB_VORBIS_NO_STDIO 1
 #endif
 
+#if 0 /* FAudio change! */
 #ifndef STB_VORBIS_NO_STDIO
 #include <stdio.h>
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -545,6 +547,7 @@ enum STBVorbisError
 #endif
 
 
+#if 0 /* FAudio change! */
 #ifndef STB_VORBIS_NO_STDIO
 #include <stdio.h>
 #endif
@@ -568,6 +571,7 @@ enum STBVorbisError
    #define free(s)     ((void) 0)
    #define realloc(s)  0
 #endif // STB_VORBIS_NO_CRT
+#endif
 
 #include <limits.h>
 
@@ -1297,7 +1301,8 @@ static uint8 get8(vorb *z)
 
    #ifndef STB_VORBIS_NO_STDIO
    {
-   int c = fgetc(z->f);
+   uint8 c;
+   fread(&c, 1, 1, z->f); /* FAudio change! */
    if (c == EOF) { z->eof = TRUE; return 0; }
    return c;
    }
