@@ -2090,4 +2090,133 @@ public static class FAudio
 	public static extern void FAudio_close(IntPtr io);
 
 	#endregion
+
+	#region stb_vorbis
+
+	/* Because why not? */
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct stb_vorbis_alloc
+	{
+		public IntPtr alloc_buffer;
+		public int alloc_buffer_length_in_bytes;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct stb_vorbis_info
+	{
+		public uint sample_rate;
+		public int channels;
+
+		public uint setup_memory_required;
+		public uint setup_temp_memory_required;
+		public uint temp_memory_required;
+
+		public int max_frame_size;
+	}
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern stb_vorbis_info stb_vorbis_get_info(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_error(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void stb_vorbis_close(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_sample_offset(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint stb_vorbis_get_file_offset(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr stb_vorbis_open_memory(
+		IntPtr data,
+		int len,
+		out int error,
+		IntPtr alloc_buffer /* stb_vorbis_alloc* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern IntPtr stb_vorbis_open_filename(
+		byte[] filename,
+		out int error,
+		IntPtr alloc_buffer /* stb_vorbis_alloc* */
+	);
+	public static IntPtr stb_vorbis_open_filename(
+		string filename,
+		out int error,
+		IntPtr alloc_buffer /* stb_vorbis_alloc* */
+	) {
+		return stb_vorbis_open_filename(
+			UTF8_ToNative(filename),
+			out error,
+			alloc_buffer
+		);
+	}
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr stb_vorbis_open_file(
+		IntPtr f, /* FAudioIOStream* */
+		int close_handle_on_close,
+		out int error,
+		IntPtr alloc_buffer /* stb_vorbis_alloc* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern IntPtr stb_vorbis_open_file_section(
+		IntPtr f, /* FAudioIOStream* */
+		int close_handle_on_close,
+		out int error,
+		IntPtr alloc_buffer, /* stb_vorbis_alloc* */
+		uint len
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_seek_frame(IntPtr f, uint sample_number);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_seek(IntPtr f, uint sample_number);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_seek_start(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint stb_vorbis_stream_length_in_samples(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern float stb_vorbis_stream_length_in_seconds(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_frame_float(
+		IntPtr f,
+		out int channels,
+		ref float[][] output
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_frame_float(
+		IntPtr f,
+		IntPtr channels, /* IntPtr.Zero */
+		ref float[][] output
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_samples_float_interleaved(
+		IntPtr f,
+		int channels,
+		float[] buffer,
+		int num_floats
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_samples_float(
+		IntPtr f,
+		int channels,
+		float[][] buffer,
+		int num_samples
+	);
+
+	#endregion
 }

@@ -130,24 +130,24 @@ typedef struct
 } stb_vorbis_info;
 
 // get general information about the file
-extern stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
+FAUDIOAPI stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
 
 // get the last error detected (clears it, too)
-extern int stb_vorbis_get_error(stb_vorbis *f);
+FAUDIOAPI int stb_vorbis_get_error(stb_vorbis *f);
 
 // close an ogg vorbis file and free all memory in use
-extern void stb_vorbis_close(stb_vorbis *f);
+FAUDIOAPI void stb_vorbis_close(stb_vorbis *f);
 
 // this function returns the offset (in samples) from the beginning of the
 // file that will be returned by the next decode, if it is known, or -1
 // otherwise. after a flush_pushdata() call, this may take a while before
 // it becomes valid again.
 // NOT WORKING YET after a seek with PULLDATA API
-extern int stb_vorbis_get_sample_offset(stb_vorbis *f);
+FAUDIOAPI int stb_vorbis_get_sample_offset(stb_vorbis *f);
 
 // returns the current seek point within the file, or offset from the beginning
 // of the memory buffer. In pushdata mode it returns 0.
-extern unsigned int stb_vorbis_get_file_offset(stb_vorbis *f);
+FAUDIOAPI unsigned int stb_vorbis_get_file_offset(stb_vorbis *f);
 
 ///////////   PUSHDATA API
 
@@ -239,18 +239,18 @@ extern int stb_vorbis_decode_memory(const unsigned char *mem, int len, int *chan
 // decoded, or -1 if the file could not be opened or was not an ogg vorbis file.
 // When you're done with it, just free() the pointer returned in *output.
 
-extern stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len,
+FAUDIOAPI stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len,
                                   int *error, const stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from an ogg vorbis stream in memory (note
 // this must be the entire stream!). on failure, returns NULL and sets *error
 
 #ifndef STB_VORBIS_NO_STDIO
-extern stb_vorbis * stb_vorbis_open_filename(const char *filename,
+FAUDIOAPI stb_vorbis * stb_vorbis_open_filename(const char *filename,
                                   int *error, const stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from a filename via fopen(). on failure,
 // returns NULL and sets *error (possibly to VORBIS_file_open_failure).
 
-extern stb_vorbis * stb_vorbis_open_file(FILE *f, int close_handle_on_close,
+FAUDIOAPI stb_vorbis * stb_vorbis_open_file(FILE *f, int close_handle_on_close,
                                   int *error, const stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from an open FILE *, looking for a stream at
 // the _current_ seek point (ftell). on failure, returns NULL and sets *error.
@@ -260,7 +260,7 @@ extern stb_vorbis * stb_vorbis_open_file(FILE *f, int close_handle_on_close,
 // owns the _entire_ rest of the file after the start point. Use the next
 // function, stb_vorbis_open_file_section(), to limit it.
 
-extern stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_close,
+FAUDIOAPI stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_close,
                 int *error, const stb_vorbis_alloc *alloc_buffer, unsigned int len);
 // create an ogg vorbis decoder from an open FILE *, looking for a stream at
 // the _current_ seek point (ftell); the stream will be of length 'len' bytes.
@@ -269,8 +269,8 @@ extern stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_cl
 // confused.
 #endif
 
-extern int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number);
-extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
+FAUDIOAPI int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number);
+FAUDIOAPI int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 // these functions seek in the Vorbis file to (approximately) 'sample_number'.
 // after calling seek_frame(), the next call to get_frame_*() will include
 // the specified sample. after calling stb_vorbis_seek(), the next call to
@@ -278,14 +278,14 @@ extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 // do not need to seek to EXACTLY the target sample when using get_samples_*,
 // you can also use seek_frame().
 
-extern int stb_vorbis_seek_start(stb_vorbis *f);
+FAUDIOAPI int stb_vorbis_seek_start(stb_vorbis *f);
 // this function is equivalent to stb_vorbis_seek(f,0)
 
-extern unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f);
-extern float        stb_vorbis_stream_length_in_seconds(stb_vorbis *f);
+FAUDIOAPI unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f);
+FAUDIOAPI float        stb_vorbis_stream_length_in_seconds(stb_vorbis *f);
 // these functions return the total length of the vorbis stream
 
-extern int stb_vorbis_get_frame_float(stb_vorbis *f, int *channels, float ***output);
+FAUDIOAPI int stb_vorbis_get_frame_float(stb_vorbis *f, int *channels, float ***output);
 // decode the next frame and return the number of samples. the number of
 // channels returned are stored in *channels (which can be NULL--it is always
 // the same as the number of channels reported by get_info). *output will
@@ -324,8 +324,8 @@ extern int stb_vorbis_get_frame_short            (stb_vorbis *f, int num_c, shor
 //    Note that this is not _good_ surround etc. mixing at all! It's just so
 //    you get something useful.
 
-extern int stb_vorbis_get_samples_float_interleaved(stb_vorbis *f, int channels, float *buffer, int num_floats);
-extern int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, int num_samples);
+FAUDIOAPI int stb_vorbis_get_samples_float_interleaved(stb_vorbis *f, int channels, float *buffer, int num_floats);
+FAUDIOAPI int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, int num_samples);
 // gets num_samples samples, not necessarily on a frame boundary--this requires
 // buffering so you have to supply the buffers. DOES NOT APPLY THE COERCION RULES.
 // Returns the number of samples stored per channel; it may be less than requested
