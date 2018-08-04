@@ -28,9 +28,6 @@
 
 /* stb_vorbis */
 
-#ifdef alloca
-#undef alloca /* eep */
-#endif
 #define malloc FAudio_malloc
 #define realloc FAudio_realloc
 #define free FAudio_free
