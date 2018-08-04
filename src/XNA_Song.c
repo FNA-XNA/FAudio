@@ -34,8 +34,6 @@
 #define malloc FAudio_malloc
 #define realloc FAudio_realloc
 #define free FAudio_free
-#define alloca(x) FAudio_alloca((x))
-#define dealloca(x) FAudio_dealloca((x))
 #define memset FAudio_memset
 #define memcpy FAudio_memcpy
 #define memcmp FAudio_memcmp
