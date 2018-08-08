@@ -1494,7 +1494,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	c->wave->parentBank->io->seek(
 		c->wave->parentBank->io->data,
 		c->wave->streamOffset,
-		0
+		FAUDIO_SEEK_SET
 	);
 	c->wave->parentBank->io->read(
 		c->wave->parentBank->io->data,
@@ -2544,7 +2544,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	io->seek(
 		io->data,
 		header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset,
-		0
+		FAUDIO_SEEK_SET
 	);
 	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
 	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
@@ -2566,7 +2566,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	io->seek(
 		io->data,
 		header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYMETADATA].dwOffset,
-		0
+		FAUDIO_SEEK_SET
 	);
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_COMPACT)
 	{
@@ -2590,7 +2590,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			io->seek(
 				io->data,
 				wbinfo.dwEntryMetaDataElementSize,
-				1
+				FAUDIO_SEEK_CUR
 			);
 			wb->entries[i].PlayRegion.dwLength = (
 				(compactEntry & ((1 << 21) - 1)) *
@@ -2616,7 +2616,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		io->seek(
 			io->data,
 			wbinfo.dwEntryMetaDataElementSize,
-			1
+			FAUDIO_SEEK_CUR
 		);
 		wb->entries[i].PlayRegion.dwLength = (
 			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwLength -

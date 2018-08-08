@@ -49,6 +49,18 @@
 #define assert FAudio_assert
 
 #define FILE FAudioIOStream
+#ifdef SEEK_SET
+#undef SEEK_SET
+#endif
+#ifdef SEEK_END
+#undef SEEK_END
+#endif
+#ifdef EOF
+#undef EOF
+#endif
+#define SEEK_SET FAUDIO_SEEK_SET
+#define SEEK_END FAUDIO_SEEK_END
+#define EOF FAUDIO_EOF
 #define fopen(path, mode) FAudio_fopen(path)
 #define fclose(io) FAudio_close(io)
 #define fread(dst, size, count, io) io->read(io->data, dst, size, count)

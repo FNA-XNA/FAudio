@@ -382,7 +382,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	uint32_t retval;
 	FAudioIOStream *io = (FAudioIOStream*) pParms->file;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
-	io->seek(io->data, pParms->offset, 0);
+	io->seek(io->data, pParms->offset, FAUDIO_SEEK_SET);
 	retval = FACT_INTERNAL_ParseWaveBank(
 		pEngine,
 		io,

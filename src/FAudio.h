@@ -714,6 +714,11 @@ struct FAudioVoiceCallback
 
 /* FAudio I/O API */
 
+#define FAUDIO_SEEK_SET 0
+#define FAUDIO_SEEK_CUR 1
+#define FAUDIO_SEEK_END 2
+#define FAUDIO_EOF -1
+
 typedef size_t (FAUDIOCALL * FAudio_readfunc)(
 	void *data,
 	void *dst,
