@@ -265,7 +265,7 @@ struct FAudioVoice
 			uint32_t resampleSamples;
 
 			/* Resampler */
-			float resampleFreqRatio;
+			float resampleFreq;
 			uint64_t resampleStep;
 			uint64_t resampleOffset;
 			uint64_t curBufferOffsetDec;

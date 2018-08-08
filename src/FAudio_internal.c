@@ -513,7 +513,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	float *effectOut;
 
 	/* Calculate the resample stepping value */
-	if (voice->src.resampleFreqRatio != voice->src.freqRatio)
+	if (voice->src.resampleFreq != voice->src.freqRatio * voice->src.format->nSamplesPerSec)
 	{
 		FAudio_PlatformLockMutex(voice->sendLock);
 		out = (voice->sends.SendCount == 0) ?
@@ -529,7 +529,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			(double) outputRate
 		);
 		voice->src.resampleStep = DOUBLE_TO_FIXED(stepd);
-		voice->src.resampleFreqRatio = voice->src.freqRatio;
+		voice->src.resampleFreq = voice->src.freqRatio * voice->src.format->nSamplesPerSec;
 	}
 
 	/* Last call for buffer data! */
