@@ -640,7 +640,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				{
 					evtInst = &newSound->tracks[i].events[j];
 					if (	!evt->wave.isComplex ||
-						(evt->wave.complex.variation & 0xF) == 1	)
+						(evt->wave.complex.variation & 0xF) == 0	)
 					{
 						evtInst->valuei = 0;
 					}
