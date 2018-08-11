@@ -1301,7 +1301,7 @@ static uint8 get8(vorb *z)
 
    #ifndef STB_VORBIS_NO_STDIO
    {
-   uint8 c;
+   int8 c;
    fread(&c, 1, 1, z->f); /* FAudio change! */
    if (c == EOF) { z->eof = TRUE; return 0; }
    return c;
