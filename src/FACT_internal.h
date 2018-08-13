@@ -485,7 +485,6 @@ struct FACTCue
 
 	/* Sound data */
 	FACTCueData *data;
-
 	union
 	{
 		FACTVariationTable *variation;
