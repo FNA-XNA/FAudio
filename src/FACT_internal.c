@@ -822,7 +822,8 @@ void FACT_INTERNAL_UpdateRPCs(
 	uint32_t *codes,
 	FACTInstanceRPCData *data,
 	uint32_t timestamp,
-	uint32_t trackStart
+	uint32_t elapsedCue,
+	uint32_t elapsedTrack
 ) {
 	uint8_t i;
 	FACTRPC *rpc;
@@ -849,7 +850,7 @@ void FACT_INTERNAL_UpdateRPCs(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
 				) == 0) {
-					variableValue = timestamp - trackStart;
+					variableValue = elapsedTrack;
 				}
 				else if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
@@ -1248,7 +1249,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 	/* To get the time on a single Cue, subtract from the global time
 	 * the latest start time minus the total time elapsed (minus pause time)
 	 */
-	uint32_t elapsed = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
+	uint32_t elapsedCue = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
 
 	/* RPC updates */
 	sound->rpcData.rpcFilterFreq = -1.0f;
@@ -1258,7 +1259,8 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 		sound->sound->rpcCodes,
 		&sound->rpcData,
 		timestamp,
-		sound->parentCue->start + sound->tracks[0].events[0].timestamp
+		elapsedCue,
+		elapsedCue - sound->tracks[0].events[0].timestamp
 	);
 	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
@@ -1269,7 +1271,8 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 			sound->sound->tracks[i].rpcCodes,
 			&sound->tracks[i].rpcData,
 			timestamp,
-			sound->parentCue->start + sound->sound->tracks[i].events[0].timestamp
+			elapsedCue,
+			elapsedCue - sound->sound->tracks[i].events[0].timestamp
 		);
 	}
 
@@ -1286,7 +1289,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 				finished = 0;
 
 				/* Trigger events at the right time */
-				if (elapsed > evtInst->timestamp)
+				if (elapsedCue > evtInst->timestamp)
 				{
 					FACT_INTERNAL_ActivateEvent(
 						sound,
@@ -1294,7 +1297,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 						&sound->tracks[i],
 						&sound->sound->tracks[i].events[j],
 						evtInst,
-						elapsed
+						elapsedCue
 					);
 				}
 			}
