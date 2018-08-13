@@ -824,6 +824,8 @@ uint32_t FACTSoundBank_Prepare(
 ) {
 	uint16_t i;
 	FACTCue *latest;
+	FACTAudioEngine *engine = pSoundBank->parentEngine;
+
 	if (pSoundBank == NULL)
 	{
 		*ppCue = NULL;
@@ -880,6 +882,33 @@ uint32_t FACTSoundBank_Prepare(
 	{
 		(*ppCue)->variableValues[i] =
 			pSoundBank->parentEngine->variables[i].initialValue;
+	}
+
+	/* Calculate Max RPC Release Time */
+	(*ppCue)->maxRpcReleaseTime = 0;
+	for(int i = 0; i < (*ppCue)->sound->trackCount; i += 1)
+	{
+		for(int j = 0; j < (*ppCue)->sound->tracks[i].rpcCodeCount; j+=1)
+		{
+			FACTRPC *rpc = FACT_INTERNAL_GetRPC(
+				engine,
+				(*ppCue)->sound->tracks[i].rpcCodes[j]
+			);
+			if (engine->variables[rpc->variable].accessibility & 0x04)
+			{
+				if (FAudio_strcmp(
+					engine->variableNames[rpc->variable],
+					"ReleaseTime"
+				) == 0 && rpc->parameter == RPC_PARAMETER_VOLUME)
+				{
+					float lastX = rpc->points[rpc->pointCount - 1].x;
+					if (lastX > (*ppCue)->maxRpcReleaseTime)
+					{
+						(*ppCue)->maxRpcReleaseTime = lastX;
+					}
+				}
+			}
+		}
 	}
 
 	/* Playback */
@@ -2038,7 +2067,8 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	if (	dwFlags & FACT_FLAG_STOP_IMMEDIATE ||
 		pCue->state & FACT_STATE_PAUSED	||
 		pCue->playingSound == NULL ||
-		pCue->parentBank->cues[pCue->index].fadeOutMS == 0	)
+		(pCue->parentBank->cues[pCue->index].fadeOutMS == 0 &&
+			pCue->maxRpcReleaseTime == 0) 	)
 	{
 		pCue->start = 0;
 		pCue->elapsed = 0;
@@ -2064,10 +2094,21 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	}
 	else
 	{
-		FACT_INTERNAL_BeginFadeOut(
-			pCue->playingSound,
-			pCue->parentBank->cues[pCue->index].fadeOutMS
-		);
+		if (pCue->parentBank->cues[pCue->index].fadeOutMS > 0)
+		{
+			FACT_INTERNAL_BeginFadeOut(
+				pCue->playingSound,
+				pCue->parentBank->cues[pCue->index].fadeOutMS
+			);
+		}
+		else if (pCue->maxRpcReleaseTime > 0)
+		{
+			FACT_INTERNAL_BeginReleaseRPC(
+				pCue->playingSound,
+				pCue->maxRpcReleaseTime
+			);
+		}
+
 		pCue->state |= FACT_STATE_STOPPING;
 	}
 

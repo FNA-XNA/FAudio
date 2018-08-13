@@ -344,7 +344,7 @@ typedef struct FACTSoundInstance
 	/* Fade data */
 	uint16_t fadeStart;
 	uint16_t fadeTarget;
-	uint8_t fadeType; /* 1 for in, 2 for out */
+	uint8_t fadeType; /* In (1), Out (2), Release RPC (3) */
 
 	/* Engine references */
 	FACTCue *parentCue;
@@ -485,6 +485,7 @@ struct FACTCue
 
 	/* Sound data */
 	FACTCueData *data;
+
 	union
 	{
 		FACTVariationTable *variation;
@@ -505,6 +506,7 @@ struct FACTCue
 	FACTWave *simpleWave;
 	FACTSoundInstance *playingSound;
 	FACTVariation *playingVariation;
+	uint32_t maxRpcReleaseTime;
 
 	/* 3D Data */
 	uint8_t active3D;
@@ -531,6 +533,11 @@ void FACT_INTERNAL_GetNextWave(
 uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
+void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS);
+
+/* RPC Helper Functions */
+
+FACTRPC* FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code);
 
 /* FACT Thread */
 

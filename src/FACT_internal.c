@@ -738,9 +738,23 @@ void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
 		return;
 	}
 
-	sound->fadeType = 2;
+	sound->fadeType = 2; /* Out */
 	sound->fadeStart = FAudio_timems();
 	sound->fadeTarget = fadeOutMS;
+}
+
+void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS)
+{
+	if (releaseMS == 0)
+	{
+		/* No release RPC? Screw it, just delete us */
+		FACT_INTERNAL_DestroySound(sound);
+		return;
+	}
+
+	sound->fadeType = 3; /* Release RPC */
+	sound->fadeStart = FAudio_timems();
+	sound->fadeTarget = releaseMS;
 }
 
 /* RPC Helper Functions */
@@ -806,7 +820,9 @@ void FACT_INTERNAL_UpdateRPCs(
 	FACTCue *cue,
 	uint8_t codeCount,
 	uint32_t *codes,
-	FACTInstanceRPCData *data
+	FACTInstanceRPCData *data,
+	uint32_t timestamp,
+	uint32_t trackStart
 ) {
 	uint8_t i;
 	FACTRPC *rpc;
@@ -828,27 +844,35 @@ void FACT_INTERNAL_UpdateRPCs(
 			);
 			if (engine->variables[rpc->variable].accessibility & 0x04)
 			{
+				float variableValue;
 				if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
 				) == 0) {
-					/* TODO: AttackTime */
-					rpcResult = 0.0f;
+					variableValue = timestamp - trackStart;
 				}
 				else if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
 					"ReleaseTime"
 				) == 0) {
-					/* TODO: ReleaseTime */
-					rpcResult = 0.0f;
+					if (cue->playingSound->fadeType == 3) /* Release RPC */
+					{
+						variableValue = timestamp - cue->playingSound->fadeStart;
+					}
+					else
+					{
+						variableValue = 0;
+					}
 				}
 				else
 				{
-					rpcResult = FACT_INTERNAL_CalculateRPC(
-						rpc,
-						cue->variableValues[rpc->variable]
-					);
+					variableValue = cue->variableValues[rpc->variable];
 				}
+
+				rpcResult = FACT_INTERNAL_CalculateRPC(
+					rpc,
+					variableValue
+				);
 			}
 			else
 			{
@@ -1167,7 +1191,7 @@ void FACT_INTERNAL_ActivateEvent(
 	evtInst->finished = 1;
 }
 
-uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
+uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 {
 	uint8_t i, j;
 	uint32_t waveState;
@@ -1175,11 +1199,11 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 	FAudioFilterParameters filterParams;
 	uint8_t finished = 1;
 
-	/* Fade in/out (TODO: AttackTime/ReleaseTime, curves) */
+	/* Instance limiting Fade in/out */
 	float fadeVolume;
-	if (sound->fadeType == 1)
+	if (sound->fadeType == 1) /* Fade In */
 	{
-		if ((elapsed - sound->fadeStart) >= sound->fadeTarget)
+		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
 			/* We've faded in! */
 			fadeVolume = 1.0f;
@@ -1190,22 +1214,31 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 		else
 		{
 			fadeVolume = (
-				(float) (elapsed - sound->fadeStart) /
+				(float) (timestamp - sound->fadeStart) /
 				(float) sound->fadeTarget
 			);
 		}
 	}
-	else if (sound->fadeType == 2)
+	else if (sound->fadeType == 2) /* Fade Out */
 	{
-		if ((elapsed - sound->fadeStart) >= sound->fadeTarget)
+		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
 			/* We've faded out! */
 			return 1;
 		}
 		fadeVolume = 1.0f - (
-			(float) (elapsed - sound->fadeStart) /
-			(float) sound->fadeTarget
-		);
+			(float)(timestamp - sound->fadeStart) /
+			(float)sound->fadeTarget
+			);
+	}
+	else if (sound->fadeType == 3) /* Release RPC */
+	{
+		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
+		{
+			/* We've faded out! */
+			return 1;
+		}
+		fadeVolume = 1.0f;
 	}
 	else
 	{
@@ -1215,7 +1248,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 	/* To get the time on a single Cue, subtract from the global time
 	 * the latest start time minus the total time elapsed (minus pause time)
 	 */
-	elapsed -= sound->parentCue->start - sound->parentCue->elapsed;
+	uint32_t elapsed = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
 
 	/* RPC updates */
 	sound->rpcData.rpcFilterFreq = -1.0f;
@@ -1223,7 +1256,9 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 		sound->parentCue,
 		sound->sound->rpcCodeCount,
 		sound->sound->rpcCodes,
-		&sound->rpcData
+		&sound->rpcData,
+		timestamp,
+		sound->parentCue->start + sound->tracks[0].events[0].timestamp
 	);
 	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
@@ -1232,7 +1267,9 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t elapsed)
 			sound->parentCue,
 			sound->sound->tracks[i].rpcCodeCount,
 			sound->sound->tracks[i].rpcCodes,
-			&sound->tracks[i].rpcData
+			&sound->tracks[i].rpcData,
+			timestamp,
+			sound->parentCue->start + sound->sound->tracks[i].events[0].timestamp
 		);
 	}
 
