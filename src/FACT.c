@@ -889,7 +889,7 @@ uint32_t FACTSoundBank_Prepare(
 	(*ppCue)->maxRpcReleaseTime = 0;
 	for (i = 0; i < (*ppCue)->sound->trackCount; i += 1)
 	{
-		for(j = 0; j < (*ppCue)->sound->tracks[i].rpcCodeCount; j+=1)
+		for (j = 0; j < (*ppCue)->sound->tracks[i].rpcCodeCount; j += 1)
 		{
 			rpc = FACT_INTERNAL_GetRPC(
 				pSoundBank->parentEngine,
