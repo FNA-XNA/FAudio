@@ -342,7 +342,7 @@ typedef struct FACTSoundInstance
 	FACTInstanceRPCData rpcData;
 
 	/* Fade data */
-	uint16_t fadeStart;
+	uint32_t fadeStart;
 	uint16_t fadeTarget;
 	uint8_t fadeType; /* In (1), Out (2), Release RPC (3) */
 
