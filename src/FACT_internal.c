@@ -822,12 +822,12 @@ void FACT_INTERNAL_UpdateRPCs(
 	uint32_t *codes,
 	FACTInstanceRPCData *data,
 	uint32_t timestamp,
-	uint32_t elapsedCue,
 	uint32_t elapsedTrack
 ) {
 	uint8_t i;
 	FACTRPC *rpc;
 	float rpcResult;
+	float variableValue;
 	FACTAudioEngine *engine = cue->parentBank->parentEngine;
 
 	if (codeCount > 0)
@@ -845,7 +845,6 @@ void FACT_INTERNAL_UpdateRPCs(
 			);
 			if (engine->variables[rpc->variable].accessibility & 0x04)
 			{
-				float variableValue;
 				if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
@@ -1259,7 +1258,6 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 		sound->sound->rpcCodes,
 		&sound->rpcData,
 		timestamp,
-		elapsedCue,
 		elapsedCue - sound->tracks[0].events[0].timestamp
 	);
 	for (i = 0; i < sound->sound->trackCount; i += 1)
@@ -1271,7 +1269,6 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 			sound->sound->tracks[i].rpcCodes,
 			&sound->tracks[i].rpcData,
 			timestamp,
-			elapsedCue,
 			elapsedCue - sound->sound->tracks[i].events[0].timestamp
 		);
 	}

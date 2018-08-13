@@ -822,9 +822,10 @@ uint32_t FACTSoundBank_Prepare(
 	int32_t timeOffset,
 	FACTCue** ppCue
 ) {
-	uint16_t i;
+	uint16_t i, j;
+	float lastX;
+	FACTRPC *rpc;
 	FACTCue *latest;
-	FACTAudioEngine *engine = pSoundBank->parentEngine;
 
 	if (pSoundBank == NULL)
 	{
@@ -886,22 +887,22 @@ uint32_t FACTSoundBank_Prepare(
 
 	/* Calculate Max RPC Release Time */
 	(*ppCue)->maxRpcReleaseTime = 0;
-	for(int i = 0; i < (*ppCue)->sound->trackCount; i += 1)
+	for (i = 0; i < (*ppCue)->sound->trackCount; i += 1)
 	{
-		for(int j = 0; j < (*ppCue)->sound->tracks[i].rpcCodeCount; j+=1)
+		for(j = 0; j < (*ppCue)->sound->tracks[i].rpcCodeCount; j+=1)
 		{
-			FACTRPC *rpc = FACT_INTERNAL_GetRPC(
-				engine,
+			rpc = FACT_INTERNAL_GetRPC(
+				pSoundBank->parentEngine,
 				(*ppCue)->sound->tracks[i].rpcCodes[j]
 			);
-			if (engine->variables[rpc->variable].accessibility & 0x04)
+			if (pSoundBank->parentEngine->variables[rpc->variable].accessibility & 0x04)
 			{
 				if (FAudio_strcmp(
-					engine->variableNames[rpc->variable],
+					pSoundBank->parentEngine->variableNames[rpc->variable],
 					"ReleaseTime"
 				) == 0 && rpc->parameter == RPC_PARAMETER_VOLUME)
 				{
-					float lastX = rpc->points[rpc->pointCount - 1].x;
+					lastX = rpc->points[rpc->pointCount - 1].x;
 					if (lastX > (*ppCue)->maxRpcReleaseTime)
 					{
 						(*ppCue)->maxRpcReleaseTime = lastX;
@@ -2067,8 +2068,8 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	if (	dwFlags & FACT_FLAG_STOP_IMMEDIATE ||
 		pCue->state & FACT_STATE_PAUSED	||
 		pCue->playingSound == NULL ||
-		(pCue->parentBank->cues[pCue->index].fadeOutMS == 0 &&
-			pCue->maxRpcReleaseTime == 0) 	)
+		(	pCue->parentBank->cues[pCue->index].fadeOutMS == 0 &&
+			pCue->maxRpcReleaseTime == 0	)	)
 	{
 		pCue->start = 0;
 		pCue->elapsed = 0;
