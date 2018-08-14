@@ -959,6 +959,37 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 
 /* Cue Update Functions */
 
+static inline void FACT_INTERNAL_StopTrack(
+	FACTTrack *track,
+	FACTTrackInstance *trackInst,
+	uint8_t immediate
+) {
+	uint8_t i;
+
+	/* Stop the wave (may as-authored or immedate */
+	if (trackInst->activeWave.wave != NULL)
+	{
+		FACTWave_Stop(
+			trackInst->activeWave.wave,
+			immediate
+		);
+	}
+
+	/* If there was another sound coming, it ain't now! */
+	if (trackInst->upcomingWave.wave != NULL)
+	{
+		FACTWave_Destroy(trackInst->upcomingWave.wave);
+		trackInst->upcomingWave.wave = NULL;
+	}
+
+	/* Kill the loop count too */
+	for (i = 0; i < track->eventCount; i += 1)
+	{
+		trackInst->events[i].loopCount = 0;
+		trackInst->events[i].finished = 1;
+	}
+}
+
 void FACT_INTERNAL_ActivateEvent(
 	FACTSoundInstance *sound,
 	FACTTrack *track,
@@ -977,37 +1008,35 @@ void FACT_INTERNAL_ActivateEvent(
 		/* Stop Cue */
 		if (evt->stop.flags & 0x02)
 		{
-			FACTCue_Stop(sound->parentCue, evt->stop.flags & 0x01);
+			if (	evt->stop.flags & 0x01 ||
+				sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS == 0	)
+			{
+				for (i = 0; i < sound->sound->trackCount; i += 1)
+				{
+					FACT_INTERNAL_StopTrack(
+						&sound->sound->tracks[i],
+						&sound->tracks[i],
+						1
+					);
+				}
+			}
+			else
+			{
+				FACT_INTERNAL_BeginFadeOut(
+					sound,
+					sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS
+				);
+			}
 		}
 
 		/* Stop track */
 		else
 		{
-			if (trackInst->activeWave.wave != NULL)
-			{
-				FACTWave_Stop(
-					trackInst->activeWave.wave,
-					evt->stop.flags & 0x01
-				);
-			}
-
-			/* If there was another sound coming, it ain't now! */
-			if (trackInst->upcomingWave.wave != NULL)
-			{
-				FACTWave_Destroy(trackInst->upcomingWave.wave);
-				trackInst->upcomingWave.wave = NULL;
-			}
-
-			/* Kill the loop count too */
-			for (i = 0; i < track->eventCount; i += 1)
-			if (	track->events[i].type == FACTEVENT_PLAYWAVE ||
-				track->events[i].type == FACTEVENT_PLAYWAVETRACKVARIATION ||
-				track->events[i].type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
-				track->events[i].type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
-			{
-				trackInst->events[i].loopCount = 0;
-				break;
-			}
+			FACT_INTERNAL_StopTrack(
+				track,
+				trackInst,
+				evt->stop.flags & 0x01
+			);
 		}
 	}
 
