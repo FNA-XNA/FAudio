@@ -242,7 +242,7 @@ FAUDIOAPI uint32_t XNA_GetSongEnded()
 	{
 		return 1;
 	}
-	FAudioSourceVoice_GetState(songVoice, &state);
+	FAudioSourceVoice_GetState(songVoice, &state, 0);
 	return state.BuffersQueued == 0;
 }
 

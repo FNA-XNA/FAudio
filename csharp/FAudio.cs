@@ -596,7 +596,8 @@ public static class FAudio
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void FAudioSourceVoice_GetState(
 		IntPtr voice, /* FAudioSourceVoice* */
-		out FAudioVoiceState pVoiceState
+		out FAudioVoiceState pVoiceState,
+		uint Flags
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]

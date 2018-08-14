@@ -284,6 +284,8 @@ typedef struct FAudioDebugConfiguration
 #define FAUDIO_END_OF_STREAM		0x40
 #define FAUDIO_SEND_USEFILTER		0x80
 
+#define FAUDIO_VOICE_NOSAMPLESPLAYED	0x0100
+
 #define FAUDIO_DEFAULT_FILTER_TYPE	FAudioLowPassFilter
 #define FAUDIO_DEFAULT_FILTER_FREQUENCY	FAUDIO_MAX_FILTER_FREQUENCY
 #define FAUDIO_DEFAULT_FILTER_ONEOVERQ	1.0f
@@ -633,7 +635,8 @@ FAUDIOAPI uint32_t FAudioSourceVoice_ExitLoop(
 
 FAUDIOAPI void FAudioSourceVoice_GetState(
 	FAudioSourceVoice *voice,
-	FAudioVoiceState *pVoiceState
+	FAudioVoiceState *pVoiceState,
+	uint32_t flags
 );
 
 FAUDIOAPI uint32_t FAudioSourceVoice_SetFrequencyRatio(

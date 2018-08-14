@@ -1380,15 +1380,20 @@ uint32_t FAudioSourceVoice_ExitLoop(
 
 void FAudioSourceVoice_GetState(
 	FAudioSourceVoice *voice,
-	FAudioVoiceState *pVoiceState
+	FAudioVoiceState *pVoiceState,
+	uint32_t flags
 ) {
 	FAudioBufferEntry *entry;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 
+	if (!(flags & FAUDIO_VOICE_NOSAMPLESPLAYED))
+	{
+		pVoiceState->SamplesPlayed = voice->src.totalSamples;
+	}
+
 	pVoiceState->BuffersQueued = 0;
-	pVoiceState->SamplesPlayed = voice->src.totalSamples;
 	if (voice->src.bufferList != NULL)
 	{
 		entry = voice->src.bufferList;

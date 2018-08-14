@@ -681,7 +681,11 @@ public:
 #endif
 	{
 		TRACE_FUNC();
+#if (XAUDIO2_VERSION <= 7)
 		FAudioSourceVoice_GetState(faudio_voice, pVoiceState);
+#else
+		FAudioSourceVoice_GetState(faudio_voice, pVoiceState, Flags);
+#endif
 	}
 
 	COM_METHOD(HRESULT) SetFrequencyRatio(float Ratio, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
