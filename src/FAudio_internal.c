@@ -1281,3 +1281,74 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 
 	*samples = done;
 }
+
+uint32_t FAudio_INTERNAL_DecodeFFMPEG(
+	FAudioVoice *voice,
+	FAudioBuffer *buffer,
+	uint32_t *samples,
+	uint32_t end,
+	float *decodeCache
+) {
+	AVPacket avpkt = {0};
+	int averr;
+
+	avpkt.size = format->nBlockAlign;
+	avpkt.data = (unsigned char *)buffer->pAudioData + curOffset;
+
+	while (samples > 0)
+	{
+		averr = avcodec_receive_frame(src->conv_ctx, src->conv_frame);
+		if(averr == AVERROR(EAGAIN)){
+			/* ffmpeg needs more data to decode */
+			avpkt.pts = avpkt.dts = AV_NOPTS_VALUE;
+
+			if(buf->offs_bytes >= buf->cur_end_bytes)
+				/* no more data in this buffer */
+				break;
+
+			if(buf->offs_bytes + avpkt.size + AV_INPUT_BUFFER_PADDING_SIZE > buf->cur_end_bytes){
+				UINT32 remain = buf->cur_end_bytes - buf->offs_bytes;
+				/* Unfortunately, the FFmpeg API requires that a number of
+				 * extra bytes must be available past the end of the buffer.
+				 * The xaudio2 client probably hasn't done this, so we have to
+				 * perform a copy near the end of the buffer. */
+				TRACE("hitting end of buffer. copying %u + %u bytes into %u buffer\n",
+						remain, AV_INPUT_BUFFER_PADDING_SIZE, src->convert_bytes);
+				if(src->convert_bytes < remain + AV_INPUT_BUFFER_PADDING_SIZE){
+					src->convert_bytes = remain + AV_INPUT_BUFFER_PADDING_SIZE;
+					TRACE("buffer too small, expanding to %u\n", src->convert_bytes);
+					src->convert_buf = HeapReAlloc(GetProcessHeap(), 0, src->convert_buf, src->convert_bytes);
+				}
+				memcpy(src->convert_buf, buf->xa2buffer.pAudioData + buf->offs_bytes, remain);
+				memset(src->convert_buf + remain, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+				avpkt.data = src->convert_buf;
+			}
+
+			averr = avcodec_send_packet(src->conv_ctx, &avpkt);
+			if(averr){
+				WARN("avcodec_send_packet failed: %s\n", av_err2str(averr));
+				break;
+			}
+
+			buf->offs_bytes += avpkt.size;
+			avpkt.data += avpkt.size;
+
+			/* data sent, try receive again */
+			continue;
+		}
+
+		if(averr){
+			WARN("avcodec_receive_frame failed: %s\n", av_err2str(averr));
+			return TRUE;
+		}
+
+		to_copy_bytes = src->conv_frame->nb_samples * src->conv_ctx->channels * src->submit_blocksize;
+
+		while(scratch_offs_bytes + to_copy_bytes >= src->scratch_bytes){
+			src->scratch_bytes *= 2;
+			src->scratch_buf = HeapReAlloc(GetProcessHeap(), 0, src->scratch_buf, src->scratch_bytes);
+		}
+	}
+
+	return curOffset;
+}
