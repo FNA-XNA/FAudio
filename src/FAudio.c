@@ -184,8 +184,9 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
 
-	if(pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
-			pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT){
+	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
+		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT	)
+	{
 		FAudioWaveFormatExtensible *fmtex = FAudio_malloc(sizeof(FAudioWaveFormatExtensible));
 		/* convert PCM to EXTENSIBLE */
 		fmtex->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
@@ -197,15 +198,27 @@ uint32_t FAudio_CreateSourceVoice(
 		fmtex->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
 		fmtex->Samples.wValidBitsPerSample = pSourceFormat->wBitsPerSample;
 		fmtex->dwChannelMask = 0;
-		if(pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM)
-			memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID));
-		else if(pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
-			memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+		if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM)
+		{
+			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID));
+		}
+		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
+		{
+			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+		}
 		(*ppSourceVoice)->src.format = &fmtex->Format;
-	}else{
+	}
+	else
+	{
 		/* direct copy anything else */
-		(*ppSourceVoice)->src.format = FAudio_malloc(sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize);
-		memcpy((*ppSourceVoice)->src.format, pSourceFormat, sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize);
+		(*ppSourceVoice)->src.format = FAudio_malloc(
+			sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize
+		);
+		FAudio_memcpy(
+			(*ppSourceVoice)->src.format,
+			pSourceFormat,
+			sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize
+		);
 	}
 
 	(*ppSourceVoice)->src.callback = pCallback;
@@ -222,9 +235,10 @@ uint32_t FAudio_CreateSourceVoice(
 		if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)) == 0)
 		{
 			(*ppSourceVoice)->src.decode = (fmtex->Format.wBitsPerSample == 16) ?
-				FAudio_INTERNAL_DecodePCM16 : FAudio_INTERNAL_DecodePCM8;
+				FAudio_INTERNAL_DecodePCM16 :
+				FAudio_INTERNAL_DecodePCM8;
 		}
-		else if(FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)) == 0)
+		else if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)) == 0)
 		{
 			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
 		}
@@ -706,7 +720,8 @@ uint32_t FAudioVoice_SetEffectChain(
 			uint32_t r;
 
 			r = fapo->GetRegistrationProperties(fapo, &pProps);
-			if(r == 0){
+			if (r == 0)
+			{
 				voice->effects.inPlaceProcessing[i] = (pProps->Flags & FAPO_FLAG_INPLACE_SUPPORTED) == FAPO_FLAG_INPLACE_SUPPORTED;
 				voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
 				channelCount = voice->effects.desc[i].OutputChannels;
