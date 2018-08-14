@@ -343,6 +343,8 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	FACTEventInstance *evtInst;
 	FACTSound *baseSound = NULL;
 	FACTSoundInstance *newSound;
+	FACTRPC *rpc;
+	float lastX;
 
 	union
 	{
@@ -672,6 +674,33 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					);
 					newSound->tracks[i].waveEvt = evt;
 					newSound->tracks[i].waveEvtInst = evtInst;
+				}
+			}
+		}
+
+		/* Calculate Max RPC Release Time */
+		cue->maxRpcReleaseTime = 0;
+		for (i = 0; i < newSound->sound->trackCount; i += 1)
+		{
+			for (j = 0; j < newSound->sound->tracks[i].rpcCodeCount; j += 1)
+			{
+				rpc = FACT_INTERNAL_GetRPC(
+					newSound->parentCue->parentBank->parentEngine,
+					newSound->sound->tracks[i].rpcCodes[j]
+				);
+				if (cue->parentBank->parentEngine->variables[rpc->variable].accessibility & 0x04)
+				{
+					if (FAudio_strcmp(
+						newSound->parentCue->parentBank->parentEngine->variableNames[rpc->variable],
+						"ReleaseTime"
+					) == 0 && rpc->parameter == RPC_PARAMETER_VOLUME)
+					{
+						lastX = rpc->points[rpc->pointCount - 1].x;
+						if (lastX > cue->maxRpcReleaseTime)
+						{
+							cue->maxRpcReleaseTime = lastX;
+						}
+					}
 				}
 			}
 		}

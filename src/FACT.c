@@ -822,9 +822,7 @@ uint32_t FACTSoundBank_Prepare(
 	int32_t timeOffset,
 	FACTCue** ppCue
 ) {
-	uint16_t i, j;
-	float lastX;
-	FACTRPC *rpc;
+	uint16_t i;
 	FACTCue *latest;
 
 	if (pSoundBank == NULL)
@@ -883,33 +881,6 @@ uint32_t FACTSoundBank_Prepare(
 	{
 		(*ppCue)->variableValues[i] =
 			pSoundBank->parentEngine->variables[i].initialValue;
-	}
-
-	/* Calculate Max RPC Release Time */
-	(*ppCue)->maxRpcReleaseTime = 0;
-	for (i = 0; i < (*ppCue)->sound->trackCount; i += 1)
-	{
-		for (j = 0; j < (*ppCue)->sound->tracks[i].rpcCodeCount; j += 1)
-		{
-			rpc = FACT_INTERNAL_GetRPC(
-				pSoundBank->parentEngine,
-				(*ppCue)->sound->tracks[i].rpcCodes[j]
-			);
-			if (pSoundBank->parentEngine->variables[rpc->variable].accessibility & 0x04)
-			{
-				if (FAudio_strcmp(
-					pSoundBank->parentEngine->variableNames[rpc->variable],
-					"ReleaseTime"
-				) == 0 && rpc->parameter == RPC_PARAMETER_VOLUME)
-				{
-					lastX = rpc->points[rpc->pointCount - 1].x;
-					if (lastX > (*ppCue)->maxRpcReleaseTime)
-					{
-						(*ppCue)->maxRpcReleaseTime = lastX;
-					}
-				}
-			}
-		}
 	}
 
 	/* Playback */
