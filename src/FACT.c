@@ -2023,7 +2023,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	}
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
-	if (pCue->state & FACT_STATE_STOPPED)
+	if (pCue->state & (FACT_STATE_STOPPED | FACT_STATE_STOPPING))
 	{
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
