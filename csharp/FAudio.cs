@@ -284,6 +284,8 @@ public static class FAudio
 	public const byte FAUDIO_END_OF_STREAM =	0x40;
 	public const byte FAUDIO_SEND_USEFILTER =	0x80;
 
+	public const ushort FAUDIO_VOICE_NOSAMPLESPLAYED = 0x0100;
+
 	public const FAudioFilterType FAUDIO_DEFAULT_FILTER_TYPE =	FAudioFilterType.FAudioLowPassFilter;
 	public const float FAUDIO_DEFAULT_FILTER_FREQUENCY =		FAUDIO_MAX_FILTER_FREQUENCY;
 	public const float FAUDIO_DEFAULT_FILTER_ONEOVERQ =		1.0f;
