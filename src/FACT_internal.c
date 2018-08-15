@@ -630,8 +630,6 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 
 				newSound->tracks[i].events[j].timestamp =
 					newSound->sound->tracks[i].events[j].timestamp;
-				newSound->tracks[i].events[j].loopCount =
-					newSound->sound->tracks[i].events[j].wave.loopCount;
 				newSound->tracks[i].events[j].finished = 0;
 				newSound->tracks[i].events[j].value = 0.0f;
 
@@ -640,6 +638,9 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 					evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 				{
+					newSound->tracks[i].events[j].loopCount =
+						newSound->sound->tracks[i].events[j].wave.loopCount;
+
 					evtInst = &newSound->tracks[i].events[j];
 					if (	!evt->wave.isComplex ||
 						(evt->wave.complex.variation & 0xF) == 0	)
@@ -674,6 +675,12 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					);
 					newSound->tracks[i].waveEvt = evt;
 					newSound->tracks[i].waveEvtInst = evtInst;
+				}
+				else if (	evt->type == FACTEVENT_PITCHREPEATING ||
+					evt->type == FACTEVENT_VOLUMEREPEATING	)
+				{
+					newSound->tracks[i].events[j].loopCount =
+						newSound->sound->tracks[i].events[j].value.repeats;
 				}
 			}
 		}
@@ -1183,7 +1190,7 @@ void FACT_INTERNAL_ActivateEvent(
 		}
 		if (evtInst->loopCount > 0)
 		{
-			if (evtInst->loopCount != 0xFF)
+			if (evtInst->loopCount != 0xFF && evtInst->loopCount != 0xFFFF)
 			{
 				evtInst->loopCount -= 1;
 			}
