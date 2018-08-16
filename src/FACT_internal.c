@@ -1146,18 +1146,19 @@ void FACT_INTERNAL_ActivateEvent(
 			/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
 			skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
 			svResult = (
-				evt->value.ramp.initialSlope *
-				evt->value.ramp.duration *
+				evt->value.ramp.initialSlope * 100 *
+				evt->value.ramp.duration / 1000 *
 				10 /* "Slices" */
 			) + evt->value.ramp.initialValue;
 			svResult = (
-				evt->value.ramp.initialValue +
 				(svResult - evt->value.ramp.initialValue)
 			) * FAudio_clamp(
-				(elapsed - evtInst->timestamp) / evt->value.ramp.duration,
+				(float) (elapsed - evtInst->timestamp) / evt->value.ramp.duration,
 				0.0f,
 				1.0f
-			);
+			) + evt->value.ramp.initialValue;
+
+			evtInst->value = svResult;
 		}
 		else
 		{
@@ -1182,7 +1183,15 @@ void FACT_INTERNAL_ActivateEvent(
 			/* Add/Replace */
 			if (evt->value.equation.flags & 0x01)
 			{
-				evtInst->value += svResult;
+				if(	evt->type == FACTEVENT_PITCH ||
+					evt->type == FACTEVENT_PITCHREPEATING	)
+				{
+					evtInst->value = trackInst->evtPitch + svResult;
+				}
+				else
+				{
+					evtInst->value = trackInst->evtVolume + svResult;
+				}
 			}
 			else
 			{
