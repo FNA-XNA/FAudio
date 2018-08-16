@@ -196,6 +196,12 @@ typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioWaveFormatEx *format
 );
 
+typedef void (FAUDIOCALL * FAudioResampleCallback)(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+);
+
 typedef void* FAudioPlatformFixedRateSRC;
 
 typedef float FAudioFilterState[4];
@@ -275,6 +281,7 @@ struct FAudioVoice
 			float maxFreqRatio;
 			FAudioWaveFormatEx *format;
 			FAudioDecodeCallback decode;
+			FAudioResampleCallback resample;
 			FAudioVoiceCallback *callback;
 
 			/* Dynamic */
@@ -325,7 +332,8 @@ void FAudio_INTERNAL_AllocEffectChain(
 	const FAudioEffectChain *pEffectChain
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
-void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON);
+void FAudio_INTERNAL_AssignResampleFunc(FAudioVoice *voice);
+void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 
 #define DECODE_FUNC(type) \
 	extern void FAudio_INTERNAL_Decode##type( \

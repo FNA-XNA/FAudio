@@ -257,6 +257,7 @@ uint32_t FAudio_CreateSourceVoice(
 	{
 		FAudio_assert(0 && "Unsupported format tag!");
 	}
+	FAudio_INTERNAL_AssignResampleFunc(*ppSourceVoice);
 
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 

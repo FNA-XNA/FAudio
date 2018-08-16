@@ -148,6 +148,10 @@ void LinkedList_RemoveEntry(
 	(double) (fxd >> FIXED_PRECISION) + /* Integer part */ \
 	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
 )
+#define FIXED_TO_FLOAT(fxd) ( \
+	(float) (fxd >> FIXED_PRECISION) + /* Integer part */ \
+	((fxd & FIXED_FRACTION_MASK) * (1.0f / FIXED_ONE)) /* Fraction part */ \
+)
 
 static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
@@ -326,329 +330,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	*toDecode = decoded;
-}
- void new_FAudio_INTERNAL_ResamplePCM_opt_nChannel1(
-
-		float * dCache,
-		uint64_t* resampleOffset,
-		uint64_t resampleStep,
-		float **resampleCache,
-		uint64_t toResample
-		) {
-	/* Linear Resampler */
-	/* TODO: SSE */
-	uint32_t i ;
-	uint32_t header=4-(uint64_t)(*resampleCache)%4;
-	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
-	{
-
-		for (i = 0; i < header; i += 1)
-		{
-			/* lerp, then convert to float value */
-			*(*resampleCache)++ = (float) (
-					dCache[0] +
-					(dCache[1] - dCache[0]) *
-					FIXED_TO_FLOAT(cur_scalar)
-					);
-
-			/* Increment fraction offset by the stepping value */
-			*resampleOffset += resampleStep;
-			cur_scalar += resampleStep;
-			/* Only increment the sample offset by integer values.
-			 * 		 * Sometimes this will be 0 until cur accumulates
-			 * 		 		 * enough steps, especially for "slow" rates.
-			 * 		 		 		 */
-			dCache += (cur_scalar >> FIXED_PRECISION) ;
-
-			/* Now that any integer has been added, drop it.
-			 * 		 * The offset pointer will preserve the total.
-			 * 		 		 */
-			cur_scalar &= FIXED_FRACTION_MASK;
-		}
-	}
-	toResample-=header;
-	int nChannels=1;
-	__m128i cur=_mm_set1_epi64x(cur_scalar);
-	__m128i adder=_mm_set_epi64x(resampleStep*2,0);
-	cur=_mm_add_epi64(cur,adder);
-	uint64_t next_cur=((uint64_t*)&cur)[1];
-	float* dCache_next=dCache+(next_cur>>FIXED_PRECISION)*nChannels;
-	cur=_mm_and_si128(cur,_mm_set1_epi64x(FIXED_FRACTION_MASK));
-	 adder=_mm_set1_epi64x(resampleStep);
-	__m128i next_adder=_mm_set1_epi64x(3*resampleStep);
-	__m128d	one_over_fixed_one=_mm_set1_pd(1.0/FIXED_ONE);
-	__m128d	half=_mm_set1_pd(0.5);
-	__m128i	half_fixed=_mm_set1_epi64x(DOUBLE_TO_FIXED(0.5));
-	__m128i	fixed_fraction_maskvec=_mm_set1_epi64x(FIXED_FRACTION_MASK);
-	uint32_t tail=toResample%4;
-	for (i = 0; i < toResample-tail; i += 4)
-	{
-		__m128 res_half_1,res_half_2;
-		{
-			__m128 current_next_1=_mm_undefined_ps();
-			__m128 current_next_2=_mm_undefined_ps();
-			current_next_1=_mm_loadl_pi(current_next_1,(__m64*)dCache);
-			current_next_2=_mm_loadl_pi(current_next_2,(__m64*)dCache_next);
-			__m128 current=_mm_unpacklo_ps(current_next_1,current_next_2);
-			__m128 next=_mm_shuffle_ps(current,current,0xe);
-			__m128 sub=_mm_sub_ps(next,current);
-			__m128d sub_double=_mm_cvtps_pd(sub);
-			__m128d current_double=_mm_cvtps_pd(current);
-			__m128i cur_frac_i=_mm_sub_epi64(cur,half_fixed);
-			cur_frac_i=_mm_shuffle_epi32(cur_frac_i,0x8);
-			__m128d cur_fixed=_mm_add_pd(_mm_mul_pd(_mm_cvtepi32_pd(cur_frac_i),one_over_fixed_one),half);
-			__m128d mul_double=_mm_mul_pd(sub_double,cur_fixed);
-			__m128d res_double=_mm_add_pd(current_double,mul_double);
-			res_half_1=_mm_cvtpd_ps(res_double);
-		}
-		cur=_mm_add_epi64(cur,adder);
-		__m128i cur_shifted=_mm_srli_epi64(cur,FIXED_PRECISION);
-		uint64_t next_cur=((uint64_t*)&cur_shifted)[0];
-		dCache=dCache+next_cur;
-		next_cur=((uint64_t*)&cur_shifted)[1];
-		dCache_next = dCache_next + next_cur ;
-		cur=_mm_and_si128(cur,fixed_fraction_maskvec);
-		{
-			__m128 current_next_1=_mm_undefined_ps();
-			__m128 current_next_2=_mm_undefined_ps();
-			current_next_1=_mm_loadl_pi(current_next_1,(__m64*)dCache);
-			current_next_2=_mm_loadl_pi(current_next_2,(__m64*)dCache_next);
-			__m128 current=_mm_unpacklo_ps(current_next_1,current_next_2);
-			__m128 next=_mm_shuffle_ps(current,current,0xe);
-			__m128 sub=_mm_sub_ps(next,current);
-			__m128d sub_double=_mm_cvtps_pd(sub);
-			__m128d current_double=_mm_cvtps_pd(current);
-			__m128i cur_frac_i=_mm_sub_epi64(cur,half_fixed);
-			cur_frac_i=_mm_shuffle_epi32(cur_frac_i,0x8);
-			__m128d cur_fixed=_mm_add_pd(_mm_mul_pd(_mm_cvtepi32_pd(cur_frac_i),one_over_fixed_one),half);
-			__m128d mul_double=_mm_mul_pd(sub_double,cur_fixed);
-			__m128d res_double=_mm_add_pd(current_double,mul_double);
-			res_half_2=_mm_cvtpd_ps(res_double);
-		}
-		cur=_mm_add_epi64(cur,next_adder);
-		cur_shifted=_mm_srli_epi64(cur,FIXED_PRECISION);
-		next_cur=((uint64_t*)&cur_shifted)[0];
-		dCache=dCache+next_cur;
-		next_cur=((uint64_t*)&cur_shifted)[1];
-		dCache_next = dCache_next + next_cur ;
-		__m128 res=_mm_unpacklo_ps(res_half_1,res_half_2);
-		_mm_store_ps(*resampleCache,res);
-		cur=_mm_and_si128(cur,fixed_fraction_maskvec);
-		(*resampleCache)=(*resampleCache)+4;
-	}
-	cur_scalar=((uint64_t*)&cur)[0];
-	*resampleOffset+=resampleStep*(toResample-tail);
-
-	for (i = 0; i < tail; i += 1)
-	{
-		/* lerp, then convert to float value */
-			*(*resampleCache)++ = (float) (
-					dCache[0] +
-					(dCache[1] - dCache[0]) *
-					FIXED_TO_FLOAT(cur_scalar)
-					);
-		
-		/* Increment fraction offset by the stepping value */
-		*resampleOffset += resampleStep;
-		cur_scalar += resampleStep;
-		/* Only increment the sample offset by integer values.
-		 * 		 * Sometimes this will be 0 until cur accumulates
-		 * 		 		 * enough steps, especially for "slow" rates.
-		 * 		 		 		 */
-		dCache += (cur_scalar >> FIXED_PRECISION) * nChannels;
-
-		/* Now that any integer has been added, drop it.
-		 * 		 * The offset pointer will preserve the total.
-		 * 		 		 */
-		cur_scalar &= FIXED_FRACTION_MASK;
-	}
-}
-void new_FAudio_INTERNAL_ResamplePCM_opt_nChannel2_float(
-
-		float * dCache,
-		uint64_t* resampleOffset,
-		uint64_t resampleStep,
-		float **resampleCache,
-		uint64_t toResample
-		) {
-	uint32_t i,j ;
-	uint32_t nChannels=2;
-	/* Linear Resampler */
-	/* TODO: SSE */
-
-	//This is the header, the Dest needs to be aligned to 16B
-	uint32_t header=(16-(uint64_t)(*resampleCache)%16)/8;
-	if(header==2) header=0;
-	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
-	for (i = 0; i < header; i += 2)
-	{
-		for (j = 0; j < nChannels; j += 1)
-		{
-			/* lerp, then convert to float value */
-			*(*resampleCache)++ = (float) (
-					dCache[j] +
-					(dCache[j + nChannels] - dCache[j]) *
-					FIXED_TO_FLOAT(cur_scalar)
-					);
-		}		/* Increment fraction offset by the stepping value */
-		*resampleOffset += resampleStep;
-		cur_scalar += resampleStep;
-		/* Only increment the sample offset by integer values.
-		 * 		 * Sometimes this will be 0 until cur accumulates
-		 * 		 		 * enough steps, especially for "slow" rates.
-		 * 		 		 		 */
-		dCache += (cur_scalar >> FIXED_PRECISION) ;
-
-		/* Now that any integer has been added, drop it.
-		 * 		 * The offset pointer will preserve the total.
-		 * 		 		 */
-		cur_scalar &= FIXED_FRACTION_MASK;
-	}
-
-	toResample-=header;
-
-	//initialising the varius cur
-	__m128i cur=_mm_set1_epi64x(cur_scalar);
-	__m128i cur_frac=_mm_set1_epi32((uint32_t)(cur_scalar & FIXED_FRACTION_MASK)-DOUBLE_TO_FIXED(0.5));
-	__m128i adder_frac=_mm_setr_epi32(0,0,(uint32_t)(resampleStep & FIXED_FRACTION_MASK),(uint32_t)(resampleStep & FIXED_FRACTION_MASK));
-	cur_frac=_mm_add_epi32(cur_frac,adder_frac);
-	__m128i adder=_mm_set_epi64x(resampleStep,0);
-	cur=_mm_add_epi64(cur,adder);
-	uint64_t next_cur_1=((uint64_t*)&cur)[1];
-	float* dCache_1=dCache+(next_cur_1>>FIXED_PRECISION)*2;
-	cur=_mm_and_si128(cur,_mm_set1_epi64x(FIXED_FRACTION_MASK));
-	__m128i next_adder=_mm_set1_epi64x(2*resampleStep);
-	__m128	one_over_fixed_one=_mm_set1_ps(1.0f/FIXED_ONE);
-	__m128	half=_mm_set1_ps(0.5f);
-	__m128i	half_fixed=_mm_set1_epi64x(DOUBLE_TO_FIXED(0.5));
-	__m128i	fixed_fraction_maskvec=_mm_set1_epi64x(FIXED_FRACTION_MASK);
-	__m128i adder_frac_loop=_mm_set1_epi32((uint32_t)((resampleStep*2)& FIXED_FRACTION_MASK));
-	uint32_t tail=toResample%2;
-	for (i = 0; i < toResample-tail; i += 2)
-	{
-	
-		__m128 current_next_1=_mm_undefined_ps();
-		__m128 current_next_2=_mm_undefined_ps();
-		current_next_1=_mm_loadu_ps(dCache); //A1B1A2B2
-		current_next_2=_mm_loadu_ps(dCache_1); //A3B3A4B4
-		__m128 current=_mm_castpd_ps(_mm_unpacklo_pd(_mm_castps_pd(current_next_1),_mm_castps_pd(current_next_2)));
-		__m128 next=_mm_castpd_ps(_mm_unpackhi_pd(_mm_castps_pd(current_next_1),_mm_castps_pd(current_next_2)));
-		__m128 sub=_mm_sub_ps(next,current);
-		__m128 cur_fixed=_mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(cur_frac),one_over_fixed_one),half);
-		__m128 mul=_mm_mul_ps(sub,cur_fixed);
-		__m128 res=_mm_add_ps(current,mul);
-
-
-		//updating cur and dcache
-		/*cur=_mm_add_epi64(cur,next_adder);
-		cur_2=_mm_add_epi64(cur_2, next_adder);
-		__m128i cur_shifted=_mm_srli_epi64(cur,FIXED_PRECISION);
-		__m128i cur_shifted_2=_mm_srli_epi64(cur_2,FIXED_PRECISION);
-		uint64_t next_cur=((uint64_t*)&cur_shifted)[0];
-		dCache=dCache+next_cur;
-		next_cur=((uint64_t*)&cur_shifted)[1];
-		dCache_1 = dCache_1 + next_cur ;
-		next_cur=((uint64_t*)&cur_shifted_2)[0];
-		dCache_2 = dCache_2+next_cur;
-		next_cur=((uint64_t*)&cur_shifted_2)[1];
-		dCache_3 = dCache_3 + next_cur ;
-		cur=_mm_and_si128(cur,fixed_fraction_maskvec);
-		cur_2=_mm_and_si128(cur_2,fixed_fraction_maskvec);
-		cur_frac=_mm_add_epi32(cur_frac,adder_frac_loop);*/
-		
-		cur_scalar+=resampleStep*2;
-		next_cur_1+=resampleStep*2;
-
-		uint64_t next_cur=cur_scalar>>FIXED_PRECISION;
-		dCache=dCache+next_cur*2;
-		next_cur=next_cur_1>>FIXED_PRECISION;
-		dCache_1 = dCache_1 + next_cur*2 ;
-		cur_scalar&=FIXED_FRACTION_MASK;
-		next_cur_1&=FIXED_FRACTION_MASK;
-		cur_frac=_mm_add_epi32(cur_frac,adder_frac_loop);
-		_mm_store_ps(*resampleCache,res);
-		(*resampleCache)=(*resampleCache)+4;
-	
-	}
-	*resampleOffset+=resampleStep*(toResample-tail);
-
-	//This is the tail.
-	for (i = 0; i < tail; i += 1)
-	{
-		/* lerp, then convert to float value */
-		for (j = 0; j < nChannels; j += 1)
-		{
-			/* lerp, then convert to float value */
-			*(*resampleCache)++ = (float) (
-					dCache[j] +
-					(dCache[j + nChannels] - dCache[j]) *
-					FIXED_TO_FLOAT(cur_scalar)
-					);
-		}			/* Increment fraction offset by the stepping value */
-		*resampleOffset += resampleStep;
-		cur_scalar += resampleStep;
-		/* Only increment the sample offset by integer values.
-		 * 		 * Sometimes this will be 0 until cur accumulates
-		 * 		 		 * enough steps, especially for "slow" rates.
-		 * 		 		 		 */
-		dCache += (cur_scalar >> FIXED_PRECISION) * nChannels;
-
-		/* Now that any integer has been added, drop it.
-		 * 		 * The offset pointer will preserve the total.
-		 * 		 		 */
-		cur_scalar &= FIXED_FRACTION_MASK;
-	}
-
-}
-
-static void FAudio_INTERNAL_ResamplePCM(
-	FAudioSourceVoice *voice,
-	float **resampleCache,
-	uint64_t toResample
-) {
-	/* Linear Resampler */
-	/* TODO: SSE */
-	uint32_t i, j;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
-	if(voice->src.format->nChannels==1)
-	{
-		new_FAudio_INTERNAL_ResamplePCM_opt_nChannel1_float(dCache,&voice->src.resampleOffset,voice->src.resampleStep,resampleCache,toResample);
-	}
-	else if(voice->src.format->nChannels==2)
-	{
-		new_FAudio_INTERNAL_ResamplePCM_opt_nChannel2_float(dCache,&voice->src.resampleOffset,voice->src.resampleStep,resampleCache,toResample);
-	}
-	else
-	{
-		for (i = 0; i < toResample; i += 1)
-		{
-			for (j = 0; j < voice->src.format->nChannels; j += 1)
-			{
-				/* lerp, then convert to float value */
-				*(*resampleCache)++ = (float) (
-						dCache[j] +
-						(dCache[j + voice->src.format->nChannels] - dCache[j]) *
-						FIXED_TO_DOUBLE(cur)
-						);
-			}
-
-			/* Increment fraction offset by the stepping value */
-			voice->src.resampleOffset += voice->src.resampleStep;
-			cur += voice->src.resampleStep;
-
-			/* Only increment the sample offset by integer values.
-			 * Sometimes this will be 0 until cur accumulates
-			 * enough steps, especially for "slow" rates.
-			 */
-			dCache += (cur >> FIXED_PRECISION) * voice->src.format->nChannels;
-
-			/* Now that any integer has been added, drop it.
-			 * The offset pointer will preserve the total.
-			 */
-			cur &= FIXED_FRACTION_MASK;
-		}
-	}
 }
 
 static inline void FAudio_INTERNAL_FilterVoice(
@@ -872,7 +553,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		}
 		else
 		{
-			FAudio_INTERNAL_ResamplePCM(voice, &resampleCache, toResample);
+			voice->src.resample(voice, &resampleCache, toResample);
 		}
 
 		/* Update buffer offsets */
@@ -988,48 +669,12 @@ end:
 		);
 	}
 }
-void amplifier_vector(
-		float* output,
-		int totalSamples,
-		float volume
-		)
-{
-	int i;
-	int header=(16-(((uint64_t)output)%16))/4;
-	if(header==4) header=0;
-	for (i = 0; i < header; i += 1)
-	{
-		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-	}
 
-	int tail=(((uint64_t)totalSamples-header)%4);
-	if(tail==4) tail=0;
-	__m128 volume_vec=_mm_set1_ps(volume);
-	__m128 minus_max_volume_level_vec=_mm_set1_ps(-FAUDIO_MAX_VOLUME_LEVEL);
-	__m128 max_volume_level_vec=_mm_set1_ps(FAUDIO_MAX_VOLUME_LEVEL);
-	for (i = header; i < totalSamples-tail; i += 4)
-	{
-		__m128 output_vec=_mm_load_ps(output+i);
-		output_vec=_mm_mul_ps(output_vec,volume_vec);
-		output_vec=_mm_max_ps(output_vec,minus_max_volume_level_vec);
-		output_vec=_mm_min_ps(output_vec,max_volume_level_vec);
-		_mm_store_ps(output+i,output_vec);
-	}
-	for (i = totalSamples-tail; i < totalSamples; i += 1)
-	{
-		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-	}
-}
+void (*FAudio_INTERNAL_Amplify)(
+	float *output,
+	uint32_t totalSamples,
+	float volume
+);
 
 static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 {
@@ -1059,7 +704,13 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 
 	/* Submix overall volume is applied _before_ effects/filters, blech! */
 	if (voice->volume != 1.0f)
-		amplifier_vector(voice->audio->resampleCache,resampled,voice->volume);
+	{
+		FAudio_INTERNAL_Amplify(
+			voice->audio->resampleCache,
+			resampled,
+			voice->volume
+		);
+	}
 	resampled /= voice->mix.inputChannels;
 
 	/* Filters */
@@ -1204,7 +855,13 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 	/* Apply master volume */
 	totalSamples = audio->updateSize * audio->master->master.inputChannels;
 	if (audio->master->volume != 1.0f)
-		amplifier_vector(output,totalSamples,audio->master->volume);
+	{
+		FAudio_INTERNAL_Amplify(
+			output,
+			totalSamples,
+			audio->master->volume
+		);
+	}
 
 	/* Process master effect chain */
 	FAudio_PlatformLockMutex(audio->master->effectLock);
@@ -1926,13 +1583,505 @@ void FAudio_INTERNAL_Convert_S16_To_F32_NEON(
 }
 #endif /* HAVE_NEON_INTRINSICS */
 
-void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON)
+/* Linear Resamplers */
+
+FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
+FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
+
+void FAudio_INTERNAL_ResampleGeneric(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	uint32_t i, j;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	for (i = 0; i < toResample; i += 1)
+	{
+		for (j = 0; j < voice->src.format->nChannels; j += 1)
+		{
+			/* lerp, then convert to float value */
+			*(*resampleCache)++ = (float) (
+				dCache[j] +
+				(dCache[j + voice->src.format->nChannels] - dCache[j]) *
+				FIXED_TO_DOUBLE(cur)
+			);
+		}
+
+		/* Increment fraction offset by the stepping value */
+		voice->src.resampleOffset += voice->src.resampleStep;
+		cur += voice->src.resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur >> FIXED_PRECISION) * voice->src.format->nChannels;
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur &= FIXED_FRACTION_MASK;
+	}
+}
+
+#if 1 /* TODO: NEED_SCALAR_CONVERTER_FALLBACKS */
+void FAudio_INTERNAL_ResampleMono_Scalar(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	uint32_t i;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	for (i = 0; i < toResample; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[1] - dCache[0]) *
+			FIXED_TO_DOUBLE(cur)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		voice->src.resampleOffset += voice->src.resampleStep;
+		cur += voice->src.resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur >> FIXED_PRECISION);
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur &= FIXED_FRACTION_MASK;
+	}
+}
+
+void FAudio_INTERNAL_ResampleStereo_Scalar(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	uint32_t i;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	for (i = 0; i < toResample; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[2] - dCache[0]) *
+			FIXED_TO_DOUBLE(cur)
+		);
+		*(*resampleCache)++ = (float) (
+			dCache[1] +
+			(dCache[3] - dCache[1]) *
+			FIXED_TO_DOUBLE(cur)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		voice->src.resampleOffset += voice->src.resampleStep;
+		cur += voice->src.resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur >> FIXED_PRECISION) * 2;
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur &= FIXED_FRACTION_MASK;
+	}
+}
+#endif /* NEED_SCALAR_CONVERTER_FALLBACKS */
+
+#if HAVE_SSE2_INTRINSICS
+void FAudio_INTERNAL_ResampleMono_SSE2(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	uint32_t i;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t *resampleOffset = &voice->src.resampleOffset;
+	uint64_t resampleStep = voice->src.resampleStep;
+
+	uint32_t header = 4 - (uint64_t) (*resampleCache) % 4;
+	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
+
+	for (i = 0; i < header; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[1] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION);
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+	toResample-=header;
+	__m128i cur=_mm_set1_epi64x(cur_scalar);
+	__m128i adder=_mm_set_epi64x(resampleStep*2,0);
+	cur=_mm_add_epi64(cur,adder);
+	uint64_t next_cur=((uint64_t*)&cur)[1];
+	float* dCache_next=dCache+(next_cur>>FIXED_PRECISION);
+	cur=_mm_and_si128(cur,_mm_set1_epi64x(FIXED_FRACTION_MASK));
+	 adder=_mm_set1_epi64x(resampleStep);
+	__m128i next_adder=_mm_set1_epi64x(3*resampleStep);
+	__m128d	one_over_fixed_one=_mm_set1_pd(1.0/FIXED_ONE);
+	__m128d	half=_mm_set1_pd(0.5);
+	__m128i	half_fixed=_mm_set1_epi64x(DOUBLE_TO_FIXED(0.5));
+	__m128i	fixed_fraction_maskvec=_mm_set1_epi64x(FIXED_FRACTION_MASK);
+	uint32_t tail=toResample%4;
+	for (i = 0; i < toResample-tail; i += 4)
+	{
+		__m128 res_half_1,res_half_2;
+		{
+			__m128 current_next_1=_mm_undefined_ps();
+			__m128 current_next_2=_mm_undefined_ps();
+			current_next_1=_mm_loadl_pi(current_next_1,(__m64*)dCache);
+			current_next_2=_mm_loadl_pi(current_next_2,(__m64*)dCache_next);
+			__m128 current=_mm_unpacklo_ps(current_next_1,current_next_2);
+			__m128 next=_mm_shuffle_ps(current,current,0xe);
+			__m128 sub=_mm_sub_ps(next,current);
+			__m128d sub_double=_mm_cvtps_pd(sub);
+			__m128d current_double=_mm_cvtps_pd(current);
+			__m128i cur_frac_i=_mm_sub_epi64(cur,half_fixed);
+			cur_frac_i=_mm_shuffle_epi32(cur_frac_i,0x8);
+			__m128d cur_fixed=_mm_add_pd(_mm_mul_pd(_mm_cvtepi32_pd(cur_frac_i),one_over_fixed_one),half);
+			__m128d mul_double=_mm_mul_pd(sub_double,cur_fixed);
+			__m128d res_double=_mm_add_pd(current_double,mul_double);
+			res_half_1=_mm_cvtpd_ps(res_double);
+		}
+		cur=_mm_add_epi64(cur,adder);
+		__m128i cur_shifted=_mm_srli_epi64(cur,FIXED_PRECISION);
+		uint64_t next_cur=((uint64_t*)&cur_shifted)[0];
+		dCache=dCache+next_cur;
+		next_cur=((uint64_t*)&cur_shifted)[1];
+		dCache_next = dCache_next + next_cur ;
+		cur=_mm_and_si128(cur,fixed_fraction_maskvec);
+		{
+			__m128 current_next_1=_mm_undefined_ps();
+			__m128 current_next_2=_mm_undefined_ps();
+			current_next_1=_mm_loadl_pi(current_next_1,(__m64*)dCache);
+			current_next_2=_mm_loadl_pi(current_next_2,(__m64*)dCache_next);
+			__m128 current=_mm_unpacklo_ps(current_next_1,current_next_2);
+			__m128 next=_mm_shuffle_ps(current,current,0xe);
+			__m128 sub=_mm_sub_ps(next,current);
+			__m128d sub_double=_mm_cvtps_pd(sub);
+			__m128d current_double=_mm_cvtps_pd(current);
+			__m128i cur_frac_i=_mm_sub_epi64(cur,half_fixed);
+			cur_frac_i=_mm_shuffle_epi32(cur_frac_i,0x8);
+			__m128d cur_fixed=_mm_add_pd(_mm_mul_pd(_mm_cvtepi32_pd(cur_frac_i),one_over_fixed_one),half);
+			__m128d mul_double=_mm_mul_pd(sub_double,cur_fixed);
+			__m128d res_double=_mm_add_pd(current_double,mul_double);
+			res_half_2=_mm_cvtpd_ps(res_double);
+		}
+		cur=_mm_add_epi64(cur,next_adder);
+		cur_shifted=_mm_srli_epi64(cur,FIXED_PRECISION);
+		next_cur=((uint64_t*)&cur_shifted)[0];
+		dCache=dCache+next_cur;
+		next_cur=((uint64_t*)&cur_shifted)[1];
+		dCache_next = dCache_next + next_cur ;
+		__m128 res=_mm_unpacklo_ps(res_half_1,res_half_2);
+		_mm_store_ps(*resampleCache,res);
+		cur=_mm_and_si128(cur,fixed_fraction_maskvec);
+		(*resampleCache)=(*resampleCache)+4;
+	}
+	cur_scalar=((uint64_t*)&cur)[0];
+	*resampleOffset+=resampleStep*(toResample-tail);
+
+	for (i = 0; i < tail; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[1] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION);
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+}
+
+void FAudio_INTERNAL_ResampleStereo_SSE2(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	uint32_t i;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t *resampleOffset = &voice->src.resampleOffset;
+	uint64_t resampleStep = voice->src.resampleStep;
+
+	/* This is the header, the Dest needs to be aligned to 16B */
+	uint32_t header = (16 - (uint64_t) (*resampleCache) % 16) / 8;
+	if (header == 2)
+	{
+		header = 0;
+	}
+	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
+	for (i = 0; i < header; i += 2)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[2] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+		*(*resampleCache)++ = (float) (
+			dCache[1] +
+			(dCache[3] - dCache[1]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION) * 2;
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+	toResample-=header;
+
+	/* initialising the varius cur */
+	__m128i cur=_mm_set1_epi64x(cur_scalar);
+	__m128i cur_frac=_mm_set1_epi32((uint32_t)(cur_scalar & FIXED_FRACTION_MASK)-DOUBLE_TO_FIXED(0.5));
+	__m128i adder_frac=_mm_setr_epi32(0,0,(uint32_t)(resampleStep & FIXED_FRACTION_MASK),(uint32_t)(resampleStep & FIXED_FRACTION_MASK));
+	cur_frac=_mm_add_epi32(cur_frac,adder_frac);
+	__m128i adder=_mm_set_epi64x(resampleStep,0);
+	cur=_mm_add_epi64(cur,adder);
+	uint64_t next_cur_1=((uint64_t*)&cur)[1];
+	float* dCache_1=dCache+(next_cur_1>>FIXED_PRECISION)*2;
+	cur=_mm_and_si128(cur,_mm_set1_epi64x(FIXED_FRACTION_MASK));
+	__m128i next_adder=_mm_set1_epi64x(2*resampleStep);
+	__m128	one_over_fixed_one=_mm_set1_ps(1.0f/FIXED_ONE);
+	__m128	half=_mm_set1_ps(0.5f);
+	__m128i	half_fixed=_mm_set1_epi64x(DOUBLE_TO_FIXED(0.5));
+	__m128i	fixed_fraction_maskvec=_mm_set1_epi64x(FIXED_FRACTION_MASK);
+	__m128i adder_frac_loop=_mm_set1_epi32((uint32_t)((resampleStep*2)& FIXED_FRACTION_MASK));
+	uint32_t tail=toResample%2;
+	for (i = 0; i < toResample-tail; i += 2)
+	{
+		__m128 current_next_1=_mm_undefined_ps();
+		__m128 current_next_2=_mm_undefined_ps();
+		current_next_1=_mm_loadu_ps(dCache); //A1B1A2B2
+		current_next_2=_mm_loadu_ps(dCache_1); //A3B3A4B4
+		__m128 current=_mm_castpd_ps(_mm_unpacklo_pd(_mm_castps_pd(current_next_1),_mm_castps_pd(current_next_2)));
+		__m128 next=_mm_castpd_ps(_mm_unpackhi_pd(_mm_castps_pd(current_next_1),_mm_castps_pd(current_next_2)));
+		__m128 sub=_mm_sub_ps(next,current);
+		__m128 cur_fixed=_mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(cur_frac),one_over_fixed_one),half);
+		__m128 mul=_mm_mul_ps(sub,cur_fixed);
+		__m128 res=_mm_add_ps(current,mul);
+
+
+		/*updating cur and dcache*/
+		/*cur=_mm_add_epi64(cur,next_adder);
+		cur_2=_mm_add_epi64(cur_2, next_adder);
+		__m128i cur_shifted=_mm_srli_epi64(cur,FIXED_PRECISION);
+		__m128i cur_shifted_2=_mm_srli_epi64(cur_2,FIXED_PRECISION);
+		uint64_t next_cur=((uint64_t*)&cur_shifted)[0];
+		dCache=dCache+next_cur;
+		next_cur=((uint64_t*)&cur_shifted)[1];
+		dCache_1 = dCache_1 + next_cur ;
+		next_cur=((uint64_t*)&cur_shifted_2)[0];
+		dCache_2 = dCache_2+next_cur;
+		next_cur=((uint64_t*)&cur_shifted_2)[1];
+		dCache_3 = dCache_3 + next_cur ;
+		cur=_mm_and_si128(cur,fixed_fraction_maskvec);
+		cur_2=_mm_and_si128(cur_2,fixed_fraction_maskvec);
+		cur_frac=_mm_add_epi32(cur_frac,adder_frac_loop);*/
+
+		cur_scalar+=resampleStep*2;
+		next_cur_1+=resampleStep*2;
+
+		uint64_t next_cur=cur_scalar>>FIXED_PRECISION;
+		dCache=dCache+next_cur*2;
+		next_cur=next_cur_1>>FIXED_PRECISION;
+		dCache_1 = dCache_1 + next_cur*2 ;
+		cur_scalar&=FIXED_FRACTION_MASK;
+		next_cur_1&=FIXED_FRACTION_MASK;
+		cur_frac=_mm_add_epi32(cur_frac,adder_frac_loop);
+		_mm_store_ps(*resampleCache,res);
+		(*resampleCache)=(*resampleCache)+4;
+	}
+	*resampleOffset+=resampleStep*(toResample-tail);
+
+	/* This is the tail. */
+	for (i = 0; i < tail; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[2] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+		*(*resampleCache)++ = (float) (
+			dCache[1] +
+			(dCache[3] - dCache[1]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION) * 2;
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+}
+#endif /* HAVE_SSE2_INTRINSICS */
+
+void FAudio_INTERNAL_AssignResampleFunc(FAudioVoice *voice)
+{
+	if (voice->src.format->nChannels == 1)
+	{
+		voice->src.resample = FAudio_INTERNAL_ResampleMono;
+	}
+	else if (voice->src.format->nChannels == 2)
+	{
+		voice->src.resample = FAudio_INTERNAL_ResampleStereo;
+	}
+	else
+	{
+		voice->src.resample = FAudio_INTERNAL_ResampleGeneric;
+	}
+}
+
+/* Amplifiers */
+
+#if 1 /* TODO: NEED_SCALAR_CONVERTER_FALLBACKS */
+void FAudio_INTERNAL_Amplify_Scalar(
+	float* output,
+	uint32_t totalSamples,
+	float volume
+) {
+	uint32_t i;
+	for (i = 0; i < totalSamples; i += 1)
+	{
+		output[i] *= volume;
+		output[i] = FAudio_clamp(
+			output[i],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+#endif /* NEED_SCALAR_CONVERTER_FALLBACKS */
+
+#if HAVE_SSE2_INTRINSICS
+void FAudio_INTERNAL_Amplify_SSE2(
+	float* output,
+	uint32_t totalSamples,
+	float volume
+) {
+	uint32_t i;
+	uint32_t header = (16 - (((uint64_t) output) % 16)) / 4;
+	uint32_t tail = ((uint64_t) totalSamples - header) % 4;
+	if (header == 4)
+	{
+		header = 0;
+	}
+	if (tail == 4)
+	{
+		tail = 0;
+	}
+
+	for (i = 0; i < header; i += 1)
+	{
+		output[i] *= volume;
+		output[i] = FAudio_clamp(
+			output[i],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+
+	__m128 volumeVec = _mm_set1_ps(volume);
+	__m128 minVolumeVec = _mm_set1_ps(-FAUDIO_MAX_VOLUME_LEVEL);
+	__m128 maxVolumeVec = _mm_set1_ps(FAUDIO_MAX_VOLUME_LEVEL);
+	for (i = header; i < totalSamples - tail; i += 4)
+	{
+		__m128 outVec = _mm_load_ps(output + i);
+		outVec = _mm_mul_ps(outVec, volumeVec);
+		outVec = _mm_max_ps(outVec, minVolumeVec);
+		outVec = _mm_min_ps(outVec, maxVolumeVec);
+		_mm_store_ps(output + i, outVec);
+	}
+
+	for (i = totalSamples - tail; i < totalSamples; i += 1)
+	{
+		output[i] *= volume;
+		output[i] = FAudio_clamp(
+			output[i],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+#endif /* HAVE_SSE2_INTRINSICS */
+
+void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 {
 #if HAVE_SSE2_INTRINSICS
 	if (hasSSE2)
 	{
 		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_SSE2;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_SSE2;
+		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_SSE2;
+		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_SSE2;
+		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_SSE2;
 		return;
 	}
 #endif
@@ -1941,12 +2090,18 @@ void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 	{
 		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_NEON;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
+		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_Scalar;
+		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
+		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_Scalar;
 		return;
 	}
 #endif
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 	FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_Scalar;
 	FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_Scalar;
+	FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_Scalar;
+	FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
+	FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_Scalar;
 #else
 	FAudio_assert(0 && "Need converter functions!");
 #endif
