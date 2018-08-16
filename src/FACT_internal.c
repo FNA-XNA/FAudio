@@ -1335,7 +1335,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 				finished = 0;
 
 				/* Trigger events at the right time */
-				if (elapsedCue > evtInst->timestamp)
+				if (elapsedCue >= evtInst->timestamp)
 				{
 					FACT_INTERNAL_ActivateEvent(
 						sound,
