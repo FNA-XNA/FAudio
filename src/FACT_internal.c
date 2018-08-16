@@ -630,6 +630,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 
 				newSound->tracks[i].events[j].timestamp =
 					newSound->sound->tracks[i].events[j].timestamp;
+				newSound->tracks[i].events[j].loopCount = 0;
 				newSound->tracks[i].events[j].finished = 0;
 				newSound->tracks[i].events[j].value = 0.0f;
 
