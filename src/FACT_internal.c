@@ -678,10 +678,15 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					newSound->tracks[i].waveEvtInst = evtInst;
 				}
 				else if (	evt->type == FACTEVENT_PITCHREPEATING ||
-					evt->type == FACTEVENT_VOLUMEREPEATING	)
+						evt->type == FACTEVENT_VOLUMEREPEATING	)
 				{
 					newSound->tracks[i].events[j].loopCount =
 						newSound->sound->tracks[i].events[j].value.repeats;
+				}
+				else if (evt->type == FACTEVENT_MARKERREPEATING)
+				{
+					newSound->tracks[i].events[j].loopCount =
+						newSound->sound->tracks[i].events[j].marker.repeats;
 				}
 			}
 		}
@@ -696,14 +701,13 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					newSound->parentCue->parentBank->parentEngine,
 					newSound->sound->tracks[i].rpcCodes[j]
 				);
-				if (cue->parentBank->parentEngine->variables[rpc->variable].accessibility & 0x04)
+				if (	rpc->parameter == RPC_PARAMETER_VOLUME &&
+					cue->parentBank->parentEngine->variables[rpc->variable].accessibility & 0x04	)
 				{
-					if (	rpc->parameter == RPC_PARAMETER_VOLUME &&
-							FAudio_strcmp(
-								newSound->parentCue->parentBank->parentEngine->variableNames[rpc->variable],
-								"ReleaseTime"
-							) == 0	)
-					{
+					if (FAudio_strcmp(
+						newSound->parentCue->parentBank->parentEngine->variableNames[rpc->variable],
+						"ReleaseTime"
+					) == 0) {
 						lastX = rpc->points[rpc->pointCount - 1].x;
 						if (lastX > cue->maxRpcReleaseTime)
 						{
@@ -1071,8 +1075,8 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->stop.flags & 0x02)
 		{
 			if (	evt->stop.flags & 0x01 ||
-				(sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS == 0 &&
-				sound->parentCue->maxRpcReleaseTime == 0)	)
+				(	sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS == 0 &&
+					sound->parentCue->maxRpcReleaseTime == 0	)	)
 			{
 				for (i = 0; i < sound->sound->trackCount; i += 1)
 				{
@@ -1276,9 +1280,9 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 			return 1;
 		}
 		fadeVolume = 1.0f - (
-			(float)(timestamp - sound->fadeStart) /
-			(float)sound->fadeTarget
-			);
+			(float) (timestamp - sound->fadeStart) /
+			(float) sound->fadeTarget
+		);
 	}
 	else if (sound->fadeType == 3) /* Release RPC */
 	{
