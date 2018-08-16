@@ -959,6 +959,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 {
 	FAudioFXReverbParameters rvbPar;
 	uint16_t i, j, par;
+	float rpcResult;
 	for (i = 0; i < engine->rpcCount; i += 1)
 	{
 		if (engine->rpcs[i].parameter >= RPC_PARAMETER_COUNT)
@@ -972,13 +973,12 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 					 * What if there's more than one?
 					 */
 					par = engine->rpcs[i].parameter - RPC_PARAMETER_COUNT;
+					rpcResult = FACT_INTERNAL_CalculateRPC(
+						&engine->rpcs[i],
+						engine->globalVariableValues[engine->rpcs[i].variable]
+					);
 					engine->dspPresets[j].parameters[par].value = FAudio_clamp(
-						FACT_INTERNAL_CalculateRPC(
-							&engine->rpcs[i],
-							engine->globalVariableValues[
-								engine->rpcs[i].variable
-							]
-						),
+						rpcResult,
 						engine->dspPresets[j].parameters[par].minVal,
 						engine->dspPresets[j].parameters[par].maxVal
 					);
