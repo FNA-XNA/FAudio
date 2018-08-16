@@ -72,6 +72,7 @@
     <ClCompile Include="..\src\F3DAudio.c" />
     <ClCompile Include="..\src\FAudio.c" />
     <ClCompile Include="..\src\FAudio_internal.c" />
+    <ClCompile Include="..\src\FAudio_internal_simd.c" />
     <ClCompile Include="..\src\FAudioFX.c" />
     <ClCompile Include="..\src\FAudioFX_internal.c" />
     <ClCompile Include="..\src\FACT.c" />
