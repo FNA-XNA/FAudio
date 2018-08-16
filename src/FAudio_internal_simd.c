@@ -684,22 +684,6 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 }
 #endif /* HAVE_SSE2_INTRINSICS */
 
-void FAudio_INTERNAL_AssignResampleFunc(FAudioVoice *voice)
-{
-	if (voice->src.format->nChannels == 1)
-	{
-		voice->src.resample = FAudio_INTERNAL_ResampleMono;
-	}
-	else if (voice->src.format->nChannels == 2)
-	{
-		voice->src.resample = FAudio_INTERNAL_ResampleStereo;
-	}
-	else
-	{
-		voice->src.resample = FAudio_INTERNAL_ResampleGeneric;
-	}
-}
-
 /* SECTION 3: Amplifiers */
 
 #if 1 /* TODO: NEED_SCALAR_CONVERTER_FALLBACKS */

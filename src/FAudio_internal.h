@@ -355,12 +355,16 @@ extern void (*FAudio_INTERNAL_Convert_S16_To_F32)(
 );
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
+extern void FAudio_INTERNAL_ResampleGeneric(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+);
 extern void (*FAudio_INTERNAL_Amplify)(
 	float *output,
 	uint32_t totalSamples,
 	float volume
 );
-void FAudio_INTERNAL_AssignResampleFunc(FAudioVoice *voice);
 void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 
 #define DECODE_FUNC(type) \

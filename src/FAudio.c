@@ -257,7 +257,19 @@ uint32_t FAudio_CreateSourceVoice(
 	{
 		FAudio_assert(0 && "Unsupported format tag!");
 	}
-	FAudio_INTERNAL_AssignResampleFunc(*ppSourceVoice);
+
+	if ((*ppSourceVoice)->src.format->nChannels == 1)
+	{
+		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleMono;
+	}
+	else if ((*ppSourceVoice)->src.format->nChannels == 2)
+	{
+		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleStereo;
+	}
+	else
+	{
+		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleGeneric;
+	}
 
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 
