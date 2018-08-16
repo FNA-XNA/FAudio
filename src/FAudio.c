@@ -187,7 +187,9 @@ uint32_t FAudio_CreateSourceVoice(
 	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT	)
 	{
-		FAudioWaveFormatExtensible *fmtex = FAudio_malloc(sizeof(FAudioWaveFormatExtensible));
+		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) FAudio_malloc(
+			sizeof(FAudioWaveFormatExtensible)
+		);
 		/* convert PCM to EXTENSIBLE */
 		fmtex->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
 		fmtex->Format.nChannels = pSourceFormat->nChannels;
@@ -211,7 +213,7 @@ uint32_t FAudio_CreateSourceVoice(
 	else
 	{
 		/* direct copy anything else */
-		(*ppSourceVoice)->src.format = FAudio_malloc(
+		(*ppSourceVoice)->src.format = (FAudioWaveFormatEx*) FAudio_malloc(
 			sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize
 		);
 		FAudio_memcpy(
