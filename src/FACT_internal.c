@@ -1071,7 +1071,8 @@ void FACT_INTERNAL_ActivateEvent(
 		if (evt->stop.flags & 0x02)
 		{
 			if (	evt->stop.flags & 0x01 ||
-				sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS == 0	)
+				(sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS == 0 &&
+				sound->parentCue->maxRpcReleaseTime == 0)	)
 			{
 				for (i = 0; i < sound->sound->trackCount; i += 1)
 				{
@@ -1083,12 +1084,22 @@ void FACT_INTERNAL_ActivateEvent(
 				}
 			}
 			else
+			{
+				if (sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS > 0)
 				{
 					FACT_INTERNAL_BeginFadeOut(
 						sound,
 						sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS
 					);
 				}
+				else if (sound->parentCue->maxRpcReleaseTime > 0)
+				{
+					FACT_INTERNAL_BeginReleaseRPC(
+						sound,
+						sound->parentCue->maxRpcReleaseTime
+					);
+				}
+			}
 		}
 
 		/* Stop track */
