@@ -698,10 +698,11 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				);
 				if (cue->parentBank->parentEngine->variables[rpc->variable].accessibility & 0x04)
 				{
-					if (FAudio_strcmp(
-						newSound->parentCue->parentBank->parentEngine->variableNames[rpc->variable],
-						"ReleaseTime"
-					) == 0 && rpc->parameter == RPC_PARAMETER_VOLUME)
+					if (	rpc->parameter == RPC_PARAMETER_VOLUME &&
+							FAudio_strcmp(
+								newSound->parentCue->parentBank->parentEngine->variableNames[rpc->variable],
+								"ReleaseTime"
+							) == 0	)
 					{
 						lastX = rpc->points[rpc->pointCount - 1].x;
 						if (lastX > cue->maxRpcReleaseTime)
@@ -1082,12 +1083,12 @@ void FACT_INTERNAL_ActivateEvent(
 				}
 			}
 			else
-			{
-				FACT_INTERNAL_BeginFadeOut(
-					sound,
-					sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS
-				);
-			}
+				{
+					FACT_INTERNAL_BeginFadeOut(
+						sound,
+						sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS
+					);
+				}
 		}
 
 		/* Stop track */
