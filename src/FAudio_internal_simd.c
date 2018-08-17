@@ -451,9 +451,6 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	int nChannels=1;
 
 	//initialising the varius cur
-	//cur is the vector cur which holds 0th,1st samples of the 
-	//scalar cur but is used only for the initialization of the various
-	//dCaches. i think it can be thrown away to just initialise Dcache.
 	//cur_frac is the fractional part of cur with 4 samples. as the
 	//fractional part is 32 bit unsigned value, it can be just added
 	//and the modulu operation for keeping the fractional part will be implicit.
