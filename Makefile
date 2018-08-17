@@ -42,6 +42,7 @@ FAUDIOSRC = \
 	src/F3DAudio.c \
 	src/FAudio.c \
 	src/FAudio_internal.c \
+	src/FAudio_internal_simd.c \
 	src/FAudioFX.c \
 	src/FAudioFX_internal.c \
 	src/FACT.c \

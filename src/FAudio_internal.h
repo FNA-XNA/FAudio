@@ -119,6 +119,14 @@
 #define FAudio_assert SDL_assert
 #endif
 
+/* Easy Macros */
+#define FAudio_min(val1, val2) \
+	(val1 < val2 ? val1 : val2)
+#define FAudio_max(val1, val2) \
+	(val1 > val2 ? val1 : val2)
+#define FAudio_clamp(val, min, max) \
+	(val > max ? max : (val < min ? min : val))
+
 /* Windows/Visual Studio cruft */
 #ifdef _WIN32
 #define inline __inline
@@ -194,6 +202,12 @@ typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	float *decodeCache,
 	uint32_t samples,
 	FAudioWaveFormatEx *format
+);
+
+typedef void (FAUDIOCALL * FAudioResampleCallback)(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
 );
 
 typedef void* FAudioPlatformFixedRateSRC;
@@ -275,6 +289,7 @@ struct FAudioVoice
 			float maxFreqRatio;
 			FAudioWaveFormatEx *format;
 			FAudioDecodeCallback decode;
+			FAudioResampleCallback resample;
 			FAudioVoiceCallback *callback;
 
 			/* Dynamic */
@@ -325,7 +340,32 @@ void FAudio_INTERNAL_AllocEffectChain(
 	const FAudioEffectChain *pEffectChain
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
-void FAudio_INTERNAL_InitConverterFunctions(uint8_t hasSSE2, uint8_t hasNEON);
+
+/* SIMD Stuff */
+
+extern void (*FAudio_INTERNAL_Convert_U8_To_F32)(
+	const uint8_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+);
+extern void (*FAudio_INTERNAL_Convert_S16_To_F32)(
+	const int16_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+);
+extern FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
+extern FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
+extern void FAudio_INTERNAL_ResampleGeneric(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+);
+extern void (*FAudio_INTERNAL_Amplify)(
+	float *output,
+	uint32_t totalSamples,
+	float volume
+);
+void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 
 #define DECODE_FUNC(type) \
 	extern void FAudio_INTERNAL_Decode##type( \
@@ -390,11 +430,57 @@ void FAudio_sleep(uint32_t ms);
 
 uint32_t FAudio_timems(void);
 
-/* Easy Macros */
+/* Resampling */
 
-#define FAudio_min(val1, val2) \
-	(val1 < val2 ? val1 : val2)
-#define FAudio_max(val1, val2) \
-	(val1 > val2 ? val1 : val2)
-#define FAudio_clamp(val, min, max) \
-	(val > max ? max : (val < min ? min : val))
+/* Okay, so here's what all this fixed-point goo is for:
+ *
+ * Inevitably you're going to run into weird sample rates,
+ * both from WaveBank data and from pitch shifting changes.
+ *
+ * How we deal with this is by calculating a fixed "step"
+ * value that steps from sample to sample at the speed needed
+ * to get the correct output sample rate, and the offset
+ * is stored as separate integer and fraction values.
+ *
+ * This allows us to do weird fractional steps between samples,
+ * while at the same time not letting it drift off into death
+ * thanks to floating point madness.
+ *
+ * Steps are stored in fixed-point with 32 bits for the fraction:
+ *
+ * 00000000000000000000000000000000 00000000000000000000000000000000
+ * ^ Integer block (32)             ^ Fraction block (32)
+ *
+ * For example, to get 1.5:
+ * 00000000000000000000000000000001 10000000000000000000000000000000
+ *
+ * The Integer block works exactly like you'd expect.
+ * The Fraction block is divided by the Integer's "One" value.
+ * So, the above Fraction represented visually...
+ *   1 << 31
+ *   -------
+ *   1 << 32
+ * ... which, simplified, is...
+ *   1 << 0
+ *   ------
+ *   1 << 1
+ * ... in other words, 1 / 2, or 0.5.
+ */
+#define FIXED_PRECISION		32
+#define FIXED_ONE		(1LL << FIXED_PRECISION)
+
+/* Quick way to drop parts */
+#define FIXED_FRACTION_MASK	(FIXED_ONE - 1)
+#define FIXED_INTEGER_MASK	~FIXED_FRACTION_MASK
+
+/* Helper macros to convert fixed to float */
+#define DOUBLE_TO_FIXED(dbl) \
+	((uint64_t) (dbl * FIXED_ONE + 0.5))
+#define FIXED_TO_DOUBLE(fxd) ( \
+	(double) (fxd >> FIXED_PRECISION) + /* Integer part */ \
+	((fxd & FIXED_FRACTION_MASK) * (1.0 / FIXED_ONE)) /* Fraction part */ \
+)
+#define FIXED_TO_FLOAT(fxd) ( \
+	(float) (fxd >> FIXED_PRECISION) + /* Integer part */ \
+	((fxd & FIXED_FRACTION_MASK) * (1.0f / FIXED_ONE)) /* Fraction part */ \
+)
