@@ -1103,6 +1103,8 @@ void FACT_INTERNAL_ActivateEvent(
 						sound->parentCue->maxRpcReleaseTime
 					);
 				}
+
+				sound->parentCue->state |= FACT_STATE_STOPPING;
 			}
 		}
 
