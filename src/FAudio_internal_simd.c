@@ -422,6 +422,9 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	uint64_t resampleStep = voice->src.resampleStep;
 	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
 	uint32_t tail, header = (16 - (uint64_t) (*resampleCache) % 16) / 4;
+	__m128 one_over_fixed_one, half, current_next_0_1, current_next_2_3,
+		current, next, sub, cur_fixed, mul, res;
+	__m128i cur_frac, adder_frac, adder_frac_loop;
 	if (header == 4)
 	{
 		header = 0;
@@ -461,11 +464,10 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	 * the 0.5 is for converting signed values to float (no unsigned convert),
 	 * the 0.5 is added later.
 	 */
-	
-	__m128i cur_frac = _mm_set1_epi32(
+	cur_frac = _mm_set1_epi32(
 		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
 	);
-	__m128i adder_frac = _mm_setr_epi32(
+	adder_frac = _mm_setr_epi32(
 		0,
 		(uint32_t) (resampleStep & FIXED_FRACTION_MASK),
 		(uint32_t) ((resampleStep * 2) & FIXED_FRACTION_MASK),
@@ -488,9 +490,9 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	cur_scalar_3 &= FIXED_FRACTION_MASK;
 
 	/* Constants */
-	__m128	one_over_fixed_one =_mm_set1_ps(1.0f / FIXED_ONE);
-	__m128	half = _mm_set1_ps(0.5f);
-	__m128i adder_frac_loop = _mm_set1_epi32(
+	one_over_fixed_one = _mm_set1_ps(1.0f / FIXED_ONE);
+	half = _mm_set1_ps(0.5f);
+	adder_frac_loop = _mm_set1_epi32(
 		(uint32_t) ((resampleStep * 4) & FIXED_FRACTION_MASK)
 	);
 
@@ -498,39 +500,37 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	for (i = 0; i < toResample - tail; i += 4)
 	{
 		/* This does not compile for me for some reason but should be used:
-		 * __m128 current_next_0_1 = _mm_undefined_ps();
-		 * __m128 current_next_2_3 = _mm_undefined_ps();
+		 * current_next_0_1 = _mm_undefined_ps();
+		 * current_next_2_3 = _mm_undefined_ps();
 		 */
 
 		/* current next holds 2 pairs of the sample and the sample + 1
 		 * after that need to seperate them.
 		 */
 
-		__m128 current_next_0_1;
-		__m128 current_next_2_3;
 		current_next_0_1 = _mm_loadl_pi(current_next_0_1, (__m64*) dCache);
 		current_next_0_1 = _mm_loadh_pi(current_next_0_1, (__m64*) dCache_1);
 		current_next_2_3 = _mm_loadl_pi(current_next_2_3, (__m64*) dCache_2);
 		current_next_2_3 = _mm_loadh_pi(current_next_2_3, (__m64*) dCache_3);
 
 		/* Unpack them to have seperate current and next in 2 vectors. */
-		__m128 current = _mm_shuffle_ps(current_next_0_1, current_next_2_3, 0x88); /* 0b1000 */
-		__m128 next = _mm_shuffle_ps(current_next_0_1, current_next_2_3, 0xdd); /* 0b1101 */
+		current = _mm_shuffle_ps(current_next_0_1, current_next_2_3, 0x88); /* 0b1000 */
+		next = _mm_shuffle_ps(current_next_0_1, current_next_2_3, 0xdd); /* 0b1101 */
 
-		__m128 sub = _mm_sub_ps(next, current);
+		sub = _mm_sub_ps(next, current);
 
 		/* Convert the fractional part to float and then mul to get the fractions out.
 		 * then add back the 0.5 we subtracted before.
 		 */
-		__m128 cur_fixed = _mm_add_ps(
+		cur_fixed = _mm_add_ps(
 			_mm_mul_ps(
 				_mm_cvtepi32_ps(cur_frac),
 				one_over_fixed_one
 			),
 			half
 		);
-		__m128 mul = _mm_mul_ps(sub, cur_fixed);
-		__m128 res = _mm_add_ps(current, mul);
+		mul = _mm_mul_ps(sub, cur_fixed);
+		res = _mm_add_ps(current, mul);
 
 		/* Update cur scalar for next iteration (or next loop) */
 		cur_scalar += resampleStep * 4;
@@ -597,6 +597,9 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	float *dCache = voice->audio->decodeCache;
 	uint64_t *resampleOffset = &voice->src.resampleOffset;
 	uint64_t resampleStep = voice->src.resampleStep;
+	__m128 one_over_fixed_one, half, current_next_1, current_next_2,
+		current, next, sub, cur_fixed, mul, res;
+	__m128i cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
 	header = (16 - (uint64_t) (*resampleCache) % 16) / 8;
@@ -642,10 +645,10 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	 * to avoid duplication please see the mono part for a thorough
 	 * explanation.
 	 */
-	__m128i cur_frac = _mm_set1_epi32(
+	cur_frac = _mm_set1_epi32(
 		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
 	);
-	__m128i adder_frac = _mm_setr_epi32(
+	adder_frac = _mm_setr_epi32(
 		0,
 		0,
 		(uint32_t) (resampleStep & FIXED_FRACTION_MASK),
@@ -658,9 +661,9 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	dCache_1 = dCache + (cur_scalar_1 >> FIXED_PRECISION) * 2;
 	cur_scalar_1 &= FIXED_FRACTION_MASK;
 
-	__m128	one_over_fixed_one = _mm_set1_ps(1.0f / FIXED_ONE);
-	__m128	half = _mm_set1_ps(0.5f);
-	__m128i adder_frac_loop = _mm_set1_epi32(
+	one_over_fixed_one = _mm_set1_ps(1.0f / FIXED_ONE);
+	half = _mm_set1_ps(0.5f);
+	adder_frac_loop = _mm_set1_epi32(
 		(uint32_t) ((resampleStep * 2) & FIXED_FRACTION_MASK)
 	);
 
@@ -668,11 +671,9 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	for (i = 0; i < toResample - tail; i += 2)
 	{
 		/* This does not compile for me for some reason but should be used:
-		 * __m128 current_next_1=_mm_undefined_ps();
-		 * __m128 current_next_2=_mm_undefined_ps();
+		 * current_next_1 = _mm_undefined_ps();
+		 * current_next_2 = _mm_undefined_ps();
 		 */
-		__m128 current_next_1;
-		__m128 current_next_2;
 
 		/* Current_next_1 and current_next_2 each holds 4 src
 		 * sample points for getting 4 dest resample point at the end.
@@ -685,33 +686,33 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		current_next_2 = _mm_loadu_ps(dCache_1); /* A3B3A4B4 */
 
 		/* Unpack them to get the current and the next in seperate vectors. */
-		__m128 current = _mm_castpd_ps(
+		current = _mm_castpd_ps(
 			_mm_unpacklo_pd(
 				_mm_castps_pd(current_next_1),
 				_mm_castps_pd(current_next_2)
 			)
 		);
-		__m128 next = _mm_castpd_ps(
+		next = _mm_castpd_ps(
 			_mm_unpackhi_pd(
 				_mm_castps_pd(current_next_1),
 				_mm_castps_pd(current_next_2)
 			)
 		);
 
-		__m128 sub = _mm_sub_ps(next, current);
+		sub = _mm_sub_ps(next, current);
 
 		/* Adding the 0.5 back.
 		 * See mono explanation for more elaborate explanation.
 		 */
-		__m128 cur_fixed = _mm_add_ps(
+		cur_fixed = _mm_add_ps(
 			_mm_mul_ps(
 				_mm_cvtepi32_ps(cur_frac),
 				one_over_fixed_one
 			),
 			half
 		);
-		__m128 mul = _mm_mul_ps(sub, cur_fixed);
-		__m128 res = _mm_add_ps(current, mul);
+		mul = _mm_mul_ps(sub, cur_fixed);
+		res = _mm_add_ps(current, mul);
 
 		/* Update cur_scalar,dCache ant cur_frac for next iteration */
 		cur_scalar += resampleStep * 2;
@@ -795,6 +796,7 @@ void FAudio_INTERNAL_Amplify_SSE2(
 	uint32_t i;
 	uint32_t header = (16 - (((uint64_t) output) % 16)) / 4;
 	uint32_t tail = ((uint64_t) totalSamples - header) % 4;
+	__m128 volumeVec, minVolumeVec, maxVolumeVec, outVec;
 	if (header == 4)
 	{
 		header = 0;
@@ -814,12 +816,12 @@ void FAudio_INTERNAL_Amplify_SSE2(
 		);
 	}
 
-	__m128 volumeVec = _mm_set1_ps(volume);
-	__m128 minVolumeVec = _mm_set1_ps(-FAUDIO_MAX_VOLUME_LEVEL);
-	__m128 maxVolumeVec = _mm_set1_ps(FAUDIO_MAX_VOLUME_LEVEL);
+	volumeVec = _mm_set1_ps(volume);
+	minVolumeVec = _mm_set1_ps(-FAUDIO_MAX_VOLUME_LEVEL);
+	maxVolumeVec = _mm_set1_ps(FAUDIO_MAX_VOLUME_LEVEL);
 	for (i = header; i < totalSamples - tail; i += 4)
 	{
-		__m128 outVec = _mm_load_ps(output + i);
+		outVec = _mm_load_ps(output + i);
 		outVec = _mm_mul_ps(outVec, volumeVec);
 		outVec = _mm_max_ps(outVec, minVolumeVec);
 		outVec = _mm_min_ps(outVec, maxVolumeVec);
