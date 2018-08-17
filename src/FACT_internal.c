@@ -1145,10 +1145,10 @@ void FACT_INTERNAL_ActivateEvent(
 		/* Ramp/Equation */
 		if (evt->value.settings & 0x01)
 		{
-			/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
+			/* FIXME: Incorporate 2nd derivative into the interpolated pitch (slopeDelta) */
 			skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
 			svResult = (
-				evt->value.ramp.initialSlope * 100 *
+				evt->value.ramp.initialSlope *
 				evt->value.ramp.duration / 1000 *
 				10 /* "Slices" */
 			) + evt->value.ramp.initialValue;
@@ -2113,7 +2113,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			{
 				track->events[i].value.repeats = 0;
 				track->events[i].value.ramp.initialValue = read_f32(ptr);
-				track->events[i].value.ramp.initialSlope = read_f32(ptr);
+				track->events[i].value.ramp.initialSlope = read_f32(ptr) * 100;
 				track->events[i].value.ramp.slopeDelta = read_f32(ptr);
 				track->events[i].value.ramp.duration = read_u16(ptr);
 			}
