@@ -187,7 +187,9 @@ uint32_t FAudio_CreateSourceVoice(
 	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT	)
 	{
-		FAudioWaveFormatExtensible *fmtex = FAudio_malloc(sizeof(FAudioWaveFormatExtensible));
+		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) FAudio_malloc(
+			sizeof(FAudioWaveFormatExtensible)
+		);
 		/* convert PCM to EXTENSIBLE */
 		fmtex->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
 		fmtex->Format.nChannels = pSourceFormat->nChannels;
@@ -211,7 +213,7 @@ uint32_t FAudio_CreateSourceVoice(
 	else
 	{
 		/* direct copy anything else */
-		(*ppSourceVoice)->src.format = FAudio_malloc(
+		(*ppSourceVoice)->src.format = (FAudioWaveFormatEx*) FAudio_malloc(
 			sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize
 		);
 		FAudio_memcpy(
@@ -256,6 +258,19 @@ uint32_t FAudio_CreateSourceVoice(
 	else
 	{
 		FAudio_assert(0 && "Unsupported format tag!");
+	}
+
+	if ((*ppSourceVoice)->src.format->nChannels == 1)
+	{
+		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleMono;
+	}
+	else if ((*ppSourceVoice)->src.format->nChannels == 2)
+	{
+		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleStereo;
+	}
+	else
+	{
+		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleGeneric;
 	}
 
 	(*ppSourceVoice)->src.curBufferOffset = 0;
