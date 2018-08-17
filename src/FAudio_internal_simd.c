@@ -62,8 +62,8 @@
 #include <emmintrin.h>
 #define HAVE_SSE2_INTRINSICS 1
 #endif
-/*#include <emmintrin.h>
-#define HAVE_SSE2_INTRINSICS 1*/
+#include <emmintrin.h>
+#define HAVE_SSE2_INTRINSICS 1
 
 /* SECTION 1: Type Converters */
 
@@ -497,10 +497,8 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 		current_next_2_3=_mm_loadh_pi(current_next_2_3,(__m64*)dCache_3);
 
 		//unpack them to have seperate current and next in 2 vectors. 
-		__m128 current_1=_mm_unpacklo_ps(current_next_0_1,current_next_2_3);
-		__m128 current_2=_mm_unpackhi_ps(current_next_0_1,current_next_2_3);
-		__m128 current=_mm_unpacklo_ps(current_1,current_2);
-		__m128 next=_mm_unpackhi_ps(current_1,current_2);
+		__m128 current=_mm_shuffle_ps(current_next_0_1,current_next_2_3,0x88);//0b1000
+		__m128 next=_mm_shuffle_ps(current_next_0_1,current_next_2_3,0xdd);//0b1101
 
 		__m128 sub=_mm_sub_ps(next,current);
 //convert the fractional part to float and then mul to get the fractions out.
