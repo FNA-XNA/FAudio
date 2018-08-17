@@ -107,7 +107,7 @@ void faudio_filter_update(AudioFilter *p_filter, int p_type, float p_cutoff_freq
 	{
 		// documentation of XAUDIO2_FILTER_PARAMETERS: 
 		// Setting XAUDIO2_FILTER_PARAMETERS with the following values is acoustically equivalent to the filter being fully bypassed.
-		p_filter->params.Type = LowPassFilter;
+		p_filter->params.Type = FAudioLowPassFilter;
 		p_filter->params.Frequency = 1.0f;
 		p_filter->params.OneOverQ = 1.0f;
 	}

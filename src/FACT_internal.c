@@ -711,7 +711,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 						lastX = rpc->points[rpc->pointCount - 1].x;
 						if (lastX > cue->maxRpcReleaseTime)
 						{
-							cue->maxRpcReleaseTime = lastX;
+							cue->maxRpcReleaseTime = (uint32_t) lastX /* bleh */;
 						}
 					}
 				}
@@ -891,7 +891,7 @@ void FACT_INTERNAL_UpdateRPCs(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
 				) == 0) {
-					variableValue = elapsedTrack;
+					variableValue = (float) elapsedTrack;
 				}
 				else if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
@@ -899,11 +899,11 @@ void FACT_INTERNAL_UpdateRPCs(
 				) == 0) {
 					if (cue->playingSound->fadeType == 3) /* Release RPC */
 					{
-						variableValue = timestamp - cue->playingSound->fadeStart;
+						variableValue = (float) (timestamp - cue->playingSound->fadeStart);
 					}
 					else
 					{
-						variableValue = 0;
+						variableValue = 0.0f;
 					}
 				}
 				else
@@ -1259,6 +1259,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 {
 	uint8_t i, j;
 	uint32_t waveState;
+	uint32_t elapsedCue;
 	FACTEventInstance *evtInst;
 	FAudioFilterParameters filterParams;
 	uint8_t finished = 1;
@@ -1312,7 +1313,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 	/* To get the time on a single Cue, subtract from the global time
 	 * the latest start time minus the total time elapsed (minus pause time)
 	 */
-	uint32_t elapsedCue = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
+	elapsedCue = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
 
 	/* RPC updates */
 	sound->rpcData.rpcFilterFreq = -1.0f;
