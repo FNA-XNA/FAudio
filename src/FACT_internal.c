@@ -711,7 +711,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 						lastX = rpc->points[rpc->pointCount - 1].x;
 						if (lastX > cue->maxRpcReleaseTime)
 						{
-							cue->maxRpcReleaseTime = lastX;
+							cue->maxRpcReleaseTime = (uint32_t) lastX /* bleh */;
 						}
 					}
 				}
@@ -891,7 +891,7 @@ void FACT_INTERNAL_UpdateRPCs(
 					engine->variableNames[rpc->variable],
 					"AttackTime"
 				) == 0) {
-					variableValue = elapsedTrack;
+					variableValue = (float) elapsedTrack;
 				}
 				else if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
@@ -899,11 +899,11 @@ void FACT_INTERNAL_UpdateRPCs(
 				) == 0) {
 					if (cue->playingSound->fadeType == 3) /* Release RPC */
 					{
-						variableValue = timestamp - cue->playingSound->fadeStart;
+						variableValue = (float) (timestamp - cue->playingSound->fadeStart);
 					}
 					else
 					{
-						variableValue = 0;
+						variableValue = 0.0f;
 					}
 				}
 				else
@@ -1103,6 +1103,8 @@ void FACT_INTERNAL_ActivateEvent(
 						sound->parentCue->maxRpcReleaseTime
 					);
 				}
+
+				sound->parentCue->state |= FACT_STATE_STOPPING;
 			}
 		}
 
@@ -1143,21 +1145,22 @@ void FACT_INTERNAL_ActivateEvent(
 		/* Ramp/Equation */
 		if (evt->value.settings & 0x01)
 		{
-			/* FIXME: Incorporate 2nd derivative into the interpolated pitch */
+			/* FIXME: Incorporate 2nd derivative into the interpolated pitch (slopeDelta) */
 			skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
 			svResult = (
 				evt->value.ramp.initialSlope *
-				evt->value.ramp.duration *
+				evt->value.ramp.duration / 1000 *
 				10 /* "Slices" */
 			) + evt->value.ramp.initialValue;
 			svResult = (
-				evt->value.ramp.initialValue +
 				(svResult - evt->value.ramp.initialValue)
 			) * FAudio_clamp(
-				(elapsed - evtInst->timestamp) / evt->value.ramp.duration,
+				(float) (elapsed - evtInst->timestamp) / evt->value.ramp.duration,
 				0.0f,
 				1.0f
-			);
+			) + evt->value.ramp.initialValue;
+
+			evtInst->value = svResult;
 		}
 		else
 		{
@@ -1182,7 +1185,15 @@ void FACT_INTERNAL_ActivateEvent(
 			/* Add/Replace */
 			if (evt->value.equation.flags & 0x01)
 			{
-				evtInst->value += svResult;
+				if(	evt->type == FACTEVENT_PITCH ||
+					evt->type == FACTEVENT_PITCHREPEATING	)
+				{
+					evtInst->value = trackInst->evtPitch + svResult;
+				}
+				else
+				{
+					evtInst->value = trackInst->evtVolume + svResult;
+				}
 			}
 			else
 			{
@@ -1248,6 +1259,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 {
 	uint8_t i, j;
 	uint32_t waveState;
+	uint32_t elapsedCue;
 	FACTEventInstance *evtInst;
 	FAudioFilterParameters filterParams;
 	uint8_t finished = 1;
@@ -1301,7 +1313,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 	/* To get the time on a single Cue, subtract from the global time
 	 * the latest start time minus the total time elapsed (minus pause time)
 	 */
-	uint32_t elapsedCue = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
+	elapsedCue = timestamp - (sound->parentCue->start - sound->parentCue->elapsed);
 
 	/* RPC updates */
 	sound->rpcData.rpcFilterFreq = -1.0f;
@@ -2102,7 +2114,7 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			{
 				track->events[i].value.repeats = 0;
 				track->events[i].value.ramp.initialValue = read_f32(ptr);
-				track->events[i].value.ramp.initialSlope = read_f32(ptr);
+				track->events[i].value.ramp.initialSlope = read_f32(ptr) * 100;
 				track->events[i].value.ramp.slopeDelta = read_f32(ptr);
 				track->events[i].value.ramp.duration = read_u16(ptr);
 			}

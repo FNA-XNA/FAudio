@@ -45,7 +45,7 @@ void faudio_destroy_context(AudioContext *context)
 void faudio_create_voice(AudioContext *context, float *buffer, size_t buffer_size, int sample_rate, int num_channels)
 {
 	// create reverb effect
-	void *fapo = NULL;
+	FAPO *fapo = NULL;
 	uint32_t hr = FAudioCreateReverb(&fapo, 0);
 
 	if (hr != 0)
