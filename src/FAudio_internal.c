@@ -408,7 +408,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
-	uint32_t i, j, co, ci;
+	uint32_t i;
 	/* Decode/Resample variables */
 	uint64_t toDecode;
 	uint64_t toResample;
@@ -579,26 +579,16 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			oChan = out->mix.inputChannels;
 		}
 
-		/* TODO: SSE */
-		for (j = 0; j < mixed; j += 1)
-		for (co = 0; co < oChan; co += 1)
-		for (ci = 0; ci < voice->outputChannels; ci += 1)
-		{
-			/* Include source/channel volumes in the mix! */
-			stream[j * oChan + co] += (
-				effectOut[j * voice->outputChannels + ci] *
-				voice->channelVolume[ci] *
-				voice->volume *
-				voice->sendCoefficients[i][
-					co * voice->outputChannels + ci
-				]
-			);
-			stream[j * oChan + co] = FAudio_clamp(
-				stream[j * oChan + co],
-				-FAUDIO_MAX_VOLUME_LEVEL,
-				FAUDIO_MAX_VOLUME_LEVEL
-			);
-		}
+		voice->sendMix[i](
+			mixed,
+			voice->outputChannels,
+			oChan,
+			voice->volume,
+			effectOut,
+			stream,
+			voice->channelVolume,
+			voice->sendCoefficients[i]
+		);
 	}
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
 
@@ -617,7 +607,7 @@ end:
 
 static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 {
-	uint32_t i, j, co, ci;
+	uint32_t i;
 	float *stream;
 	uint32_t oChan;
 	FAudioVoice *out;
@@ -698,24 +688,16 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			oChan = out->mix.inputChannels;
 		}
 
-		/* TODO: SSE */
-		for (j = 0; j < resampled; j += 1)
-		for (co = 0; co < oChan; co += 1)
-		for (ci = 0; ci < voice->outputChannels; ci += 1)
-		{
-			stream[j * oChan + co] += (
-				effectOut[j * voice->outputChannels + ci] *
-				voice->channelVolume[ci] *
-				voice->sendCoefficients[i][
-					co * voice->outputChannels + ci
-				]
-			);
-			stream[j * oChan + co] = FAudio_clamp(
-				stream[j * oChan + co],
-				-FAUDIO_MAX_VOLUME_LEVEL,
-				FAUDIO_MAX_VOLUME_LEVEL
-			);
-		}
+		voice->sendMix[i](
+			resampled,
+			voice->outputChannels,
+			oChan,
+			1.0f,
+			effectOut,
+			stream,
+			voice->channelVolume,
+			voice->sendCoefficients[i]
+		);
 	}
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
 

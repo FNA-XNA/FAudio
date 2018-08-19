@@ -840,7 +840,327 @@ void FAudio_INTERNAL_Amplify_SSE2(
 }
 #endif /* HAVE_SSE2_INTRINSICS */
 
-/* SECTION 4: InitSIMDFunctions. Assigns based on SSE2/NEON support. */
+/* SECTION 4: Mixer Functions */
+
+void FAudio_INTERNAL_Mix_Generic_Scalar(
+	uint32_t toMix,
+	uint32_t srcChans,
+	uint32_t dstChans,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i, co, ci;
+	float *src = srcData;
+	float *dst = dstData;
+
+	for (i = 0; i < toMix; i += 1)
+	for (co = 0; co < dstChans; co += 1, dst += 1)
+	{
+		for (ci = 0; ci < srcChans; ci += 1, src += 1)
+		{
+			*dst += (
+				(*src) *
+				channelVolume[ci] *
+				baseVolume *
+				coefficients[co * srcChans + ci]
+			);
+		}
+		*dst = FAudio_clamp(
+			*dst,
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_1in_1out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float *src = srcData;
+	float *dst = dstData;
+	float totalVolume = baseVolume * channelVolume[0] * coefficients[0];
+	for (i = 0; i < toMix; i += 1, src += 1, dst += 1)
+	{
+		/* Base source data, combined with the coefficients... */
+		dst[0] += src[0] * totalVolume;
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_1in_2out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float *src = srcData;
+	float *dst = dstData;
+	float totalVolume = baseVolume * channelVolume[0];
+	for (i = 0; i < toMix; i += 1, src += 1, dst += 2)
+	{
+		/* Base source data... */
+		const float sample = src[0] * totalVolume;
+
+		/* ... combined with the coefficients... */
+		dst[0] += sample * coefficients[0];
+		dst[1] += sample * coefficients[1];
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[1] = FAudio_clamp(
+			dst[1],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_1in_6out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float *src = srcData;
+	float *dst = dstData;
+	float totalVolume = baseVolume * channelVolume[0];
+	for (i = 0; i < toMix; i += 1, src += 1, dst += 6)
+	{
+		/* Base source data... */
+		const float sample = src[0] * totalVolume;
+
+		/* ... combined with the coefficients... */
+		dst[0] += sample * coefficients[0];
+		dst[1] += sample * coefficients[1];
+		dst[2] += sample * coefficients[2];
+		dst[3] += sample * coefficients[3];
+		dst[4] += sample * coefficients[4];
+		dst[5] += sample * coefficients[5];
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[1] = FAudio_clamp(
+			dst[1],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[2] = FAudio_clamp(
+			dst[2],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[3] = FAudio_clamp(
+			dst[3],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[4] = FAudio_clamp(
+			dst[4],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[5] = FAudio_clamp(
+			dst[5],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_2in_1out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float *src = srcData;
+	float *dst = dstData;
+	float totalVolumeL = baseVolume * channelVolume[0] * coefficients[0];
+	float totalVolumeR = baseVolume * channelVolume[1] * coefficients[1];
+	for (i = 0; i < toMix; i += 1, src += 2, dst += 1)
+	{
+		/* Base source data, combined with the coefficients... */
+		dst[0] += (
+			(src[0] * totalVolumeL) +
+			(src[1] * totalVolumeR)
+		);
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_2in_2out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float *src = srcData;
+	float *dst = dstData;
+	float totalVolumeL = baseVolume * channelVolume[0];
+	float totalVolumeR = baseVolume * channelVolume[1];
+	for (i = 0; i < toMix; i += 1, src += 2, dst += 2)
+	{
+		/* Base source data... */
+		const float left = src[0] * totalVolumeL;
+		const float right = src[1] * totalVolumeR;
+
+		/* ... combined with the coefficients... */
+		dst[0] += (
+			(left * coefficients[0]) +
+			(right * coefficients[1])
+		);
+		dst[1] += (
+			(left * coefficients[2]) +
+			(right * coefficients[3])
+		);
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[1] = FAudio_clamp(
+			dst[1],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_2in_6out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float *src = srcData;
+	float *dst = dstData;
+	float totalVolumeL = baseVolume * channelVolume[0];
+	float totalVolumeR = baseVolume * channelVolume[1];
+	for (i = 0; i < toMix; i += 1, src += 2, dst += 6)
+	{
+		/* Base source data... */
+		const float left = src[0] * totalVolumeL;
+		const float right = src[1] * totalVolumeR;
+
+		/* ... combined with the coefficients... */
+		dst[0] += (
+			(left * coefficients[0]) +
+			(right * coefficients[1])
+		);
+		dst[1] += (
+			(left * coefficients[2]) +
+			(right * coefficients[3])
+		);
+		dst[2] += (
+			(left * coefficients[4]) +
+			(right * coefficients[5])
+		);
+		dst[3] += (
+			(left * coefficients[6]) +
+			(right * coefficients[7])
+		);
+		dst[4] += (
+			(left * coefficients[8]) +
+			(right * coefficients[9])
+		);
+		dst[5] += (
+			(left * coefficients[10]) +
+			(right * coefficients[11])
+		);
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[1] = FAudio_clamp(
+			dst[1],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[2] = FAudio_clamp(
+			dst[2],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[3] = FAudio_clamp(
+			dst[3],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[4] = FAudio_clamp(
+			dst[4],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[5] = FAudio_clamp(
+			dst[5],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+/* SECTION 5: InitSIMDFunctions. Assigns based on SSE2/NEON support. */
 
 void (*FAudio_INTERNAL_Convert_U8_To_F32)(
 	const uint8_t *restrict src,

@@ -210,6 +210,17 @@ typedef void (FAUDIOCALL * FAudioResampleCallback)(
 	uint64_t toResample
 );
 
+typedef void (FAUDIOCALL * FAudioMixCallback)(
+	uint32_t toMix,
+	uint32_t srcChans,
+	uint32_t dstChans,
+	float baseVolume,
+	float *restrict srcData,
+	float *restrict dstData,
+	float *restrict channelVolume,
+	float *restrict coefficients
+);
+
 typedef void* FAudioPlatformFixedRateSRC;
 
 typedef float FAudioFilterState[4];
@@ -250,6 +261,7 @@ struct FAudioVoice
 
 	FAudioVoiceSends sends;
 	float **sendCoefficients;
+	FAudioMixCallback *sendMix;
 	struct
 	{
 		uint32_t count;
@@ -343,6 +355,10 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 
 /* SIMD Stuff */
 
+/* Callbacks declared as functions (rather than function pointers) are
+ * scalar-only, for now. SIMD versions should be possible for these.
+ */
+
 extern void (*FAudio_INTERNAL_Convert_U8_To_F32)(
 	const uint8_t *restrict src,
 	float *restrict dst,
@@ -353,6 +369,7 @@ extern void (*FAudio_INTERNAL_Convert_S16_To_F32)(
 	float *restrict dst,
 	uint32_t len
 );
+
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
 extern void FAudio_INTERNAL_ResampleGeneric(
@@ -360,12 +377,36 @@ extern void FAudio_INTERNAL_ResampleGeneric(
 	float **resampleCache,
 	uint64_t toResample
 );
+
 extern void (*FAudio_INTERNAL_Amplify)(
 	float *output,
 	uint32_t totalSamples,
 	float volume
 );
+
+#define MIX_FUNC(type) \
+	extern void FAudio_INTERNAL_Mix_##type##_Scalar( \
+		uint32_t toMix, \
+		uint32_t srcChans, \
+		uint32_t dstChans, \
+		float baseVolume, \
+		float *restrict srcData, \
+		float *restrict dstData, \
+		float *restrict channelVolume, \
+		float *restrict coefficients \
+	);
+MIX_FUNC(Generic)
+MIX_FUNC(1in_1out)
+MIX_FUNC(1in_2out)
+MIX_FUNC(1in_6out)
+MIX_FUNC(2in_1out)
+MIX_FUNC(2in_2out)
+MIX_FUNC(2in_6out)
+#undef MIX_FUNC
+
 void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
+
+/* Decoders */
 
 #define DECODE_FUNC(type) \
 	extern void FAudio_INTERNAL_Decode##type( \

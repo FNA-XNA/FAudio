@@ -555,6 +555,10 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		FAudio_free(voice->sendCoefficients);
 	}
+	if (voice->sendMix != NULL)
+	{
+		FAudio_free(voice->sendMix);
+	}
 	if (voice->sends.pSends != NULL)
 	{
 		FAudio_free(voice->sends.pSends);
@@ -588,9 +592,12 @@ uint32_t FAudioVoice_SetOutputVoices(
 		pSendList->SendCount * sizeof(FAudioSendDescriptor)
 	);
 
-	/* Allocate/Reset default output matrix */
+	/* Allocate/Reset default output matrix, mixer function */
 	voice->sendCoefficients = (float**) FAudio_malloc(
 		sizeof(float*) * pSendList->SendCount
+	);
+	voice->sendMix = (FAudioMixCallback*) FAudio_malloc(
+		sizeof(FAudioMixCallback) * pSendList->SendCount
 	);
 	for (i = 0; i < pSendList->SendCount; i += 1)
 	{
@@ -610,6 +617,49 @@ uint32_t FAudioVoice_SetOutputVoices(
 			voice->outputChannels,
 			outChannels
 		);
+
+		if (voice->outputChannels == 1)
+		{
+			if (outChannels == 1)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_1in_1out_Scalar;
+			}
+			else if (outChannels == 2)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_1in_2out_Scalar;
+			}
+			else if (outChannels == 6)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_1in_6out_Scalar;
+			}
+			else
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_Generic_Scalar;
+			}
+		}
+		else if (voice->outputChannels == 2)
+		{
+			if (outChannels == 1)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_2in_1out_Scalar;
+			}
+			else if (outChannels == 2)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_2in_2out_Scalar;
+			}
+			else if (outChannels == 6)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_2in_6out_Scalar;
+			}
+			else
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_Generic_Scalar;
+			}
+		}
+		else
+		{
+			voice->sendMix[i] = FAudio_INTERNAL_Mix_Generic_Scalar;
+		}
 	}
 
 	/* Allocate resample cache */
@@ -1129,6 +1179,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		if (voice->sendCoefficients != NULL)
 		{
 			FAudio_free(voice->sendCoefficients);
+		}
+		if (voice->sendMix != NULL)
+		{
+			FAudio_free(voice->sendMix);
 		}
 		if (voice->sends.pSends != NULL)
 		{
