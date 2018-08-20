@@ -762,6 +762,380 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 }
 #endif /* HAVE_SSE2_INTRINSICS */
 
+#if HAVE_NEON_INTRINSICS
+void FAudio_INTERNAL_ResampleMono_NEON(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	/* This is the header, the Dest needs to be aligned to 16B */
+	uint32_t i;
+	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
+	float *dCache_1, *dCache_2, *dCache_3;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t *resampleOffset = &voice->src.resampleOffset;
+	uint64_t resampleStep = voice->src.resampleStep;
+	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
+	uint32_t tail, header = (16 - (uint64_t) (*resampleCache) % 16) / 4;
+	float32x4_t one_over_fixed_one, half, current_next_0_1, current_next_2_3,
+		current, next, sub, cur_fixed, mul, res;
+	int32x4_t cur_frac, adder_frac, adder_frac_loop;
+	if (header == 4)
+	{
+		header = 0;
+	}
+
+	for (i = 0; i < header; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[1] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION);
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+	toResample -= header;
+
+	/* initialising the varius cur
+	 * cur_frac is the fractional part of cur with 4 samples. as the
+	 * fractional part is 32 bit unsigned value, it can be just added
+	 * and the modulu operation for keeping the fractional part will be implicit.
+	 * the 0.5 is for converting signed values to float (no unsigned convert),
+	 * the 0.5 is added later.
+	 */
+	cur_frac = vdupq_n_s32(
+		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
+	);
+	int32_t __attribute__((aligned(16))) data[4] =
+	{
+		0,
+		(uint32_t)(resampleStep & FIXED_FRACTION_MASK),
+		(uint32_t)((resampleStep * 2) & FIXED_FRACTION_MASK),
+		(uint32_t)((resampleStep * 3) & FIXED_FRACTION_MASK)
+	};
+	adder_frac = vld1q_s32(data);
+	cur_frac = vaddq_s32(cur_frac, adder_frac);
+
+	/* The various cur_scalar is for the different samples
+	 * (1, 2, 3 compared to original cur_scalar = 0)
+	 */
+	cur_scalar_1 = cur_scalar + resampleStep;
+	cur_scalar_2 = cur_scalar + resampleStep * 2;
+	cur_scalar_3 = cur_scalar + resampleStep * 3;
+	dCache_1 = dCache + (cur_scalar_1 >> FIXED_PRECISION);
+	dCache_2 = dCache + (cur_scalar_2 >> FIXED_PRECISION);
+	dCache_3 = dCache + (cur_scalar_3 >> FIXED_PRECISION);
+	cur_scalar &= FIXED_FRACTION_MASK;
+	cur_scalar_1 &= FIXED_FRACTION_MASK;
+	cur_scalar_2 &= FIXED_FRACTION_MASK;
+	cur_scalar_3 &= FIXED_FRACTION_MASK;
+
+	/* Constants */
+	one_over_fixed_one = vdupq_n_f32(1.0f / FIXED_ONE);
+	half = vdupq_n_f32(0.5f);
+	adder_frac_loop = vdupq_n_s32(
+		(uint32_t) ((resampleStep * 4) & FIXED_FRACTION_MASK)
+	);
+
+	tail = toResample % 4;
+	for (i = 0; i < toResample - tail; i += 4)
+	{
+		/* This does not compile for me for some reason but should be used:
+		 * current_next_0_1 = _mm_undefined_ps();
+		 * current_next_2_3 = _mm_undefined_ps();
+		 */
+
+		/* current next holds 2 pairs of the sample and the sample + 1
+		 * after that need to seperate them.
+		 */
+		current_next_0_1 = vcombine_f32(
+			vld1_f32(dCache),
+			vld1_f32(dCache_1)
+		);
+		current_next_2_3 = vcombine_f32(
+			vld1_f32(dCache_2),
+			vld1_f32(dCache_3)
+		);
+
+		/* Unpack them to have seperate current and next in 2 vectors. */
+		current = vmovq_n_f32(vgetq_lane_f32(current_next_0_1, 0x88 & 0x3)); /* 0b1000 */
+		current = vsetq_lane_f32(vgetq_lane_f32(current_next_0_1, (0x88 >> 2) & 0x3), current, 1);
+		current = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0x88 >> 4) & 0x3), current, 2);
+		current = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0x88 >> 6) & 0x3), current, 3);
+		next = vmovq_n_f32(vgetq_lane_f32(current_next_0_1, 0xdd & 0x3));  /* 0b1101 */
+		next = vsetq_lane_f32(vgetq_lane_f32(current_next_0_1, (0xdd >> 2) & 0x3), next, 1);
+		next = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0xdd >> 4) & 0x3), next, 2);
+		next = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0xdd >> 6) & 0x3), next, 3);
+
+		sub = vsubq_f32(next, current);
+
+		/* Convert the fractional part to float and then mul to get the fractions out.
+		 * then add back the 0.5 we subtracted before.
+		 */
+		cur_fixed = vaddq_f32(
+			vmulq_f32(
+				vcvtq_f32_s32(cur_frac),
+				one_over_fixed_one
+			),
+			half
+		);
+		mul = vmulq_f32(sub, cur_fixed);
+		res = vaddq_f32(current, mul);
+
+		/* Update cur scalar for next iteration (or next loop) */
+		cur_scalar += resampleStep * 4;
+		cur_scalar_1 += resampleStep * 4;
+		cur_scalar_2 += resampleStep * 4;
+		cur_scalar_3 += resampleStep * 4;
+
+		/* update dCaches for next iteration */
+		dCache = dCache + (cur_scalar >> FIXED_PRECISION);
+		dCache_1 = dCache_1 + (cur_scalar_1 >> FIXED_PRECISION);
+		dCache_2 = dCache_2 + (cur_scalar_2 >> FIXED_PRECISION);
+		dCache_3 = dCache_3 + (cur_scalar_3 >> FIXED_PRECISION);
+		cur_scalar &= FIXED_FRACTION_MASK;
+		cur_scalar_1 &= FIXED_FRACTION_MASK;
+		cur_scalar_2 &= FIXED_FRACTION_MASK;
+		cur_scalar_3 &= FIXED_FRACTION_MASK;
+
+		cur_frac = vaddq_s32(cur_frac, adder_frac_loop);
+
+		/* Store back */
+		vst1q_f32(*resampleCache, res);
+		(*resampleCache) = (*resampleCache) + 4;
+
+	}
+	*resampleOffset += resampleStep * (toResample - tail);
+
+	/* This is the tail. */
+	for (i = 0; i < tail; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[1] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION);
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+
+}
+
+#if 0 /* FIXME: See next occurrence of FIXME... -flibit */
+void FAudio_INTERNAL_ResampleStereo_NEON(
+	FAudioSourceVoice *voice,
+	float **resampleCache,
+	uint64_t toResample
+) {
+	uint32_t i, tail, header;
+	uint64_t cur_scalar, cur_scalar_1;
+	float *dCache_1;
+	float *dCache = voice->audio->decodeCache;
+	uint64_t *resampleOffset = &voice->src.resampleOffset;
+	uint64_t resampleStep = voice->src.resampleStep;
+	float32x4_t one_over_fixed_one, half, current_next_1, current_next_2,
+		current, next, sub, cur_fixed, mul, res;
+	int32x4_t cur_frac, adder_frac, adder_frac_loop;
+
+	/* This is the header, the Dest needs to be aligned to 16B */
+	header = (16 - (uint64_t) (*resampleCache) % 16) / 8;
+	if (header == 2)
+	{
+		header = 0;
+	}
+	cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
+	for (i = 0; i < header; i += 2)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[2] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+		*(*resampleCache)++ = (float) (
+			dCache[1] +
+			(dCache[3] - dCache[1]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION) * 2;
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+	toResample -= header;
+
+	/* initialising the varius cur.
+	 * cur_frac holds the fractional part of cur.
+	 * to avoid duplication please see the mono part for a thorough
+	 * explanation.
+	 */
+	cur_frac = vdupq_n_s32(
+		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
+	);
+	int32_t __attribute__((aligned(16))) data[4] =
+	{
+		0,
+		0,
+		(uint32_t) (resampleStep & FIXED_FRACTION_MASK),
+		(uint32_t) (resampleStep & FIXED_FRACTION_MASK)
+	};
+	adder_frac = vld1q_s32(data);
+	cur_frac = vaddq_s32(cur_frac, adder_frac);
+
+	/* dCache_1 is the pointer for dcache in the next resample pos. */
+	cur_scalar_1 = cur_scalar + resampleStep;
+	dCache_1 = dCache + (cur_scalar_1 >> FIXED_PRECISION) * 2;
+	cur_scalar_1 &= FIXED_FRACTION_MASK;
+
+	one_over_fixed_one = vdupq_n_f32(1.0f / FIXED_ONE);
+	half = vdupq_n_f32(0.5f);
+	adder_frac_loop = vdupq_n_s32(
+		(uint32_t) ((resampleStep * 2) & FIXED_FRACTION_MASK)
+	);
+
+	tail = toResample % 2;
+	for (i = 0; i < toResample - tail; i += 2)
+	{
+		/* This does not compile for me for some reason but should be used:
+		 * current_next_1 = _mm_undefined_ps();
+		 * current_next_2 = _mm_undefined_ps();
+		 */
+
+		/* Current_next_1 and current_next_2 each holds 4 src
+		 * sample points for getting 4 dest resample point at the end.
+		 * current_next_1 holds:
+		 * (current_ch_1, current_ch_2, next_ch_1, next_ch_2)
+		 * for the first resample position, while current_next_2 holds
+		 * the same for the 2nd resample position
+		 */
+		current_next_1 = vld1q_f32(dCache); /* A1B1A2B2 */
+		current_next_2 = vld1q_f32(dCache_1); /* A3B3A4B4 */
+
+		/* Unpack them to get the current and the next in seperate vectors. */
+#if 0 /* FIXME */
+		current = _mm_castpd_ps(
+			_mm_unpacklo_pd(
+				_mm_castps_pd(current_next_1),
+				_mm_castps_pd(current_next_2)
+			)
+		);
+		next = _mm_castpd_ps(
+			_mm_unpackhi_pd(
+				_mm_castps_pd(current_next_1),
+				_mm_castps_pd(current_next_2)
+			)
+		);
+#endif
+
+		sub = vsubq_f32(next, current);
+
+		/* Adding the 0.5 back.
+		 * See mono explanation for more elaborate explanation.
+		 */
+		cur_fixed = vaddq_f32(
+			vmulq_f32(
+				vcvtq_f32_s32(cur_frac),
+				one_over_fixed_one
+			),
+			half
+		);
+		mul = vmulq_f32(sub, cur_fixed);
+		res = vaddq_f32(current, mul);
+
+		/* Update cur_scalar, dCache and cur_frac for next iteration */
+		cur_scalar += resampleStep * 2;
+		cur_scalar_1 += resampleStep * 2;
+
+		dCache = dCache + (cur_scalar >> FIXED_PRECISION) * 2;
+		dCache_1 = dCache_1 + (cur_scalar_1 >> FIXED_PRECISION) * 2;
+		cur_scalar &= FIXED_FRACTION_MASK;
+		cur_scalar_1 &= FIXED_FRACTION_MASK;
+		cur_frac = vaddq_s32(cur_frac, adder_frac_loop);
+
+		/* Store the results */
+		vst1q_f32(*resampleCache, res);
+		(*resampleCache) = (*resampleCache) + 4;
+	}
+	*resampleOffset += resampleStep * (toResample - tail);
+
+	/* This is the tail. */
+	for (i = 0; i < tail; i += 1)
+	{
+		/* lerp, then convert to float value */
+		*(*resampleCache)++ = (float) (
+			dCache[0] +
+			(dCache[2] - dCache[0]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+		*(*resampleCache)++ = (float)(
+			dCache[1] +
+			(dCache[3] - dCache[1]) *
+			FIXED_TO_FLOAT(cur_scalar)
+		);
+
+		/* Increment fraction offset by the stepping value */
+		*resampleOffset += resampleStep;
+		cur_scalar += resampleStep;
+
+		/* Only increment the sample offset by integer values.
+		 * Sometimes this will be 0 until cur accumulates
+		 * enough steps, especially for "slow" rates.
+		 */
+		dCache += (cur_scalar >> FIXED_PRECISION) * 2;
+
+		/* Now that any integer has been added, drop it.
+		 * The offset pointer will preserve the total.
+		 */
+		cur_scalar &= FIXED_FRACTION_MASK;
+	}
+
+}
+#endif
+#endif /* HAVE_NEON_INTRINSICS */
+
 /* SECTION 3: Amplifiers */
 
 #if NEED_SCALAR_CONVERTER_FALLBACKS
@@ -1236,7 +1610,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 	{
 		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_NEON;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
-		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_Scalar;
+		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_NEON;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_NEON;
 		return;
