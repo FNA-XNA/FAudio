@@ -411,7 +411,6 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	float **resampleCache,
 	uint64_t toResample
 ) {
-	/* This is the header, the Dest needs to be aligned to 16B */
 	uint32_t i;
 	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
 	float *dCache_1, *dCache_2, *dCache_3;
@@ -423,11 +422,12 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	__m128 one_over_fixed_one, half, current_next_0_1, current_next_2_3,
 		current, next, sub, cur_fixed, mul, res;
 	__m128i cur_frac, adder_frac, adder_frac_loop;
+
+	/* This is the header, the Dest needs to be aligned to 16B */
 	if (header == 4)
 	{
 		header = 0;
 	}
-
 	for (i = 0; i < header; i += 1)
 	{
 		/* lerp, then convert to float value */
@@ -768,7 +768,6 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	float **resampleCache,
 	uint64_t toResample
 ) {
-	/* This is the header, the Dest needs to be aligned to 16B */
 	uint32_t i;
 	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
 	float *dCache_1, *dCache_2, *dCache_3;
@@ -780,11 +779,12 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	float32x4_t one_over_fixed_one, half, current_next_0_1, current_next_2_3,
 		current, next, sub, cur_fixed, mul, res;
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
+
+	/* This is the header, the Dest needs to be aligned to 16B */
 	if (header == 4)
 	{
 		header = 0;
 	}
-
 	for (i = 0; i < header; i += 1)
 	{
 		/* lerp, then convert to float value */
