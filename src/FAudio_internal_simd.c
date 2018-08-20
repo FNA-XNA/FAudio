@@ -825,9 +825,9 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	int32_t __attribute__((aligned(16))) data[4] =
 	{
 		0,
-		(uint32_t)(resampleStep & FIXED_FRACTION_MASK),
-		(uint32_t)((resampleStep * 2) & FIXED_FRACTION_MASK),
-		(uint32_t)((resampleStep * 3) & FIXED_FRACTION_MASK)
+		(uint32_t) (resampleStep & FIXED_FRACTION_MASK),
+		(uint32_t) ((resampleStep * 2) & FIXED_FRACTION_MASK),
+		(uint32_t) ((resampleStep * 3) & FIXED_FRACTION_MASK)
 	};
 	adder_frac = vld1q_s32(data);
 	cur_frac = vaddq_s32(cur_frac, adder_frac);
@@ -1110,7 +1110,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 			(dCache[2] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
 		);
-		*(*resampleCache)++ = (float)(
+		*(*resampleCache)++ = (float) (
 			dCache[1] +
 			(dCache[3] - dCache[1]) *
 			FIXED_TO_FLOAT(cur_scalar)
