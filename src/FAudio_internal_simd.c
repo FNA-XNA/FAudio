@@ -714,7 +714,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		mul = _mm_mul_ps(sub, cur_fixed);
 		res = _mm_add_ps(current, mul);
 
-		/* Update cur_scalar,dCache ant cur_frac for next iteration */
+		/* Update cur_scalar, dCache and cur_frac for next iteration */
 		cur_scalar += resampleStep * 2;
 		cur_scalar_1 += resampleStep * 2;
 
@@ -847,15 +847,12 @@ void FAudio_INTERNAL_Mix_Generic_Scalar(
 	uint32_t srcChans,
 	uint32_t dstChans,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i, co, ci;
-	float *src = srcData;
-	float *dst = dstData;
-
 	for (i = 0; i < toMix; i += 1)
 	for (co = 0; co < dstChans; co += 1, dst += 1)
 	{
@@ -881,14 +878,12 @@ void FAudio_INTERNAL_Mix_1in_1out_Scalar(
 	uint32_t UNUSED1,
 	uint32_t UNUSED2,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float *src = srcData;
-	float *dst = dstData;
 	float totalVolume = baseVolume * channelVolume[0] * coefficients[0];
 	for (i = 0; i < toMix; i += 1, src += 1, dst += 1)
 	{
@@ -909,14 +904,12 @@ void FAudio_INTERNAL_Mix_1in_2out_Scalar(
 	uint32_t UNUSED1,
 	uint32_t UNUSED2,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float *src = srcData;
-	float *dst = dstData;
 	float totalVolume = baseVolume * channelVolume[0];
 	for (i = 0; i < toMix; i += 1, src += 1, dst += 2)
 	{
@@ -946,14 +939,12 @@ void FAudio_INTERNAL_Mix_1in_6out_Scalar(
 	uint32_t UNUSED1,
 	uint32_t UNUSED2,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float *src = srcData;
-	float *dst = dstData;
 	float totalVolume = baseVolume * channelVolume[0];
 	for (i = 0; i < toMix; i += 1, src += 1, dst += 6)
 	{
@@ -1007,14 +998,12 @@ void FAudio_INTERNAL_Mix_2in_1out_Scalar(
 	uint32_t UNUSED1,
 	uint32_t UNUSED2,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float *src = srcData;
-	float *dst = dstData;
 	float totalVolumeL = baseVolume * channelVolume[0] * coefficients[0];
 	float totalVolumeR = baseVolume * channelVolume[1] * coefficients[1];
 	for (i = 0; i < toMix; i += 1, src += 2, dst += 1)
@@ -1039,14 +1028,12 @@ void FAudio_INTERNAL_Mix_2in_2out_Scalar(
 	uint32_t UNUSED1,
 	uint32_t UNUSED2,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float *src = srcData;
-	float *dst = dstData;
 	float totalVolumeL = baseVolume * channelVolume[0];
 	float totalVolumeR = baseVolume * channelVolume[1];
 	for (i = 0; i < toMix; i += 1, src += 2, dst += 2)
@@ -1084,14 +1071,12 @@ void FAudio_INTERNAL_Mix_2in_6out_Scalar(
 	uint32_t UNUSED1,
 	uint32_t UNUSED2,
 	float baseVolume,
-	float *restrict srcData,
-	float *restrict dstData,
+	float *restrict src,
+	float *restrict dst,
 	float *restrict channelVolume,
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float *src = srcData;
-	float *dst = dstData;
 	float totalVolumeL = baseVolume * channelVolume[0];
 	float totalVolumeR = baseVolume * channelVolume[1];
 	for (i = 0; i < toMix; i += 1, src += 2, dst += 6)
