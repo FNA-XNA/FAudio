@@ -64,8 +64,6 @@
 #include <emmintrin.h>
 #define HAVE_SSE2_INTRINSICS 1
 #endif
-#include <emmintrin.h>
-#define HAVE_SSE2_INTRINSICS 1
 
 /* SECTION 1: Type Converters */
 
@@ -766,7 +764,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 
 /* SECTION 3: Amplifiers */
 
-#if 1 /* TODO: NEED_SCALAR_CONVERTER_FALLBACKS */
+#if NEED_SCALAR_CONVERTER_FALLBACKS
 void FAudio_INTERNAL_Amplify_Scalar(
 	float* output,
 	uint32_t totalSamples,
@@ -839,6 +837,59 @@ void FAudio_INTERNAL_Amplify_SSE2(
 	}
 }
 #endif /* HAVE_SSE2_INTRINSICS */
+
+#if HAVE_NEON_INTRINSICS
+void FAudio_INTERNAL_Amplify_NEON(
+	float* output,
+	uint32_t totalSamples,
+	float volume
+) {
+	uint32_t i;
+	uint32_t header = (16 - (((uint64_t)output) % 16)) / 4;
+	uint32_t tail = ((uint64_t)totalSamples - header) % 4;
+	float32x4_t volumeVec, minVolumeVec, maxVolumeVec, outVec;
+	if (header == 4)
+	{
+		header = 0;
+	}
+	if (tail == 4)
+	{
+		tail = 0;
+	}
+
+	for (i = 0; i < header; i += 1)
+	{
+		output[i] *= volume;
+		output[i] = FAudio_clamp(
+			output[i],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+
+	volumeVec = vdupq_n_f32(volume);
+	minVolumeVec = vdupq_n_f32(-FAUDIO_MAX_VOLUME_LEVEL);
+	maxVolumeVec = vdupq_n_f32(FAUDIO_MAX_VOLUME_LEVEL);
+	for (i = header; i < totalSamples - tail; i += 4)
+	{
+		outVec = vld1q_f32(output + i);
+		outVec = vmulq_f32(outVec, volumeVec);
+		outVec = vmaxq_f32(outVec, minVolumeVec);
+		outVec = vminq_f32(outVec, maxVolumeVec);
+		vst1q_f32(output + i, outVec);
+	}
+
+	for (i = totalSamples - tail; i < totalSamples; i += 1)
+	{
+		output[i] *= volume;
+		output[i] = FAudio_clamp(
+			output[i],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+#endif /* HAVE_NEON_INTRINSICS */
 
 /* SECTION 4: Mixer Functions */
 
@@ -1187,7 +1238,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_Scalar;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
-		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_Scalar;
+		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_NEON;
 		return;
 	}
 #endif
