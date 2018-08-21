@@ -958,8 +958,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	float *dCache = voice->audio->decodeCache;
 	uint64_t *resampleOffset = &voice->src.resampleOffset;
 	uint64_t resampleStep = voice->src.resampleStep;
-	float32x4_t one_over_fixed_one, half, current_next_1, current_next_2,
-		current, next, sub, cur_fixed, mul, res;
+	float32x4_t one_over_fixed_one, half, current, next, sub, cur_fixed, mul, res;
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
