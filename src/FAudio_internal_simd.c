@@ -328,7 +328,7 @@ void FAudio_INTERNAL_ResampleGeneric(
 	}
 }
 
-#if 1 /* TODO: NEED_SCALAR_CONVERTER_FALLBACKS */
+#if NEED_SCALAR_CONVERTER_FALLBACKS
 void FAudio_INTERNAL_ResampleMono_Scalar(
 	FAudioSourceVoice *voice,
 	float **resampleCache,
@@ -856,13 +856,8 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	tail = toResample % 4;
 	for (i = 0; i < toResample - tail; i += 4)
 	{
-		/* This does not compile for me for some reason but should be used:
-		 * current_next_0_1 = _mm_undefined_ps();
-		 * current_next_2_3 = _mm_undefined_ps();
-		 */
-
 		/* current next holds 2 pairs of the sample and the sample + 1
-		 * after that need to seperate them.
+		 * after that need to separate them.
 		 */
 		current_next_0_1 = vcombine_f32(
 			vld1_f32(dCache),
@@ -952,7 +947,6 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 
 }
 
-#if 0 /* FIXME: See next occurrence of FIXME... -flibit */
 void FAudio_INTERNAL_ResampleStereo_NEON(
 	FAudioSourceVoice *voice,
 	float **resampleCache,
@@ -1039,11 +1033,6 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	tail = toResample % 2;
 	for (i = 0; i < toResample - tail; i += 2)
 	{
-		/* This does not compile for me for some reason but should be used:
-		 * current_next_1 = _mm_undefined_ps();
-		 * current_next_2 = _mm_undefined_ps();
-		 */
-
 		/* Current_next_1 and current_next_2 each holds 4 src
 		 * sample points for getting 4 dest resample point at the end.
 		 * current_next_1 holds:
@@ -1051,24 +1040,14 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 		 * for the first resample position, while current_next_2 holds
 		 * the same for the 2nd resample position
 		 */
-		current_next_1 = vld1q_f32(dCache); /* A1B1A2B2 */
-		current_next_2 = vld1q_f32(dCache_1); /* A3B3A4B4 */
-
-		/* Unpack them to get the current and the next in seperate vectors. */
-#if 0 /* FIXME */
-		current = _mm_castpd_ps(
-			_mm_unpacklo_pd(
-				_mm_castps_pd(current_next_1),
-				_mm_castps_pd(current_next_2)
-			)
+		current = vcombine_f32(
+			vld1_f32(dCache), /* A1B1 */
+			vld1_f32(dCache_1) /* A3B3 */
 		);
-		next = _mm_castpd_ps(
-			_mm_unpackhi_pd(
-				_mm_castps_pd(current_next_1),
-				_mm_castps_pd(current_next_2)
-			)
+		next = vcombine_f32(
+			vld1_f32(dCache + 4), /* A2B2 */
+			vld1_f32(dCache_1 + 4) /* A4B4 */
 		);
-#endif
 
 		sub = vsubq_f32(next, current);
 
@@ -1133,7 +1112,6 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	}
 
 }
-#endif
 #endif /* HAVE_NEON_INTRINSICS */
 
 /* SECTION 3: Amplifiers */
@@ -1611,7 +1589,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_NEON;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_NEON;
-		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
+		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_NEON;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_NEON;
 		return;
 	}
