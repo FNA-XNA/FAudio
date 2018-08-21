@@ -1044,8 +1044,8 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 			vld1_f32(dCache_1) /* A3B3 */
 		);
 		next = vcombine_f32(
-			vld1_f32(dCache + 4), /* A2B2 */
-			vld1_f32(dCache_1 + 4) /* A4B4 */
+			vld1_f32(dCache + 2), /* A2B2 */
+			vld1_f32(dCache_1 + 2) /* A4B4 */
 		);
 
 		sub = vsubq_f32(next, current);
