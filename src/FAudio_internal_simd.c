@@ -869,14 +869,8 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 		);
 
 		/* Unpack them to have seperate current and next in 2 vectors. */
-		current = vmovq_n_f32(vgetq_lane_f32(current_next_0_1, 0x88 & 0x3)); /* 0b1000 */
-		current = vsetq_lane_f32(vgetq_lane_f32(current_next_0_1, (0x88 >> 2) & 0x3), current, 1);
-		current = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0x88 >> 4) & 0x3), current, 2);
-		current = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0x88 >> 6) & 0x3), current, 3);
-		next = vmovq_n_f32(vgetq_lane_f32(current_next_0_1, 0xdd & 0x3));  /* 0b1101 */
-		next = vsetq_lane_f32(vgetq_lane_f32(current_next_0_1, (0xdd >> 2) & 0x3), next, 1);
-		next = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0xdd >> 4) & 0x3), next, 2);
-		next = vsetq_lane_f32(vgetq_lane_f32(current_next_2_3, (0xdd >> 6) & 0x3), next, 3);
+		current = vuzp1q_f32(current_next_0_1, current_next_2_3);
+		next = vuzp2q_f32(current_next_0_1, current_next_2_3);
 
 		sub = vsubq_f32(next, current);
 
