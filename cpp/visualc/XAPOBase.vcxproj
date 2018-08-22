@@ -18,7 +18,7 @@
     <ClCompile Include="..\XAPOBase.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\visualc\FAudio.vcxproj">
+    <ProjectReference Include="..\..\visualc\FAudio\FAudio.vcxproj">
       <Project>{90a103ef-e403-47d4-bbbb-0f206b9fa7f2}</Project>
     </ProjectReference>
   </ItemGroup>
