@@ -199,6 +199,20 @@ struct FAPOCppBase
 	IXAPOParameters *xapo_params;
 };
 
+static int32_t FAPOCALL AddRef(void *fapo)
+{
+	TRACE_FUNC();
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
+	return xapo->AddRef();
+}
+
+static int32_t FAPOCALL Release(void *fapo)
+{
+	TRACE_FUNC();
+	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
+	return xapo->Release();
+}
+
 static uint32_t FAPOCALL GetRegistrationProperties(
 	void *fapo, 
 	FAPORegistrationProperties **ppRegistrationProperties)
@@ -344,6 +358,8 @@ static FAPO *wrap_xapo_effect(IUnknown *xapo)
 
 	TRACE_MSG("IXAPO: %x; IXAPOParameters: %x", f_effect->xapo, f_effect->xapo_params);
 
+	f_effect->fapo.base.AddRef = AddRef;
+	f_effect->fapo.base.Release = Release;
 	f_effect->fapo.base.GetRegistrationProperties = GetRegistrationProperties;
 	f_effect->fapo.base.IsInputFormatSupported = IsInputFormatSupported;
 	f_effect->fapo.base.IsOutputFormatSupported = IsOutputFormatSupported;
