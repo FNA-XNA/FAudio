@@ -682,7 +682,7 @@ public:
 	{
 		TRACE_FUNC();
 #if (XAUDIO2_VERSION <= 7)
-		FAudioSourceVoice_GetState(faudio_voice, pVoiceState);
+		FAudioSourceVoice_GetState(faudio_voice, pVoiceState, 0);
 #else
 		FAudioSourceVoice_GetState(faudio_voice, pVoiceState, Flags);
 #endif
