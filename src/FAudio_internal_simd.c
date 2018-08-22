@@ -1249,20 +1249,20 @@ void FAudio_INTERNAL_Mix_Generic_Scalar(
 	float *restrict coefficients
 ) {
 	uint32_t i, co, ci;
-	for (i = 0; i < toMix; i += 1)
-	for (co = 0; co < dstChans; co += 1, dst += 1)
+	for (i = 0; i < toMix; i += 1, src += srcChans, dst += dstChans)
+	for (co = 0; co < dstChans; co += 1)
 	{
-		for (ci = 0; ci < srcChans; ci += 1, src += 1)
+		for (ci = 0; ci < srcChans; ci += 1)
 		{
-			*dst += (
-				(*src) *
+			dst[co] += (
+				src[ci] *
 				channelVolume[ci] *
 				baseVolume *
 				coefficients[co * srcChans + ci]
 			);
 		}
-		*dst = FAudio_clamp(
-			*dst,
+		dst[co] = FAudio_clamp(
+			dst[co],
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
