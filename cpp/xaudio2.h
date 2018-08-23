@@ -20,6 +20,7 @@ extern "C" {
 typedef FAudioProcessor XAUDIO2_PROCESSOR;
 typedef FAudioDeviceDetails XAUDIO2_DEVICE_DETAILS;
 typedef FAudioWaveFormatEx WAVEFORMATEX;
+typedef FAudioWaveFormatExtensible WAVEFORMATEXTENSIBLE;
 typedef FAudioDebugConfiguration XAUDIO2_DEBUG_CONFIGURATION;
 typedef FAudioFilterParameters XAUDIO2_FILTER_PARAMETERS;
 typedef FAudioBuffer XAUDIO2_BUFFER;
