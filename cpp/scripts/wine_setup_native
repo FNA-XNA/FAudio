@@ -65,5 +65,14 @@ install_dll x3daudio1_5
 install_dll x3daudio1_6
 install_dll x3daudio1_7
 
+install_dll xactengine3_0
+install_dll xactengine3_1
+install_dll xactengine3_2
+install_dll xactengine3_3
+install_dll xactengine3_4
+install_dll xactengine3_5
+install_dll xactengine3_6
+install_dll xactengine3_7
+
 ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
 ln -sf "$dll_path/SDL2.dll" "$wine_path/SDL2.dll"
