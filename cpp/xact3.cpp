@@ -1,9 +1,9 @@
-#include <windows.h> // Needed for I/O wrapping >:(
-
 #include "xact3.h"
 
 //#define TRACING_ENABLE
 #include "trace.h"
+
+#include "SDL.h"
 
 /* IXACT3Cue Implementation */
 
@@ -350,51 +350,14 @@ public:
  * so that's slightly less work for us!
  */
 
-static size_t FAUDIOCALL wrap_io_read(
+extern "C" size_t FAUDIOCALL wrap_io_read(
 	void *data,
 	void *dst,
 	size_t size,
 	size_t count
-) {
-	DWORD byte_read;
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	if (!ReadFile(io->data, dst, size * count, &byte_read, NULL))
-	{
-		return 0;
-	}
-	return byte_read;
-}
-static int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
-{
-	DWORD windowswhence;
-	LARGE_INTEGER windowsoffset;
-	FAudioIOStream *io = (FAudioIOStream*) data;
-
-	switch (whence) {
-	case FAUDIO_SEEK_SET:
-		windowswhence = FILE_BEGIN;
-		break;
-	case FAUDIO_SEEK_CUR:
-		windowswhence = FILE_CURRENT;
-		break;
-	case FAUDIO_SEEK_END:
-		windowswhence = FILE_END;
-		break;
-	}
-
-	windowsoffset.QuadPart = offset;
-	if (!SetFilePointerEx(io->data, windowsoffset, &windowsoffset, windowswhence))
-	{
-		return -1;
-	}
-	return windowsoffset.QuadPart;
-}
-static int FAUDIOCALL wrap_io_close(void *data)
-{
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	CloseHandle(io->data);
-	return 0;
-}
+);
+extern "C" int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence);
+extern "C" int FAUDIOCALL wrap_io_close(void *data);
 
 class XACT3EngineImpl : public IXACT3Engine
 {
@@ -533,8 +496,8 @@ public:
 
 		/* We have to wrap the file around an IOStream first! */
 		XACT_STREAMING_PARAMETERS fakeParms;
-		memcpy(&fakeParms, pParms, sizeof(XACT_STREAMING_PARAMETERS));
-		FAudioIOStream *fake = (FAudioIOStream*) malloc(
+		SDL_memcpy(&fakeParms, pParms, sizeof(XACT_STREAMING_PARAMETERS));
+		FAudioIOStream *fake = (FAudioIOStream*) SDL_malloc(
 			sizeof(FAudioIOStream)
 		);
 		fake->data = pParms->file;

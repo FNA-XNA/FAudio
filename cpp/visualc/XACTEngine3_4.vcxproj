@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="..\com_utils_xact.cpp" />
     <ClCompile Include="..\win_registry.cpp" />
+    <ClCompile Include="..\win_iostream.c" />
     <ClCompile Include="..\xact3.cpp" />
   </ItemGroup>
   <ItemGroup>
