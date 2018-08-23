@@ -119,7 +119,7 @@ public:
 	COM_METHOD(HRESULT) Pause(int32_t fPause)
 	{
 		TRACE_FUNC();
-		return FACTWave_Pause(fPause);
+		return FACTWave_Pause(wave, fPause);
 	}
 	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
 	{
@@ -333,7 +333,7 @@ public:
 		uint32_t dwFlags
 	) {
 		TRACE_FUNC();
-		return FACTWaveBank_Stop(wave, nWaveIndex, dwFlags);
+		return FACTWaveBank_Stop(waveBank, nWaveIndex, dwFlags);
 	}
 private:
 	FACTWaveBank *waveBank;
@@ -394,12 +394,12 @@ public:
 	COM_METHOD(ULONG) AddRef()
 	{
 		TRACE_FUNC();
-		return FAudio_AddRef(faudio);
+		return FACTAudioEngine_AddRef(engine);
 	}
 	COM_METHOD(ULONG) Release()
 	{
 		TRACE_FUNC();
-		ULONG refcount = FAudio_Release(faudio);
+		ULONG refcount = FACTAudioEngine_Release(engine);
 		if (refcount == 0)
 		{
 			delete this;
