@@ -90,7 +90,7 @@ public:
 		/* TODO: SetOutputVoiceMatrix */
 		return 0;
 	}
-private:
+
 	FACTCue *cue;
 };
 
@@ -157,7 +157,7 @@ public:
 		TRACE_FUNC();
 		return FACTWave_GetProperties(wave, pProperties);
 	}
-private:
+
 	FACTWave *wave;
 };
 
@@ -235,7 +235,7 @@ public:
 		*ppCue = new XACT3CueImpl(cue);
 		return retval;
 	}
-private:
+
 	FACTSoundBank *soundBank;
 };
 
@@ -337,7 +337,7 @@ public:
 		TRACE_FUNC();
 		return FACTWaveBank_Stop(waveBank, nWaveIndex, dwFlags);
 	}
-private:
+
 	FACTWaveBank *waveBank;
 };
 
@@ -595,15 +595,65 @@ public:
 		const XACT_NOTIFICATION_DESCRIPTION *pNotificationDescription
 	) {
 		TRACE_FUNC();
-		/* TODO: Notification wrapping... */
-		return 0;
+
+		/* We have to unwrap the FACT object first! */
+		FACTNotificationDescription desc;
+		desc.type = pNotificationDescription->type;
+		desc.flags = pNotificationDescription->flags;
+		desc.cueIndex = pNotificationDescription->cueIndex;
+		desc.waveIndex = pNotificationDescription->waveIndex;
+		desc.pvContext = pNotificationDescription->pvContext;
+		if (desc.type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
+		{
+			desc.pCue = ((XACT3CueImpl*) pNotificationDescription->pCue)->cue;
+		}
+		else if (desc.type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
+		{
+			desc.pSoundBank = ((XACT3SoundBankImpl*) pNotificationDescription->pSoundBank)->soundBank;
+		}
+		else if (desc.type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
+		{
+			desc.pWaveBank = ((XACT3WaveBankImpl*) pNotificationDescription->pWaveBank)->waveBank;
+		}
+		else if (desc.type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
+		{
+			desc.pWave = ((XACT3WaveImpl*) pNotificationDescription->pWave)->wave;
+		}
+		// If you didn't hit an above if, get ready for an assert!
+
+		return FACTAudioEngine_RegisterNotification(engine, &desc);
 	}
 	COM_METHOD(HRESULT) UnRegisterNotification(
 		const XACT_NOTIFICATION_DESCRIPTION *pNotificationDescription
 	) {
 		TRACE_FUNC();
-		/* TODO: Notification wrapping... */
-		return 0;
+
+		/* We have to unwrap the FACT object first! */
+		FACTNotificationDescription desc;
+		desc.type = pNotificationDescription->type;
+		desc.flags = pNotificationDescription->flags;
+		desc.cueIndex = pNotificationDescription->cueIndex;
+		desc.waveIndex = pNotificationDescription->waveIndex;
+		desc.pvContext = pNotificationDescription->pvContext;
+		if (desc.type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
+		{
+			desc.pCue = ((XACT3CueImpl*) pNotificationDescription->pCue)->cue;
+		}
+		else if (desc.type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
+		{
+			desc.pSoundBank = ((XACT3SoundBankImpl*) pNotificationDescription->pSoundBank)->soundBank;
+		}
+		else if (desc.type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
+		{
+			desc.pWaveBank = ((XACT3WaveBankImpl*) pNotificationDescription->pWaveBank)->waveBank;
+		}
+		else if (desc.type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
+		{
+			desc.pWave = ((XACT3WaveImpl*) pNotificationDescription->pWave)->wave;
+		}
+		// If you didn't hit an above if, get ready for an assert!
+
+		return FACTAudioEngine_UnRegisterNotification(engine, &desc);
 	}
 	COM_METHOD(uint16_t) GetCategory(const char *szFriendlyName)
 	{
