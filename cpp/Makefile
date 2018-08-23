@@ -29,6 +29,11 @@ XAUDIO2_SRC_x28 = \
 
 X3DAUDIO_SRC = 	X3DAudio.cpp
 
+XACT3_SRC = \
+	com_utils_xact.cpp \
+	xact3.cpp \
+	win_registry.cpp
+
 # Object code lists
 XAPO_TARGET = $(BUILD_DIR)/XAPOBase.lib
 XAPO_OBJ = $(XAPO_SRC:%.cpp=$(BUILD_DIR)/%.o)
@@ -66,6 +71,30 @@ XAUDIO29_OBJ = $(XAUDIO2_SRC_x28:%.cpp=$(BUILD_DIR)/%_x29.o) $(BUILD_DIR)/xaudio
 X3DAUDIO_TARGET = $(BUILD_DIR)/x3daudio1_7.dll
 X3DAUDIO_OBJ = $(X3DAUDIO_SRC:%.cpp=$(BUILD_DIR)/%.o)
 
+XACT30_TARGET = $(BUILD_DIR)/xactengine3_0.dll
+XACT30_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x30.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT31_TARGET = $(BUILD_DIR)/xactengine3_1.dll
+XACT31_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x31.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT32_TARGET = $(BUILD_DIR)/xactengine3_2.dll
+XACT32_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x32.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT33_TARGET = $(BUILD_DIR)/xactengine3_3.dll
+XACT33_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x33.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT34_TARGET = $(BUILD_DIR)/xactengine3_4.dll
+XACT34_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x34.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT35_TARGET = $(BUILD_DIR)/xactengine3_5.dll
+XACT35_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x35.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT36_TARGET = $(BUILD_DIR)/xactengine3_6.dll
+XACT36_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x36.o) $(BUILD_DIR)/xactdll_x30.o
+
+XACT37_TARGET = $(BUILD_DIR)/xactengine3_7.dll
+XACT37_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x37.o) $(BUILD_DIR)/xactdll_x30.o
+
 
 # Targets
 $(BUILD_DIR)/%.o:%.cpp
@@ -101,9 +130,35 @@ $(BUILD_DIR)/%_x28.o:%.cpp
 $(BUILD_DIR)/%_x29.o:%.cpp
 	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=9 -DUNICODE -c -o $@ $<
 
+$(BUILD_DIR)/%_x30.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=0 -c -o $@ $<
+
+$(BUILD_DIR)/%_x31.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=1 -c -o $@ $<
+
+$(BUILD_DIR)/%_x32.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=2 -c -o $@ $<
+
+$(BUILD_DIR)/%_x33.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=3 -c -o $@ $<
+
+$(BUILD_DIR)/%_x34.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=4 -c -o $@ $<
+
+$(BUILD_DIR)/%_x35.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=5 -c -o $@ $<
+
+$(BUILD_DIR)/%_x36.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=6 -c -o $@ $<
+
+$(BUILD_DIR)/%_x37.o:%.cpp
+	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=7 -c -o $@ $<
+
 all: $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \
      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
-     $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET)
+     $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \
+     $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
+     $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET)
 
 $(XAPO_TARGET): directories $(XAPO_OBJ)
 	$(AR) rcs $@ $(XAPO_OBJ)
@@ -145,10 +200,37 @@ $(X3DAUDIO_TARGET) : directories $(X3DAUDIO_OBJ)
 	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_5.dll
 	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_6.dll
 
+$(XACT30_TARGET) : directories $(XACT30_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT31_TARGET) : directories $(XACT31_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT32_TARGET) : directories $(XACT32_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT33_TARGET) : directories $(XACT33_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT34_TARGET) : directories $(XACT34_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT35_TARGET) : directories $(XACT35_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT36_TARGET) : directories $(XACT36_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
+$(XACT37_TARGET) : directories $(XACT37_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+
 $(BUILD_DIR)/xaudiodll_x20.o: xaudio2_7.def
 	$(DLLTOOL) -d $< -e $@
 
 $(BUILD_DIR)/xaudiodll_x28.o: xaudio2_9.def
+	$(DLLTOOL) -d $< -e $@
+
+$(BUILD_DIR)/xactdll_x30.o: xact3_7.def
 	$(DLLTOOL) -d $< -e $@
 
 .PHONY: directories clean
@@ -161,6 +243,8 @@ directories:
 clean:
 	rm -f $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \
 	      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
-	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \
+	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \ \
+	      $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
+	      $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET) \
 	      $(BUILD_DIR)/*.o $(BUILD_DIR)/*.dll
 	rmdir $(BUILD_DIR)
