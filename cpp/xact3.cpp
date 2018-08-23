@@ -148,7 +148,7 @@ public:
 			wave,
 			uSrcChannelCount,
 			uDstChannelCount,
-			pMatrixCoefficient
+			pMatrixCoefficients
 		);
 	}
 	COM_METHOD(HRESULT) GetProperties(
@@ -221,6 +221,7 @@ public:
 			return FACTSoundBank_Play(
 				soundBank,
 				nCueIndex,
+				dwFlags,
 				timeOffset,
 				NULL
 			);
@@ -229,6 +230,7 @@ public:
 		HRESULT retval = FACTSoundBank_Play(
 			soundBank,
 			nCueIndex,
+			dwFlags,
 			timeOffset,
 			&cue
 		);
@@ -266,7 +268,7 @@ public:
 	COM_METHOD(uint16_t) GetWaveIndex(const char *szFriendlyName)
 	{
 		TRACE_FUNC();
-		return FACTWaveBank_GetWaveIndex(waveBank, szFriendlyWave);
+		return FACTWaveBank_GetWaveIndex(waveBank, szFriendlyName);
 	}
 	COM_METHOD(HRESULT) GetWaveProperties(
 		uint16_t nWaveIndex,
@@ -369,19 +371,19 @@ static int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 	FAudioIOStream *io = (FAudioIOStream*) data;
 
 	switch (whence) {
-	case RW_SEEK_SET:
+	case FAUDIO_SEEK_SET:
 		windowswhence = FILE_BEGIN;
 		break;
-	case RW_SEEK_CUR:
+	case FAUDIO_SEEK_CUR:
 		windowswhence = FILE_CURRENT;
 		break;
-	case RW_SEEK_END:
+	case FAUDIO_SEEK_END:
 		windowswhence = FILE_END;
 		break;
 	}
 
 	windowsoffset.QuadPart = offset;
-	if (!SetFilePointerEx(data->data, windowsoffset, &windowsoffset, windowswhence))
+	if (!SetFilePointerEx(io->data, windowsoffset, &windowsoffset, windowswhence))
 	{
 		return -1;
 	}
@@ -531,7 +533,7 @@ public:
 
 		/* We have to wrap the file around an IOStream first! */
 		XACT_STREAMING_PARAMETERS fakeParms;
-		memcpy(&fakeParms, pParms, sizeof(XACT_STREAMING_PARAMETERS);
+		memcpy(&fakeParms, pParms, sizeof(XACT_STREAMING_PARAMETERS));
 		FAudioIOStream *fake = (FAudioIOStream*) malloc(
 			sizeof(FAudioIOStream)
 		);
@@ -539,7 +541,7 @@ public:
 		fake->read = wrap_io_read;
 		fake->seek = wrap_io_seek;
 		fake->close = wrap_io_close;
-		fakeParms->file = fake;
+		fakeParms.file = fake;
 
 		FACTWaveBank *waveBank;
 		HRESULT retval = FACTAudioEngine_CreateStreamingWaveBank(
@@ -547,7 +549,7 @@ public:
 			&fakeParms,
 			&waveBank
 		);
-		*ppWaveBank = new IXACT3WaveBankImpl(waveBank);
+		*ppWaveBank = new XACT3WaveBankImpl(waveBank);
 		return retval;
 	}
 	COM_METHOD(HRESULT) PrepareWave(
@@ -700,7 +702,7 @@ public:
 		float *pnValue
 	) {
 		TRACE_FUNC();
-		return FACTAudioEngine_SetGlobalVariable(
+		return FACTAudioEngine_GetGlobalVariable(
 			engine,
 			nIndex,
 			pnValue
