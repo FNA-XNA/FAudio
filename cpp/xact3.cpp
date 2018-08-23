@@ -1,3 +1,5 @@
+#include <windows.h> // Needed for I/O wrapping >:(
+
 #include "xact3.h"
 
 //#define TRACING_ENABLE
@@ -341,24 +343,55 @@ private:
 
 /* IXACT3Engine Implementation */
 
+/* These wrapper calls are just SDL_RWops for Windows.
+ * XACT specifically asks for FILE_FLAG_NO_BUFFERING,
+ * so that's slightly less work for us!
+ */
+
 static size_t FAUDIOCALL wrap_io_read(
 	void *data,
 	void *dst,
 	size_t size,
 	size_t count
 ) {
-	/* TODO: Windows I/O crap */
-	return 0;
+	DWORD byte_read;
+	FAudioIOStream *io = (FAudioIOStream*) data;
+	if (!ReadFile(io->data, dst, size * count, &byte_read, NULL))
+	{
+		return 0;
+	}
+	return byte_read;
 }
 static int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 {
-	/* TODO: Windows I/O crap */
-	return 0;
+	DWORD windowswhence;
+	LARGE_INTEGER windowsoffset;
+	FAudioIOStream *io = (FAudioIOStream*) data;
+
+	switch (whence) {
+	case RW_SEEK_SET:
+		windowswhence = FILE_BEGIN;
+		break;
+	case RW_SEEK_CUR:
+		windowswhence = FILE_CURRENT;
+		break;
+	case RW_SEEK_END:
+		windowswhence = FILE_END;
+		break;
+	}
+
+	windowsoffset.QuadPart = offset;
+	if (!SetFilePointerEx(data->data, windowsoffset, &windowsoffset, windowswhence))
+	{
+		return -1;
+	}
+	return windowsoffset.QuadPart;
 }
 static int FAUDIOCALL wrap_io_close(void *data)
 {
-	/* TODO: Windows I/O crap */
-	free(data);
+	FAudioIOStream *io = (FAudioIOStream*) data;
+        CloseHandle(io->data);
+	free(io);
 	return 0;
 }
 
