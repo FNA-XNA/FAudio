@@ -390,7 +390,7 @@ static int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 static int FAUDIOCALL wrap_io_close(void *data)
 {
 	FAudioIOStream *io = (FAudioIOStream*) data;
-        CloseHandle(io->data);
+	CloseHandle(io->data);
 	free(io);
 	return 0;
 }
