@@ -13,8 +13,8 @@ size_t FAUDIOCALL wrap_io_read(
 	size_t count
 ) {
 	DWORD byte_read;
-	FAudioIOStream *io = (FAudioIOStream*)data;
-	if (!ReadFile(io->data, dst, size * count, &byte_read, NULL))
+	HANDLE io = (HANDLE) data;
+	if (!ReadFile(io, dst, size * count, &byte_read, NULL))
 	{
 		return 0;
 	}
@@ -25,7 +25,7 @@ int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 {
 	DWORD windowswhence;
 	LARGE_INTEGER windowsoffset;
-	FAudioIOStream *io = (FAudioIOStream*)data;
+	HANDLE io = (HANDLE) data;
 
 	switch (whence) {
 	case FAUDIO_SEEK_SET:
@@ -40,7 +40,7 @@ int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 	}
 
 	windowsoffset.QuadPart = offset;
-	if (!SetFilePointerEx(io->data, windowsoffset, &windowsoffset, windowswhence))
+	if (!SetFilePointerEx(io, windowsoffset, &windowsoffset, windowswhence))
 	{
 		return -1;
 	}
@@ -49,7 +49,7 @@ int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 
 int FAUDIOCALL wrap_io_close(void *data)
 {
-	FAudioIOStream *io = (FAudioIOStream*)data;
-	CloseHandle(io->data);
+	HANDLE io = (HANDLE) data;
+	CloseHandle(io);
 	return 0;
 }
