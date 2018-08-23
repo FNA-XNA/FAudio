@@ -9,6 +9,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifndef XACT3_VERSION
+#define XACT3_VERSION 7
+#endif
 
 typedef FACTRendererDetails XACT_RENDERER_DETAILS;
 typedef FACTFileIOCallbacks XACT_FILEIO_CALLBACKS;
