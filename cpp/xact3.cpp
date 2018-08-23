@@ -496,7 +496,6 @@ public:
 
 		/* We have to wrap the file around an IOStream first! */
 		XACT_STREAMING_PARAMETERS fakeParms;
-		SDL_memcpy(&fakeParms, pParms, sizeof(XACT_STREAMING_PARAMETERS));
 		FAudioIOStream *fake = (FAudioIOStream*) SDL_malloc(
 			sizeof(FAudioIOStream)
 		);
@@ -505,6 +504,9 @@ public:
 		fake->seek = wrap_io_seek;
 		fake->close = wrap_io_close;
 		fakeParms.file = fake;
+		fakeParms.flags = pParms->flags;
+		fakeParms.offset = pParms->offset;
+		fakeParms.packetSize = pParms->packetSize;
 
 		FACTWaveBank *waveBank;
 		HRESULT retval = FACTAudioEngine_CreateStreamingWaveBank(
