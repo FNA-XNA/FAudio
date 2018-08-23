@@ -391,7 +391,6 @@ static int FAUDIOCALL wrap_io_close(void *data)
 {
 	FAudioIOStream *io = (FAudioIOStream*) data;
 	CloseHandle(io->data);
-	free(io);
 	return 0;
 }
 
