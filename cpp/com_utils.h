@@ -79,7 +79,16 @@ extern const IID CLSID_AudioReverb_7;
 extern const IID *CLSID_AudioReverb[];
 
 extern const IID IID_IXACT3Engine;
-extern const IID CLSID_XACTEngine;
+
+extern const IID CLSID_XACTEngine3_0;
+extern const IID CLSID_XACTEngine3_1;
+extern const IID CLSID_XACTEngine3_2;
+extern const IID CLSID_XACTEngine3_3;
+extern const IID CLSID_XACTEngine3_4;
+extern const IID CLSID_XACTEngine3_5;
+extern const IID CLSID_XACTEngine3_6;
+extern const IID CLSID_XACTEngine3_7;
+extern const IID *CLSID_XACTEngine[];
 
 // quality of life macro's
 #define COM_METHOD(rtype)		virtual rtype __stdcall 
