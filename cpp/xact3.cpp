@@ -68,7 +68,7 @@ public:
 		return FACTCue_Pause(cue, fPause);
 	}
 	COM_METHOD(HRESULT) GetProperties(
-		XACT_CUE_INSTANCE_PROPERTIES *ppProperties
+		XACT_CUE_INSTANCE_PROPERTIES **ppProperties
 	) {
 		TRACE_FUNC();
 		return FACTCue_GetProperties(cue, ppProperties);

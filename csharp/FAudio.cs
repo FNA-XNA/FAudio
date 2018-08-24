@@ -1678,7 +1678,7 @@ public static class FAudio
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTCue_GetProperties(
 		IntPtr pCue, /* FACTCue* */
-		out FACTCueInstanceProperties ppProperties
+		out IntPtr ppProperties /* FACTCueInstanceProperties** */
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]

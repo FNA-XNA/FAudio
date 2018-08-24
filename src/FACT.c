@@ -2327,8 +2327,11 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 
 uint32_t FACTCue_GetProperties(
 	FACTCue *pCue,
-	FACTCueInstanceProperties *ppProperties
+	FACTCueInstanceProperties **ppProperties
 ) {
+	uint32_t i;
+	size_t allocSize;
+	FACTCueInstanceProperties *cueProps;
 	FACTVariationProperties *varProps;
 	FACTSoundProperties *sndProps;
 	FACTWaveInstanceProperties waveProps;
@@ -2339,17 +2342,27 @@ uint32_t FACTCue_GetProperties(
 
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
-	ppProperties->allocAttributes = 0;
+	/* Alloc container (including variable length array space) */
+	allocSize = sizeof(FACTCueInstanceProperties);
+	if (pCue->playingSound != NULL)
+	{
+		allocSize += (
+			sizeof(FACTTrackProperties) *
+			pCue->playingSound->sound->trackCount
+		);
+	}
+	cueProps = (FACTCueInstanceProperties*) FAudio_malloc(allocSize);
+	FAudio_zero(cueProps, allocSize);
+
+	/* Cue Properties */
 	FACTSoundBank_GetCueProperties(
 		pCue->parentBank,
 		pCue->index,
-		&ppProperties->cueProperties
+		&cueProps->cueProperties
 	);
 
-	varProps = &ppProperties->activeVariationProperties.variationProperties;
-	sndProps = &ppProperties->activeVariationProperties.soundProperties;
-
 	/* Variation Properties */
+	varProps = &cueProps->activeVariationProperties.variationProperties;
 	if (pCue->playingVariation != NULL)
 	{
 		varProps->index = 0; /* TODO: Index of what...? */
@@ -2372,16 +2385,9 @@ uint32_t FACTCue_GetProperties(
 		}
 		varProps->linger = pCue->playingVariation->linger;
 	}
-	else
-	{
-		/* No variations here! */
-		FAudio_zero(
-			varProps,
-			sizeof(FACTVariationProperties)
-		);
-	}
 
 	/* Sound Properties */
+	sndProps = &cueProps->activeVariationProperties.soundProperties;
 	if (pCue->playingSound != NULL)
 	{
 		sndProps->category = pCue->playingSound->sound->category;
@@ -2390,33 +2396,26 @@ uint32_t FACTCue_GetProperties(
 		sndProps->volume = pCue->playingSound->sound->volume;
 		sndProps->numTracks = pCue->playingSound->sound->trackCount;
 
-		/* FIXME: Why the hell is arrTrackProperties not a pointer? */
-		FAudio_assert(sndProps->numTracks == 1);
-		if (FACTWave_GetProperties(pCue->playingSound->tracks[0].activeWave.wave, &waveProps) != 0)
+		for (i = 0; i < sndProps->numTracks; i += 1)
 		{
-			FAudio_zero(sndProps->arrTrackProperties, sizeof(FACTTrackProperties));
+			if (FACTWave_GetProperties(
+				pCue->playingSound->tracks[i].activeWave.wave,
+				&waveProps
+			) == 0) {
+				sndProps->arrTrackProperties[i].duration = (uint32_t) (
+					(
+						(float) waveProps.properties.durationInSamples /
+						(float) waveProps.properties.format.nSamplesPerSec
+					) / 1000.0f
+				);
+				sndProps->arrTrackProperties[i].numVariations = 1; /* ? */
+				sndProps->arrTrackProperties[i].numChannels =
+					waveProps.properties.format.nChannels;
+				sndProps->arrTrackProperties[i].waveVariation = 0; /* ? */
+				sndProps->arrTrackProperties[i].loopCount =
+					pCue->playingSound->tracks[i].waveEvt->wave.loopCount;
+			}
 		}
-		else
-		{
-			sndProps->arrTrackProperties[0].duration = (uint32_t) (
-				(
-					(float) waveProps.properties.durationInSamples /
-					(float) waveProps.properties.format.nSamplesPerSec
-				) / 1000.0f
-			);
-			sndProps->arrTrackProperties[0].numVariations = 1; /* ? */
-			sndProps->arrTrackProperties[0].numChannels = waveProps.properties.format.nChannels;
-			sndProps->arrTrackProperties[0].waveVariation = 0; /* ? */
-			sndProps->arrTrackProperties[0].loopCount = pCue->playingSound->tracks[0].waveEvt->wave.loopCount;
-		}
-	}
-	else
-	{
-		/* It's either a simple wave or nothing's playing */
-		FAudio_zero(
-			sndProps,
-			sizeof(FACTSoundProperties)
-		);
 	}
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);

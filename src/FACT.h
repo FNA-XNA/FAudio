@@ -743,7 +743,7 @@ FACTAPI uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause);
 
 FACTAPI uint32_t FACTCue_GetProperties(
 	FACTCue *pCue,
-	FACTCueInstanceProperties *ppProperties
+	FACTCueInstanceProperties **ppProperties
 );
 
 FACTAPI uint32_t FACTCue_SetOutputVoices(
