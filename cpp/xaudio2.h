@@ -83,16 +83,15 @@ typedef struct XAUDIO2_PERFORMANCE_DATA
 } XAUDIO2_PERFORMANCE_DATA;
 #endif// XAUDIO2_VERSION >= 3
 
-#if XAUDIO2_VERSION <= 7
+#if XAUDIO2_VERSION > 7
 typedef FAudioVoiceDetails XAUDIO2_VOICE_DETAILS;
 #else
 typedef struct XAUDIO2_VOICE_DETAILS {
 	uint32_t CreationFlags;
-	uint32_t ActiveFlags;
 	uint32_t InputChannels;
 	uint32_t InputSampleRate;
 } XAUDIO2_VOICE_DETAILS;
-#endif // XAUDIO2_VERSION <= 7
+#endif // XAUDIO2_VERSION > 7
 
 class IXAudio2Voice  {
 public:
