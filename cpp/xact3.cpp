@@ -73,6 +73,7 @@ public:
 		TRACE_FUNC();
 		return FACTCue_GetProperties(cue, ppProperties);
 	}
+#if XACT3_VERSION >= 5
 	COM_METHOD(HRESULT) SetOutputVoices(
 		const XAUDIO2_VOICE_SENDS *pSendList /* Optional! */
 	) {
@@ -90,6 +91,7 @@ public:
 		/* TODO: SetOutputVoiceMatrix */
 		return 0;
 	}
+#endif /* #if XACT3_VERSION >= 5 */
 
 	FACTCue *cue;
 };
