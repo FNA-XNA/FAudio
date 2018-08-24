@@ -436,6 +436,11 @@ public:
 		const XACT_RUNTIME_PARAMETERS *pParams
 	) {
 		TRACE_FUNC();
+
+		/* TODO: Unwrap FAudio/FAudioMasteringVoice */
+		SDL_assert(pParams->pXAudio2 == NULL);
+		SDL_assert(pParams->pMasteringVoice == NULL);
+
 		return FACTAudioEngine_Initialize(engine, pParams);
 	}
 	COM_METHOD(HRESULT) ShutDown()
