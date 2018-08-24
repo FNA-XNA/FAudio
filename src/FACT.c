@@ -1328,10 +1328,21 @@ uint32_t FACTWaveBank_GetWaveProperties(
 	);
 
 	pWaveProperties->format = entry->Format;
-	pWaveProperties->durationInSamples = (
-		entry->LoopRegion.dwStartSample +
-		entry->LoopRegion.dwTotalSamples
-	); /* FIXME: Do we just want the full wave block? -flibit */
+	pWaveProperties->durationInSamples = entry->PlayRegion.dwLength;
+	if (entry->Format.wFormatTag == 0)
+	{
+		pWaveProperties->durationInSamples /= (8 << entry->Format.wBitsPerSample) / 8;
+		pWaveProperties->durationInSamples /= entry->Format.nChannels;
+	}
+	else if (entry->Format.wFormatTag == FAUDIO_FORMAT_MSADPCM)
+	{
+		pWaveProperties->durationInSamples = (
+			pWaveProperties->durationInSamples /
+			((entry->Format.wBlockAlign + 22) * entry->Format.nChannels) *
+			((entry->Format.wBlockAlign + 16) * 2)
+		);
+	}
+
 	pWaveProperties->loopRegion = entry->LoopRegion;
 	pWaveProperties->streaming = pWaveBank->streaming;
 
@@ -2320,6 +2331,7 @@ uint32_t FACTCue_GetProperties(
 ) {
 	FACTVariationProperties *varProps;
 	FACTSoundProperties *sndProps;
+	FACTWaveInstanceProperties waveProps;
 	if (pCue == NULL)
 	{
 		return 1;
@@ -2372,13 +2384,31 @@ uint32_t FACTCue_GetProperties(
 	/* Sound Properties */
 	if (pCue->playingSound != NULL)
 	{
-		/* TODO: u8->float volume conversion crap */
 		sndProps->category = pCue->playingSound->sound->category;
 		sndProps->priority = pCue->playingSound->sound->priority;
 		sndProps->pitch = pCue->playingSound->sound->pitch;
 		sndProps->volume = pCue->playingSound->sound->volume;
 		sndProps->numTracks = pCue->playingSound->sound->trackCount;
-		/* TODO: arrTrackProperties[0] */
+
+		/* FIXME: Why the hell is arrTrackProperties not a pointer? */
+		FAudio_assert(sndProps->numTracks == 1);
+		if (FACTWave_GetProperties(pCue->playingSound->tracks[0].activeWave.wave, &waveProps) != 0)
+		{
+			FAudio_zero(sndProps->arrTrackProperties, sizeof(FACTTrackProperties));
+		}
+		else
+		{
+			sndProps->arrTrackProperties[0].duration = (uint32_t) (
+				(
+					(float) waveProps.properties.durationInSamples /
+					(float) waveProps.properties.format.nSamplesPerSec
+				) / 1000.0f
+			);
+			sndProps->arrTrackProperties[0].numVariations = 1; /* ? */
+			sndProps->arrTrackProperties[0].numChannels = waveProps.properties.format.nChannels;
+			sndProps->arrTrackProperties[0].waveVariation = 0; /* ? */
+			sndProps->arrTrackProperties[0].loopCount = pCue->playingSound->tracks[0].waveEvt->wave.loopCount;
+		}
 	}
 	else
 	{
