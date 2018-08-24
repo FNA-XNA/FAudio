@@ -14,11 +14,6 @@ public:
 	{
 		cue = newCue;
 	}
-	COM_METHOD(HRESULT) Destroy()
-	{
-		TRACE_FUNC();
-		return FACTCue_Destroy(cue);
-	}
 	COM_METHOD(HRESULT) Play()
 	{
 		TRACE_FUNC();
@@ -33,6 +28,11 @@ public:
 	{
 		TRACE_FUNC();
 		return FACTCue_GetState(cue, pdwState);
+	}
+	COM_METHOD(HRESULT) Destroy()
+	{
+		TRACE_FUNC();
+		return FACTCue_Destroy(cue);
 	}
 	COM_METHOD(HRESULT) SetMatrixCoefficients(
 		uint32_t uSrcChannelCount,
@@ -237,6 +237,18 @@ public:
 		*ppCue = new XACT3CueImpl(cue);
 		return retval;
 	}
+	COM_METHOD(HRESULT) Stop(uint16_t nCueIndex, uint32_t dwFlags)
+	{
+		return FACTSoundBank_Stop(soundBank, nCueIndex, dwFlags);
+	}
+	COM_METHOD(HRESULT) Destroy()
+	{
+		return FACTSoundBank_Destroy(soundBank);
+	}
+	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
+	{
+		return FACTSoundBank_GetState(soundBank, pdwState);
+	}
 
 	FACTSoundBank *soundBank;
 };
@@ -254,11 +266,6 @@ public:
 	{
 		TRACE_FUNC();
 		return FACTWaveBank_Destroy(waveBank);
-	}
-	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
-	{
-		TRACE_FUNC();
-		return FACTWaveBank_GetState(waveBank, pdwState);
 	}
 	COM_METHOD(HRESULT) GetNumWaves(uint16_t *pnNumWaves)
 	{
@@ -339,16 +346,16 @@ public:
 		TRACE_FUNC();
 		return FACTWaveBank_Stop(waveBank, nWaveIndex, dwFlags);
 	}
+	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
+	{
+		TRACE_FUNC();
+		return FACTWaveBank_GetState(waveBank, pdwState);
+	}
 
 	FACTWaveBank *waveBank;
 };
 
 /* IXACT3Engine Implementation */
-
-/* These wrapper calls are just SDL_RWops for Windows.
- * XACT specifically asks for FILE_FLAG_NO_BUFFERING,
- * so that's slightly less work for us!
- */
 
 extern "C" size_t FAUDIOCALL wrap_io_read(
 	void *data,

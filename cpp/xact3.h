@@ -237,13 +237,15 @@ public:
 		int32_t timeOffset,
 		IXACT3Cue** ppCue /* Optional! */
 	) = 0;
+	COM_METHOD(HRESULT) Stop(uint16_t nCueIndex, uint32_t dwFlags) = 0;
+	COM_METHOD(HRESULT) Destroy() = 0;
+	COM_METHOD(HRESULT) GetState(uint32_t *pdwState) = 0;
 };
 
 class IXACT3WaveBank
 {
 public:
 	COM_METHOD(HRESULT) Destroy() = 0;
-	COM_METHOD(HRESULT) GetState(uint32_t *pdwState) = 0;
 	COM_METHOD(HRESULT) GetNumWaves(uint16_t *pnNumWaves) = 0;
 	COM_METHOD(uint16_t) GetWaveIndex(const char *szFriendlyName) = 0;
 	COM_METHOD(HRESULT) GetWaveProperties(
@@ -268,6 +270,7 @@ public:
 		uint16_t nWaveIndex,
 		uint32_t dwFlags
 	) = 0;
+	COM_METHOD(HRESULT) GetState(uint32_t *pdwState) = 0;
 };
 
 class IXACT3Wave
@@ -293,10 +296,10 @@ public:
 class IXACT3Cue
 {
 public:
-	COM_METHOD(HRESULT) Destroy() = 0;
 	COM_METHOD(HRESULT) Play() = 0;
 	COM_METHOD(HRESULT) Stop(uint32_t dwFlags) = 0;
 	COM_METHOD(HRESULT) GetState(uint32_t *pdwState) = 0;
+	COM_METHOD(HRESULT) Destroy() = 0;
 	COM_METHOD(HRESULT) SetMatrixCoefficients(
 		uint32_t uSrcChannelCount,
 		uint32_t uDstChannelCount,

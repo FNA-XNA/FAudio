@@ -2,9 +2,9 @@
 #include <FAudio.h>
 
 /* These wrapper calls are just SDL_RWops for Windows.
-* XACT specifically asks for FILE_FLAG_NO_BUFFERING,
-* so that's slightly less work for us!
-*/
+ * XACT specifically asks for FILE_FLAG_NO_BUFFERING,
+ * so that's slightly less work for us!
+ */
 
 size_t FAUDIOCALL wrap_io_read(
 	void *data,
