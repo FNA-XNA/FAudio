@@ -78,7 +78,18 @@ extern const IID CLSID_AudioReverb_6;
 extern const IID CLSID_AudioReverb_7;
 extern const IID *CLSID_AudioReverb[];
 
-extern const IID IID_IXACT3Engine;
+extern const IID IID_IXACT3Engine3_0;
+extern const IID IID_IXACT3Engine3_1;
+extern const IID IID_IXACT3Engine3_2;
+extern const IID IID_IXACT3Engine3_3;
+extern const IID IID_IXACT3Engine3_4;
+extern const IID IID_IXACT3Engine3_5;
+extern const IID IID_IXACT3Engine3_6;
+extern const IID IID_IXACT3Engine3_7;
+
+#define JOIN_IID_VERSION(x, y) JOIN_IID_VERSION2(x, y)
+#define JOIN_IID_VERSION2(x, y) x ## y
+#define IID_IXACT3Engine JOIN_IID_VERSION(IID_IXACT3Engine3_, XACT3_VERSION)
 
 extern const IID CLSID_XACTEngine3_0;
 extern const IID CLSID_XACTEngine3_1;

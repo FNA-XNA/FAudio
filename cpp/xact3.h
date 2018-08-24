@@ -312,6 +312,7 @@ public:
 	COM_METHOD(HRESULT) GetProperties(
 		XACT_CUE_INSTANCE_PROPERTIES *ppProperties
 	) = 0;
+#if XACT3_VERSION >= 5
 	COM_METHOD(HRESULT) SetOutputVoices(
 		const XAUDIO2_VOICE_SENDS *pSendList /* Optional! */
 	) = 0;
@@ -321,6 +322,7 @@ public:
 		uint32_t DestinationChannels,
 		const float *pLevelMatrix /* SourceChannels * DestinationChannels */
 	) = 0;
+#endif /* XACT_VERSION >= 5 */
 };
 
 
