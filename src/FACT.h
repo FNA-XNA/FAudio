@@ -107,7 +107,7 @@ typedef struct FACTRuntimeParameters
 	FACTNotificationCallback fnNotificationCallback;
 	int16_t *pRendererID; /* Win32 wchar_t* */
 	FAudio *pXAudio2;
-	void *pMasteringVoice;
+	FAudioMasteringVoice *pMasteringVoice;
 } FACTRuntimeParameters;
 
 typedef struct FACTStreamingParameters

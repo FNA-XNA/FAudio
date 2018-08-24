@@ -162,31 +162,36 @@ uint32_t FACTAudioEngine_Initialize(
 	pEngine->audio = pParams->pXAudio2;
 	if (pEngine->audio == NULL)
 	{
+		FAudio_assert(pParams->pMasteringVoice == NULL);
 		FAudioCreate(&pEngine->audio, 0, FAUDIO_DEFAULT_PROCESSOR);
 	}
 
 	/* Create the audio device */
-	if (pParams->pRendererID == NULL)
+	pEngine->master = pParams->pMasteringVoice;
+	if (pEngine->master == NULL)
 	{
-		deviceIndex = 0;
-	}
-	else
-	{
-		deviceIndex = pParams->pRendererID[0] - L'0';
-		if (deviceIndex > FAudio_PlatformGetDeviceCount())
+		if (pParams->pRendererID == NULL)
 		{
 			deviceIndex = 0;
 		}
+		else
+		{
+			deviceIndex = pParams->pRendererID[0] - L'0';
+			if (deviceIndex > FAudio_PlatformGetDeviceCount())
+			{
+				deviceIndex = 0;
+			}
+		}
+		FAudio_CreateMasteringVoice(
+			pEngine->audio,
+			&pEngine->master,
+			FAUDIO_DEFAULT_CHANNELS,
+			FAUDIO_DEFAULT_SAMPLERATE,
+			0,
+			deviceIndex,
+			NULL
+		);
 	}
-	FAudio_CreateMasteringVoice(
-		pEngine->audio,
-		&pEngine->master,
-		FAUDIO_DEFAULT_CHANNELS,
-		FAUDIO_DEFAULT_SAMPLERATE,
-		0,
-		deviceIndex,
-		NULL
-	);
 
 	/* Create the reverb effect, if applicable */
 	if (pEngine->dspPresetCount > 0) /* Never more than 1...? */
