@@ -310,7 +310,7 @@ public:
 	COM_METHOD(HRESULT) GetVariable(uint16_t nIndex, float *nValue) = 0;
 	COM_METHOD(HRESULT) Pause(int32_t fPause) = 0;
 	COM_METHOD(HRESULT) GetProperties(
-		XACT_CUE_INSTANCE_PROPERTIES *ppProperties
+		XACT_CUE_INSTANCE_PROPERTIES **ppProperties
 	) = 0;
 #if XACT3_VERSION >= 5
 	COM_METHOD(HRESULT) SetOutputVoices(
