@@ -786,7 +786,7 @@ public static class FAudio
 
 	/* Delegates */
 
-	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 	public delegate int FACTReadFileCallback(
 		IntPtr hFile,
 		IntPtr buffer,
@@ -794,14 +794,14 @@ public static class FAudio
 		IntPtr lpOverlapped /* FACTOverlapped* */
 	);
 
-	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 	public delegate int FACTGetOverlappedResultCallback(
 		IntPtr hFile,
 		IntPtr lpOverlapped, /* FACTOverlapped* */
 		int bWait
 	);
 
-	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 	public delegate void FACTNotificationCallback(
 		IntPtr pNotification /* const FACTNotification* */
 	);

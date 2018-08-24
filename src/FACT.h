@@ -30,7 +30,11 @@
 #include "FAudio.h"
 
 #define FACTAPI FAUDIOAPI
-#define FACTCALL FAUDIOCALL
+#ifdef _WIN32
+#define FACTCALL __stdcall
+#else
+#define FACTCALL
+#endif
 
 #ifdef __cplusplus
 extern "C" {
