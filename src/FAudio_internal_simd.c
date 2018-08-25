@@ -530,6 +530,9 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 		mul = _mm_mul_ps(sub, cur_fixed);
 		res = _mm_add_ps(current, mul);
 
+		/* Store back */
+		_mm_store_ps(*resampleCache, res);
+
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 4;
 		cur_scalar_1 += resampleStep * 4;
@@ -545,9 +548,6 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 		cur_scalar_3 &= FIXED_FRACTION_MASK;
 
 		cur_frac = _mm_add_epi32(cur_frac, adder_frac_loop);
-
-		/* Store back */
-		_mm_store_ps(*resampleCache, res);
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
@@ -708,6 +708,9 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		mul = _mm_mul_ps(sub, cur_fixed);
 		res = _mm_add_ps(current, mul);
 
+		/* Store the results */
+		_mm_store_ps(*resampleCache, res);
+
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 2;
 		cur_scalar_1 += resampleStep * 2;
@@ -717,9 +720,6 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		cur_scalar_1 &= FIXED_FRACTION_MASK;
 
 		cur_frac = _mm_add_epi32(cur_frac, adder_frac_loop);
-
-		/* Store the results */
-		_mm_store_ps(*resampleCache, res);
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
@@ -882,6 +882,9 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 		mul = vmulq_f32(sub, cur_fixed);
 		res = vaddq_f32(current, mul);
 
+		/* Store back */
+		vst1q_f32(*resampleCache, res);
+
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 4;
 		cur_scalar_1 += resampleStep * 4;
@@ -897,9 +900,6 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 		cur_scalar_3 &= FIXED_FRACTION_MASK;
 
 		cur_frac = vaddq_s32(cur_frac, adder_frac_loop);
-
-		/* Store back */
-		vst1q_f32(*resampleCache, res);
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
@@ -1048,6 +1048,9 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 		mul = vmulq_f32(sub, cur_fixed);
 		res = vaddq_f32(current, mul);
 
+		/* Store the results */
+		vst1q_f32(*resampleCache, res);
+
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 2;
 		cur_scalar_1 += resampleStep * 2;
@@ -1057,9 +1060,6 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 		cur_scalar_1 &= FIXED_FRACTION_MASK;
 
 		cur_frac = vaddq_s32(cur_frac, adder_frac_loop);
-
-		/* Store the results */
-		vst1q_f32(*resampleCache, res);
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
