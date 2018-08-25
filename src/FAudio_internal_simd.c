@@ -495,7 +495,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	);
 
 	tail = toResample % 4;
-	for (i = 0; i < toResample - tail; i += 4)
+	for (i = 0; i < toResample - tail; i += 4, *resampleCache += 4)
 	{
 		/* This does not compile for me for some reason but should be used:
 		 * current_next_0_1 = _mm_undefined_ps();
@@ -530,13 +530,11 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 		mul = _mm_mul_ps(sub, cur_fixed);
 		res = _mm_add_ps(current, mul);
 
-		/* Update cur scalar for next iteration (or next loop) */
+		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 4;
 		cur_scalar_1 += resampleStep * 4;
 		cur_scalar_2 += resampleStep * 4;
 		cur_scalar_3 += resampleStep * 4;
-
-		/* update dCaches for next iteration */
 		dCache = dCache + (cur_scalar >> FIXED_PRECISION);
 		dCache_1 = dCache_1 + (cur_scalar_1 >> FIXED_PRECISION);
 		dCache_2 = dCache_2 + (cur_scalar_2 >> FIXED_PRECISION);
@@ -550,8 +548,6 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 
 		/* Store back */
 		_mm_store_ps(*resampleCache, res);
-		(*resampleCache) = (*resampleCache) + 4;
-	
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
@@ -666,7 +662,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	);
 
 	tail = toResample % 2;
-	for (i = 0; i < toResample - tail; i += 2)
+	for (i = 0; i < toResample - tail; i += 2, *resampleCache += 4)
 	{
 		/* This does not compile for me for some reason but should be used:
 		 * current_next_1 = _mm_undefined_ps();
@@ -712,19 +708,18 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		mul = _mm_mul_ps(sub, cur_fixed);
 		res = _mm_add_ps(current, mul);
 
-		/* Update cur_scalar, dCache and cur_frac for next iteration */
+		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 2;
 		cur_scalar_1 += resampleStep * 2;
-
 		dCache = dCache + (cur_scalar >> FIXED_PRECISION) * 2;
 		dCache_1 = dCache_1 + (cur_scalar_1 >> FIXED_PRECISION) * 2;
 		cur_scalar &= FIXED_FRACTION_MASK;
 		cur_scalar_1 &= FIXED_FRACTION_MASK;
+
 		cur_frac = _mm_add_epi32(cur_frac, adder_frac_loop);
 
 		/* Store the results */
 		_mm_store_ps(*resampleCache, res);
-		(*resampleCache) = (*resampleCache) + 4;
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
@@ -854,7 +849,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	);
 
 	tail = toResample % 4;
-	for (i = 0; i < toResample - tail; i += 4)
+	for (i = 0; i < toResample - tail; i += 4, *resampleCache += 4)
 	{
 		/* current next holds 2 pairs of the sample and the sample + 1
 		 * after that need to separate them.
@@ -887,13 +882,11 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 		mul = vmulq_f32(sub, cur_fixed);
 		res = vaddq_f32(current, mul);
 
-		/* Update cur scalar for next iteration (or next loop) */
+		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 4;
 		cur_scalar_1 += resampleStep * 4;
 		cur_scalar_2 += resampleStep * 4;
 		cur_scalar_3 += resampleStep * 4;
-
-		/* update dCaches for next iteration */
 		dCache = dCache + (cur_scalar >> FIXED_PRECISION);
 		dCache_1 = dCache_1 + (cur_scalar_1 >> FIXED_PRECISION);
 		dCache_2 = dCache_2 + (cur_scalar_2 >> FIXED_PRECISION);
@@ -907,8 +900,6 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 
 		/* Store back */
 		vst1q_f32(*resampleCache, res);
-		(*resampleCache) = (*resampleCache) + 4;
-
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
@@ -1024,7 +1015,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	);
 
 	tail = toResample % 2;
-	for (i = 0; i < toResample - tail; i += 2)
+	for (i = 0; i < toResample - tail; i += 2, *resampleCache += 4)
 	{
 		/* Current_next_1 and current_next_2 each holds 4 src
 		 * sample points for getting 4 dest resample point at the end.
@@ -1057,19 +1048,18 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 		mul = vmulq_f32(sub, cur_fixed);
 		res = vaddq_f32(current, mul);
 
-		/* Update cur_scalar, dCache and cur_frac for next iteration */
+		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 2;
 		cur_scalar_1 += resampleStep * 2;
-
 		dCache = dCache + (cur_scalar >> FIXED_PRECISION) * 2;
 		dCache_1 = dCache_1 + (cur_scalar_1 >> FIXED_PRECISION) * 2;
 		cur_scalar &= FIXED_FRACTION_MASK;
 		cur_scalar_1 &= FIXED_FRACTION_MASK;
+
 		cur_frac = vaddq_s32(cur_frac, adder_frac_loop);
 
 		/* Store the results */
 		vst1q_f32(*resampleCache, res);
-		(*resampleCache) = (*resampleCache) + 4;
 	}
 	*resampleOffset += resampleStep * (toResample - tail);
 
