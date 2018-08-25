@@ -664,11 +664,6 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	tail = toResample % 2;
 	for (i = 0; i < toResample - tail; i += 2, *resampleCache += 4)
 	{
-		/* This does not compile for me for some reason but should be used:
-		 * current_next_1 = _mm_undefined_ps();
-		 * current_next_2 = _mm_undefined_ps();
-		 */
-
 		/* Current_next_1 and current_next_2 each holds 4 src
 		 * sample points for getting 4 dest resample point at the end.
 		 * current_next_1 holds:
