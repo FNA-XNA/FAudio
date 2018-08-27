@@ -32,7 +32,8 @@ X3DAUDIO_SRC = 	X3DAudio.cpp
 XACT3_SRC = \
 	com_utils_xact.cpp \
 	xact3.cpp \
-	win_registry.cpp
+	win_registry.cpp \
+	win_iostream.cpp
 
 # Object code lists
 XAPO_TARGET = $(BUILD_DIR)/XAPOBase.lib
