@@ -411,19 +411,19 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	float **resampleCache,
 	uint64_t toResample
 ) {
-	uint32_t i;
+	uint32_t i, header, tail;
 	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
 	float *dCache_1, *dCache_2, *dCache_3;
 	float *dCache = voice->audio->decodeCache;
 	uint64_t *resampleOffset = &voice->src.resampleOffset;
 	uint64_t resampleStep = voice->src.resampleStep;
 	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
-	uint32_t tail, header = (16 - (uint64_t) (*resampleCache) % 16) / 4;
 	__m128 one_over_fixed_one, half, current_next_0_1, current_next_2_3,
 		current, next, sub, cur_fixed, mul, res;
 	__m128i cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
+	header = (16 - ((size_t) *resampleCache) % 16) / 4;
 	if (header == 4)
 	{
 		header = 0;
@@ -585,7 +585,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	float **resampleCache,
 	uint64_t toResample
 ) {
-	uint32_t i, tail, header;
+	uint32_t i, header, tail;
 	uint64_t cur_scalar, cur_scalar_1;
 	float *dCache_1;
 	float *dCache = voice->audio->decodeCache;
@@ -596,7 +596,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	__m128i cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
-	header = (16 - (uint64_t) (*resampleCache) % 16) / 8;
+	header = (16 - ((size_t) *resampleCache) % 16) / 8;
 	if (header == 2)
 	{
 		header = 0;
@@ -758,19 +758,19 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	float **resampleCache,
 	uint64_t toResample
 ) {
-	uint32_t i;
+	uint32_t i, header, tail;
 	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
 	float *dCache_1, *dCache_2, *dCache_3;
 	float *dCache = voice->audio->decodeCache;
 	uint64_t *resampleOffset = &voice->src.resampleOffset;
 	uint64_t resampleStep = voice->src.resampleStep;
 	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
-	uint32_t tail, header = (16 - (uint64_t) (*resampleCache) % 16) / 4;
 	float32x4_t one_over_fixed_one, half, current_next_0_1, current_next_2_3,
 		current, next, sub, cur_fixed, mul, res;
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
+	header = (16 - ((size_t) *resampleCache) % 16) / 4;
 	if (header == 4)
 	{
 		header = 0;
@@ -932,7 +932,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	float **resampleCache,
 	uint64_t toResample
 ) {
-	uint32_t i, tail, header;
+	uint32_t i, header, tail;
 	uint64_t cur_scalar, cur_scalar_1;
 	float *dCache_1;
 	float *dCache = voice->audio->decodeCache;
@@ -942,7 +942,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
-	header = (16 - (uint64_t) (*resampleCache) % 16) / 8;
+	header = (16 - ((size_t) *resampleCache) % 16) / 8;
 	if (header == 2)
 	{
 		header = 0;
@@ -1122,8 +1122,8 @@ void FAudio_INTERNAL_Amplify_SSE2(
 	float volume
 ) {
 	uint32_t i;
-	uint32_t header = (16 - (((uint64_t) output) % 16)) / 4;
-	uint32_t tail = ((uint64_t) totalSamples - header) % 4;
+	uint32_t header = (16 - (((size_t) output) % 16)) / 4;
+	uint32_t tail = (totalSamples - header) % 4;
 	__m128 volumeVec, minVolumeVec, maxVolumeVec, outVec;
 	if (header == 4)
 	{
@@ -1175,8 +1175,8 @@ void FAudio_INTERNAL_Amplify_NEON(
 	float volume
 ) {
 	uint32_t i;
-	uint32_t header = (16 - (((uint64_t)output) % 16)) / 4;
-	uint32_t tail = ((uint64_t)totalSamples - header) % 4;
+	uint32_t header = (16 - (((size_t) output) % 16)) / 4;
+	uint32_t tail = (totalSamples - header) % 4;
 	float32x4_t volumeVec, minVolumeVec, maxVolumeVec, outVec;
 	if (header == 4)
 	{
