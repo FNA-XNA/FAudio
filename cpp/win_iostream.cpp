@@ -13,8 +13,7 @@ size_t FAUDIOCALL wrap_io_read(
 	size_t count
 ) {
 	DWORD byte_read;
-	HANDLE io = (HANDLE) data;
-	if (!ReadFile(io, dst, size * count, &byte_read, NULL))
+	if (!ReadFile((HANDLE) data, dst, size * count, &byte_read, NULL))
 	{
 		return 0;
 	}
@@ -27,7 +26,8 @@ int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 	LARGE_INTEGER windowsoffset;
 	HANDLE io = (HANDLE) data;
 
-	switch (whence) {
+	switch (whence)
+	{
 	case FAUDIO_SEEK_SET:
 		windowswhence = FILE_BEGIN;
 		break;
@@ -49,7 +49,6 @@ int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence)
 
 int FAUDIOCALL wrap_io_close(void *data)
 {
-	HANDLE io = (HANDLE) data;
-	CloseHandle(io);
+	CloseHandle((HANDLE) data);
 	return 0;
 }
