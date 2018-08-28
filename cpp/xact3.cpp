@@ -359,14 +359,14 @@ public:
 
 /* IXACT3Engine Implementation */
 
-extern "C" size_t FAUDIOCALL wrap_io_read(
+extern size_t FAUDIOCALL wrap_io_read(
 	void *data,
 	void *dst,
 	size_t size,
 	size_t count
 );
-extern "C" int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence);
-extern "C" int FAUDIOCALL wrap_io_close(void *data);
+extern int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence);
+extern int FAUDIOCALL wrap_io_close(void *data);
 
 class XACT3EngineImpl : public IXACT3Engine
 {
