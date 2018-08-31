@@ -1301,9 +1301,9 @@ static uint8 get8(vorb *z)
 
    #ifndef STB_VORBIS_NO_STDIO
    {
+   /* FAudio change! */
    int8 c;
-   fread(&c, 1, 1, z->f); /* FAudio change! */
-   if (c == EOF) { z->eof = TRUE; return 0; }
+   if (fread(&c, 1, 1, z->f) != 1) { z->eof = TRUE; return 0; }
    return c;
    }
    #endif
@@ -1376,7 +1376,7 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
    } else {
       loc += f->f_start;
    }
-   if (!fseek(f->f, loc, SEEK_SET))
+   if (fseek(f->f, loc, SEEK_SET) != -1) /* FAudio change! */
       return 1;
    f->eof = 1;
    fseek(f->f, f->f_start, SEEK_END);

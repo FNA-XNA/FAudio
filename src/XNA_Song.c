@@ -65,7 +65,7 @@
 #define fclose(io) FAudio_close(io)
 #define fread(dst, size, count, io) io->read(io->data, dst, size, count)
 #define fseek(io, offset, whence) io->seek(io->data, offset, whence)
-#define ftell(io) io->seek(io->data, 0, 1)
+#define ftell(io) io->seek(io->data, 0, FAUDIO_SEEK_CUR)
 
 #define STB_VORBIS_NO_PUSHDATA_API 1
 #define STB_VORBIS_NO_INTEGER_CONVERSION 1
