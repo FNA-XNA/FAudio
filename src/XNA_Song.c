@@ -73,19 +73,19 @@
 
 /* Globals */
 
-float songVolume = 1.0f;
-FAudio *songAudio = NULL;
-FAudioMasteringVoice *songMaster = NULL;
+static float songVolume = 1.0f;
+static FAudio *songAudio = NULL;
+static FAudioMasteringVoice *songMaster = NULL;
 
-FAudioSourceVoice *songVoice = NULL;
-FAudioVoiceCallback callbacks;
-stb_vorbis *activeSong = NULL;
-stb_vorbis_info activeSongInfo;
-uint8_t *songCache;
+static FAudioSourceVoice *songVoice = NULL;
+static FAudioVoiceCallback callbacks;
+static stb_vorbis *activeSong = NULL;
+static stb_vorbis_info activeSongInfo;
+static uint8_t *songCache;
 
 /* Internal Functions */
 
-void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
+static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
 	FAudioBuffer buffer;
 	uint32_t decoded = stb_vorbis_get_samples_float_interleaved(
@@ -116,7 +116,7 @@ void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 	);
 }
 
-void XNA_SongKill()
+static void XNA_SongKill()
 {
 	if (songVoice != NULL)
 	{
