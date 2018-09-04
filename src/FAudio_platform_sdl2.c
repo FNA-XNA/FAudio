@@ -380,7 +380,7 @@ void FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
 ) {
-	const char *name;
+	const char *name, *envvar;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 	if (index > FAudio_PlatformGetDeviceCount())
@@ -405,13 +405,52 @@ void FAudio_PlatformGetDeviceDetails(
 		sizeof(details->DisplayName)
 	);
 
-	/* FIXME: SDL needs a device format query function! */
-	details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
+	/* TODO: SDL_GetAudioDeviceSpec! */
+	envvar = SDL_getenv("SDL_AUDIO_FREQUENCY");
+	if (!envvar || ((details->OutputFormat.Format.nSamplesPerSec = SDL_atoi(envvar)) == 0))
+	{
+		details->OutputFormat.Format.nSamplesPerSec = 48000;
+	}
+	envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
+	if (!envvar || ((details->OutputFormat.Format.nChannels = SDL_atoi(envvar)) == 0))
+	{
+		details->OutputFormat.Format.nChannels = 2;
+	}
+	if (details->OutputFormat.Format.nChannels == 1)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_MONO;
+	}
+	else if (details->OutputFormat.Format.nChannels == 2)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
+	}
+	else if (details->OutputFormat.Format.nChannels == 3)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_2POINT1;
+	}
+	else if (details->OutputFormat.Format.nChannels == 4)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_QUAD;
+	}
+	else if (details->OutputFormat.Format.nChannels == 5)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_4POINT1;
+	}
+	else if (details->OutputFormat.Format.nChannels == 6)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_5POINT1;
+	}
+	else if (details->OutputFormat.Format.nChannels == 8)
+	{
+		details->OutputFormat.dwChannelMask = SPEAKER_7POINT1;
+	}
+	else
+	{
+		FAudio_assert(0 && "Unrecognized speaker layout!");
+	}
 	details->OutputFormat.Samples.wValidBitsPerSample = 32;
 	details->OutputFormat.Format.wBitsPerSample = 32;
 	details->OutputFormat.Format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
-	details->OutputFormat.Format.nChannels = 2;
-	details->OutputFormat.Format.nSamplesPerSec = 48000;
 	details->OutputFormat.Format.nBlockAlign = (
 		details->OutputFormat.Format.nChannels *
 		(details->OutputFormat.Format.wBitsPerSample / 8)
