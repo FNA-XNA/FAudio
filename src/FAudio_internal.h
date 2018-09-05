@@ -205,9 +205,12 @@ typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 );
 
 typedef void (FAUDIOCALL * FAudioResampleCallback)(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t channels
 );
 
 typedef void (FAUDIOCALL * FAudioMixCallback)(
@@ -373,9 +376,12 @@ extern void (*FAudio_INTERNAL_Convert_S16_To_F32)(
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
 extern void FAudio_INTERNAL_ResampleGeneric(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t channels
 );
 
 extern void (*FAudio_INTERNAL_Amplify)(

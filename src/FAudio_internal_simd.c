@@ -292,34 +292,36 @@ void FAudio_INTERNAL_Convert_S16_To_F32_NEON(
 /* SECTION 2: Linear Resamplers */
 
 void FAudio_INTERNAL_ResampleGeneric(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t channels
 ) {
 	uint32_t i, j;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	uint64_t cur = *resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
-		for (j = 0; j < voice->src.format->nChannels; j += 1)
+		for (j = 0; j < channels; j += 1)
 		{
 			/* lerp, then convert to float value */
 			*resampleCache++ = (float) (
 				dCache[j] +
-				(dCache[j + voice->src.format->nChannels] - dCache[j]) *
+				(dCache[j + channels] - dCache[j]) *
 				FIXED_TO_DOUBLE(cur)
 			);
 		}
 
 		/* Increment fraction offset by the stepping value */
-		voice->src.resampleOffset += voice->src.resampleStep;
-		cur += voice->src.resampleStep;
+		*resampleOffset += resampleStep;
+		cur += resampleStep;
 
 		/* Only increment the sample offset by integer values.
 		 * Sometimes this will be 0 until cur accumulates
 		 * enough steps, especially for "slow" rates.
 		 */
-		dCache += (cur >> FIXED_PRECISION) * voice->src.format->nChannels;
+		dCache += (cur >> FIXED_PRECISION) * channels;
 
 		/* Now that any integer has been added, drop it.
 		 * The offset pointer will preserve the total.
@@ -330,13 +332,15 @@ void FAudio_INTERNAL_ResampleGeneric(
 
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 void FAudio_INTERNAL_ResampleMono_Scalar(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t UNUSED
 ) {
 	uint32_t i;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	uint64_t cur = *resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
 		/* lerp, then convert to float value */
@@ -347,8 +351,8 @@ void FAudio_INTERNAL_ResampleMono_Scalar(
 		);
 
 		/* Increment fraction offset by the stepping value */
-		voice->src.resampleOffset += voice->src.resampleStep;
-		cur += voice->src.resampleStep;
+		*resampleOffset += resampleStep;
+		cur += resampleStep;
 
 		/* Only increment the sample offset by integer values.
 		 * Sometimes this will be 0 until cur accumulates
@@ -364,13 +368,15 @@ void FAudio_INTERNAL_ResampleMono_Scalar(
 }
 
 void FAudio_INTERNAL_ResampleStereo_Scalar(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t UNUSED
 ) {
 	uint32_t i;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t cur = voice->src.resampleOffset & FIXED_FRACTION_MASK;
+	uint64_t cur = *resampleOffset & FIXED_FRACTION_MASK;
 	for (i = 0; i < toResample; i += 1)
 	{
 		/* lerp, then convert to float value */
@@ -386,8 +392,8 @@ void FAudio_INTERNAL_ResampleStereo_Scalar(
 		);
 
 		/* Increment fraction offset by the stepping value */
-		voice->src.resampleOffset += voice->src.resampleStep;
-		cur += voice->src.resampleStep;
+		*resampleOffset += resampleStep;
+		cur += resampleStep;
 
 		/* Only increment the sample offset by integer values.
 		 * Sometimes this will be 0 until cur accumulates
@@ -407,16 +413,16 @@ void FAudio_INTERNAL_ResampleStereo_Scalar(
 
 #if HAVE_SSE2_INTRINSICS
 void FAudio_INTERNAL_ResampleMono_SSE2(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t UNUSED
 ) {
 	uint32_t i, header, tail;
 	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
 	float *dCache_1, *dCache_2, *dCache_3;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t *resampleOffset = &voice->src.resampleOffset;
-	uint64_t resampleStep = voice->src.resampleStep;
 	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
 	__m128 one_over_fixed_one, half, current_next_0_1, current_next_2_3,
 		current, next, sub, cur_fixed, mul, res;
@@ -581,16 +587,16 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 }
 
 void FAudio_INTERNAL_ResampleStereo_SSE2(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t UNUSED
 ) {
 	uint32_t i, header, tail;
 	uint64_t cur_scalar, cur_scalar_1;
 	float *dCache_1;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t *resampleOffset = &voice->src.resampleOffset;
-	uint64_t resampleStep = voice->src.resampleStep;
 	__m128 one_over_fixed_one, half, current_next_1, current_next_2,
 		current, next, sub, cur_fixed, mul, res;
 	__m128i cur_frac, adder_frac, adder_frac_loop;
@@ -754,16 +760,16 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 
 #if HAVE_NEON_INTRINSICS
 void FAudio_INTERNAL_ResampleMono_NEON(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t UNUSED
 ) {
 	uint32_t i, header, tail;
 	uint64_t cur_scalar_1, cur_scalar_2, cur_scalar_3;
 	float *dCache_1, *dCache_2, *dCache_3;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t *resampleOffset = &voice->src.resampleOffset;
-	uint64_t resampleStep = voice->src.resampleStep;
 	uint64_t cur_scalar = *resampleOffset & FIXED_FRACTION_MASK;
 	float32x4_t one_over_fixed_one, half, current_next_0_1, current_next_2_3,
 		current, next, sub, cur_fixed, mul, res;
@@ -928,16 +934,16 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 }
 
 void FAudio_INTERNAL_ResampleStereo_NEON(
-	FAudioSourceVoice *voice,
+	float *restrict dCache,
 	float *restrict resampleCache,
-	uint64_t toResample
+	uint64_t *resampleOffset,
+	uint64_t resampleStep,
+	uint32_t toResample,
+	uint8_t channels
 ) {
 	uint32_t i, header, tail;
 	uint64_t cur_scalar, cur_scalar_1;
 	float *dCache_1;
-	float *dCache = voice->audio->decodeCache;
-	uint64_t *resampleOffset = &voice->src.resampleOffset;
-	uint64_t resampleStep = voice->src.resampleStep;
 	float32x4_t one_over_fixed_one, half, current, next, sub, cur_fixed, mul, res;
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
 
