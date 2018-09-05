@@ -217,6 +217,13 @@ static void FAudio_INTERNAL_DecodeBuffers(
 							voice->src.callback
 						);
 					}
+
+					/* One last chance at redemption */
+					if (buffer == NULL && voice->src.bufferList != NULL)
+					{
+						buffer = &voice->src.bufferList->buffer;
+						voice->src.curBufferOffset = buffer->PlayBegin;
+					}
 				}
 
 				FAudio_free(toDelete);
