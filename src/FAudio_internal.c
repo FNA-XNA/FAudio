@@ -543,7 +543,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 	/* Process effect chain */
 	effectOut = voice->audio->resampleCache;
-
 	FAudio_PlatformLockMutex(voice->effectLock);
 	if (voice->effects.count > 0)
 	{
