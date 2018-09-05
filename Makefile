@@ -12,7 +12,7 @@ WINDOWS_TARGET=0
 ifeq ($(OS), Windows_NT) # cygwin/msys2
 	WINDOWS_TARGET=1
 endif
-ifneq (,$(findstring w64-mingw32,$(CC)))  # mingw-w64 on Linux
+ifneq (,$(findstring w64-mingw32,$(CC))) # mingw-w64 on Linux
 	WINDOWS_TARGET=1
 endif
 
@@ -23,8 +23,7 @@ ifeq ($(WINDOWS_TARGET),1)
 	UTIL_SUFFIX = .exe
 	LDFLAGS += -static-libgcc
 else ifeq ($(UNAME), Darwin)
-	CC = cc -arch i386 -arch x86_64 -mmacosx-version-min=10.6
-	CFLAGS += -fpic -fPIC
+	CFLAGS += -mmacosx-version-min=10.6 -fpic -fPIC
 	TARGET_PREFIX = lib
 	TARGET_SUFFIX = dylib
 	UTIL_SUFFIX = 
