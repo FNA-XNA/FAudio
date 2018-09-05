@@ -651,7 +651,6 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 
 	/* Process effect chain */
 	effectOut = voice->audio->resampleCache;
-
 	FAudio_PlatformLockMutex(voice->effectLock);
 	if (voice->effects.count > 0)
 	{
