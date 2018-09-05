@@ -293,7 +293,7 @@ void FAudio_INTERNAL_Convert_S16_To_F32_NEON(
 
 void FAudio_INTERNAL_ResampleGeneric(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i, j;
@@ -304,7 +304,7 @@ void FAudio_INTERNAL_ResampleGeneric(
 		for (j = 0; j < voice->src.format->nChannels; j += 1)
 		{
 			/* lerp, then convert to float value */
-			*(*resampleCache)++ = (float) (
+			*resampleCache++ = (float) (
 				dCache[j] +
 				(dCache[j + voice->src.format->nChannels] - dCache[j]) *
 				FIXED_TO_DOUBLE(cur)
@@ -331,7 +331,7 @@ void FAudio_INTERNAL_ResampleGeneric(
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 void FAudio_INTERNAL_ResampleMono_Scalar(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i;
@@ -340,7 +340,7 @@ void FAudio_INTERNAL_ResampleMono_Scalar(
 	for (i = 0; i < toResample; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[1] - dCache[0]) *
 			FIXED_TO_DOUBLE(cur)
@@ -365,7 +365,7 @@ void FAudio_INTERNAL_ResampleMono_Scalar(
 
 void FAudio_INTERNAL_ResampleStereo_Scalar(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i;
@@ -374,12 +374,12 @@ void FAudio_INTERNAL_ResampleStereo_Scalar(
 	for (i = 0; i < toResample; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[2] - dCache[0]) *
 			FIXED_TO_DOUBLE(cur)
 		);
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[1] +
 			(dCache[3] - dCache[1]) *
 			FIXED_TO_DOUBLE(cur)
@@ -408,7 +408,7 @@ void FAudio_INTERNAL_ResampleStereo_Scalar(
 #if HAVE_SSE2_INTRINSICS
 void FAudio_INTERNAL_ResampleMono_SSE2(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i, header, tail;
@@ -423,7 +423,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	__m128i cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
-	header = (16 - ((size_t) *resampleCache) % 16) / 4;
+	header = (16 - ((size_t) resampleCache) % 16) / 4;
 	if (header == 4)
 	{
 		header = 0;
@@ -431,7 +431,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	for (i = 0; i < header; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[1] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -495,7 +495,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	);
 
 	tail = toResample % 4;
-	for (i = 0; i < toResample - tail; i += 4, *resampleCache += 4)
+	for (i = 0; i < toResample - tail; i += 4, resampleCache += 4)
 	{
 		/* This does not compile for me for some reason but should be used:
 		 * current_next_0_1 = _mm_undefined_ps();
@@ -531,7 +531,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 		res = _mm_add_ps(current, mul);
 
 		/* Store back */
-		_mm_store_ps(*resampleCache, res);
+		_mm_store_ps(resampleCache, res);
 
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 4;
@@ -555,7 +555,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	for (i = 0; i < tail; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[1] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -582,7 +582,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 
 void FAudio_INTERNAL_ResampleStereo_SSE2(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i, header, tail;
@@ -596,7 +596,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	__m128i cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
-	header = (16 - ((size_t) *resampleCache) % 16) / 8;
+	header = (16 - ((size_t) resampleCache) % 16) / 8;
 	if (header == 2)
 	{
 		header = 0;
@@ -605,12 +605,12 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	for (i = 0; i < header; i += 2)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[2] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
 		);
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[1] +
 			(dCache[3] - dCache[1]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -662,7 +662,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	);
 
 	tail = toResample % 2;
-	for (i = 0; i < toResample - tail; i += 2, *resampleCache += 4)
+	for (i = 0; i < toResample - tail; i += 2, resampleCache += 4)
 	{
 		/* Current_next_1 and current_next_2 each holds 4 src
 		 * sample points for getting 4 dest resample point at the end.
@@ -704,7 +704,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		res = _mm_add_ps(current, mul);
 
 		/* Store the results */
-		_mm_store_ps(*resampleCache, res);
+		_mm_store_ps(resampleCache, res);
 
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 2;
@@ -722,12 +722,12 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	for (i = 0; i < tail; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[2] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
 		);
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[1] +
 			(dCache[3] - dCache[1]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -755,7 +755,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 #if HAVE_NEON_INTRINSICS
 void FAudio_INTERNAL_ResampleMono_NEON(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i, header, tail;
@@ -770,7 +770,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
-	header = (16 - ((size_t) *resampleCache) % 16) / 4;
+	header = (16 - ((size_t) resampleCache) % 16) / 4;
 	if (header == 4)
 	{
 		header = 0;
@@ -778,7 +778,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	for (i = 0; i < header; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[1] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -844,7 +844,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	);
 
 	tail = toResample % 4;
-	for (i = 0; i < toResample - tail; i += 4, *resampleCache += 4)
+	for (i = 0; i < toResample - tail; i += 4, resampleCache += 4)
 	{
 		/* current next holds 2 pairs of the sample and the sample + 1
 		 * after that need to separate them.
@@ -878,7 +878,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 		res = vaddq_f32(current, mul);
 
 		/* Store back */
-		vst1q_f32(*resampleCache, res);
+		vst1q_f32(resampleCache, res);
 
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 4;
@@ -902,7 +902,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	for (i = 0; i < tail; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[1] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -929,7 +929,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 
 void FAudio_INTERNAL_ResampleStereo_NEON(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 ) {
 	uint32_t i, header, tail;
@@ -942,7 +942,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	int32x4_t cur_frac, adder_frac, adder_frac_loop;
 
 	/* This is the header, the Dest needs to be aligned to 16B */
-	header = (16 - ((size_t) *resampleCache) % 16) / 8;
+	header = (16 - ((size_t) resampleCache) % 16) / 8;
 	if (header == 2)
 	{
 		header = 0;
@@ -951,12 +951,12 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	for (i = 0; i < header; i += 2)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[2] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
 		);
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[1] +
 			(dCache[3] - dCache[1]) *
 			FIXED_TO_FLOAT(cur_scalar)
@@ -1010,7 +1010,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	);
 
 	tail = toResample % 2;
-	for (i = 0; i < toResample - tail; i += 2, *resampleCache += 4)
+	for (i = 0; i < toResample - tail; i += 2, resampleCache += 4)
 	{
 		/* Current_next_1 and current_next_2 each holds 4 src
 		 * sample points for getting 4 dest resample point at the end.
@@ -1044,7 +1044,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 		res = vaddq_f32(current, mul);
 
 		/* Store the results */
-		vst1q_f32(*resampleCache, res);
+		vst1q_f32(resampleCache, res);
 
 		/* Update dCaches for next iteration */
 		cur_scalar += resampleStep * 2;
@@ -1062,12 +1062,12 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	for (i = 0; i < tail; i += 1)
 	{
 		/* lerp, then convert to float value */
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[0] +
 			(dCache[2] - dCache[0]) *
 			FIXED_TO_FLOAT(cur_scalar)
 		);
-		*(*resampleCache)++ = (float) (
+		*resampleCache++ = (float) (
 			dCache[1] +
 			(dCache[3] - dCache[1]) *
 			FIXED_TO_FLOAT(cur_scalar)

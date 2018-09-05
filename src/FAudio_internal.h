@@ -206,7 +206,7 @@ typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 
 typedef void (FAUDIOCALL * FAudioResampleCallback)(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 );
 
@@ -374,7 +374,7 @@ extern FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
 extern void FAudio_INTERNAL_ResampleGeneric(
 	FAudioSourceVoice *voice,
-	float **resampleCache,
+	float *restrict resampleCache,
 	uint64_t toResample
 );
 

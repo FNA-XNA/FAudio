@@ -409,10 +409,8 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
 	uint32_t i;
-	/* Decode/Resample variables */
+	/* Decode variables */
 	uint64_t toDecode;
-	uint64_t toResample;
-	float *resampleCache;
 	/* Output mix variables */
 	float *stream;
 	uint32_t mixed;
@@ -461,63 +459,59 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		goto end;
 	}
 
-	mixed = 0;
-	resampleCache = voice->audio->resampleCache;
-	while (mixed < voice->src.resampleSamples && voice->src.bufferList != NULL)
+	/* Base decode size, int to fixed... */
+	toDecode = voice->src.resampleSamples * voice->src.resampleStep;
+	/* ... rounded up based on current offset... */
+	toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
+	/* ... fixed to int, truncating extra fraction from rounding. */
+	toDecode >>= FIXED_PRECISION;
+
+	/* Decode... */
+	FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
+
+	/* int to fixed... */
+	mixed = toDecode << FIXED_PRECISION;
+	/* ... round back down based on current offset... */
+	mixed -= voice->src.curBufferOffsetDec;
+	/* ... undo step size, fixed to int. */
+	mixed /= voice->src.resampleStep;
+	/* FIXME: I feel like this should be an assert but I suck */
+	mixed = FAudio_min(mixed, voice->src.resampleSamples - mixed);
+
+	/* Resample... */
+	if (voice->src.resampleStep == FIXED_ONE)
 	{
-
-		/* Base decode size, int to fixed... */
-		toDecode = (voice->src.resampleSamples - mixed) * voice->src.resampleStep;
-		/* ... rounded up based on current offset... */
-		toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
-		/* ... fixed to int, truncating extra fraction from rounding. */
-		toDecode >>= FIXED_PRECISION;
-
-		/* Decode... */
-		FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
-
-		/* int to fixed... */
-		toResample = toDecode << FIXED_PRECISION;
-		/* ... round back down based on current offset... */
-		toResample -= voice->src.curBufferOffsetDec;
-		/* ... undo step size, fixed to int. */
-		toResample /= voice->src.resampleStep;
-		/* FIXME: I feel like this should be an assert but I suck */
-		toResample = FAudio_min(toResample, voice->src.resampleSamples - mixed);
-
-		/* Resample... */
-		if (voice->src.resampleStep == FIXED_ONE)
-		{
-			/* Actually, just copy directly... */
-			FAudio_memcpy(
-				resampleCache,
-				voice->audio->decodeCache,
-				(size_t) toResample * voice->src.format->nChannels * sizeof(float)
-			);
-			resampleCache += toResample * voice->src.format->nChannels;
-		}
-		else
-		{
-			voice->src.resample(voice, &resampleCache, toResample);
-		}
-
-		/* Update buffer offsets */
-		if (voice->src.bufferList != NULL)
-		{
-			/* Increment fixed offset by resample size, int to fixed... */
-			voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
-			/* ... chop off any ints we got from the above increment */
-			voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
-		}
-		else
-		{
-			voice->src.curBufferOffsetDec = 0;
-			voice->src.curBufferOffset = 0;
-		}
-
-		/* Finally. */
-		mixed += (uint32_t) toResample;
+		/* Actually, just copy directly... */
+		FAudio_memcpy(
+			voice->audio->resampleCache,
+			voice->audio->decodeCache,
+			(size_t) mixed * voice->src.format->nChannels * sizeof(float)
+		);
 	}
+	else
+	{
+		voice->src.resample(
+			voice,
+			voice->audio->resampleCache,
+			mixed
+		);
+	}
+
+	/* Update buffer offsets */
+	if (voice->src.bufferList != NULL)
+	{
+		/* Increment fixed offset by resample size, int to fixed... */
+		voice->src.curBufferOffsetDec += mixed * voice->src.resampleStep;
+		/* ... chop off any ints we got from the above increment */
+		voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
+	}
+	else
+	{
+		voice->src.curBufferOffsetDec = 0;
+		voice->src.curBufferOffset = 0;
+	}
+
+	/* Finally. */
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	if (mixed == 0)
 	{
@@ -526,7 +520,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 	FAudio_PlatformLockMutex(voice->sendLock);
 
-	/* Nowhere to send it? Just skip resampling...*/
+	/* Nowhere to send it? Just skip the rest...*/
 	if (voice->sends.SendCount == 0)
 	{
 		FAudio_PlatformUnlockMutex(voice->sendLock);
