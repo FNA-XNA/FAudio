@@ -466,7 +466,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	while (mixed < voice->src.resampleSamples && voice->src.bufferList != NULL)
 	{
 		/* Base decode size, int to fixed... */
-		toDecode = voice->src.resampleSamples * voice->src.resampleStep;
+		toDecode = (voice->src.resampleSamples - mixed) * voice->src.resampleStep;
 		/* ... rounded up based on current offset... */
 		toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
 		/* ... fixed to int, truncating extra fraction from rounding. */
