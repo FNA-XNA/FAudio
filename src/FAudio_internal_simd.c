@@ -296,7 +296,7 @@ void FAudio_INTERNAL_ResampleGeneric(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t channels
 ) {
 	uint32_t i, j;
@@ -336,7 +336,7 @@ void FAudio_INTERNAL_ResampleMono_Scalar(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t UNUSED
 ) {
 	uint32_t i;
@@ -372,7 +372,7 @@ void FAudio_INTERNAL_ResampleStereo_Scalar(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t UNUSED
 ) {
 	uint32_t i;
@@ -417,7 +417,7 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t UNUSED
 ) {
 	uint32_t i, header, tail;
@@ -591,7 +591,7 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t UNUSED
 ) {
 	uint32_t i, header, tail;
@@ -764,7 +764,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t UNUSED
 ) {
 	uint32_t i, header, tail;
@@ -938,7 +938,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t channels
 ) {
 	uint32_t i, header, tail;

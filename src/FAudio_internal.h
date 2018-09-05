@@ -209,7 +209,7 @@ typedef void (FAUDIOCALL * FAudioResampleCallback)(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t channels
 );
 
@@ -380,7 +380,7 @@ extern void FAudio_INTERNAL_ResampleGeneric(
 	float *restrict resampleCache,
 	uint64_t *resampleOffset,
 	uint64_t resampleStep,
-	uint32_t toResample,
+	uint64_t toResample,
 	uint8_t channels
 );
 
