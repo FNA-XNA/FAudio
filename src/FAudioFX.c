@@ -74,8 +74,22 @@ void FAudioFXVolumeMeter_Process(
 	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
 		FAPOBase_BeginProcess(&fapo->base);
 
-	/* TODO */
-	(void) levels;
+	if (levels->pPeakLevels)
+	{
+		/* TODO: pPeakLevels */
+		FAudio_zero(
+			levels->pPeakLevels,
+			levels->ChannelCount * sizeof(float)
+		);
+	}
+	if (levels->pRMSLevels)
+	{
+		/* TODO: pRMSLevels */
+		FAudio_zero(
+			levels->pRMSLevels,
+			levels->ChannelCount * sizeof(float)
+		);
+	}
 
 	FAPOBase_EndProcess(&fapo->base);
 }
@@ -91,13 +105,17 @@ uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 	FAudioFXVolumeMeter *result = (FAudioFXVolumeMeter*) FAudio_malloc(
 		sizeof(FAudioFXVolumeMeter)
 	);
+	uint8_t *params = (uint8_t*) FAudio_malloc(
+		sizeof(FAudioFXVolumeMeterLevels) * 3
+	);
+	FAudio_zero(params, sizeof(FAudioFXVolumeMeterLevels) * 3);
 
 	/* Initialize... */
 	CreateFAPOBase(
 		&result->base,
 		&VolumeMeterProperties,
-		NULL, /* FIXME */
-		0, /* sizeof(FAudioFXVolumeMeterLevels), */
+		params,
+		sizeof(FAudioFXVolumeMeterLevels),
 		1
 	);
 
