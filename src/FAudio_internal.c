@@ -375,7 +375,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			
 			if (dstParams.pBuffer == buffer)
 			{
-				FAudio_INTERNAL_ResizeEffectChainCache(voice->audio, dstFmt.Format.nBlockAlign * samples);
+				FAudio_INTERNAL_ResizeEffectChainCache(voice->audio, voice->effects.desc[i].OutputChannels * samples);
 				dstParams.pBuffer = voice->audio->effectChainCache;
 			}
 			else
