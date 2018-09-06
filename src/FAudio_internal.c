@@ -114,14 +114,17 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		decoding = (uint32_t) *toDecode - decoded;
 
 		/* Start-of-buffer behavior */
-		if (	voice->src.curBufferOffset == buffer->PlayBegin &&
-			voice->src.callback != NULL &&
-			voice->src.callback->OnBufferStart != NULL	)
+		if (voice->src.newBuffer)
 		{
-			voice->src.callback->OnBufferStart(
-				voice->src.callback,
-				buffer->pContext
-			);
+			voice->src.newBuffer = 0;
+			if (	voice->src.callback != NULL &&
+				voice->src.callback->OnBufferStart != NULL	)
+			{
+				voice->src.callback->OnBufferStart(
+					voice->src.callback,
+					buffer->pContext
+				);
+			}
 		}
 
 		/* Check for end-of-buffer */
@@ -182,6 +185,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				{
 					buffer = &voice->src.bufferList->buffer;
 					voice->src.curBufferOffset = buffer->PlayBegin;
+					voice->src.newBuffer = 1;
 				}
 				else
 				{
@@ -223,6 +227,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					{
 						buffer = &voice->src.bufferList->buffer;
 						voice->src.curBufferOffset = buffer->PlayBegin;
+						voice->src.newBuffer = 1;
 					}
 				}
 

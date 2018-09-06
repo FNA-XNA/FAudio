@@ -1361,6 +1361,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	{
 		voice->src.bufferList = entry;
 		voice->src.curBufferOffset = entry->buffer.PlayBegin;
+		voice->src.newBuffer = 1;
 	}
 	else
 	{
@@ -1391,7 +1392,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 
 	/* If the source is playing, don't flush the active buffer */
 	entry = voice->src.bufferList;
-	if (voice->src.active && entry != NULL)
+	if (voice->src.active && entry != NULL && !voice->src.newBuffer)
 	{
 		entry = entry->next;
 		voice->src.bufferList->next = NULL;
@@ -1400,6 +1401,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	{
 		voice->src.curBufferOffset = 0;
 		voice->src.bufferList = NULL;
+		voice->src.newBuffer = 0;
 	}
 
 	/* Go through each buffer, send an event for each one before deleting */
@@ -1468,19 +1470,19 @@ void FAudioSourceVoice_GetState(
 	}
 
 	pVoiceState->BuffersQueued = 0;
+	pVoiceState->pCurrentBufferContext = NULL;
 	if (voice->src.bufferList != NULL)
 	{
 		entry = voice->src.bufferList;
-		pVoiceState->pCurrentBufferContext = entry->buffer.pContext;
+		if (!voice->src.newBuffer)
+		{
+			pVoiceState->pCurrentBufferContext = entry->buffer.pContext;
+		}
 		do
 		{
 			pVoiceState->BuffersQueued += 1;
 			entry = entry->next;
 		} while (entry != NULL);
-	}
-	else
-	{
-		pVoiceState->pCurrentBufferContext = NULL;
 	}
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);

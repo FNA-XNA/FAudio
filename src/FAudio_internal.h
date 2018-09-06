@@ -310,6 +310,7 @@ struct FAudioVoice
 			/* Dynamic */
 			uint8_t active;
 			float freqRatio;
+			uint8_t newBuffer;
 			uint64_t totalSamples;
 			FAudioBufferEntry *bufferList;
 			FAudioMutex bufferLock;
