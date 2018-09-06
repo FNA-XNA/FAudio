@@ -1195,17 +1195,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	if (voice->effectLock != NULL)
 	{
 		FAudio_PlatformLockMutex(voice->effectLock);
-		if (voice->effects.desc != NULL)
-		{
-			for (i = 0; i < voice->effects.count; i += 1)
-			{
-				voice->effects.desc[i].pEffect->Release(voice->effects.desc[i].pEffect);
-			}
-			FAudio_free(voice->effects.parameters);
-			FAudio_free(voice->effects.parameterSizes);
-			FAudio_free(voice->effects.parameterUpdates);
-			FAudio_free(voice->effects.desc);
-		}
+		FAudio_INTERNAL_FreeEffectChain(voice);
 		FAudio_PlatformUnlockMutex(voice->effectLock);
 		FAudio_PlatformDestroyMutex(voice->effectLock);
 	}
