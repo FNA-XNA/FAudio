@@ -865,7 +865,7 @@ void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples)
 	if (samples > audio->effectChainSamples)
 	{
 		audio->effectChainSamples = samples;
-		audio->effectChainCache = (float*)FAudio_realloc(
+		audio->effectChainCache = (float*) FAudio_realloc(
 			audio->effectChainCache,
 			sizeof(float) * audio->effectChainSamples
 		);
