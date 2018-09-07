@@ -333,27 +333,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 ) {
 	uint32_t i;
 	FAPO *fapo;
-	FAudioWaveFormatExtensible srcFmt, dstFmt;
-	FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
 	FAPOProcessBufferParameters srcParams, dstParams;
-
-	/* Lock in formats that the APO will expect for processing */
-	srcFmt.Format.wBitsPerSample = 32;
-	srcFmt.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
-	srcFmt.Format.nChannels = channels;
-	srcFmt.Format.nSamplesPerSec = sampleRate;
-	srcFmt.Format.nBlockAlign = srcFmt.Format.nChannels * (srcFmt.Format.wBitsPerSample / 8);
-	srcFmt.Format.nAvgBytesPerSec = srcFmt.Format.nSamplesPerSec * srcFmt.Format.nBlockAlign;
-	srcFmt.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
-	srcFmt.Samples.wValidBitsPerSample = srcFmt.Format.wBitsPerSample;
-	srcFmt.dwChannelMask = 0; /* FIXME */
-	FAudio_memcpy(&srcFmt.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
-	srcLockParams.pFormat = &srcFmt.Format;
-	srcLockParams.MaxFrameCount = samples;
-
-	FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
-	dstLockParams.pFormat = &dstFmt.Format;
-	dstLockParams.MaxFrameCount = samples;
 
 	/* Set up the buffer to be written into */
 	srcParams.pBuffer = buffer;
@@ -369,13 +349,12 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 		if (!voice->effects.inPlaceProcessing[i])
 		{
-			dstFmt.Format.nChannels = voice->effects.desc[i].OutputChannels;
-			dstFmt.Format.nBlockAlign = dstFmt.Format.nChannels * (dstFmt.Format.wBitsPerSample / 8);
-			dstFmt.Format.nAvgBytesPerSec = dstFmt.Format.nSamplesPerSec * dstFmt.Format.nBlockAlign;
-			
 			if (dstParams.pBuffer == buffer)
 			{
-				FAudio_INTERNAL_ResizeEffectChainCache(voice->audio, voice->effects.desc[i].OutputChannels * samples);
+				FAudio_INTERNAL_ResizeEffectChainCache(
+					voice->audio,
+					voice->effects.desc[i].OutputChannels * samples
+				);
 				dstParams.pBuffer = voice->audio->effectChainCache;
 			}
 			else
@@ -393,13 +372,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			);
 			voice->effects.parameterUpdates[i] = 0;
 		}
-		fapo->LockForProcess(
-			fapo,
-			1,
-			&srcLockParams,
-			1,
-			&dstLockParams
-		);
+
 		fapo->Process(
 			fapo,
 			1,
@@ -408,13 +381,11 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			&dstParams,
 			voice->effects.desc[i].InitialState
 		);
-		fapo->UnlockForProcess(fapo);
 
-		FAudio_memcpy(&srcFmt, &dstFmt, sizeof(dstFmt));
 		FAudio_memcpy(&srcParams, &dstParams, sizeof(dstParams));
 	}
 
-	return (float *) dstParams.pBuffer;
+	return (float*) dstParams.pBuffer;
 }
 
 static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
@@ -942,6 +913,7 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 
 	for (i = 0; i < voice->effects.count; i += 1)
 	{
+		voice->effects.desc[i].pEffect->UnlockForProcess(voice->effects.desc[i].pEffect);
 		voice->effects.desc[i].pEffect->Release(voice->effects.desc[i].pEffect);
 	}
 

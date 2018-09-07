@@ -747,22 +747,32 @@ uint32_t FAudioVoice_SetEffectChain(
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
 			FAPO *fapo = pEffectChain->pEffectDescriptors[i].pEffect;
-			FAudioWaveFormatEx srcFmt, dstFmt;
+			FAudioWaveFormatExtensible srcFmt, dstFmt;
+			FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
 
-			srcFmt.wBitsPerSample = 32;
-			srcFmt.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
-			srcFmt.nChannels = voiceDetails.InputChannels;
-			srcFmt.nSamplesPerSec = voiceDetails.InputSampleRate;
-			srcFmt.nBlockAlign = srcFmt.nChannels * (srcFmt.wBitsPerSample / 8);
-			srcFmt.nAvgBytesPerSec = srcFmt.nSamplesPerSec * srcFmt.nBlockAlign;
-			srcFmt.cbSize = 0;
+			srcFmt.Format.wBitsPerSample = 32;
+			srcFmt.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
+			srcFmt.Format.nChannels = voiceDetails.InputChannels;
+			srcFmt.Format.nSamplesPerSec = voiceDetails.InputSampleRate;
+			srcFmt.Format.nBlockAlign = srcFmt.Format.nChannels * (srcFmt.Format.wBitsPerSample / 8);
+			srcFmt.Format.nAvgBytesPerSec = srcFmt.Format.nSamplesPerSec * srcFmt.Format.nBlockAlign;
+			srcFmt.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+			srcFmt.Samples.wValidBitsPerSample = srcFmt.Format.wBitsPerSample;
+			srcFmt.dwChannelMask = 0;
+			FAudio_memcpy(&srcFmt.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
 
 			FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
-			dstFmt.nChannels = pEffectChain->pEffectDescriptors[i].OutputChannels;
-			dstFmt.nBlockAlign = dstFmt.nChannels * (dstFmt.wBitsPerSample / 8);
-			dstFmt.nAvgBytesPerSec = dstFmt.nSamplesPerSec * dstFmt.nBlockAlign;
+			dstFmt.Format.nChannels = pEffectChain->pEffectDescriptors[i].OutputChannels;
+			dstFmt.Format.nBlockAlign = dstFmt.Format.nChannels * (dstFmt.Format.wBitsPerSample / 8);
+			dstFmt.Format.nAvgBytesPerSec = dstFmt.Format.nSamplesPerSec * dstFmt.Format.nBlockAlign;
 
-			if (fapo->IsOutputFormatSupported(fapo, &srcFmt, &dstFmt, NULL))
+			srcLockParams.pFormat = &srcFmt.Format;
+			srcLockParams.MaxFrameCount = voice->audio->updateSize;
+
+			dstLockParams.pFormat = &dstFmt.Format;
+			dstLockParams.MaxFrameCount = voice->audio->updateSize;
+
+			if (fapo->LockForProcess(fapo, 1, &srcLockParams, 1, &dstLockParams))
 			{
 				FAudio_assert(0 && "Effect: output format not supported");
 				FAudio_PlatformUnlockMutex(voice->effectLock);
