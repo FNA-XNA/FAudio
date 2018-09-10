@@ -754,14 +754,6 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 		].instanceCount -= 1;
 	}
 
-	if (	!(sound->parentCue->data->flags & 0x04) &&
-		sound->parentCue->variation->flags == 3	)
-	{
-		/* Interactive Cues avoid autostopping... */
-		FAudio_free(sound);
-		return;
-	}
-
 	/* TODO: if (sound->parentCue->playingSounds == NULL) */
 	{
 		sound->parentCue->state |= FACT_STATE_STOPPED;
@@ -1450,9 +1442,9 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 
 void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
+	uint32_t i;
 	float next;
-	uint16_t fadeIn = 0;
-	uint16_t fadeOut = 0;
+	FACTSoundInstance *sound;
 
 	/* Interactive sound selection */
 	if (!(cue->data->flags & 0x04) && cue->variation->flags == 3)
@@ -1481,10 +1473,33 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			/* New sound, time for death! */
 			if (cue->playingSound != NULL)
 			{
-				FACT_INTERNAL_BeginFadeOut(
-					cue->playingSound,
-					fadeOut
-				);
+				/* Copy of DestroySound but does not set Cue to STOPPED */
+				sound = cue->playingSound;
+				sound->parentCue->playingSound = NULL;
+				for (i = 0; i < sound->sound->trackCount; i += 1)
+				{
+					if (sound->tracks[i].activeWave.wave != NULL)
+					{
+						FACTWave_Destroy(
+							sound->tracks[i].activeWave.wave
+						);
+					}
+					if (sound->tracks[i].upcomingWave.wave != NULL)
+					{
+						FACTWave_Destroy(
+							sound->tracks[i].upcomingWave.wave
+						);
+					}
+					FAudio_free(sound->tracks[i].events);
+				}
+				FAudio_free(sound->tracks);
+
+				if (sound->sound->category != FACTCATEGORY_INVALID)
+				{
+					sound->parentCue->parentBank->parentEngine->categories[
+						sound->sound->category
+					].instanceCount -= 1;
+				}
 			}
 
 			/* TODO: Reset cue times? Transition tables...?
@@ -1492,7 +1507,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			cue->elapsed = 0;
 			 */
 
-			FACT_INTERNAL_CreateSound(cue, fadeIn);
+			FACT_INTERNAL_CreateSound(cue, 0 /* fadeIn */);
 		}
 	}
 }
@@ -1692,6 +1707,7 @@ void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 			FACT_STATE_STOPPING
 		);
 		c->wave->parentCue->data->instanceCount -= 1;
+
 	}
 }
 
