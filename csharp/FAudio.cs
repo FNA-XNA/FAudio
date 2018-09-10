@@ -33,7 +33,7 @@ public static class FAudio
 {
 	#region Native Library Name
 
-	const string nativeLibName = "FAudio.dll";
+	const string nativeLibName = "FAudio";
 
 	#endregion
 
