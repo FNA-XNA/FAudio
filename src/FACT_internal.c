@@ -1707,7 +1707,6 @@ void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 			FACT_STATE_STOPPING
 		);
 		c->wave->parentCue->data->instanceCount -= 1;
-
 	}
 }
 
