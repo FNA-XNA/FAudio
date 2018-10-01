@@ -77,9 +77,23 @@
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
 
+/* When running with the COM wrapper, you'll need to make sure that memory is
+ * allocated with CoTaskMemAlloc because the application as well as XAPOFX
+ * expects memory to be allocated/freed using these routines.
+ * -flibit
+ */
+#if 0
+__declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
+__declspec(dllimport) void * __stdcall CoTaskMemRelloc(void* pv, size_t cb);
+__declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
+#define FAudio_malloc CoTaskMemAlloc
+#define FAudio_realloc CoTaskMemRealloc
+#define FAudio_free CoTaskMemFree
+#else
 #define FAudio_malloc(size) SDL_malloc(size)
 #define FAudio_realloc(mem, size) SDL_realloc(mem, size)
 #define FAudio_free(mem) SDL_free(mem)
+#endif
 #define FAudio_alloca(x) SDL_stack_alloc(uint8_t, x)
 #define FAudio_dealloca(x) SDL_stack_free(x)
 #define FAudio_zero(ptr, size) SDL_memset(ptr, '\0', size)

@@ -2325,16 +2325,6 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	return 0;
 }
 
-/* When running with the COM wrapper, you'll need to make sure that
- * ppProperties is allocated with CoTaskMemAlloc because the application will
- * use CoTaskMemFree to release the memory.
- */
-#if 0
-__declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
-#else
-#define CoTaskMemAlloc FAudio_malloc
-#endif
-
 uint32_t FACTCue_GetProperties(
 	FACTCue *pCue,
 	FACTCueInstanceProperties **ppProperties
@@ -2361,7 +2351,7 @@ uint32_t FACTCue_GetProperties(
 			pCue->playingSound->sound->trackCount
 		);
 	}
-	cueProps = (FACTCueInstanceProperties*) CoTaskMemAlloc(allocSize);
+	cueProps = (FACTCueInstanceProperties*) FAudio_malloc(allocSize);
 	FAudio_zero(cueProps, allocSize);
 
 	/* Cue Properties */

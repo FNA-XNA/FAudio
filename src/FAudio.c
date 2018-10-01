@@ -705,8 +705,12 @@ uint32_t FAudioVoice_SetEffectChain(
 	const FAudioEffectChain *pEffectChain
 ) {
 	uint32_t i;
+	FAPO *fapo;
 	uint32_t channelCount;
 	FAudioVoiceDetails voiceDetails;
+	FAPORegistrationProperties *pProps;
+	FAudioWaveFormatExtensible srcFmt, dstFmt;
+	FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
 
 	FAudioVoice_GetVoiceDetails(voice, &voiceDetails);
 
@@ -746,9 +750,7 @@ uint32_t FAudioVoice_SetEffectChain(
 		/* validate incoming effect chain before changing the current chain */
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
-			FAPO *fapo = pEffectChain->pEffectDescriptors[i].pEffect;
-			FAudioWaveFormatExtensible srcFmt, dstFmt;
-			FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
+			fapo = pEffectChain->pEffectDescriptors[i].pEffect;
 
 			srcFmt.Format.wBitsPerSample = 32;
 			srcFmt.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
@@ -790,12 +792,8 @@ uint32_t FAudioVoice_SetEffectChain(
 		channelCount = voiceDetails.InputChannels;
 		for (i = 0; i < voice->effects.count; i += 1)
 		{
-			FAPORegistrationProperties *pProps;
-			FAPO *fapo = voice->effects.desc[i].pEffect;
-			uint32_t r;
-
-			r = fapo->GetRegistrationProperties(fapo, &pProps);
-			if (r == 0)
+			fapo = voice->effects.desc[i].pEffect;
+			if (fapo->GetRegistrationProperties(fapo, &pProps) == 0)
 			{
 				voice->effects.inPlaceProcessing[i] = (pProps->Flags & FAPO_FLAG_INPLACE_SUPPORTED) == FAPO_FLAG_INPLACE_SUPPORTED;
 				voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
