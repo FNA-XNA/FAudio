@@ -34,6 +34,8 @@ class IXAudio2SubmixVoice;
 class IXAudio2MasteringVoice;
 class IXAudio2VoiceCallback;
 
+#pragma pack(push, 1)
+
 #if XAUDIO2_VERSION >= 4
 typedef struct XAUDIO2_SEND_DESCRIPTOR {
 	UINT32        Flags;
@@ -92,6 +94,8 @@ typedef struct XAUDIO2_VOICE_DETAILS {
 	uint32_t InputSampleRate;
 } XAUDIO2_VOICE_DETAILS;
 #endif // XAUDIO2_VERSION > 7
+
+#pragma pack(pop)
 
 class IXAudio2Voice  {
 public:
