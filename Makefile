@@ -80,17 +80,17 @@ testparse:
 facttool:
 	$(CXX) -g -Wall -o facttool$(UTIL_SUFFIX) \
 		utils/facttool/facttool.cpp \
-		utils/uicommon/*.cpp utils/uicommon/*.c src/*.c \
+		utils/uicommon/*.cpp src/*.c \
 		-Isrc `sdl2-config --cflags --libs`
 
 testreverb:
 	$(CXX) -g -Wall -o testreverb$(UTIL_SUFFIX) \
 		utils/testreverb/*.cpp \
-		utils/uicommon/*.cpp utils/uicommon/*.c src/*.c \
+		utils/uicommon/*.cpp src/*.c \
 		-Isrc `sdl2-config --cflags --libs`
 
 testfilter:
 	$(CXX) -g -Wall -o testfilter$(UTIL_SUFFIX) \
 		utils/testfilter/*.cpp \
-		utils/uicommon/*.cpp utils/uicommon/*.c src/*.c \
+		utils/uicommon/*.cpp src/*.c \
 		-Isrc `sdl2-config --cflags --libs`

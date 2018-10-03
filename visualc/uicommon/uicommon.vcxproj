@@ -64,7 +64,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\utils\uicommon\FAudioUI_main.c" />
+    <ClCompile Include="..\..\utils\uicommon\FAudioUI_main.cpp" />
     <ClCompile Include="..\..\utils\uicommon\FAudioUI_ui.cpp" />
     <ClCompile Include="..\..\utils\uicommon\imgui.cpp" />
     <ClCompile Include="..\..\utils\uicommon\imgui_demo.cpp" />

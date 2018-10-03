@@ -32,7 +32,7 @@
 #include <stdint.h>
 #include "imgui.h"
 
-/* FAudioUI_main.c */
+/* FAudioUI_main.cpp */
 
 extern const char* main_getclipboardtext(void* userdata);
 extern void main_setclipboardtext(void* userdata, const char *text);
