@@ -7,7 +7,7 @@ MINGW=x86_64-w64-mingw32
 
 if [ ! -f $SDL_CROSS_PATH/$MINGW/bin/sdl2-config ]; then
 	echo "Please check your mingw32 SDL installation"
-	exit -1
+	return -1
 fi
 
 export PATH=$SDL_CROSS_PATH/$MINGW/bin:$PATH
