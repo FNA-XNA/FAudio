@@ -81,7 +81,6 @@
     <ClCompile Include="..\..\src\FACT3D.c" />
     <ClCompile Include="..\..\src\FACT_internal.c" />
     <ClCompile Include="..\..\src\FAPOBase.c" />
-    <ClCompile Include="..\..\src\XNA_Song.c" />
     <ClCompile Include="..\..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
