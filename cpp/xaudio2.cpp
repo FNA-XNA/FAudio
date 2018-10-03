@@ -974,9 +974,9 @@ private:
 // IXAudio2MasteringVoice implementation
 //
 
-#if (XAUDIO2_VERSION >= 8) && !defined(__WINE__)
+#if (XAUDIO2_VERSION >= 8)
 uint32_t device_index_from_device_id(FAudio *faudio, LPCWSTR deviceId);
-#endif // (XAUDIO2_VERSION >= 8) && !defined(__WINE__)
+#endif // (XAUDIO2_VERSION >= 8)
 
 class XAudio2MasteringVoiceImpl : public IXAudio2MasteringVoice
 {
@@ -1021,12 +1021,10 @@ public:
 
 		uint32_t device_index = 0;
 
-#ifndef __WINE__
 		if (szDeviceId != NULL)
 		{
 			device_index = device_index_from_device_id(faudio, szDeviceId);
 		}
-#endif // !__WINE__
 
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(
