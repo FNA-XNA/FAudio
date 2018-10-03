@@ -71,3 +71,7 @@ The COM wrapper DLLs depend on both FAudio.dll and SDL2.dll. During the build pr
     - Alt-Tab until you can access the message box and dismiss it
 2. The sound is crackling when using the native DLLs with Wine
     - Are you using PulseAudio? Try setting the ```PULSE_LATENCY_MSEC``` environment variable to 60 to fix this.
+3. Wine games are silent after installing the native DLLs
+    - Some MinGW setups will silently link to libwinpthread-1.dll, resulting in failure to load the DLLs if this is not present. Usually this is quickly solved with a line like `ln -sf /usr/i686-w64-mingw32/sys-root/mingw/bin/libwinpthread-1.dll $WINEPREFIX/drive_c/windows/system32/libwinpthread-1.dll`
+4. Wine audio may sound choppy with the COM wrapper
+    - Set `SDL_AUDIODRIVER=directsound`. For Proton, this is `SDL_AUDIODRIVER=directsound %command%` in the Steam Launch Options.
