@@ -84,7 +84,7 @@
  */
 #if 0
 __declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
-__declspec(dllimport) void * __stdcall CoTaskMemRelloc(void* pv, size_t cb);
+__declspec(dllimport) void * __stdcall CoTaskMemRealloc(void* pv, size_t cb);
 __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
 #define FAudio_malloc CoTaskMemAlloc
 #define FAudio_realloc CoTaskMemRealloc

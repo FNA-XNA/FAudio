@@ -3,7 +3,18 @@
 //#define TRACING_ENABLE
 #include "trace.h"
 
-#include "SDL.h"
+#include <assert.h>
+
+#if defined _WIN32 || defined __CYGWIN__
+  #define DLLIMPORT __declspec(dllimport)
+#else
+  #if __GNUC__ >= 4
+    #define DLLIMPORT __attribute__((visibility ("default")))
+  #else
+    #define DLLIMPORT
+  #endif
+#endif
+extern "C" DLLIMPORT void * __stdcall CoTaskMemAlloc(size_t cb);
 
 /* IXACT3Cue Implementation */
 
@@ -447,8 +458,8 @@ public:
 		TRACE_FUNC();
 
 		/* TODO: Unwrap FAudio/FAudioMasteringVoice */
-		SDL_assert(pParams->pXAudio2 == NULL);
-		SDL_assert(pParams->pMasteringVoice == NULL);
+		assert(pParams->pXAudio2 == NULL);
+		assert(pParams->pMasteringVoice == NULL);
 
 		return FACTAudioEngine_Initialize(engine, pParams);
 	}
@@ -510,7 +521,7 @@ public:
 
 		/* We have to wrap the file around an IOStream first! */
 		XACT_STREAMING_PARAMETERS fakeParms;
-		FAudioIOStream *fake = (FAudioIOStream*) SDL_malloc(
+		FAudioIOStream *fake = (FAudioIOStream*) CoTaskMemAlloc(
 			sizeof(FAudioIOStream)
 		);
 		fake->data = pParms->file;

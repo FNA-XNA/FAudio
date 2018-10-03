@@ -1,5 +1,5 @@
 #include "XAPOBase.h"
-#include <FAudio_internal.h>
+#include <assert.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -85,7 +85,7 @@ ULONG CXAPOBase::Release()
 
 HRESULT CXAPOBase::GetRegistrationProperties(XAPO_REGISTRATION_PROPERTIES** ppRegistrationProperties) 
 {
-	FAudio_assert(fapo_base->base.GetRegistrationProperties != NULL);
+	assert(fapo_base->base.GetRegistrationProperties != NULL);
 	return fapo_base->base.GetRegistrationProperties(fapo_base, ppRegistrationProperties);
 }
 
@@ -94,7 +94,7 @@ HRESULT CXAPOBase::IsInputFormatSupported(
 	const WAVEFORMATEX* pRequestedInputFormat,
 	WAVEFORMATEX** ppSupportedInputFormat
 ) {
-	FAudio_assert(fapo_base->base.IsInputFormatSupported != NULL);
+	assert(fapo_base->base.IsInputFormatSupported != NULL);
 	return fapo_base->base.IsInputFormatSupported(
 		fapo_base, 
 		pOutputFormat, 
@@ -107,7 +107,7 @@ HRESULT CXAPOBase::IsOutputFormatSupported(
 	const WAVEFORMATEX* pRequestedOutputFormat,
 	WAVEFORMATEX** ppSupportedOutputFormat
 ) {
-	FAudio_assert(fapo_base->base.IsOutputFormatSupported != NULL);
+	assert(fapo_base->base.IsOutputFormatSupported != NULL);
 	return fapo_base->base.IsOutputFormatSupported(
 		fapo_base, 
 		pInputFormat, 
@@ -117,13 +117,13 @@ HRESULT CXAPOBase::IsOutputFormatSupported(
 
 HRESULT CXAPOBase::Initialize(const void*pData, UINT32 DataByteSize) 
 {
-	FAudio_assert(fapo_base->base.Initialize != NULL);
+	assert(fapo_base->base.Initialize != NULL);
 	return fapo_base->base.Initialize(fapo_base, pData, DataByteSize);
 }
 
 void CXAPOBase::Reset() 
 {
-	FAudio_assert(fapo_base->base.Reset != NULL);
+	assert(fapo_base->base.Reset != NULL);
 	fapo_base->base.Reset(fapo_base);
 }
 
@@ -133,7 +133,7 @@ HRESULT CXAPOBase::LockForProcess(
 	UINT32 OutputLockedParameterCount,
 	const XAPO_LOCKFORPROCESS_BUFFER_PARAMETERS* pOutputLockedParameters
 ) {
-	FAudio_assert(fapo_base->base.LockForProcess != NULL);
+	assert(fapo_base->base.LockForProcess != NULL);
 	return fapo_base->base.LockForProcess(
 		fapo_base, 
 		InputLockedParameterCount, 
@@ -144,19 +144,19 @@ HRESULT CXAPOBase::LockForProcess(
 
 void CXAPOBase::UnlockForProcess() 
 {
-	FAudio_assert(fapo_base->base.UnlockForProcess != NULL);
+	assert(fapo_base->base.UnlockForProcess != NULL);
 	fapo_base->base.UnlockForProcess(fapo_base);
 }
 
 UINT32 CXAPOBase::CalcInputFrames(UINT32 OutputFrameCount) 
 {
-	FAudio_assert(fapo_base->base.CalcInputFrames != NULL);
+	assert(fapo_base->base.CalcInputFrames != NULL);
 	return fapo_base->base.CalcInputFrames(fapo_base, OutputFrameCount);
 }
 
 UINT32 CXAPOBase::CalcOutputFrames(UINT32 InputFrameCount) 
 {
-	FAudio_assert(fapo_base->base.CalcOutputFrames != NULL);
+	assert(fapo_base->base.CalcOutputFrames != NULL);
 	return fapo_base->base.CalcOutputFrames(fapo_base, InputFrameCount);
 }
 
@@ -251,18 +251,18 @@ ULONG CXAPOParametersBase::Release()
 
 void CXAPOParametersBase::SetParameters(const void* pParameters, UINT32 ParameterByteSize) 
 {
-	FAudio_assert(fapo_base->base.SetParameters);
+	assert(fapo_base->base.SetParameters);
 	fapo_base->base.SetParameters(fapo_base, pParameters, ParameterByteSize);
 }
 
 void CXAPOParametersBase::GetParameters(void* pParameters, UINT32 ParameterByteSize) {
-	FAudio_assert(fapo_base->base.GetParameters);
+	assert(fapo_base->base.GetParameters);
 	fapo_base->base.GetParameters(fapo_base, pParameters, ParameterByteSize);
 }
 
 void CXAPOParametersBase::OnSetParameters(const void* pParameters, UINT32 ParameterByteSize) 
 {
-	FAudio_assert(fapo_base->OnSetParameters);
+	assert(fapo_base->OnSetParameters);
 	fapo_base->OnSetParameters(fapo_base, pParameters, ParameterByteSize);
 }
 

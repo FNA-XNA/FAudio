@@ -1,5 +1,5 @@
-CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600 `sdl2-config --cflags`
-LDFLAGS += -Wl,--enable-stdcall-fixup `sdl2-config --libs` -static-libgcc -static-libstdc++ -L.. -lFAudio
+CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600
+LDFLAGS += -Wl,--enable-stdcall-fixup -static-libgcc -static-libstdc++ -L.. -lFAudio
 
 DLLTOOL ?= dlltool
 
@@ -202,28 +202,28 @@ $(X3DAUDIO_TARGET) : directories $(X3DAUDIO_OBJ)
 	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_6.dll
 
 $(XACT30_TARGET) : directories $(XACT30_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT31_TARGET) : directories $(XACT31_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT32_TARGET) : directories $(XACT32_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT33_TARGET) : directories $(XACT33_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT34_TARGET) : directories $(XACT34_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT35_TARGET) : directories $(XACT35_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT36_TARGET) : directories $(XACT36_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT37_TARGET) : directories $(XACT37_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(BUILD_DIR)/xaudiodll_x20.o: xaudio2_7.def
 	$(DLLTOOL) -d $< -e $@

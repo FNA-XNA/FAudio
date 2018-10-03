@@ -1,5 +1,5 @@
 #include "com_utils.h"
-#include <SDL.h>
+#include <string.h> /* memcmp */
 
 /* GUIDs */
 const IID IID_IUnknown = {0x00000000, 0x0000, 0x0000, {0xC0, 00, 00, 00, 00, 00, 00, 0x46}};
@@ -61,7 +61,7 @@ const IID *CLSID_AudioReverb[] = {
 
 bool guid_equals(REFIID a, REFIID b)
 {
-	return SDL_memcmp(&a, &b, sizeof(IID)) == 0;
+	return memcmp(&a, &b, sizeof(IID)) == 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

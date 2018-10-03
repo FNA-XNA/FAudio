@@ -1,7 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include <SDL.h>
+#include <stdio.h> /* snprintf */
 
 static bool registry_write_string(HKEY reg, const char *name, const char *value, size_t len) 
 {
@@ -30,7 +30,7 @@ static const char *base_key()
 
 static void format_clsid(REFIID clsid, char *value, size_t max) 
 {
-	SDL_snprintf(value, max, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+	snprintf(value, max, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
 		clsid.Data1, clsid.Data2, clsid.Data3,
 		clsid.Data4[0], clsid.Data4[1], clsid.Data4[2], clsid.Data4[3],
 		clsid.Data4[4], clsid.Data4[5], clsid.Data4[6], clsid.Data4[7]);
@@ -48,7 +48,7 @@ extern "C" HRESULT register_faudio_dll(void *DllHandle, REFIID clsid)
 	format_clsid(clsid, str_clsid, sizeof(str_clsid) / sizeof(char));
 
 	char key[2048];
-	SDL_snprintf(key, sizeof(key) / sizeof(char), "%s\\%s\\InProcServer32", base_key(), str_clsid);
+	snprintf(key, sizeof(key) / sizeof(char), "%s\\%s\\InProcServer32", base_key(), str_clsid);
 
 	// open registry (creating key if it does not exist)
 	HKEY registry_key = NULL;
