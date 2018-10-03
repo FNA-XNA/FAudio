@@ -82,7 +82,7 @@
  * expects memory to be allocated/freed using these routines.
  * -flibit
  */
-#if 0
+#ifdef FAUDIO_COM_WRAPPER
 __declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
 __declspec(dllimport) void * __stdcall CoTaskMemRealloc(void* pv, size_t cb);
 __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);

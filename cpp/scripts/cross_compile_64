@@ -15,3 +15,4 @@ export CC=${MINGW}-gcc
 export CXX=${MINGW}-g++
 export AR=${MINGW}-ar
 export DLLTOOL=${MINGW}-dlltool
+export COM_WRAPPER=1
