@@ -26,7 +26,7 @@ Because cross-compiling is fun.
 #### Building
 The project includes two shell scripts to set up your environment for cross-compilation: either for 32-bit or 64-bit Windows DLLs.
 
-- ```source``` either ```scrips/cross_compile_32``` or ```scripts/cross_compile_64```
+- ```source``` either ```scripts/cross_compile_32``` or ```scripts/cross_compile_64```
 - (optional) check if ```sdl-config --libs``` prints the correct directory 
     - if not: update the cross-compilation scripts
 - cross-compile FACT: ```make clean all``` in the root directory of FACT
