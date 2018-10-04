@@ -61,6 +61,7 @@ The ```wine_setup_native``` script (in the ```cpp/scripts``` subdirectory) does 
 - Remove a dependency (e.g. ```FAudio.dll```), the application will fail to load the wrapper and hopefully show a nice error message.
     - Some applications (e.g. games using Wwise) will just try to use a different version of XAudio2 :-)
 - Set `WINEDEBUG=+loaddll` to check which DLLs are loaded by the application
+- On Windows, use [Sysinternals Process Monitor](https://docs.microsoft.com/en-us/sysinternals/downloads/procmon) to check which DLLs are loaded by the application
 
 ## Redistributing the DLLs
 The COM wrapper DLLs depend on both FAudio.dll and SDL2.dll. During the build process they are copied to the output directory. Don't forget to include these DLLs when you want to use the binaries from another directory or on another computer.
