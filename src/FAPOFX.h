@@ -37,6 +37,8 @@ extern "C" {
 
 /* Structures */
 
+#pragma pack(push, 1)
+
 typedef struct FAPOFXEQParameters
 {
 	float FrequencyCenter0;
@@ -71,6 +73,8 @@ typedef struct FAPOFXEchoParameters
 	float Feedback;
 	float Delay;
 } FAPOFXEchoParameters;
+
+#pragma pack(pop)
 
 /* Constants */
 
