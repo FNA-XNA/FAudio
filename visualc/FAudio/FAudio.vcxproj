@@ -79,6 +79,10 @@
     <ClCompile Include="..\..\src\FACT3D.c" />
     <ClCompile Include="..\..\src\FACT_internal.c" />
     <ClCompile Include="..\..\src\FAPOBase.c" />
+    <ClCompile Include="..\..\src\FAPOFX_eq.c" />
+    <ClCompile Include="..\..\src\FAPOFX_masteringlimiter.c" />
+    <ClCompile Include="..\..\src\FAPOFX_reverb.c" />
+    <ClCompile Include="..\..\src\FAPOFX_echo.c" />
     <ClCompile Include="..\..\src\XNA_Song.c" />
     <ClCompile Include="..\..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
@@ -92,6 +96,7 @@
     <ClInclude Include="..\..\src\FACT_internal.h" />
     <ClInclude Include="..\..\src\FAPO.h" />
     <ClInclude Include="..\..\src\FAPOBase.h" />
+    <ClInclude Include="..\..\src\FAPOFX.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

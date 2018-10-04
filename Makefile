@@ -52,6 +52,10 @@ FAUDIOSRC = \
 	src/FACT3D.c \
 	src/FACT_internal.c \
 	src/FAPOBase.c \
+	src/FAPOFX_eq.c \
+	src/FAPOFX_masteringlimiter.c \
+	src/FAPOFX_reverb.c \
+	src/FAPOFX_echo.c \
 	src/XNA_Song.c \
 	src/FAudio_platform_sdl2.c
 
@@ -80,17 +84,17 @@ testparse:
 facttool:
 	$(CXX) -g -Wall -o facttool$(UTIL_SUFFIX) \
 		utils/facttool/facttool.cpp \
-		utils/uicommon/*.cpp src/*.c \
+		utils/uicommon/*.cpp src/F*.c \
 		-Isrc `sdl2-config --cflags --libs`
 
 testreverb:
 	$(CXX) -g -Wall -o testreverb$(UTIL_SUFFIX) \
 		utils/testreverb/*.cpp \
-		utils/uicommon/*.cpp src/*.c \
+		utils/uicommon/*.cpp src/F*.c \
 		-Isrc `sdl2-config --cflags --libs`
 
 testfilter:
 	$(CXX) -g -Wall -o testfilter$(UTIL_SUFFIX) \
 		utils/testfilter/*.cpp \
-		utils/uicommon/*.cpp src/*.c \
+		utils/uicommon/*.cpp src/F*.c \
 		-Isrc `sdl2-config --cflags --libs`
