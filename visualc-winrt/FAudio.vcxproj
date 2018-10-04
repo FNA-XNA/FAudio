@@ -15,8 +15,8 @@
     <ClCompile Include="..\src\FAudio.c" />
     <ClCompile Include="..\src\FAudio_internal.c" />
     <ClCompile Include="..\src\FAudio_internal_simd.c" />
-    <ClCompile Include="..\src\FAudioFX.c" />
-    <ClCompile Include="..\src\FAudioFX_internal.c" />
+    <ClCompile Include="..\src\FAudioFX_reverb.c" />
+    <ClCompile Include="..\src\FAudioFX_volumemeter.c" />
     <ClCompile Include="..\src\FACT.c" />
     <ClCompile Include="..\src\FACT3D.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
@@ -27,9 +27,8 @@
   <ItemGroup>
     <ClInclude Include="..\src\F3DAudio.h" />
     <ClInclude Include="..\src\FAudio.h" />
-    <ClInclude Include="..\src\FAudio_internal.h" />
     <ClInclude Include="..\src\FAudioFX.h" />
-    <ClInclude Include="..\src\FAudioFX_internal.h" />
+    <ClInclude Include="..\src\FAudio_internal.h" />
     <ClInclude Include="..\src\FACT.h" />
     <ClInclude Include="..\src\FACT3D.h" />
     <ClInclude Include="..\src\FACT_internal.h" />

@@ -46,8 +46,8 @@ FAUDIOSRC = \
 	src/FAudio.c \
 	src/FAudio_internal.c \
 	src/FAudio_internal_simd.c \
-	src/FAudioFX.c \
-	src/FAudioFX_internal.c \
+	src/FAudioFX_reverb.c \
+	src/FAudioFX_volumemeter.c \
 	src/FACT.c \
 	src/FACT3D.c \
 	src/FACT_internal.c \
