@@ -78,5 +78,12 @@ install_dll xactengine3_5 1
 install_dll xactengine3_6 1
 install_dll xactengine3_7 1
 
+install_dll xapofx1_0 0
+install_dll xapofx1_1 0
+install_dll xapofx1_2 0
+install_dll xapofx1_3 0
+install_dll xapofx1_4 0
+install_dll xapofx1_5 0
+
 ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
 ln -sf "$dll_path/SDL2.dll" "$wine_path/SDL2.dll"
