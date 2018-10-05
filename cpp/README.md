@@ -29,7 +29,7 @@ The project includes two shell scripts to set up your environment for cross-comp
 - ```source``` either ```scripts/cross_compile_32``` or ```scripts/cross_compile_64```
 - (optional) check if ```sdl2-config --libs``` prints the correct directory
     - if not: update the cross-compilation scripts
-- cross-compile FACT: ```make clean all``` in the root directory of FACT
+- cross-compile FAudio: ```make clean all``` in the root directory of FAudio
 - cross-compile the C++/COM wrapper: change to the ```cpp``` subdirectory and run ```make```
 
 The results are stored in either the ```build_win32``` or ```build_win64``` subdirectory. 
