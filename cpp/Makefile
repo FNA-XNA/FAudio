@@ -205,25 +205,25 @@ $(XACT30_TARGET) : directories $(XACT30_OBJ)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
 
 $(XACT31_TARGET) : directories $(XACT31_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT31_OBJ) $(LDFLAGS) -lole32
 
 $(XACT32_TARGET) : directories $(XACT32_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT32_OBJ) $(LDFLAGS) -lole32
 
 $(XACT33_TARGET) : directories $(XACT33_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT33_OBJ) $(LDFLAGS) -lole32
 
 $(XACT34_TARGET) : directories $(XACT34_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT34_OBJ) $(LDFLAGS) -lole32
 
 $(XACT35_TARGET) : directories $(XACT35_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT35_OBJ) $(LDFLAGS) -lole32
 
 $(XACT36_TARGET) : directories $(XACT36_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT36_OBJ) $(LDFLAGS) -lole32
 
 $(XACT37_TARGET) : directories $(XACT37_OBJ)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS) -lole32
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT37_OBJ) $(LDFLAGS) -lole32
 
 $(BUILD_DIR)/xaudiodll_x20.o: xaudio2_7.def
 	$(DLLTOOL) -d $< -e $@
