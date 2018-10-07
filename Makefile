@@ -56,8 +56,10 @@ FAUDIOSRC = \
 	src/FAPOFX_masteringlimiter.c \
 	src/FAPOFX_reverb.c \
 	src/FAPOFX_echo.c \
-	src/XNA_Song.c \
 	src/FAudio_platform_sdl2.c
+ifneq ($(COM_WRAPPER), 1)
+	FAUDIOSRC += src/XNA_Song.c
+endif
 
 # Object code lists
 FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
