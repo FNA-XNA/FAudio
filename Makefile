@@ -92,6 +92,7 @@ facttool:
 testreverb:
 	$(CXX) -g -Wall -o testreverb$(UTIL_SUFFIX) \
 		utils/testreverb/*.cpp \
+		utils/wavcommon/wavs.cpp \
 		utils/uicommon/*.cpp src/F*.c \
 		-Isrc `sdl2-config --cflags --libs`
 

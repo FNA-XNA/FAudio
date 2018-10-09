@@ -83,10 +83,12 @@
     <ClCompile Include="..\..\utils\testreverb\audio_faudio.cpp" />
     <ClCompile Include="..\..\utils\testreverb\audio_xaudio.cpp" />
     <ClCompile Include="..\..\utils\testreverb\testreverb.cpp" />
+    <ClCompile Include="..\..\utils\wavcommon\wavs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\utils\testreverb\audio.h" />
-    <ClInclude Include="..\..\utils\testreverb\dr_wav.h" />
+    <ClInclude Include="..\..\utils\wavcommon\wavs.h" />
+    <ClInclude Include="..\..\utils\wavcommon\dr_wav.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
