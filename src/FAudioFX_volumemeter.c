@@ -145,9 +145,10 @@ void FAudioFXVolumeMeter_Process(
 		total = 0.0f;
 		for (j = 0; j < pInputProcessParameters->ValidFrameCount; j += 1)
 		{
-			if (buffer[j * i] > peak)
+			const float sampleAbs = FAudio_fabs(buffer[j * i]);
+			if (sampleAbs > peak)
 			{
-				peak = buffer[j * i];
+				peak = sampleAbs;
 			}
 			total += buffer[j * i] * buffer[j * i];
 		}
