@@ -7,8 +7,6 @@
 #include <xaudio2fx.h>
 #include <SDL.h>
 
-#include "dr_wav.h"
-
 struct AudioContext 
 {
 	IXAudio2 *xaudio2;
@@ -201,8 +199,9 @@ void xaudio_wave_load(AudioContext *context, AudioSampleWave sample, bool stereo
 		context->mastering_voice->DestroyVoice();
 	}
 
-	context->wav_samples = drwav_open_and_read_file_f32(
-		(!stereo) ? audio_sample_filenames[sample] : audio_stereo_filenames[sample],
+	context->wav_samples = WAVS_Open(
+		sample,
+		stereo,
 		&context->wav_channels,
 		&context->wav_samplerate,
 		&context->wav_sample_count);

@@ -1,31 +1,12 @@
 #include "audio.h"
 
-#define DR_WAV_IMPLEMENTATION
-#include "dr_wav.h"
-
 #include <FAudioFX.h>
-
-#define RESOURCE_PATH "utils/testreverb/resources"
 
 const char *audio_voice_type_names[3] = 
 {
 	"Source Voice",
 	"Submix Voice",
 	"Mastering Voice"
-};
-
-const char *audio_sample_filenames[] =
-{
-	RESOURCE_PATH"/snaredrum_forte.wav",
-	RESOURCE_PATH"/snaredrum_fortissimo.wav",
-	RESOURCE_PATH"/snaredrum_mezzoforte.wav",
-};
-
-const char *audio_stereo_filenames[] =
-{
-	RESOURCE_PATH"/snaredrum_forte_stereo.wav",
-	RESOURCE_PATH"/snaredrum_fortissimo_stereo.wav",
-	RESOURCE_PATH"/snaredrum_mezzoforte_stereo.wav",
 };
 
 const char *audio_reverb_preset_names[] = 

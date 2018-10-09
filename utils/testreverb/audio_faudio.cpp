@@ -4,8 +4,6 @@
 #include <FAudioFX.h>
 #include <SDL.h>
 
-#include "dr_wav.h"
-
 struct AudioContext 
 {
 	FAudio *faudio;
@@ -171,8 +169,9 @@ void faudio_wave_load(AudioContext *context, AudioSampleWave sample, bool stereo
 		FAudioVoice_DestroyVoice(context->mastering_voice);
 	}
 
-	context->wav_samples = drwav_open_and_read_file_f32(
-		(!stereo) ? audio_sample_filenames[sample] : audio_stereo_filenames[sample],
+	context->wav_samples = WAVS_Open(
+		sample,
+		stereo,
 		&context->wav_channels,
 		&context->wav_samplerate,
 		&context->wav_sample_count

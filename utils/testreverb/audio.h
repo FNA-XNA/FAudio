@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "../wavcommon/wavs.h"
 
 #ifdef _MSC_VER
 #define HAVE_XAUDIO2
@@ -17,12 +18,6 @@ struct AudioContext;
 enum AudioEngine {
 	AudioEngine_XAudio2,
 	AudioEngine_FAudio
-};
-
-enum AudioSampleWave {
-	AudioWave_SnareDrum01 = 0,
-	AudioWave_SnareDrum02,
-	AudioWave_SnareDrum03,
 };
 
 enum AudioVoiceType {
@@ -80,8 +75,6 @@ struct ReverbParameters
 
 extern const char *audio_voice_type_names[3];
 
-extern const char *audio_sample_filenames[];
-extern const char *audio_stereo_filenames[];
 extern const char *audio_reverb_preset_names[];
 extern const ReverbI3DL2Parameters audio_reverb_presets_i3dl2[];
 extern const ReverbParameters	   *audio_reverb_presets;
