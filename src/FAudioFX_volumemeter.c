@@ -44,6 +44,7 @@ static FAPORegistrationProperties VolumeMeterProperties =
 	/*.MajorVersion = */ 0,
 	/*.MinorVersion = */ 0,
 	/*.Flags = */(
+		FAPO_FLAG_CHANNELS_MUST_MATCH |
 		FAPO_FLAG_FRAMERATE_MUST_MATCH |
 		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
 		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
@@ -59,9 +60,68 @@ static FAPORegistrationProperties VolumeMeterProperties =
 typedef struct FAudioFXVolumeMeter
 {
 	FAPOBase base;
-
-	/* TODO */
+	uint16_t channels;
 } FAudioFXVolumeMeter;
+
+uint32_t FAudioFXVolumeMeter_LockForProcess(
+	FAudioFXVolumeMeter *fapo,
+	uint32_t InputLockedParameterCount,
+	const FAPOLockForProcessBufferParameters *pInputLockedParameters,
+	uint32_t OutputLockedParameterCount,
+	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
+) {
+	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
+		fapo->base.m_pParameterBlocks;
+
+	/* Verify parameter counts... */
+	if (	InputLockedParameterCount < fapo->base.m_pRegistrationProperties->MinInputBufferCount ||
+		InputLockedParameterCount > fapo->base.m_pRegistrationProperties->MaxInputBufferCount ||
+		OutputLockedParameterCount < fapo->base.m_pRegistrationProperties->MinOutputBufferCount ||
+		OutputLockedParameterCount > fapo->base.m_pRegistrationProperties->MaxOutputBufferCount	)
+	{
+		return FAUDIO_E_INVALID_ARG;
+	}
+
+
+	/* Validate input/output formats */
+	#define VERIFY_FORMAT_FLAG(flag, prop) \
+		if (	(fapo->base.m_pRegistrationProperties->Flags & flag) && \
+			(pInputLockedParameters->pFormat->prop != pOutputLockedParameters->pFormat->prop)	) \
+		{ \
+			return FAUDIO_E_INVALID_ARG; \
+		}
+	VERIFY_FORMAT_FLAG(FAPO_FLAG_CHANNELS_MUST_MATCH, nChannels)
+	VERIFY_FORMAT_FLAG(FAPO_FLAG_FRAMERATE_MUST_MATCH, nSamplesPerSec)
+	VERIFY_FORMAT_FLAG(FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH, wBitsPerSample)
+	#undef VERIFY_FORMAT_FLAG
+	if (	(fapo->base.m_pRegistrationProperties->Flags & FAPO_FLAG_BUFFERCOUNT_MUST_MATCH) &&
+		(InputLockedParameterCount != OutputLockedParameterCount)	)
+	{
+		return FAUDIO_E_INVALID_ARG;
+	}
+
+	/* Allocate volume meter arrays */
+	fapo->channels = pInputLockedParameters->pFormat->nChannels;
+	levels[0].pPeakLevels = (float*) FAudio_malloc(
+		fapo->channels * sizeof(float) * 6
+	);
+	levels[0].pRMSLevels = levels[0].pPeakLevels + fapo->channels;
+	levels[1].pPeakLevels = levels[0].pPeakLevels + (fapo->channels * 2);
+	levels[1].pRMSLevels = levels[0].pPeakLevels + (fapo->channels * 3);
+	levels[2].pPeakLevels = levels[0].pPeakLevels + (fapo->channels * 4);
+	levels[2].pRMSLevels = levels[0].pPeakLevels + (fapo->channels * 5);
+
+	fapo->base.m_fIsLocked = 1;
+	return 0;
+}
+
+void FAudioFXVolumeMeter_UnlockForProcess(FAudioFXVolumeMeter *fapo)
+{
+	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
+		fapo->base.m_pParameterBlocks;
+	FAudio_free(levels[0].pPeakLevels);
+	fapo->base.m_fIsLocked = 0;
+}
 
 void FAudioFXVolumeMeter_Process(
 	FAudioFXVolumeMeter *fapo,
@@ -71,27 +131,56 @@ void FAudioFXVolumeMeter_Process(
 	FAPOProcessBufferParameters* pOutputProcessParameters,
 	uint8_t IsEnabled
 ) {
+	float peak;
+	float total;
+	uint32_t i, j;
+	float *buffer = (float*) pInputProcessParameters->pBuffer;
 	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
 		FAPOBase_BeginProcess(&fapo->base);
 
-	if (levels->pPeakLevels)
+	/* TODO: This could probably be SIMD-ified... */
+	for (i = 0; i < fapo->channels; i += 1)
 	{
-		/* TODO: pPeakLevels */
-		FAudio_zero(
-			levels->pPeakLevels,
-			levels->ChannelCount * sizeof(float)
-		);
-	}
-	if (levels->pRMSLevels)
-	{
-		/* TODO: pRMSLevels */
-		FAudio_zero(
-			levels->pRMSLevels,
-			levels->ChannelCount * sizeof(float)
+		peak = 0.0f;
+		total = 0.0f;
+		for (j = 0; j < pInputProcessParameters->ValidFrameCount; j += 1)
+		{
+			if (buffer[j * i] > peak)
+			{
+				peak = buffer[j * i];
+			}
+			total += buffer[j * i] * buffer[j * i];
+		}
+		levels->pPeakLevels[i] = peak;
+		levels->pRMSLevels[i] = FAudio_sqrt(
+			total / pInputProcessParameters->ValidFrameCount
 		);
 	}
 
 	FAPOBase_EndProcess(&fapo->base);
+}
+
+void FAudioFXVolumeMeter_GetParameters(
+	FAudioFXVolumeMeter *fapo,
+	FAudioFXVolumeMeterLevels *pParameters,
+	uint32_t ParameterByteSize
+) {
+	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
+		fapo->base.m_pCurrentParameters;
+	FAudio_assert(ParameterByteSize == sizeof(FAudioFXVolumeMeterLevels));
+	FAudio_assert(pParameters->ChannelCount == fapo->channels);
+
+	/* Copy what's current as of the last Process */
+	FAudio_memcpy(
+		pParameters->pPeakLevels,
+		levels->pPeakLevels,
+		fapo->channels * sizeof(float)
+	);
+	FAudio_memcpy(
+		pParameters->pRMSLevels,
+		levels->pRMSLevels,
+		fapo->channels * sizeof(float)
+	);
 }
 
 void FAudioFXVolumeMeter_Free(void* fapo)
@@ -122,8 +211,14 @@ uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 	);
 
 	/* Function table... */
+	result->base.base.LockForProcess = (LockForProcessFunc)
+		FAudioFXVolumeMeter_LockForProcess;
+	result->base.base.UnlockForProcess = (UnlockForProcessFunc)
+		FAudioFXVolumeMeter_UnlockForProcess;
 	result->base.base.Process = (ProcessFunc)
 		FAudioFXVolumeMeter_Process;
+	result->base.base.GetParameters = (GetParametersFunc)
+		FAudioFXVolumeMeter_GetParameters;
 	result->base.Destructor = FAudioFXVolumeMeter_Free;
 
 	/* Finally. */
