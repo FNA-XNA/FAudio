@@ -105,6 +105,7 @@ uint32_t FAudioFXVolumeMeter_LockForProcess(
 	levels[0].pPeakLevels = (float*) FAudio_malloc(
 		fapo->channels * sizeof(float) * 6
 	);
+	FAudio_zero(levels[0].pPeakLevels, fapo->channels * sizeof(float) * 6);
 	levels[0].pRMSLevels = levels[0].pPeakLevels + fapo->channels;
 	levels[1].pPeakLevels = levels[0].pPeakLevels + (fapo->channels * 2);
 	levels[1].pRMSLevels = levels[0].pPeakLevels + (fapo->channels * 3);
