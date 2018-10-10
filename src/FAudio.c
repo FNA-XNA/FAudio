@@ -1359,8 +1359,14 @@ uint32_t FAudioSourceVoice_Stop(
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
-	FAudio_assert(!(Flags & FAUDIO_PLAY_TAILS)); /* FIXME: ??? */
-	voice->src.active = 0;
+	if (Flags & FAUDIO_PLAY_TAILS)
+	{
+		voice->src.active = 2;
+	}
+	else
+	{
+		voice->src.active = 0;
+	}
 	return 0;
 }
 
@@ -1502,7 +1508,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 
 	/* If the source is playing, don't flush the active buffer */
 	entry = voice->src.bufferList;
-	if (voice->src.active && entry != NULL && !voice->src.newBuffer)
+	if ((voice->src.active == 1) && entry != NULL && !voice->src.newBuffer)
 	{
 		entry = entry->next;
 		voice->src.bufferList->next = NULL;

@@ -434,6 +434,14 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		);
 	}
 
+	if (voice->src.active == 2)
+	{
+		/* We're just playing tails, skip all buffer stuff */
+		mixed = voice->src.resampleSamples;
+		FAudio_zero(voice->audio->resampleCache, mixed * sizeof(float));
+		goto sendwork;
+	}
+
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 
 	/* Nothing to do? */
@@ -509,6 +517,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	mixed = (uint32_t) toResample;
 
+sendwork:
 	FAudio_PlatformLockMutex(voice->sendLock);
 
 	/* Nowhere to send it? Just skip the rest...*/
