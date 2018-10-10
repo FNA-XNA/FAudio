@@ -956,7 +956,7 @@ void FAudio_INTERNAL_DecodePCM8(
 	uint32_t end,
 	float *decodeCache
 ) {
-	*samples = min(*samples, end - voice->src.curBufferOffset);
+	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 	FAudio_INTERNAL_Convert_U8_To_F32(
 		((uint8_t*) buffer->pAudioData) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
@@ -974,7 +974,7 @@ void FAudio_INTERNAL_DecodePCM16(
 	uint32_t end,
 	float *decodeCache
 ) {
-	*samples = min(*samples, end - voice->src.curBufferOffset);
+	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 	FAudio_INTERNAL_Convert_S16_To_F32(
 		((int16_t*) buffer->pAudioData) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
@@ -992,7 +992,7 @@ void FAudio_INTERNAL_DecodePCM32F(
 	uint32_t end,
 	float *decodeCache
 ) {
-	*samples = min(*samples, end - voice->src.curBufferOffset);
+	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 	FAudio_memcpy(
 		decodeCache,
 		((float*) buffer->pAudioData) + (
