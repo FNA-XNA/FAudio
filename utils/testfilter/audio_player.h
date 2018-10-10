@@ -33,6 +33,7 @@ class AudioPlayer
 				m_voices[idx] = audio_create_voice(m_context, m_oscillators[idx].buffer, Oscillator::CHANNEL_BUFFER_LENGTH, Oscillator::SAMPLE_RATE, p_channels);
 			}
 			m_filter = audio_create_filter(m_context);
+			m_output_filter = audio_create_filter(m_context);
 		}
 
 		void shutdown()
@@ -65,11 +66,21 @@ class AudioPlayer
 			}
 		}
 
+		void output_filter_change(int p_type, float p_cutoff_frequency, float p_q)
+		{
+			audio_filter_update(m_output_filter, p_type, p_cutoff_frequency, p_q);
+			for (int idx = 0; idx < Oscillator_Count; ++idx)
+			{
+				audio_output_filter_apply(m_output_filter, m_voices[idx]);
+			}
+		}
+
 	private : 
 		Oscillator		m_oscillators[Oscillator_Count];
 		AudioContext *	m_context;
 		AudioVoice *	m_voices[Oscillator_Count];
-		AudioFilter *	m_filter; 
+		AudioFilter *	m_filter;
+		AudioFilter *	m_output_filter;
 };
 
 #endif // FAUDIOFILTERDEMO_AUDIO_PLAYER_H

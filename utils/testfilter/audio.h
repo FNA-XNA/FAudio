@@ -42,5 +42,6 @@ extern PFN_AUDIO_VOICE_SET_FREQUENCY audio_voice_set_frequency;
 extern PFN_AUDIO_CREATE_FILTER audio_create_filter;
 extern PFN_AUDIO_FILTER_UPDATE audio_filter_update;
 extern PFN_AUDIO_FILTER_APPLY audio_filter_apply;
+extern PFN_AUDIO_FILTER_APPLY audio_output_filter_apply;
 
 #endif // FAUDIOFILTERDEMO_AUDIO_H

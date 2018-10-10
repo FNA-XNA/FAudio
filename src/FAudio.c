@@ -559,6 +559,18 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		FAudio_free(voice->sendMix);
 	}
+	if (voice->sendFilter != NULL)
+	{
+		FAudio_free(voice->sendFilter);
+	}
+	if (voice->sendFilterState != NULL)
+	{
+		for (i = 0; i < voice->sends.SendCount; i += 1)
+		{
+			FAudio_free(voice->sendFilterState[i]);
+		}
+		FAudio_free(voice->sendFilterState);
+	}
 	if (voice->sends.pSends != NULL)
 	{
 		FAudio_free(voice->sends.pSends);
@@ -592,13 +604,22 @@ uint32_t FAudioVoice_SetOutputVoices(
 		pSendList->SendCount * sizeof(FAudioSendDescriptor)
 	);
 
-	/* Allocate/Reset default output matrix, mixer function */
+	/* Allocate/Reset default output matrix, mixer function, filters */
 	voice->sendCoefficients = (float**) FAudio_malloc(
 		sizeof(float*) * pSendList->SendCount
 	);
 	voice->sendMix = (FAudioMixCallback*) FAudio_malloc(
 		sizeof(FAudioMixCallback) * pSendList->SendCount
 	);
+	if (voice->flags & FAUDIO_VOICE_USEFILTER)
+	{
+		voice->sendFilter = (FAudioFilterParameters*) FAudio_malloc(
+			sizeof(FAudioFilterParameters) * pSendList->SendCount
+		);
+		voice->sendFilterState = (FAudioFilterState**) FAudio_malloc(
+			sizeof(FAudioFilterState*) * pSendList->SendCount
+		);
+	}
 	for (i = 0; i < pSendList->SendCount; i += 1)
 	{
 		if (pSendList->pSends[i].pOutputVoice->type == FAUDIO_VOICE_MASTER)
@@ -659,6 +680,20 @@ uint32_t FAudioVoice_SetOutputVoices(
 		else
 		{
 			voice->sendMix[i] = FAudio_INTERNAL_Mix_Generic_Scalar;
+		}
+
+		if (voice->flags & FAUDIO_VOICE_USEFILTER)
+		{
+			voice->sendFilter[i].Type = FAUDIO_DEFAULT_FILTER_TYPE;
+			voice->sendFilter[i].Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+			voice->sendFilter[i].OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+			voice->sendFilterState[i] = (FAudioFilterState*) FAudio_malloc(
+				sizeof(FAudioFilterState) * outChannels
+			);
+			FAudio_zero(
+				voice->sendFilterState[i],
+				sizeof(FAudioFilterState) * outChannels
+			);
 		}
 	}
 
@@ -943,13 +978,38 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
+	uint32_t i;
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
-	FAudio_assert(0 && "Output filters are not supported!");
 
 	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
 	{
 		return 0;
 	}
+
+	FAudio_PlatformLockMutex(voice->sendLock);
+
+	/* Find the send index */
+	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
+	{
+		pDestinationVoice = voice->audio->master;
+	}
+	for (i = 0; i < voice->sends.SendCount; i += 1)
+	{
+		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)
+		{
+			break;
+		}
+	}
+	FAudio_assert(i < voice->sends.SendCount);
+
+	/* Set the filter parameters, finally. */
+	FAudio_memcpy(
+		&voice->sendFilter[i],
+		pParameters,
+		sizeof(FAudioFilterParameters)
+	);
+
+	FAudio_PlatformUnlockMutex(voice->sendLock);
 	return 0;
 }
 
@@ -958,7 +1018,37 @@ void FAudioVoice_GetOutputFilterParameters(
 	FAudioVoice *pDestinationVoice,
 	FAudioFilterParameters *pParameters
 ) {
-	FAudio_assert(0 && "Output filters are not supported!");
+	uint32_t i;
+
+	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
+	{
+		return;
+	}
+
+	FAudio_PlatformLockMutex(voice->sendLock);
+
+	/* Find the send index */
+	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
+	{
+		pDestinationVoice = voice->audio->master;
+	}
+	for (i = 0; i < voice->sends.SendCount; i += 1)
+	{
+		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)
+		{
+			break;
+		}
+	}
+	FAudio_assert(i < voice->sends.SendCount);
+
+	/* Set the filter parameters, finally. */
+	FAudio_memcpy(
+		pParameters,
+		&voice->sendFilter[i],
+		sizeof(FAudioFilterParameters)
+	);
+
+	FAudio_PlatformUnlockMutex(voice->sendLock);
 }
 
 uint32_t FAudioVoice_SetVolume(
@@ -1191,6 +1281,18 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		if (voice->sendMix != NULL)
 		{
 			FAudio_free(voice->sendMix);
+		}
+		if (voice->sendFilter != NULL)
+		{
+			FAudio_free(voice->sendFilter);
+		}
+		if (voice->sendFilterState != NULL)
+		{
+			for (i = 0; i < voice->sends.SendCount; i += 1)
+			{
+				FAudio_free(voice->sendFilterState[i]);
+			}
+			FAudio_free(voice->sendFilterState);
 		}
 		if (voice->sends.pSends != NULL)
 		{

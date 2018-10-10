@@ -123,6 +123,11 @@ void xaudio_filter_apply(AudioFilter *p_filter, AudioVoice *p_voice)
 	p_voice->voice->SetFilterParameters(&p_filter->params, XAUDIO2_COMMIT_ALL);
 }
 
+void xaudio_output_filter_apply(AudioFilter *p_filter, AudioVoice *p_voice)
+{
+	p_voice->voice->SetOutputFilterParameters(p_voice->context->mastering_voice, &p_filter->params, XAUDIO2_COMMIT_ALL);
+}
+
 AudioContext *xaudio_create_context()
 {
 	// setup function pointers
@@ -134,6 +139,7 @@ AudioContext *xaudio_create_context()
 	audio_create_filter = xaudio_create_filter;
 	audio_filter_update = xaudio_filter_update;
 	audio_filter_apply = xaudio_filter_apply;
+	audio_output_filter_apply = xaudio_output_filter_apply;
 
 	// create XAudio object
 	IXAudio2 *xaudio2;

@@ -5,7 +5,7 @@
 
 const char* TOOL_NAME = "Filter Test Tool";
 int TOOL_WIDTH = 640;
-int TOOL_HEIGHT = 480;
+int TOOL_HEIGHT = 580;
 
 static const int NOTE_MIN = 24;
 static const int NOTE_MAX = 96;
@@ -40,6 +40,7 @@ void FAudioTool_Update()
 	bool update_square = false;
 	bool update_saw = false;
 	bool update_filter = false;
+	bool update_output_filter = false;
 
 	// gui
 	int window_y = next_window_dims(0, 80);
@@ -113,6 +114,25 @@ void FAudioTool_Update()
 
 	ImGui::End();
 
+	window_y = next_window_dims(window_y, 100);
+	ImGui::Begin("Output Filter");
+
+		static int output_filter_type = -1;
+		static int output_filter_cutoff_note = 60;
+		static float output_filter_q = 0.7f;
+
+		update_output_filter |= ImGui::RadioButton("None", &output_filter_type, -1); ImGui::SameLine();
+		update_output_filter |= ImGui::RadioButton("Low-Pass", &output_filter_type, 0); ImGui::SameLine();
+		update_output_filter |= ImGui::RadioButton("Band-Pass", &output_filter_type, 1); ImGui::SameLine();
+		update_output_filter |= ImGui::RadioButton("High-Pass", &output_filter_type, 2); ImGui::SameLine();
+		update_output_filter |= ImGui::RadioButton("Notch", &output_filter_type, 3);
+
+		update_output_filter |= ImGui::SliderInt("Cutoff Frequency", &output_filter_cutoff_note, 12, 108); ImGui::SameLine();
+		ImGui::Text(" (%.2f Hz)", note_to_frequency(output_filter_cutoff_note));
+		update_output_filter |= ImGui::SliderFloat("Q", &output_filter_q, 0.7f, 100.0f, "%.1f");
+
+	ImGui::End();
+
 	// audio control
 	static AudioPlayer	player;
 
@@ -140,5 +160,9 @@ void FAudioTool_Update()
 	if (update_filter | update_engine)
 	{
 		player.filter_change(filter_type, note_to_frequency(filter_cutoff_note), filter_q);
+	}
+	if (update_output_filter | update_engine)
+	{
+		player.output_filter_change(output_filter_type, note_to_frequency(output_filter_cutoff_note), output_filter_q);
 	}
 }

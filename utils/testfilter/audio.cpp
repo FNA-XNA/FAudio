@@ -9,6 +9,7 @@ PFN_AUDIO_VOICE_SET_FREQUENCY audio_voice_set_frequency = NULL;
 PFN_AUDIO_CREATE_FILTER audio_create_filter = NULL;
 PFN_AUDIO_FILTER_UPDATE audio_filter_update = NULL;
 PFN_AUDIO_FILTER_APPLY audio_filter_apply = NULL;
+PFN_AUDIO_FILTER_APPLY audio_output_filter_apply = NULL;
 
 extern AudioContext *xaudio_create_context();
 extern AudioContext *faudio_create_context();

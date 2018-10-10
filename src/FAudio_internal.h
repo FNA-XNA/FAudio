@@ -279,6 +279,8 @@ struct FAudioVoice
 	FAudioVoiceSends sends;
 	float **sendCoefficients;
 	FAudioMixCallback *sendMix;
+	FAudioFilterParameters *sendFilter;
+	FAudioFilterState **sendFilterState;
 	struct
 	{
 		uint32_t count;

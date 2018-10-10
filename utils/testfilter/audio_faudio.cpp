@@ -118,6 +118,11 @@ void faudio_filter_apply(AudioFilter *p_filter, AudioVoice *p_voice)
 	FAudioVoice_SetFilterParameters(p_voice->voice, &p_filter->params, FAUDIO_COMMIT_NOW);
 }
 
+void faudio_output_filter_apply(AudioFilter *p_filter, AudioVoice *p_voice)
+{
+	FAudioVoice_SetOutputFilterParameters(p_voice->voice, p_voice->context->mastering_voice, &p_filter->params, FAUDIO_COMMIT_NOW);
+}
+
 AudioContext *faudio_create_context()
 {
 	// setup function pointers
@@ -129,6 +134,7 @@ AudioContext *faudio_create_context()
 	audio_create_filter = faudio_create_filter;
 	audio_filter_update = faudio_filter_update;
 	audio_filter_apply = faudio_filter_apply;
+	audio_output_filter_apply = faudio_output_filter_apply;
 
 	// create Faudio object
 	FAudio *faudio;

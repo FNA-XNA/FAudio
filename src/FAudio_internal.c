@@ -294,8 +294,8 @@ static inline void FAudio_INTERNAL_FilterVoice(
 	FAudioFilterState *filterState,
 	float *samples,
 	uint32_t numSamples,
-	uint16_t numChannels)
-{
+	uint16_t numChannels
+) {
 	uint32_t j, ci;
 
 	/* Apply a digital state-variable filter to the voice.
@@ -573,6 +573,17 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->channelVolume,
 			voice->sendCoefficients[i]
 		);
+
+		if (voice->flags & FAUDIO_VOICE_USEFILTER)
+		{
+			FAudio_INTERNAL_FilterVoice(
+				&voice->sendFilter[i],
+				voice->sendFilterState[i],
+				stream,
+				mixed,
+				oChan
+			);
+		}
 	}
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
 
@@ -681,6 +692,17 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->channelVolume,
 			voice->sendCoefficients[i]
 		);
+
+		if (voice->flags & FAUDIO_VOICE_USEFILTER)
+		{
+			FAudio_INTERNAL_FilterVoice(
+				&voice->sendFilter[i],
+				voice->sendFilterState[i],
+				stream,
+				resampled,
+				oChan
+			);
+		}
 	}
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
 
