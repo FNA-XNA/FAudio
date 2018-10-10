@@ -102,7 +102,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
-	uint32_t end, endRead, decoding, decoded = 0;
+	uint32_t end, endRead, decoding, wanted, decoded = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
 	FAudioBufferEntry *toDelete;
 
@@ -112,6 +112,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	while (decoded < *toDecode && buffer != NULL)
 	{
 		decoding = (uint32_t) *toDecode - decoded;
+		wanted = decoding;
 
 		/* Start-of-buffer behavior */
 		if (voice->src.newBuffer)
@@ -146,7 +147,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		voice->src.totalSamples += decoding;
 
 		/* End-of-buffer behavior */
-		if (voice->src.curBufferOffset >= decoding)
+		if (decoding < wanted)
 		{
 			if (buffer->LoopCount > 0)
 			{
