@@ -4,13 +4,14 @@
 SDL_CROSS_PATH=/usr
 
 MINGW=x86_64-w64-mingw32
+MINGWROOT=sys-root/mingw
 
-if [ ! -f $SDL_CROSS_PATH/$MINGW/bin/sdl2-config ]; then
+if [ ! -f $SDL_CROSS_PATH/$MINGW/$MINGWROOT/bin/sdl2-config ]; then
 	echo "Please check your mingw32 SDL installation"
 	return -1
 fi
 
-export PATH=$SDL_CROSS_PATH/$MINGW/bin:$PATH
+export PATH=$SDL_CROSS_PATH/$MINGW/$MINGWROOT/bin:$PATH
 export CC=${MINGW}-gcc
 export CXX=${MINGW}-g++
 export AR=${MINGW}-ar
