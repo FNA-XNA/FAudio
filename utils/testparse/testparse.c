@@ -45,10 +45,9 @@ int main(int argc, char **argv)
 
 	/* Parse the AudioEngine */
 	buf = (uint8_t*) SDL_LoadFile(argv[1], &len);
+	SDL_memset(&params, '\0', sizeof(params));
 	params.pGlobalSettingsBuffer = buf;
 	params.globalSettingsBufferSize = len;
-	params.pXAudio2 = NULL;
-	params.pRendererID = NULL;
 	FACTCreateEngine(0, &engine);
 	FACTAudioEngine_Initialize(engine, &params);
 	SDL_free(buf);
