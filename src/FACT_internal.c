@@ -2709,28 +2709,6 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FAudio_assert(wb->streaming == isStreaming);
 	wb->streaming = isStreaming;
 
-	/* TODO: WaveBank Seek Tables
-	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_SEEKTABLES)
-	{
-		io->seek(
-			io->data,
-			header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset,
-			FAUDIO_SEEK_SET
-		);
-	}
-	*/
-
-	/* TODO: WaveBank Entry Names
-	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_ENTRYNAMES)
-	{
-		io->seek(
-			io->data,
-			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYNAMES].dwOffset,
-			FAUDIO_SEEK_SET
-		);
-	}
-	*/
-
 	/* WaveBank Entry Metadata */
 	io->seek(
 		io->data,
@@ -2819,6 +2797,28 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			}
 		}
 	}
+
+	/* TODO: WaveBank Seek Tables
+	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_SEEKTABLES)
+	{
+		io->seek(
+			io->data,
+			header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset,
+			FAUDIO_SEEK_SET
+		);
+	}
+	*/
+
+	/* TODO: WaveBank Entry Names
+	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_ENTRYNAMES)
+	{
+		io->seek(
+			io->data,
+			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYNAMES].dwOffset,
+			FAUDIO_SEEK_SET
+		);
+	}
+	*/
 
 	/* Add to the Engine WaveBank list */
 	LinkedList_AddEntry(&pEngine->wbList, wb, pEngine->wbLock);
