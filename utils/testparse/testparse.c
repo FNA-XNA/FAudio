@@ -534,6 +534,17 @@ int main(int argc, char **argv)
 			wb->entries[i].LoopRegion.dwStartSample,
 			wb->entries[i].LoopRegion.dwTotalSamples
 		);
+		if (wb->seekTables != NULL && wb->seekTables[i].entryCount > 0)
+		{
+			printf(
+				"\t\tSeek Table Entry Count: %d\n",
+				wb->seekTables[i].entryCount
+			);
+			for (j = 0; j < wb->seekTables[i].entryCount; j += 1)
+			{
+				printf("\t\t\t%d\n", wb->seekTables[i].entries[j]);
+			}
+		}
 	}
 
 	/* Clean up. We out. */

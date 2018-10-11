@@ -2668,7 +2668,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t i;
 	FACTWaveBankHeader header;
 	FACTWaveBankData wbinfo;
-	uint32_t compactEntry;
+	uint32_t compactEntry, seekTableOffset;
 
 	io->read(io->data, &header, sizeof(header), 1);
 	if (	header.dwSignature != 0x444E4257 ||
@@ -2798,16 +2798,72 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		}
 	}
 
-	/* TODO: WaveBank Seek Tables
+	/* WaveBank Seek Tables */
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_SEEKTABLES)
 	{
-		io->seek(
-			io->data,
-			header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset,
-			FAUDIO_SEEK_SET
+		/* The seek table data layout is an absolute disaster! */
+		wb->seekTables = (FACTSeekTable*) FAudio_malloc(
+			wbinfo.dwEntryCount * sizeof(FACTSeekTable)
 		);
+		for (i = 0; i < wbinfo.dwEntryCount; i += 1)
+		{
+			/* Get the table offset... */
+			io->seek(
+				io->data,
+				(
+					header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset +
+					i * sizeof(uint32_t)
+				),
+				FAUDIO_SEEK_SET
+			);
+			io->read(
+				io->data,
+				&seekTableOffset,
+				sizeof(int32_t),
+				1
+			);
+
+			/* If the offset is -1, this wave needs no table */
+			if (seekTableOffset == -1)
+			{
+				wb->seekTables[i].entryCount = 0;
+				wb->seekTables[i].entries = NULL;
+				continue;
+			}
+
+			/* Go to the table offset, after the offset table... */
+			io->seek(
+				io->data,
+				(
+					header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset +
+					(wbinfo.dwEntryCount * sizeof(uint32_t)) +
+					seekTableOffset
+				),
+				FAUDIO_SEEK_SET
+			);
+
+			/* Read the table, finally. */
+			io->read(
+				io->data,
+				&wb->seekTables[i].entryCount,
+				sizeof(uint32_t),
+				1
+			);
+			wb->seekTables[i].entries = (uint32_t*) FAudio_malloc(
+				wb->seekTables[i].entryCount * sizeof(uint32_t)
+			);
+			io->read(
+				io->data,
+				wb->seekTables[i].entries,
+				wb->seekTables[i].entryCount * sizeof(uint32_t),
+				1
+			);
+		}
 	}
-	*/
+	else
+	{
+		wb->seekTables = NULL;
+	}
 
 	/* TODO: WaveBank Entry Names
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_ENTRYNAMES)

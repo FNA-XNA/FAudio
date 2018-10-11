@@ -1192,6 +1192,7 @@ uint32_t FACTSoundBank_GetState(
 
 uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
+	uint32_t i;
 	FACTWave *wave;
 	FACTNotification note;
 	if (pWaveBank == NULL)
@@ -1230,6 +1231,17 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FAudio_free(pWaveBank->name);
 	FAudio_free(pWaveBank->entries);
 	FAudio_free(pWaveBank->entryRefs);
+	if (pWaveBank->seekTables != NULL)
+	{
+		for (i = 0; i < pWaveBank->entryCount; i += 1)
+		{
+			if (pWaveBank->seekTables[i].entries != NULL)
+			{
+				FAudio_free(pWaveBank->seekTables[i].entries);
+			}
+		}
+		FAudio_free(pWaveBank->seekTables);
+	}
 	FAudio_close(pWaveBank->io);
 	if (pWaveBank->notifyOnDestroy)
 	{

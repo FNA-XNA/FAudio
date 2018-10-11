@@ -282,6 +282,14 @@ typedef struct FACTTransitionTable
 	FACTTransition *entries;
 } FACTTransitionTable;
 
+/* Internal WaveBank Types */
+
+typedef struct FACTSeekTable
+{
+	uint32_t entryCount;
+	uint32_t *entries;
+} FACTSeekTable;
+
 /* Internal Cue Types */
 
 typedef struct FACTInstanceRPCData
@@ -441,6 +449,7 @@ struct FACTWaveBank
 	uint32_t entryCount;
 	FACTWaveBankEntry *entries;
 	uint32_t *entryRefs;
+	FACTSeekTable *seekTables;
 
 	/* I/O information */
 	uint16_t streaming;
