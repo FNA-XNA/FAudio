@@ -58,6 +58,24 @@ ifneq ($(COM_WRAPPER), 1)
 	FAUDIOSRC += src/XNA_Song.c
 endif
 
+# FFmpeg for WMA decoding
+ifeq ($(FAUDIO_FFMPEG), 1)
+	ifdef FAUDIO_FFMPEG_PREFIX
+		FFMPEG_CFLAGS = -I$(FAUDIO_FFMPEG_PREFIX)/include 
+		FFMPEG_LDFLAGS = -L$(FAUDIO_FFMPEG_PREFIX)/lib -lavcodec -lavutil
+	else
+		FFMPEG_CFLAGS = `pkg-config libavcodec --cflags` `pkg-config libavutil --cflags`
+		FFMPEG_LDFLAGS = `pkg-config libavcodec --libs` `pkg-config libavutil --libs`
+	endif
+
+	FAUDIOSRC += src/FAudio_ffmpeg.c
+	FFMPEG_CFLAGS += -DHAVE_FFMPEG=1
+
+	CFLAGS += $(FFMPEG_CFLAGS)
+	LDFLAGS += $(FFMPEG_LDFLAGS)
+endif
+
+
 # Object code lists
 FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
 

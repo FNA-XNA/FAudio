@@ -294,72 +294,20 @@ uint32_t FAudio_CreateSourceVoice(
 		(*ppSourceVoice)->src.decode = ((*ppSourceVoice)->src.format->nChannels == 2) ?
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
 			FAudio_INTERNAL_DecodeMonoMSADPCM;
+	}
 	else if((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
 	{
-		enum AVCodecID cid;
-		AVCodec *codec;
-
-		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeFFMPEG;
-
-		/* initialize ffmpeg state */
-		codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
-		if(!codec){
-			FAudio_free((*ppSourceVoice)->src.format);
-			FAudio_free(*ppSourceVoice);
-			return FAUDIO_E_UNSUPPORTED_FORMAT;
-		}
-
-		src->conv_ctx = avcodec_alloc_context3(codec);
-		if(!src->conv_ctx){
-			FAudio_free((*ppSourceVoice)->src.format);
-			FAudio_free(*ppSourceVoice);
-			return FAUDIO_E_UNSUPPORTED_FORMAT;
-		}
-
-		src->conv_ctx->bit_rate = (*ppSourceVoice)->src.format->Format.nAvgBytesPerSec * 8;
-		src->conv_ctx->channels = (*ppSourceVoice)->src.format->Format.nChannels;
-		src->conv_ctx->sample_rate = (*ppSourceVoice)->src.format->Format.nSamplesPerSec;
-		src->conv_ctx->block_align = (*ppSourceVoice)->src.format->Format.nBlockAlign;
-		src->conv_ctx->bits_per_coded_sample = (*ppSourceVoice)->src.format->Format.wBitsPerSample;
-		src->conv_ctx->extradata_size = (*ppSourceVoice)->src.format->Format.cbSize;
-		src->conv_ctx->request_sample_fmt = AV_SAMPLE_FMT_FLT;
-		if((*ppSourceVoice)->src.format->Format.cbSize){
-			src->conv_ctx->extradata = HeapAlloc(GetProcessHeap(), 0, (*ppSourceVoice)->src.format->Format.cbSize + AV_INPUT_BUFFER_PADDING_SIZE);
-			memcpy(src->conv_ctx->extradata, (&(*ppSourceVoice)->src.format->Format.cbSize) + 1, (*ppSourceVoice)->src.format->Format.cbSize);
-		}else{
-			/* xWMA doesn't provide the extradata info that FFmpeg needs to
-			 * decode WMA data, so we create some fake extradata. This is taken
-			 * from <ffmpeg/libavformat/xwma.c>. */
-			src->conv_ctx->extradata_size = 6;
-			src->conv_ctx->extradata = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, AV_INPUT_BUFFER_PADDING_SIZE);
-			src->conv_ctx->extradata[4] = 31;
-		}
-
-		if(avcodec_open2(src->conv_ctx, codec, NULL) < 0){
-			FAudio_free((*ppSourceVoice)->src.conv_ctx->extradata);
-			av_free(src->conv_ctx);
-			FAudio_free((*ppSourceVoice)->src.format);
-			FAudio_free(*ppSourceVoice);
-			return AUDCLNT_E_UNSUPPORTED_FORMAT;
-		}
-
-		src->conv_frame = av_frame_alloc();
-		if(!src->conv_ctx){
-			avcodec_close(src->conv_ctx);
-			FAudio_free((*ppSourceVoice)->src.conv_ctx->extradata);
-			av_free(src->conv_ctx);
-			FAudio_free((*ppSourceVoice)->src.format);
-			FAudio_free(*ppSourceVoice);
-			return AUDCLNT_E_UNSUPPORTED_FORMAT;
-		}
-
-		if(src->conv_ctx->sample_fmt != AV_SAMPLE_FMT_FLT){
-			FAudio_assert(0 && "Got non-float format!!!");
-		}
-	}
-	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
-	{
-		FAudio_assert(0 && "xWMA is not supported!");
+		#ifdef HAVE_FFMPEG
+			i = FAudio_FFMPEG_init(*ppSourceVoice);	
+			if (i != 0)
+			{
+				FAudio_free((*ppSourceVoice)->src.format);
+				FAudio_free(*ppSourceVoice);
+				return i;	
+			}
+		#else
+			FAudio_assert(0 && "xWMA is not supported!");
+		#endif
 	}
 	else
 	{

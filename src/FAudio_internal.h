@@ -310,6 +310,14 @@ struct FAudioVoice
 			uint64_t curBufferOffsetDec;
 			uint32_t curBufferOffset;
 
+			/* FFmpeg */
+			#ifdef HAVE_FFMPEG
+				struct AVCodecContext *conv_ctx;
+				struct AVFrame *conv_frame;
+				size_t convert_bytes;
+				uint8_t *convert_buf;
+			#endif /* HAVE_FFMPEG*/
+
 			/* Read-only */
 			float maxFreqRatio;
 			FAudioWaveFormatEx *format;
@@ -472,6 +480,9 @@ uint32_t FAudio_PlatformResample(
 	float *output,
 	uint32_t outLen
 );
+
+/* FFmpeg */
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice);
 
 /* Threading */
 
