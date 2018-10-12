@@ -2668,7 +2668,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t i;
 	FACTWaveBankHeader header;
 	FACTWaveBankData wbinfo;
-	uint32_t compactEntry, seekTableOffset;
+	uint32_t compactEntry;
+	int32_t seekTableOffset;
 
 	io->read(io->data, &header, sizeof(header), 1);
 	if (	header.dwSignature != 0x444E4257 ||
