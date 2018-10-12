@@ -90,7 +90,7 @@ all: $(FAUDIOOBJ)
 clean:
 	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX)
 
-.PHONY: testparse facttool testreverb testvolumemeter testfilter
+.PHONY: testparse facttool testreverb testvolumemeter testfilter testxwma
 
 testparse:
 	$(CC) -g -Wall -pedantic -o testparse$(UTIL_SUFFIX) \
@@ -99,10 +99,10 @@ testparse:
 		-Isrc `sdl2-config --cflags --libs`
 
 facttool:
-	$(CXX) -g -Wall -o facttool$(UTIL_SUFFIX) \
+	$(CXX) -g -Wall $(FFMPEG_CFLAGS) -o facttool$(UTIL_SUFFIX) \
 		utils/facttool/facttool.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
 
 testreverb:
 	$(CXX) -g -Wall -o testreverb$(UTIL_SUFFIX) \
@@ -117,6 +117,12 @@ testvolumemeter:
 		utils/wavcommon/wavs.cpp \
 		utils/uicommon/*.cpp src/F*.c \
 		-Isrc `sdl2-config --cflags --libs`
+
+testxwma:
+	$(CXX) -g -Wall $(FFMPEG_CFLAGS) -o testxwma$(UTIL_SUFFIX) \
+		utils/testxwma/*.cpp \
+		src/F*.c \
+		-Isrc `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
 
 testfilter:
 	$(CXX) -g -Wall -o testfilter$(UTIL_SUFFIX) \
