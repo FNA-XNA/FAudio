@@ -1417,10 +1417,9 @@ uint32_t FACTWaveBank_Prepare(
 	send.pOutputVoice = pWaveBank->parentEngine->master;
 	sends.SendCount = 1;
 	sends.pSends = &send;
-	format.wfx.wFormatTag = entry->Format.wFormatTag;
 	format.wfx.nChannels = entry->Format.nChannels;
 	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	if (format.wfx.wFormatTag == 0)
+	if (format.wfx.wFormatTag == 0x0)
 	{
 		format.wfx.wFormatTag = FAUDIO_FORMAT_PCM;
 		format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
@@ -1428,8 +1427,9 @@ uint32_t FACTWaveBank_Prepare(
 		format.wfx.nAvgBytesPerSec = format.wfx.nBlockAlign * format.wfx.nSamplesPerSec;
 		format.wfx.cbSize = 0;
 	}
-	else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
+	else if (format.wfx.wFormatTag == 0x2)
 	{
+		format.wfx.wFormatTag = FAUDIO_FORMAT_MSADPCM;
 		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
 		format.wfx.wBitsPerSample = 16;
 		format.wfx.cbSize = (
