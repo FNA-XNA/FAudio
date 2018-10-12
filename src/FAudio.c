@@ -255,6 +255,10 @@ uint32_t FAudio_CreateSourceVoice(
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
 			FAudio_INTERNAL_DecodeMonoMSADPCM;
 	}
+	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
+	{
+		FAudio_assert(0 && "xWMA is not supported!");
+	}
 	else
 	{
 		FAudio_assert(0 && "Unsupported format tag!");

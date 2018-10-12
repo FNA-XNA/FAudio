@@ -1420,16 +1420,18 @@ uint32_t FACTWaveBank_Prepare(
 	format.wfx.wFormatTag = entry->Format.wFormatTag;
 	format.wfx.nChannels = entry->Format.nChannels;
 	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
 	if (format.wfx.wFormatTag == 0)
 	{
 		format.wfx.wFormatTag = FAUDIO_FORMAT_PCM;
+		format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
 		format.wfx.nBlockAlign = format.wfx.nChannels * format.wfx.wBitsPerSample / 8;
+		format.wfx.nAvgBytesPerSec = format.wfx.nBlockAlign * format.wfx.nSamplesPerSec;
 		format.wfx.cbSize = 0;
 	}
 	else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
+		format.wfx.wBitsPerSample = 16;
 		format.wfx.cbSize = (
 			sizeof(FAudioADPCMWaveFormat) -
 			sizeof(FAudioWaveFormatEx)
@@ -1438,7 +1440,17 @@ uint32_t FACTWaveBank_Prepare(
 			((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2
 		);
 	}
-	else /* Includes 0x1 - XMA, 0x3 - WMA */
+	else if (format.wfx.wFormatTag == 0x3)
+	{
+		format.wfx.wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
+		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
+		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
+		format.wfx.wBitsPerSample = 16;
+		format.wfx.cbSize = 0;
+
+		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
+	}
+	else /* Includes 0x1 - XMA */
 	{
 		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}

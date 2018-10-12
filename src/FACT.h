@@ -417,6 +417,40 @@ static const uint8_t FACT_FLAG_NOTIFICATION_PERSIST = 0x01;
 
 #define FACT_ENGINE_LOOKAHEAD_DEFAULT 250
 
+#define FACT_MAX_WMA_AVG_BYTES_PER_SEC_ENTRIES 7
+static const uint32_t aWMAAvgBytesPerSec[] =
+{
+	12000,
+	24000,
+	4000,
+	6000,
+	8000,
+	20000,
+	2500
+};
+
+#define FACT_MAX_WMA_BLOCK_ALIGN_ENTRIES 17
+static const uint32_t aWMABlockAlign[] =
+{
+	929,
+	1487,
+	1280,
+	2230,
+	8917,
+	8192,
+	4459,
+	5945,
+	2304,
+	1536,
+	1485,
+	1008,
+	2731,
+	4096,
+	6827,
+	5462,
+	1280
+};
+
 /* AudioEngine Interface */
 
 /* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
