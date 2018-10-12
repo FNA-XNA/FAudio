@@ -1442,6 +1442,9 @@ uint32_t FACTWaveBank_Prepare(
 	}
 	else if (format.wfx.wFormatTag == 0x3)
 	{
+		/* Apparently this is used to detect WMA Pro...? */
+		FAudio_assert(entry->Format.wBitsPerSample == 0);
+
 		format.wfx.wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
 		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
 		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
