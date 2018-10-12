@@ -316,6 +316,11 @@ struct FAudioVoice
 				struct AVFrame *conv_frame;
 				size_t convert_bytes;
 				uint8_t *convert_buf;
+
+				uint32_t convertCapacity;
+				uint32_t convertSamples;
+				uint32_t convertOffset;
+				float *convertCache;
 			#endif /* HAVE_FFMPEG*/
 
 			/* Read-only */

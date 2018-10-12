@@ -80,21 +80,28 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
     return 0;
 }
 
-void FAudio_INTERNAL_DecodeFFMPEG(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
-) {
+void FAudio_INTERNAL_ResizeConvertCache(FAudioVoice *voice, uint32_t samples)
+{
+	if (samples > voice->src.convertCapacity)
+	{
+		voice->src.convertCapacity = samples;
+		voice->src.convertCache = (float*) FAudio_realloc(
+			voice->src.convertCache,
+			sizeof(float) * voice->src.convertCapacity
+		);
+	}
+}
+
+void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
+{
 	AVPacket avpkt = {0};
 	int averr;
-    uint32_t done = 0, to_copy_bytes;
+	uint32_t total_samples;
 
 	avpkt.size = voice->src.format->nBlockAlign;
 	avpkt.data = (unsigned char *) buffer->pAudioData + voice->src.curBufferOffset;
 
-	while (done < *samples) 
+	for(;;)
 	{
 		averr = avcodec_receive_frame(voice->src.conv_ctx, voice->src.conv_frame);
 		if (averr == AVERROR(EAGAIN))
@@ -148,11 +155,63 @@ void FAudio_INTERNAL_DecodeFFMPEG(
             WARN("avcodec_receive_frame failed: %d\n", averr);
             return; 
 		}
+		else
+		{
+			break;
+		}
+	}
 
-        done += voice->src.conv_frame->nb_samples;
-		to_copy_bytes = done * voice->src.conv_ctx->channels * voice->src.format->nBlockAlign;
+    total_samples = voice->src.conv_frame->nb_samples * voice->src.conv_ctx->channels;
 
-        FAudio_memcpy(decodeCache, voice->src.conv_frame->data, to_copy_bytes);
+	FAudio_INTERNAL_ResizeConvertCache(voice, total_samples);
+
+	if (av_sample_fmt_is_planar(voice->src.conv_ctx->sample_fmt))
+	{
+		int32_t s, c;
+		uint8_t **src = voice->src.conv_frame->data;
+		uint32_t *dst = (uint32_t *) voice->src.convertCache;
+
+		for(s = 0; s < voice->src.conv_frame->nb_samples; ++s)
+			for(c = 0; c < voice->src.conv_ctx->channels; ++c)
+				*dst++ = ((uint32_t*)(src[c]))[s];
+	}
+	else
+	{
+		FAudio_memcpy(voice->src.convertCache, voice->src.conv_frame->data[0], total_samples * sizeof(float));
+	}
+
+	voice->src.convertSamples = total_samples;
+	voice->src.convertOffset = 0;
+}
+
+void FAudio_INTERNAL_DecodeFFMPEG(
+	FAudioVoice *voice,
+	FAudioBuffer *buffer,
+	uint32_t *samples,
+	uint32_t end,
+	float *decodeCache
+) {
+    uint32_t done = 0, available, todo;
+
+	while (done < *samples) 
+	{	
+		available = (voice->src.convertSamples - voice->src.convertOffset) / voice->src.format->nChannels;
+
+		if (available <= 0) 
+		{
+			FAudio_INTERNAL_FillConvertCache(voice, buffer);
+			available = (voice->src.convertSamples - voice->src.convertOffset) / voice->src.format->nChannels;
+
+			if (available <= 0)
+			{
+				break;
+			}
+		}
+
+		todo = FAudio_min(available, *samples - done);
+		FAudio_memcpy(decodeCache + (done * voice->src.format->nChannels), voice->src.convertCache + voice->src.convertOffset, todo * voice->src.format->nChannels * sizeof(float));
+		done += todo;
+		voice->src.convertOffset += todo * voice->src.format->nChannels;
 	}
 
     *samples = done;
