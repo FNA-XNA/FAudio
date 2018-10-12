@@ -68,7 +68,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
         return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
-	if(conv_ctx->sample_fmt != AV_SAMPLE_FMT_FLT)
+	if(conv_ctx->sample_fmt != AV_SAMPLE_FMT_FLT && conv_ctx->sample_fmt != AV_SAMPLE_FMT_FLTP)
     {
 		FAudio_assert(0 && "Got non-float format!!!");
 	}
