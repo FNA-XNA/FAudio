@@ -46,6 +46,7 @@
 MAKE_SUBFORMAT_GUID(PCM, 1);
 MAKE_SUBFORMAT_GUID(ADPCM, 2);
 MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
+MAKE_SUBFORMAT_GUID(WMAUDIO2, FAUDIO_FORMAT_WMAUDIO2);
 #undef MAKE_SUBFORMAT_GUID
 
 /* FAudio Interface */
@@ -224,8 +225,9 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
 
-	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
-		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT	)
+	if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
+		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT ||
+		pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2) 
 	{
 		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) audio->pMalloc(
 			sizeof(FAudioWaveFormatExtensible)
@@ -247,6 +249,10 @@ uint32_t FAudio_CreateSourceVoice(
 		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
 		{
 			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+		}
+		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
+		{
+			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_WMAUDIO2, sizeof(FAudioGUID));
 		}
 		(*ppSourceVoice)->src.format = &fmtex->Format;
 	}
@@ -284,6 +290,20 @@ uint32_t FAudio_CreateSourceVoice(
 		{
 			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
 		}
+		else if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_WMAUDIO2, sizeof(FAudioGUID)) == 0)
+		{
+			#ifdef HAVE_FFMPEG
+				i = FAudio_FFMPEG_init(*ppSourceVoice);	
+				if (i != 0)
+				{
+					FAudio_free((*ppSourceVoice)->src.format);
+					FAudio_free(*ppSourceVoice);
+					return i;	
+				}
+			#else
+				FAudio_assert(0 && "xWMA is not supported!");
+			#endif
+		}
 		else
 		{
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
@@ -294,20 +314,6 @@ uint32_t FAudio_CreateSourceVoice(
 		(*ppSourceVoice)->src.decode = ((*ppSourceVoice)->src.format->nChannels == 2) ?
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
 			FAudio_INTERNAL_DecodeMonoMSADPCM;
-	}
-	else if((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
-	{
-		#ifdef HAVE_FFMPEG
-			i = FAudio_FFMPEG_init(*ppSourceVoice);	
-			if (i != 0)
-			{
-				FAudio_free((*ppSourceVoice)->src.format);
-				FAudio_free(*ppSourceVoice);
-				return i;	
-			}
-		#else
-			FAudio_assert(0 && "xWMA is not supported!");
-		#endif
 	}
 	else
 	{
@@ -1445,8 +1451,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
-	FAudio_assert((voice->src.format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2 && pBufferWMA != NULL) ||
-				  (voice->src.format->wFormatTag != FAUDIO_FORMAT_WMAUDIO2 && pBufferWMA == NULL));
+	FAudio_assert((voice->src.conv_ctx != NULL && pBufferWMA != NULL) ||
+				  (voice->src.conv_ctx == NULL && pBufferWMA == NULL));
 
 	/* Start off with whatever they just sent us... */
 	playBegin = pBuffer->PlayBegin;

@@ -37,10 +37,13 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	conv_ctx->extradata_size = pSourceVoice->src.format->cbSize;
 	conv_ctx->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 
-	if (pSourceVoice->src.format->cbSize)
+	/* pSourceVoice->src.format is actually pointing to a WAVEFORMATEXTENSIBLE struct, not just a WAVEFORMATEX struct.
+	   That means there's always at least 22 bytes following the struct, I assume the WMA data is behind that.
+	   XXX-JS Need to verify! */
+	if (pSourceVoice->src.format->cbSize > 22)
     {
-		conv_ctx->extradata = (uint8_t *) FAudio_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE);
-		FAudio_memcpy(conv_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 1, pSourceVoice->src.format->cbSize);
+		conv_ctx->extradata = (uint8_t *) FAudio_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
+		FAudio_memcpy(conv_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
 	}
     else
     {
