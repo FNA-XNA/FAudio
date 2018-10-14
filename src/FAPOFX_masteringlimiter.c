@@ -80,6 +80,8 @@ void FAPOFXMasteringLimiter_Process(
 
 void FAPOFXMasteringLimiter_Free(void* fapo)
 {
+	FAPOFXMasteringLimiter *limiter = (FAPOFXMasteringLimiter*) fapo;
+	FAudio_free(limiter->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }
 

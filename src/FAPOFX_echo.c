@@ -80,6 +80,8 @@ void FAPOFXEcho_Process(
 
 void FAPOFXEcho_Free(void* fapo)
 {
+	FAPOFXEcho *echo = (FAPOFXEcho*) fapo;
+	FAudio_free(echo->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }
 

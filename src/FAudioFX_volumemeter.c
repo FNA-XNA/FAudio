@@ -188,6 +188,8 @@ void FAudioFXVolumeMeter_GetParameters(
 
 void FAudioFXVolumeMeter_Free(void* fapo)
 {
+	FAudioFXVolumeMeter *volumemeter = (FAudioFXVolumeMeter*) fapo;
+	FAudio_free(volumemeter->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }
 

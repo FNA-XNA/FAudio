@@ -80,6 +80,8 @@ void FAPOFXReverb_Process(
 
 void FAPOFXReverb_Free(void* fapo)
 {
+	FAPOFXReverb *reverb = (FAPOFXReverb*) fapo;
+	FAudio_free(reverb->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }
 

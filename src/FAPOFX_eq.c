@@ -80,6 +80,8 @@ void FAPOFXEQ_Process(
 
 void FAPOFXEQ_Free(void* fapo)
 {
+	FAPOFXEQ *eq = (FAPOFXEQ*) fapo;
+	FAudio_free(eq->base.m_pParameterBlocks);
 	FAudio_free(fapo);
 }
 
