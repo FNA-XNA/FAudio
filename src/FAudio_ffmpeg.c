@@ -9,6 +9,7 @@ typedef struct FAudioFFmpeg
 	AVFrame *av_frame;
 
 	uint32_t encOffset;	/* current position in encoded stream (in bytes) */
+	uint32_t decOffset;	/* current position in decoded stream (in samples) */
 
 	/* buffer used to decode the last frame */
 	size_t paddingBytes;
@@ -229,7 +230,31 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	float *decodeCache
 ) {
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
+	uint32_t decSampleSize = voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8;
+	uint32_t outSampleSize = voice->src.format->nChannels * sizeof(float);
     uint32_t done = 0, available, todo;
+
+	/* check if we need to reposition in the stream */
+	if (voice->src.curBufferOffset != ffmpeg->decOffset)
+	{
+		FAudioBufferWMA *bufferWMA = &voice->src.bufferList->bufferWMA;
+		uint32_t byteOffset = voice->src.curBufferOffset * decSampleSize;
+		uint32_t packetIdx = bufferWMA->PacketCount - 1;
+
+		/* figure out in which encoded packet has this position */
+		while (packetIdx > 0 && bufferWMA->pDecodedPacketCumulativeBytes[packetIdx] > byteOffset)
+		{
+			packetIdx -= 1;
+		}
+
+		/* seek to the wanted position in the stream */
+		ffmpeg->encOffset = packetIdx * voice->src.format->nBlockAlign;
+		FAudio_INTERNAL_FillConvertCache(voice, buffer);
+		ffmpeg->convertOffset = (byteOffset - (packetIdx > 0) ? bufferWMA->pDecodedPacketCumulativeBytes[packetIdx-1] : 0) / outSampleSize;
+		ffmpeg->decOffset = voice->src.curBufferOffset;
+	}
+
+	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 
 	while (done < *samples) 
 	{	
@@ -253,6 +278,8 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	}
 
     *samples = done;
+	voice->src.curBufferOffset += *samples;
+	ffmpeg->decOffset += *samples;
 }
 
 #endif
