@@ -1451,8 +1451,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
-	FAudio_assert((voice->src.conv_ctx != NULL && pBufferWMA != NULL) ||
-				  (voice->src.conv_ctx == NULL && pBufferWMA == NULL));
+	FAudio_assert((voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
+				  (voice->src.ffmpeg == NULL && pBufferWMA == NULL));
 
 	/* Start off with whatever they just sent us... */
 	playBegin = pBuffer->PlayBegin;
