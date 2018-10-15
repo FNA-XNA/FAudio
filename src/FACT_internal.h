@@ -469,7 +469,6 @@ struct FACTWave
 	uint32_t state;
 	float volume;
 	int16_t pitch;
-	uint32_t initialPosition;
 	uint8_t loopCount;
 
 	/* Stream data */

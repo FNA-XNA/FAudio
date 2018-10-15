@@ -1399,16 +1399,12 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->pitch = 0;
 	if (dwFlags & FACT_FLAG_UNITS_MS)
 	{
-		(*ppWave)->initialPosition = (uint32_t) (
+		dwPlayOffset = (uint32_t) (
 			( /* Samples per millisecond... */
 				(float) entry->Format.nSamplesPerSec /
 				1000.0f
 			) * (float) dwPlayOffset
 		);
-	}
-	else
-	{
-		(*ppWave)->initialPosition = dwPlayOffset;
 	}
 	(*ppWave)->loopCount = nLoopCount;
 
@@ -1500,6 +1496,11 @@ uint32_t FACTWaveBank_Prepare(
 		(*ppWave)->streamCache = (uint8_t*) FAudio_malloc((*ppWave)->streamSize);
 		(*ppWave)->streamOffset = entry->PlayRegion.dwOffset;
 
+		/* FIXME: Streaming doesn't support subregions right now >_< */
+		FAudio_assert(dwPlayOffset == 0);
+		FAudio_assert(entry->LoopRegion.dwStartSample == 0);
+		FAudio_assert(entry->LoopRegion.dwTotalSamples == 0);
+
 		/* Read and submit first buffer from the WaveBank */
 		FACT_INTERNAL_OnBufferEnd(&(*ppWave)->callback.callback, NULL);
 	}
@@ -1513,7 +1514,7 @@ uint32_t FACTWaveBank_Prepare(
 			pWaveBank->io,
 			entry->PlayRegion.dwOffset
 		);
-		buffer.PlayBegin = (*ppWave)->initialPosition;
+		buffer.PlayBegin = dwPlayOffset;
 		buffer.PlayLength = entry->PlayRegion.dwLength;
 		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
 		{
