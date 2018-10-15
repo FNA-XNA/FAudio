@@ -1483,6 +1483,13 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 				(((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2)
 			) - playBegin;
 		}
+		else if (voice->src.ffmpeg != NULL)		/* XXX-JS ugh, this is ugly */
+		{
+			playLength = (
+				pBufferWMA->pDecodedPacketCumulativeBytes[pBufferWMA->PacketCount - 1] /
+				(voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8)
+			) - playBegin;
+		}
 		else
 		{
 			playLength = (
