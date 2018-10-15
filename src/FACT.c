@@ -1397,6 +1397,10 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->state = FACT_STATE_PREPARED;
 	(*ppWave)->volume = 1.0f;
 	(*ppWave)->pitch = 0;
+	(*ppWave)->loopCount = nLoopCount;
+
+	/* TODO: Convert dwPlayOffset to a byte offset */
+	FAudio_assert(dwPlayOffset == 0);
 	if (dwFlags & FACT_FLAG_UNITS_MS)
 	{
 		dwPlayOffset = (uint32_t) (
@@ -1406,7 +1410,6 @@ uint32_t FACTWaveBank_Prepare(
 			) * (float) dwPlayOffset
 		);
 	}
-	(*ppWave)->loopCount = nLoopCount;
 
 	/* Create the voice */
 	send.Flags = 0;
@@ -1497,7 +1500,6 @@ uint32_t FACTWaveBank_Prepare(
 		(*ppWave)->streamOffset = entry->PlayRegion.dwOffset;
 
 		/* FIXME: Streaming doesn't support subregions right now >_< */
-		FAudio_assert(dwPlayOffset == 0);
 		FAudio_assert(entry->LoopRegion.dwStartSample == 0);
 		FAudio_assert(entry->LoopRegion.dwTotalSamples == entry->Duration);
 
@@ -1514,7 +1516,7 @@ uint32_t FACTWaveBank_Prepare(
 			pWaveBank->io,
 			entry->PlayRegion.dwOffset
 		);
-		buffer.PlayBegin = dwPlayOffset;
+		buffer.PlayBegin = 0;
 		buffer.PlayLength = entry->PlayRegion.dwLength;
 		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
 		{
