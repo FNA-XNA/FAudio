@@ -197,6 +197,9 @@ typedef struct FAudioBufferEntry FAudioBufferEntry;
 struct FAudioBufferEntry
 {
 	FAudioBuffer buffer;
+	#ifdef HAVE_FFMPEG
+	FAudioBufferWMA bufferWMA;
+	#endif /* HAVE_FFMPEG */
 	FAudioBufferEntry *next;
 };
 

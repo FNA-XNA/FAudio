@@ -1541,6 +1541,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->buffer.PlayLength = playLength;
 	entry->buffer.LoopBegin = loopBegin;
 	entry->buffer.LoopLength = loopLength;
+	#ifdef HAVE_FFMPEG
+	if (pBufferWMA != NULL)
+	{
+		FAudio_memcpy(&entry->bufferWMA, pBufferWMA, sizeof(FAudioBufferWMA));
+	}
+	#endif /* HAVE_FFMPEG */
 	entry->next = NULL;
 
 	if (	voice->audio->version <= 7 && (
