@@ -479,7 +479,10 @@ uint32_t FAudio_PlatformResample(
 );
 
 /* FFmpeg */
+#ifdef HAVE_FFMPEG
 uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice);
+void FAudio_FFMPEG_free(FAudioSourceVoice *voice);
+#endif /* HAVE_FFMPEG */
 
 /* Threading */
 

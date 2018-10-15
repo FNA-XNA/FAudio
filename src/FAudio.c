@@ -1315,6 +1315,12 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		);
 		voice->audio->pFree(voice->src.format);
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
+		#ifdef HAVE_FFMPEG
+			if (voice->src.ffmpeg) 
+			{
+				FAudio_FFMPEG_free(voice);
+			}
+		#endif /* HAVE_FFMPEG */
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
