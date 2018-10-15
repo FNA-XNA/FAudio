@@ -1499,7 +1499,7 @@ uint32_t FACTWaveBank_Prepare(
 		/* FIXME: Streaming doesn't support subregions right now >_< */
 		FAudio_assert(dwPlayOffset == 0);
 		FAudio_assert(entry->LoopRegion.dwStartSample == 0);
-		FAudio_assert(entry->LoopRegion.dwTotalSamples == 0);
+		FAudio_assert(entry->LoopRegion.dwTotalSamples == entry->Duration);
 
 		/* Read and submit first buffer from the WaveBank */
 		FACT_INTERNAL_OnBufferEnd(&(*ppWave)->callback.callback, NULL);
