@@ -8,6 +8,8 @@ typedef struct FAudioFFmpeg
 	AVCodecContext *av_ctx;
 	AVFrame *av_frame;
 
+	uint32_t encOffset;	/* current position in encoded stream (in bytes) */
+
 	/* buffer used to decode the last frame */
 	size_t paddingBytes;
 	uint8_t *paddingBuffer;
@@ -119,7 +121,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 	uint32_t total_samples;
 
 	avpkt.size = voice->src.format->nBlockAlign;
-	avpkt.data = (unsigned char *) buffer->pAudioData + voice->src.curBufferOffset;
+	avpkt.data = (unsigned char *) buffer->pAudioData + ffmpeg->encOffset;
 
 	for(;;)
 	{
@@ -129,15 +131,15 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 			/* ffmpeg needs more data to decode */
 			avpkt.pts = avpkt.dts = AV_NOPTS_VALUE;
 
-            if (voice->src.curBufferOffset >= buffer->AudioBytes)
+            if (ffmpeg->encOffset >= buffer->AudioBytes)
             {
 				/* no more data in this buffer */
 				break;
             }
 
-			if (voice->src.curBufferOffset + avpkt.size + AV_INPUT_BUFFER_PADDING_SIZE > buffer->AudioBytes)
+			if (ffmpeg->encOffset + avpkt.size + AV_INPUT_BUFFER_PADDING_SIZE > buffer->AudioBytes)
             {
-				size_t remain = buffer->AudioBytes - voice->src.curBufferOffset;
+				size_t remain = buffer->AudioBytes - ffmpeg->encOffset;
 				/* Unfortunately, the FFmpeg API requires that a number of
 				 * extra bytes must be available past the end of the buffer.
 				 * The xaudio2 client probably hasn't done this, so we have to
@@ -145,7 +147,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 				TRACE("hitting end of buffer. copying %lu + %u bytes into %lu buffer\n",
 						remain, AV_INPUT_BUFFER_PADDING_SIZE, ffmpeg->paddingBytes);
 
-				if(ffmpeg->paddingBytes < remain + AV_INPUT_BUFFER_PADDING_SIZE)
+				if (ffmpeg->paddingBytes < remain + AV_INPUT_BUFFER_PADDING_SIZE)
                 {
 					ffmpeg->paddingBytes = remain + AV_INPUT_BUFFER_PADDING_SIZE;
 					TRACE("buffer too small, expanding to %lu\n", ffmpeg->paddingBytes);
@@ -154,7 +156,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 						ffmpeg->paddingBytes
 					);
 				}
-				FAudio_memcpy(ffmpeg->paddingBuffer, buffer->pAudioData + voice->src.curBufferOffset, remain);
+				FAudio_memcpy(ffmpeg->paddingBuffer, buffer->pAudioData + ffmpeg->encOffset, remain);
 				FAudio_memset(ffmpeg->paddingBuffer + remain, 0, AV_INPUT_BUFFER_PADDING_SIZE);
 				avpkt.data = ffmpeg->paddingBuffer;
 			}
@@ -166,7 +168,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 				break;
 			}
 
-			voice->src.curBufferOffset += avpkt.size;
+			ffmpeg->encOffset += avpkt.size;
 			avpkt.data += avpkt.size;
 
 			/* data sent, try receive again */
