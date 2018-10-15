@@ -101,6 +101,18 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
     return 0;
 }
 
+void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
+{
+	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
+
+	avcodec_close(ffmpeg->av_ctx);
+	FAudio_free(ffmpeg->av_ctx->extradata);
+	av_free(ffmpeg->av_ctx);
+
+	FAudio_free(ffmpeg);
+	voice->src.ffmpeg = NULL;
+}
+
 void FAudio_INTERNAL_ResizeConvertCache(FAudioVoice *voice, uint32_t samples)
 {
 	if (samples > voice->src.ffmpeg->convertCapacity)
