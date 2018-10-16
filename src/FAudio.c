@@ -592,6 +592,10 @@ uint32_t FAudioVoice_SetOutputVoices(
 	else if (pSendList->SendCount == 0)
 	{
 		/* No sends? Nothing to do... */
+		voice->sendCoefficients = NULL;
+		voice->sendMix = NULL;
+		voice->sendFilter = NULL;
+		voice->sendFilterState = NULL;
 		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		return 0;
