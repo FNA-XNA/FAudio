@@ -1457,8 +1457,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
+#ifdef HAVE_FFMPEG
 	FAudio_assert((voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
 				  (voice->src.ffmpeg == NULL && pBufferWMA == NULL));
+#endif
 
 	/* Start off with whatever they just sent us... */
 	playBegin = pBuffer->PlayBegin;
@@ -1483,7 +1485,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 				(((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2)
 			) - playBegin;
 		}
-		else if (voice->src.ffmpeg != NULL)		/* XXX-JS ugh, this is ugly */
+		else if (pBufferWMA != NULL)
 		{
 			playLength = (
 				pBufferWMA->pDecodedPacketCumulativeBytes[pBufferWMA->PacketCount - 1] /

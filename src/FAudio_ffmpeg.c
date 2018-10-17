@@ -28,10 +28,6 @@ typedef struct FAudioFFmpeg
 	float *convertCache;
 } FAudioFFmpeg;
 
-#include <stdio.h>
-#define TRACE(msg,...)  fprintf(stderr, "TRACE: " msg, __VA_ARGS__)
-#define WARN(msg,...)  fprintf(stderr, "WARN:  " msg, __VA_ARGS__)
-
 uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 {
     AVCodecContext *av_ctx;
@@ -44,12 +40,14 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
 	if (!codec)
     {
+		FAudio_assert(0 && "WMAv2 codec not supported!");
 	    return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
 	av_ctx = avcodec_alloc_context3(codec);
 	if(!av_ctx)
     {
+		FAudio_assert(0 && "WMAv2 codec not supported!");
         return FAUDIO_E_UNSUPPORTED_FORMAT;
     }
 
@@ -158,32 +156,29 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 
 			if (ffmpeg->encOffset + avpkt.size + AV_INPUT_BUFFER_PADDING_SIZE > buffer->AudioBytes)
             {
-				size_t remain = buffer->AudioBytes - ffmpeg->encOffset;
 				/* Unfortunately, the FFmpeg API requires that a number of
 				 * extra bytes must be available past the end of the buffer.
 				 * The xaudio2 client probably hasn't done this, so we have to
 				 * perform a copy near the end of the buffer. */
-				TRACE("hitting end of buffer. copying %lu + %u bytes into %lu buffer\n",
-						remain, AV_INPUT_BUFFER_PADDING_SIZE, ffmpeg->paddingBytes);
+				size_t remain = buffer->AudioBytes - ffmpeg->encOffset;
 
 				if (ffmpeg->paddingBytes < remain + AV_INPUT_BUFFER_PADDING_SIZE)
                 {
 					ffmpeg->paddingBytes = remain + AV_INPUT_BUFFER_PADDING_SIZE;
-					TRACE("buffer too small, expanding to %lu\n", ffmpeg->paddingBytes);
                     ffmpeg->paddingBuffer = (uint8_t *) FAudio_realloc(
 						ffmpeg->paddingBuffer, 
 						ffmpeg->paddingBytes
 					);
 				}
 				FAudio_memcpy(ffmpeg->paddingBuffer, buffer->pAudioData + ffmpeg->encOffset, remain);
-				FAudio_memset(ffmpeg->paddingBuffer + remain, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+				FAudio_zero(ffmpeg->paddingBuffer + remain, AV_INPUT_BUFFER_PADDING_SIZE);
 				avpkt.data = ffmpeg->paddingBuffer;
 			}
 
 			averr = avcodec_send_packet(ffmpeg->av_ctx, &avpkt);
 			if (averr)
             {
-				WARN("avcodec_send_packet failed: %d\n", averr);
+				FAudio_assert(0 && "avcodec_send_packet failed" && averr);
 				break;
 			}
 
@@ -196,7 +191,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 
 		if (averr) 
         {
-            WARN("avcodec_receive_frame failed: %d\n", averr);
+            FAudio_assert(0 && "avcodec_receive_frame failed" && averr);
             return; 
 		}
 		else
@@ -205,6 +200,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 		}
 	}
 
+	/* copy decoded samples to internal buffer, reordering if necessary */
     total_samples = ffmpeg->av_frame->nb_samples * ffmpeg->av_ctx->channels;
 
 	FAudio_INTERNAL_ResizeConvertCache(voice, total_samples);
@@ -221,7 +217,11 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 	}
 	else
 	{
-		FAudio_memcpy(ffmpeg->convertCache, ffmpeg->av_frame->data[0], total_samples * sizeof(float));
+		FAudio_memcpy(
+			ffmpeg->convertCache, 
+			ffmpeg->av_frame->data[0], 
+			total_samples * sizeof(float)
+		);
 	}
 
 	ffmpeg->convertSamples = total_samples;
@@ -264,21 +264,25 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 
 	while (done < *samples) 
 	{	
-		available = (ffmpeg->convertSamples - ffmpeg->convertOffset) / voice->src.format->nChannels;
-
-		if (available <= 0) 
+		/* check for available data in decoded cache, refill if necessary */
+		if (ffmpeg->convertOffset >= ffmpeg->convertSamples)
 		{
 			FAudio_INTERNAL_FillConvertCache(voice, buffer);
-			available = (ffmpeg->convertSamples - ffmpeg->convertOffset) / voice->src.format->nChannels;
+		}
 
-			if (available <= 0)
-			{
-				break;
-			}
+		available = (ffmpeg->convertSamples - ffmpeg->convertOffset) / voice->src.format->nChannels;
+		if (available <= 0)
+		{
+			break;
 		}
 
 		todo = FAudio_min(available, *samples - done);
-		FAudio_memcpy(decodeCache + (done * voice->src.format->nChannels), ffmpeg->convertCache + ffmpeg->convertOffset, todo * voice->src.format->nChannels * sizeof(float));
+		FAudio_memcpy(
+			decodeCache + (done * voice->src.format->nChannels), 
+			ffmpeg->convertCache + ffmpeg->convertOffset, 
+			todo * voice->src.format->nChannels * sizeof(float)
+		);
+
 		done += todo;
 		ffmpeg->convertOffset += todo * voice->src.format->nChannels;
 	}
