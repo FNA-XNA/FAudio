@@ -43,7 +43,7 @@ AudioVoice *xaudio_create_voice(AudioContext *p_context, float *p_buffer, size_t
 	waveFormat.cbSize = 0;
 
 	IXAudio2SourceVoice *voice;
-	HRESULT hr = p_context->xaudio2->CreateSourceVoice(&voice, &waveFormat, XAUDIO2_VOICE_USEFILTER, XAUDIO2_MAX_FREQ_RATIO);
+	HRESULT hr = p_context->xaudio2->CreateSourceVoice(&voice, &waveFormat, XAUDIO2_VOICE_USEFILTER, XAUDIO2_DEFAULT_FREQ_RATIO);
 
 	if (FAILED(hr)) {
 		return NULL;

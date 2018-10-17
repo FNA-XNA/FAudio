@@ -73,7 +73,7 @@ void faudio_create_voice(AudioContext *context, float *buffer, size_t buffer_siz
 		context->faudio, 
 		&context->mastering_voice, 
 		inChannels, 
-		SAMPLERATE,
+		FAUDIO_DEFAULT_SAMPLERATE,
 		0, 
 		0, 
 		voice_effect[AudioVoiceType_Master]
@@ -122,8 +122,8 @@ void faudio_create_voice(AudioContext *context, float *buffer, size_t buffer_siz
 		context->faudio, 
 		&context->source_voice, 
 		&waveFormat, 
-		FAUDIO_VOICE_USEFILTER, 
-		FAUDIO_MAX_FREQ_RATIO, 
+		0,
+		FAUDIO_DEFAULT_FREQ_RATIO,
 		NULL, 
 		&sends, 
 		voice_effect[AudioVoiceType_Source]

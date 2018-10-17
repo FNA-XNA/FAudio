@@ -9,7 +9,6 @@
 #define HAVE_XAUDIO2
 #endif
 
-const float PI = 3.14159265358979323846f;
 const uint32_t SAMPLERATE = 44100;
 
 // types

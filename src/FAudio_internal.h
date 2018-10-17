@@ -141,19 +141,19 @@ __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
 
 /* Windows/Visual Studio cruft */
 #ifdef _WIN32
-#define inline __inline
-#if defined(_MSC_VER)
-	#if (_MSC_VER >= 1700) /* VS2012+ */
-		#define restrict __restrict
-	#else /* VS2010- */
+	#ifdef __cplusplus
+		/* C++ should have `inline`, but not `restrict` */
 		#define restrict
+	#else
+		#define inline __inline
+		#if defined(_MSC_VER)
+			#if (_MSC_VER >= 1700) /* VS2012+ */
+				#define restrict __restrict
+			#else /* VS2010- */
+				#define restrict
+			#endif
+		#endif
 	#endif
-#endif
-#endif
-
-/* C++ does not have restrict (though VS2012+ does have __restrict) */
-#if defined(__cplusplus) && !defined(restrict)
-#define restrict
 #endif
 
 /* Threading Types */

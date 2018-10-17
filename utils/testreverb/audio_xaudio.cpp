@@ -75,7 +75,7 @@ void xaudio_create_voice(AudioContext *context, float *buffer, size_t buffer_siz
 	hr = context->xaudio2->CreateMasteringVoice(
 		&context->mastering_voice, 
 		inChannels,
-		SAMPLERATE,
+		XAUDIO2_DEFAULT_SAMPLERATE,
 		0,
 		0,
 		voice_effect[AudioVoiceType_Master]
@@ -125,8 +125,8 @@ void xaudio_create_voice(AudioContext *context, float *buffer, size_t buffer_siz
 	hr = context->xaudio2->CreateSourceVoice(
 		&context->source_voice, 
 		&waveFormat, 
-		XAUDIO2_VOICE_USEFILTER,
-		XAUDIO2_MAX_FREQ_RATIO, 
+		0,
+		XAUDIO2_DEFAULT_FREQ_RATIO,
 		NULL, 
 		&sends, 
 		voice_effect[AudioVoiceType_Source]
