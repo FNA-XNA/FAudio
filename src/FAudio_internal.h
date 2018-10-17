@@ -248,7 +248,6 @@ struct FAudio
 	uint8_t active;
 	uint32_t refcount;
 	uint32_t updateSize;
-	uint32_t submixStages;
 	FAudioMasteringVoice *master;
 	LinkedList *sources;
 	LinkedList *submixes;
@@ -355,7 +354,11 @@ struct FAudioVoice
 };
 
 /* Internal Functions */
-
+void FAudio_INTERNAL_InsertSubmixSorted(
+	LinkedList **start,
+	FAudioSubmixVoice *toAdd,
+	FAudioMutex lock
+);
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);

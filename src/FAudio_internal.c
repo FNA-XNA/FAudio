@@ -98,6 +98,34 @@ void LinkedList_RemoveEntry(
 	FAudio_assert(0 && "LinkedList element not found!");
 }
 
+void FAudio_INTERNAL_InsertSubmixSorted(
+	LinkedList **start,
+	FAudioSubmixVoice *toAdd,
+	FAudioMutex lock
+) {
+	LinkedList *newEntry, *latest;
+	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
+	newEntry->entry = toAdd;
+	newEntry->next = NULL;
+	FAudio_PlatformLockMutex(lock);
+	if (*start == NULL)
+	{
+		*start = newEntry;
+	}
+	else
+	{
+		latest = *start;
+		while (latest->next != NULL && 
+			   ((FAudioSubmixVoice *) latest->next->entry)->mix.processingStage < toAdd->mix.processingStage)
+		{
+			latest = latest->next;
+		}
+		newEntry->next = latest->next;
+		latest->next = newEntry;
+	}
+	FAudio_PlatformUnlockMutex(lock);
+}
+
 static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
@@ -726,10 +754,9 @@ end:
 
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 {
-	uint32_t i, totalSamples;
+	uint32_t totalSamples;
 	LinkedList *list;
 	FAudioSourceVoice *source;
-	FAudioSubmixVoice *submix;
 	FAudioEngineCallback *callback;
 
 	if (!audio->active)
@@ -772,18 +799,11 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 
 	/* Mix submixes, ordered by processing stage */
 	FAudio_PlatformLockMutex(audio->submixLock);
-	for (i = 0; i <= audio->submixStages; i += 1)
+	list = audio->submixes;
+	while (list != NULL)
 	{
-		list = audio->submixes;
-		while (list != NULL)
-		{
-			submix = (FAudioSubmixVoice*) list->entry;
-			if (submix->mix.processingStage == i)
-			{
-				FAudio_INTERNAL_MixSubmix(submix);
-			}
-			list = list->next;
-		}
+		FAudio_INTERNAL_MixSubmix((FAudioSubmixVoice*) list->entry);
+		list = list->next;
 	}
 	FAudio_PlatformUnlockMutex(audio->submixLock);
 

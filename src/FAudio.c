@@ -356,10 +356,6 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->mix.inputChannels = InputChannels;
 	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
 	(*ppSubmixVoice)->mix.processingStage = ProcessingStage;
-	audio->submixStages = FAudio_max(
-		audio->submixStages,
-		ProcessingStage
-	);
 
 	/* Sends/Effects */
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
@@ -403,7 +399,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	);
 
 	/* Add to list, finally. */
-	LinkedList_AddEntry(
+	FAudio_INTERNAL_InsertSubmixSorted(
 		&audio->submixes,
 		*ppSubmixVoice,
 		audio->submixLock
@@ -1226,8 +1222,6 @@ void FAudioVoice_GetOutputMatrix(
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
 	uint32_t i;
-	LinkedList *list;
-	FAudioSubmixVoice *submix;
 
 	/* TODO: Check for dependencies and fail if still in use */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
@@ -1248,19 +1242,6 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 			voice,
 			voice->audio->submixLock
 		);
-
-		/* Check submix stage count */
-		voice->audio->submixStages = 0;
-		list = voice->audio->submixes;
-		while (list != NULL)
-		{
-			submix = (FAudioSubmixVoice*) list->entry;
-			voice->audio->submixStages = FAudio_max(
-				voice->audio->submixStages,
-				submix->mix.processingStage
-			);
-			list = list->next;
-		}
 
 		/* Delete submix data */
 		FAudio_free(voice->mix.inputCache);
