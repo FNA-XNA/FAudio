@@ -147,7 +147,7 @@ void FAudioFXVolumeMeter_Process(
 		buffer = ((float*) pInputProcessParameters->pBuffer) + i;
 		for (j = 0; j < pInputProcessParameters->ValidFrameCount; j += 1, buffer += fapo->channels)
 		{
-			const float sampleAbs = FAudio_fabs(*buffer);
+			const float sampleAbs = FAudio_fabsf(*buffer);
 			if (sampleAbs > peak)
 			{
 				peak = sampleAbs;
@@ -155,7 +155,7 @@ void FAudioFXVolumeMeter_Process(
 			total += (*buffer) * (*buffer);
 		}
 		levels->pPeakLevels[i] = peak;
-		levels->pRMSLevels[i] = FAudio_sqrt(
+		levels->pRMSLevels[i] = FAudio_sqrtf(
 			total / pInputProcessParameters->ValidFrameCount
 		);
 	}

@@ -109,7 +109,6 @@ __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
 #define FAudio_pow(x, y) SDL_pow(x, y)
 #define FAudio_log(x) SDL_log(x)
 #define FAudio_log10(x) SDL_log10(x)
-#define FAudio_sqrt(x) SDL_sqrt(x)
 #define FAudio_sin(x) SDL_sin(x)
 #define FAudio_cos(x) SDL_cos(x)
 #define FAudio_tan(x) SDL_tan(x)
@@ -117,7 +116,6 @@ __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
 #define FAudio_ceil(x) SDL_ceil(x)
 #define FAudio_floor(x) SDL_floor(x)
 #define FAudio_abs(x) SDL_abs(x)
-#define FAudio_fabs(x) SDL_fabs(x)
 #define FAudio_ldexp(v, e) SDL_scalbn(v, e)
 #define FAudio_exp(x) exp(x) /* TODO: SDL_exp */
 

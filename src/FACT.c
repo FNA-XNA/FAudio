@@ -1418,7 +1418,7 @@ uint32_t FACTWaveBank_Prepare(
 	sends.pSends = &send;
 	format.wfx.nChannels = entry->Format.nChannels;
 	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	if (format.wfx.wFormatTag == 0x0)
+	if (entry->Format.wFormatTag == 0x0)
 	{
 		format.wfx.wFormatTag = FAUDIO_FORMAT_PCM;
 		format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
@@ -1426,7 +1426,7 @@ uint32_t FACTWaveBank_Prepare(
 		format.wfx.nAvgBytesPerSec = format.wfx.nBlockAlign * format.wfx.nSamplesPerSec;
 		format.wfx.cbSize = 0;
 	}
-	else if (format.wfx.wFormatTag == 0x2)
+	else if (entry->Format.wFormatTag == 0x2)
 	{
 		format.wfx.wFormatTag = FAUDIO_FORMAT_MSADPCM;
 		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
@@ -1439,7 +1439,7 @@ uint32_t FACTWaveBank_Prepare(
 			((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2
 		);
 	}
-	else if (format.wfx.wFormatTag == 0x3)
+	else if (entry->Format.wFormatTag == 0x3)
 	{
 		/* Apparently this is used to detect WMA Pro...? */
 		FAudio_assert(entry->Format.wBitsPerSample == 0);
