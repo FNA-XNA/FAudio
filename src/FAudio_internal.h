@@ -156,6 +156,11 @@ __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
 	#endif
 #endif
 
+/* C++ does not have restrict (though VS2012+ does have __restrict) */
+#if defined(__cplusplus) && !defined(restrict)
+#define restrict
+#endif
+
 /* Threading Types */
 
 typedef void* FAudioThread;
