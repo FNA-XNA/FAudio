@@ -292,4 +292,8 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	ffmpeg->decOffset += *samples;
 }
 
+#else
+
+extern int this_tu_is_empty;
+
 #endif
