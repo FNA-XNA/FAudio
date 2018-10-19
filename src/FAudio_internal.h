@@ -213,10 +213,10 @@ struct FAudioBufferEntry
 
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioVoice *voice,
-	FAudioBuffer *buffer, /* buffer to decode */
-	uint32_t *samples, /* on in/output, requested/actual number of samples decoded */
-	uint32_t end, /* must decode no further than this offset */
-	float *decodeCache /* decode into here */
+	FAudioBuffer *buffer,	/* Buffer to decode */
+	uint32_t *samples,	/* On in/output, requested/actual number of samples decoded */
+	uint32_t end,		/* Must decode no further than this offset */
+	float *decodeCache	/* Decode into here */
 );
 
 typedef void (FAUDIOCALL * FAudioResampleCallback)(

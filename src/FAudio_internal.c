@@ -115,8 +115,8 @@ void FAudio_INTERNAL_InsertSubmixSorted(
 	else
 	{
 		latest = *start;
-		while (latest->next != NULL && 
-			   ((FAudioSubmixVoice *) latest->next->entry)->mix.processingStage < toAdd->mix.processingStage)
+		while (	latest->next != NULL &&
+			((FAudioSubmixVoice *) latest->next->entry)->mix.processingStage < toAdd->mix.processingStage	)
 		{
 			latest = latest->next;
 		}
