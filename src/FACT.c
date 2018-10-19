@@ -1520,20 +1520,7 @@ uint32_t FACTWaveBank_Prepare(
 			entry->PlayRegion.dwOffset
 		);
 		buffer.PlayBegin = 0;
-		buffer.PlayLength = entry->PlayRegion.dwLength;
-		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
-		{
-			buffer.PlayLength /= format.wfx.wBitsPerSample / 8;
-			buffer.PlayLength /= format.wfx.nChannels;
-		}
-		else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
-		{
-			buffer.PlayLength = (
-				buffer.PlayLength /
-				format.wfx.nBlockAlign *
-				format.wSamplesPerBlock
-			);
-		}
+		buffer.PlayLength = entry->Duration;
 		if (nLoopCount == 0)
 		{
 			buffer.LoopBegin = 0;
