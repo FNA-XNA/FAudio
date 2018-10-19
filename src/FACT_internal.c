@@ -2800,7 +2800,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	}
 
 	/* WaveBank Seek Tables */
-	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_SEEKTABLES)
+	if (	wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_SEEKTABLES &&
+		header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwLength > 0	)
 	{
 		/* The seek table data layout is an absolute disaster! */
 		wb->seekTables = (FACTSeekTable*) FAudio_malloc(
