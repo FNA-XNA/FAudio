@@ -51,7 +51,6 @@
 #define FAudio_pow(x, y) pow(x, y)
 #define FAudio_log(x) log(x)
 #define FAudio_log10(x) log10(x)
-#define FAudio_sqrt(x) sqrt(x)
 #define FAudio_sin(x) sin(x)
 #define FAudio_cos(x) cos(x)
 #define FAudio_tan(x) tan(x)
@@ -59,7 +58,6 @@
 #define FAudio_ceil(x) ceil(x)
 #define FAudio_floor(x) floor(x)
 #define FAudio_abs(x) abs(x)
-#define FAudio_fabs(x) fabs(x)
 #define FAudio_ldexp(v, e) ldexp(v, e)
 #define FAudio_exp(x) exp(x)
 
