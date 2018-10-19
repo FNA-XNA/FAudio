@@ -235,6 +235,7 @@ uint32_t FACTAudioEngine_Initialize(
 uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 {
 	uint32_t i, refcount;
+	FAudioMutex mutex;
 
 	/* Close thread, then lock ASAP */
 	pEngine->initialized = 0;
@@ -299,8 +300,10 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 
 	/* Finally. */
 	refcount = pEngine->refcount;
+	mutex = pEngine->apiLock;
 	FAudio_zero(pEngine, sizeof(FACTAudioEngine));
 	pEngine->refcount = refcount;
+	pEngine->apiLock = mutex;
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return 0;
