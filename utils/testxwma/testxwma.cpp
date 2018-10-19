@@ -27,32 +27,32 @@ FAudioBufferWMA buffer_wma = {0};
 
 uint32_t FindChunk(FILE *hFile, uint32_t fourcc, uint32_t *dwChunkSize, uint32_t *dwChunkDataPosition)
 {
-    uint32_t hr = 0;
+	uint32_t hr = 0;
 
 	if (fseek(hFile, 0, SEEK_SET) != 0)
 	{ 
 		return -1;
 	}
 
-    uint32_t dwChunkType;
-    uint32_t dwChunkDataSize;
-    uint32_t dwRIFFDataSize = 0;
-    uint32_t dwFileType;
-    uint32_t bytesRead = 0;
-    uint32_t dwOffset = 0;
+	uint32_t dwChunkType;
+	uint32_t dwChunkDataSize;
+	uint32_t dwRIFFDataSize = 0;
+	uint32_t dwFileType;
+	uint32_t bytesRead = 0;
+	uint32_t dwOffset = 0;
 
-    while (hr == 0)
-    {
+	while (hr == 0)
+	{
 		if (fread(&dwChunkType, sizeof(uint32_t), 1, hFile) < 1)
 			hr = 1;
 
 		if (fread(&dwChunkDataSize, sizeof(uint32_t), 1, hFile) < 1)
 			hr = 1;
 
-        if (dwChunkType == fourccRIFF)
-        {
-            dwRIFFDataSize = dwChunkDataSize;
-            dwChunkDataSize = 4;
+		if (dwChunkType == fourccRIFF)
+		{
+			dwRIFFDataSize = dwChunkDataSize;
+			dwChunkDataSize = 4;
 
 			if (fread(&dwFileType, sizeof(uint32_t), 1, hFile) < 1)
 				hr = 1;
@@ -61,30 +61,30 @@ uint32_t FindChunk(FILE *hFile, uint32_t fourcc, uint32_t *dwChunkSize, uint32_t
 		{
 			if (fseek(hFile, dwChunkDataSize, SEEK_CUR) != 0)
 				return 1;
-        }
+		}
 
-        dwOffset += sizeof(uint32_t) * 2;
+		dwOffset += sizeof(uint32_t) * 2;
 
-        if (dwChunkType == fourcc)
-        {
-            *dwChunkSize = dwChunkDataSize;
-            *dwChunkDataPosition = dwOffset;
-            return 0;
-        }
+		if (dwChunkType == fourcc)
+		{
+			*dwChunkSize = dwChunkDataSize;
+			*dwChunkDataPosition = dwOffset;
+			return 0;
+		}
 
-        dwOffset += dwChunkDataSize;
+		dwOffset += dwChunkDataSize;
 
-        if (bytesRead >= dwRIFFDataSize) 
+		if (bytesRead >= dwRIFFDataSize) 
 			return 1;
 
-    }
+	}
 
-    return 1;
+	return 1;
 }
 
 uint32_t ReadChunkData(FILE *hFile, void * buffer, uint32_t buffersize, uint32_t bufferoffset)
 {
-    uint32_t hr = 0;
+	uint32_t hr = 0;
 
 	if (fseek(hFile, bufferoffset, SEEK_SET) != 0)
 		return 1;
@@ -92,7 +92,7 @@ uint32_t ReadChunkData(FILE *hFile, void * buffer, uint32_t buffersize, uint32_t
 	if (fread(buffer, buffersize, 1, hFile) < 1)
 		hr = 1;
 
-    return hr;
+	return hr;
 }
 
 uint32_t load_data(const char *filename)
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
 	/* process command line arguments. This is just a test program, didn't go too nuts with validation. */
 	if (argc < 2 || (argc > 4 && argc != 7)) {
 		printf("Usage: %s filename [PlayBegin] [PlayLength] [LoopBegin LoopLength LoopCount]\n", argv[0]);
-		printf(" - filename (required): can be either a WAV or XMWA audio file.\n");
+		printf(" - filename (required): can be either a WAV or xWMA audio file.\n");
 		printf(" - PlayBegin (optional): start playing at this offset. (in seconds)\n");
 		printf(" - PlayLength (optional): duration of the region to be played. (in seconds)\n");
 		printf(" - LoopBegin (optional): start looping at this offset. (in seconds)\n");

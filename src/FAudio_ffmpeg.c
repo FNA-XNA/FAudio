@@ -30,8 +30,8 @@ typedef struct FAudioFFmpeg
 
 uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 {
-    AVCodecContext *av_ctx;
-    AVFrame *av_frame;
+	AVCodecContext *av_ctx;
+	AVFrame *av_frame;
 	AVCodec *codec;
 
 	pSourceVoice->src.decode = FAudio_INTERNAL_DecodeFFMPEG;
@@ -39,17 +39,17 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	/* initialize ffmpeg state */
 	codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
 	if (!codec)
-    {
+	{
 		FAudio_assert(0 && "WMAv2 codec not supported!");
-	    return FAUDIO_E_UNSUPPORTED_FORMAT;
+		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
 	av_ctx = avcodec_alloc_context3(codec);
 	if(!av_ctx)
-    {
+	{
 		FAudio_assert(0 && "WMAv2 codec not supported!");
-        return FAUDIO_E_UNSUPPORTED_FORMAT;
-    }
+		return FAUDIO_E_UNSUPPORTED_FORMAT;
+	}
 
 	av_ctx->bit_rate = pSourceVoice->src.format->nAvgBytesPerSec * 8;
 	av_ctx->channels = pSourceVoice->src.format->nChannels;
@@ -61,28 +61,28 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 
 	/* pSourceVoice->src.format is actually pointing to a WAVEFORMATEXTENSIBLE struct, not just a WAVEFORMATEX struct.
 	   That means there's always at least 22 bytes following the struct, I assume the WMA data is behind that.
-	   XXX-JS Need to verify! */
+	   Need to verify but haven't come across any samples data with cbSize > 22 -@JohanSmet! */
 	if (pSourceVoice->src.format->cbSize > 22)
-    {
+	{
 		av_ctx->extradata = (uint8_t *) FAudio_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
 		FAudio_memcpy(av_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
 	}
-    else
-    {
+	else
+	{
 		/* xWMA doesn't provide the extradata info that FFmpeg needs to
 		 * decode WMA data, so we create some fake extradata. This is taken
 		 * from <ffmpeg/libavformat/xwma.c>. */
 		av_ctx->extradata_size = 6;
 		av_ctx->extradata = (uint8_t *) FAudio_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
-        FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
+		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[4] = 31;
 	}
 
 	if (avcodec_open2(av_ctx, codec, NULL) < 0)
-    {
+	{
 		FAudio_free(av_ctx->extradata);
 		av_free(av_ctx);
-        return FAUDIO_E_UNSUPPORTED_FORMAT;
+		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
 	av_frame = av_frame_alloc();
@@ -90,11 +90,11 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		avcodec_close(av_ctx);
 		FAudio_free(av_ctx->extradata);
 		av_free(av_ctx);
-        return FAUDIO_E_UNSUPPORTED_FORMAT;
+		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
 	if(av_ctx->sample_fmt != AV_SAMPLE_FMT_FLT && av_ctx->sample_fmt != AV_SAMPLE_FMT_FLTP)
-    {
+	{
 		FAudio_assert(0 && "Got non-float format!!!");
 	}
 
@@ -102,8 +102,8 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	FAudio_zero(pSourceVoice->src.ffmpeg, sizeof(FAudioFFmpeg));
 
 	pSourceVoice->src.ffmpeg->av_ctx = av_ctx;
-    pSourceVoice->src.ffmpeg->av_frame = av_frame;
-    return 0;
+	pSourceVoice->src.ffmpeg->av_frame = av_frame;
+	return 0;
 }
 
 void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
@@ -144,18 +144,18 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 	{
 		averr = avcodec_receive_frame(ffmpeg->av_ctx, ffmpeg->av_frame);
 		if (averr == AVERROR(EAGAIN))
-        {
+		{
 			/* ffmpeg needs more data to decode */
 			avpkt.pts = avpkt.dts = AV_NOPTS_VALUE;
 
-            if (ffmpeg->encOffset >= buffer->AudioBytes)
-            {
+			if (ffmpeg->encOffset >= buffer->AudioBytes)
+			{
 				/* no more data in this buffer */
 				break;
-            }
+			}
 
 			if (ffmpeg->encOffset + avpkt.size + AV_INPUT_BUFFER_PADDING_SIZE > buffer->AudioBytes)
-            {
+			{
 				/* Unfortunately, the FFmpeg API requires that a number of
 				 * extra bytes must be available past the end of the buffer.
 				 * The xaudio2 client probably hasn't done this, so we have to
@@ -163,9 +163,9 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 				size_t remain = buffer->AudioBytes - ffmpeg->encOffset;
 
 				if (ffmpeg->paddingBytes < remain + AV_INPUT_BUFFER_PADDING_SIZE)
-                {
+				{
 					ffmpeg->paddingBytes = remain + AV_INPUT_BUFFER_PADDING_SIZE;
-                    ffmpeg->paddingBuffer = (uint8_t *) FAudio_realloc(
+					ffmpeg->paddingBuffer = (uint8_t *) FAudio_realloc(
 						ffmpeg->paddingBuffer, 
 						ffmpeg->paddingBytes
 					);
@@ -177,7 +177,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 
 			averr = avcodec_send_packet(ffmpeg->av_ctx, &avpkt);
 			if (averr)
-            {
+			{
 				FAudio_assert(0 && "avcodec_send_packet failed" && averr);
 				break;
 			}
@@ -190,9 +190,9 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 		}
 
 		if (averr) 
-        {
-            FAudio_assert(0 && "avcodec_receive_frame failed" && averr);
-            return; 
+		{
+			FAudio_assert(0 && "avcodec_receive_frame failed" && averr);
+			return; 
 		}
 		else
 		{
@@ -201,7 +201,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 	}
 
 	/* copy decoded samples to internal buffer, reordering if necessary */
-    total_samples = ffmpeg->av_frame->nb_samples * ffmpeg->av_ctx->channels;
+	total_samples = ffmpeg->av_frame->nb_samples * ffmpeg->av_ctx->channels;
 
 	FAudio_INTERNAL_ResizeConvertCache(voice, total_samples);
 
@@ -238,7 +238,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
 	uint32_t decSampleSize = voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8;
 	uint32_t outSampleSize = voice->src.format->nChannels * sizeof(float);
-    uint32_t done = 0, available, todo;
+	uint32_t done = 0, available, todo;
 
 	/* check if we need to reposition in the stream */
 	if (voice->src.curBufferOffset != ffmpeg->decOffset)
@@ -287,7 +287,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		ffmpeg->convertOffset += todo * voice->src.format->nChannels;
 	}
 
-    *samples = done;
+	*samples = done;
 	voice->src.curBufferOffset += *samples;
 	ffmpeg->decOffset += *samples;
 }
