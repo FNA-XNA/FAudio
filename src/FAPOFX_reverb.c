@@ -29,9 +29,26 @@
 
 /* FXReverb FAPO Implementation */
 
+const FAudioGUID FAPOFX_CLSID_FXReverb =
+{
+	0xA90BC001,
+	0xE897,
+	0xE897,
+	{
+		0x74,
+		0x39,
+		0x43,
+		0x55,
+		0x00,
+		0x00,
+		0x00,
+		0x02
+	}
+};
+
 static FAPORegistrationProperties FXReverbProperties =
 {
-	/* .clsid = */ {0},
+	/* .clsid = */ FAPOFX_CLSID_FXReverb,
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'R', 'e', 'v', 'e', 'r', 'b', '\0'

@@ -29,9 +29,26 @@
 
 /* FXMasteringLimiter FAPO Implementation */
 
+const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter =
+{
+	0xA90BC001,
+	0xE897,
+	0xE897,
+	{
+		0x74,
+		0x39,
+		0x43,
+		0x55,
+		0x00,
+		0x00,
+		0x00,
+		0x01
+	}
+};
+
 static FAPORegistrationProperties FXMasteringLimiterProperties =
 {
-	/* .clsid = */ {0},
+	/* .clsid = */ FAPOFX_CLSID_FXMasteringLimiter,
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'M', 'a', 's', 't', 'e', 'r', 'i', 'n', 'g', 'L', 'i', 'm', 'i', 't', 'e', 'r', '\0'

@@ -21,6 +21,7 @@
     <ClCompile Include="..\src\FACT3D.c" />
     <ClCompile Include="..\src\FACT_internal.c" />
     <ClCompile Include="..\src\FAPOBase.c" />
+    <ClCompile Include="..\src\FAPOFX.c" />
     <ClCompile Include="..\src\FAPOFX_eq.c" />
     <ClCompile Include="..\src\FAPOFX_masteringlimiter.c" />
     <ClCompile Include="..\src\FAPOFX_reverb.c" />

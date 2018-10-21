@@ -52,6 +52,7 @@ FAUDIOSRC = \
 	src/FACT3D.c \
 	src/FACT_internal.c \
 	src/FAPOBase.c \
+	src/FAPOFX.c \
 	src/FAPOFX_eq.c \
 	src/FAPOFX_masteringlimiter.c \
 	src/FAPOFX_reverb.c \

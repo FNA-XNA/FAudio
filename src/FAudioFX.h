@@ -33,6 +33,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* GUIDs */
+
+extern const FAudioGUID FAudioFX_CLSID_AudioVolumeMeter;
+extern const FAudioGUID FAudioFX_CLSID_AudioReverb;
+
 /* Structures */
 
 #pragma pack(push, 1)

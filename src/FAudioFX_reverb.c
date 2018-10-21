@@ -1043,9 +1043,26 @@ void DspReverb_Destroy(DspReverb *reverb)
 
 /* Reverb FAPO Implementation */
 
+const FAudioGUID FAudioFX_CLSID_AudioReverb = /* 2.7 */
+{
+	0x6A93130E,
+	0xCB4E,
+	0x4CE1,
+	{
+		0xA9,
+		0xCF,
+		0xE7,
+		0x58,
+		0x80,
+		0x0B,
+		0xB1,
+		0x79
+	}
+};
+
 static FAPORegistrationProperties ReverbProperties =
 {
-	/* .clsid = */ {0},
+	/* .clsid = */ FAudioFX_CLSID_AudioReverb,
 	/*.FriendlyName = */
 	{
 		'R', 'e', 'v', 'e', 'r', 'b', '\0'

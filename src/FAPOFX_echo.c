@@ -29,9 +29,26 @@
 
 /* FXEcho FAPO Implementation */
 
+const FAudioGUID FAPOFX_CLSID_FXEcho =
+{
+	0xA90BC001,
+	0xE897,
+	0xE897,
+	{
+		0x74,
+		0x39,
+		0x43,
+		0x55,
+		0x00,
+		0x00,
+		0x00,
+		0x03
+	}
+};
+
 static FAPORegistrationProperties FXEchoProperties =
 {
-	/* .clsid = */ {0},
+	/* .clsid = */ FAPOFX_CLSID_FXEcho,
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'E', 'c', 'h', 'o', '\0'

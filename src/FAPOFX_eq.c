@@ -29,9 +29,26 @@
 
 /* FXEQ FAPO Implementation */
 
+const FAudioGUID FAPOFX_CLSID_FXEQ =
+{
+	0xA90BC001,
+	0xE897,
+	0xE897,
+	{
+		0x74,
+		0x39,
+		0x43,
+		0x55,
+		0x00,
+		0x00,
+		0x00,
+		0x00
+	}
+};
+
 static FAPORegistrationProperties FXEQProperties =
 {
-	/* .clsid = */ {0},
+	/* .clsid = */ FAPOFX_CLSID_FXEQ,
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'E', 'Q', '\0'

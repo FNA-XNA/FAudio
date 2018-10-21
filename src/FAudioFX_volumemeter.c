@@ -29,9 +29,26 @@
 
 /* Volume Meter FAPO Implementation */
 
+const FAudioGUID FAudioFX_CLSID_AudioVolumeMeter = /* 2.7 */
+{
+	0xCAC1105F,
+	0x619B,
+	0x4D04,
+	{
+		0x83,
+		0x1A,
+		0x44,
+		0xE1,
+		0xCB,
+		0xF1,
+		0x2D,
+		0x57
+	}
+};
+
 static FAPORegistrationProperties VolumeMeterProperties =
 {
-	/* .clsid = */ {0},
+	/* .clsid = */ FAudioFX_CLSID_AudioVolumeMeter,
 	/* .FriendlyName = */
 	{
 		'V', 'o', 'l', 'u', 'm', 'e', 'M', 'e', 't', 'e', 'r', '\0'

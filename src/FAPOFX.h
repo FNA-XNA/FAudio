@@ -35,6 +35,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* GUIDs */
+
+extern const FAudioGUID FAPOFX_CLSID_FXEQ;
+extern const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter;
+extern const FAudioGUID FAPOFX_CLSID_FXReverb;
+extern const FAudioGUID FAPOFX_CLSID_FXEcho;
+
 /* Structures */
 
 #pragma pack(push, 1)
@@ -126,15 +133,7 @@ typedef struct FAPOFXEchoParameters
 
 /* Functions */
 
-/* This does not match the XAPOFX API, but honestly it'd be dumb to replicate.
- * You hard link to the XAPOFX DLL and then it's all CLSID crap anyway. Pfft.
- * -flibit
- */
-
-FAPOFXAPI uint32_t FAPOFXCreateEQ(FAPO **pEffect);
-FAPOFXAPI uint32_t FAPOFXCreateMasteringLimiter(FAPO **pEffect);
-FAPOFXAPI uint32_t FAPOFXCreateReverb(FAPO **pEffect);
-FAPOFXAPI uint32_t FAPOFXCreateEcho(FAPO **pEffect);
+FAPOFXAPI uint32_t FAPOFX_CreateFX(const FAudioGUID *clsid, FAPO **pEffect);
 
 #ifdef __cplusplus
 }
