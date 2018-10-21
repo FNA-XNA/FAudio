@@ -1062,7 +1062,7 @@ const FAudioGUID FAudioFX_CLSID_AudioReverb = /* 2.7 */
 
 static FAPORegistrationProperties ReverbProperties =
 {
-	/* .clsid = */ FAudioFX_CLSID_AudioReverb,
+	/* .clsid = */ {0},
 	/*.FriendlyName = */
 	{
 		'R', 'e', 'v', 'e', 'r', 'b', '\0'
@@ -1415,6 +1415,11 @@ uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags)
 	);
 
 	/* Initialize... */
+	FAudio_memcpy(
+		&ReverbProperties.clsid,
+		&FAudioFX_CLSID_AudioReverb,
+		sizeof(FAudioGUID)
+	);
 	CreateFAPOBase(
 		&result->base,
 		&ReverbProperties,

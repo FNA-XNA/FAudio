@@ -48,7 +48,7 @@ const FAudioGUID FAPOFX_CLSID_FXEQ =
 
 static FAPORegistrationProperties FXEQProperties =
 {
-	/* .clsid = */ FAPOFX_CLSID_FXEQ,
+	/* .clsid = */ {0},
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'E', 'Q', '\0'
@@ -116,6 +116,11 @@ uint32_t FAPOFXCreateEQ(FAPO **pEffect)
 	FAudio_zero(params, sizeof(FAPOFXEQParameters) * 3);
 
 	/* Initialize... */
+	FAudio_memcpy(
+		&FXEQProperties.clsid,
+		&FAPOFX_CLSID_FXEQ,
+		sizeof(FAudioGUID)
+	);
 	CreateFAPOBase(
 		&result->base,
 		&FXEQProperties,

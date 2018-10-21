@@ -48,7 +48,7 @@ const FAudioGUID FAudioFX_CLSID_AudioVolumeMeter = /* 2.7 */
 
 static FAPORegistrationProperties VolumeMeterProperties =
 {
-	/* .clsid = */ FAudioFX_CLSID_AudioVolumeMeter,
+	/* .clsid = */ {0},
 	/* .FriendlyName = */
 	{
 		'V', 'o', 'l', 'u', 'm', 'e', 'M', 'e', 't', 'e', 'r', '\0'
@@ -224,6 +224,11 @@ uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 	FAudio_zero(params, sizeof(FAudioFXVolumeMeterLevels) * 3);
 
 	/* Initialize... */
+	FAudio_memcpy(
+		&VolumeMeterProperties.clsid,
+		&FAudioFX_CLSID_AudioVolumeMeter,
+		sizeof(FAudioGUID)
+	);
 	CreateFAPOBase(
 		&result->base,
 		&VolumeMeterProperties,

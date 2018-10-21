@@ -48,7 +48,7 @@ const FAudioGUID FAPOFX_CLSID_FXEcho =
 
 static FAPORegistrationProperties FXEchoProperties =
 {
-	/* .clsid = */ FAPOFX_CLSID_FXEcho,
+	/* .clsid = */ {0},
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'E', 'c', 'h', 'o', '\0'
@@ -116,6 +116,11 @@ uint32_t FAPOFXCreateEcho(FAPO **pEffect)
 	FAudio_zero(params, sizeof(FAPOFXEchoParameters) * 3);
 
 	/* Initialize... */
+	FAudio_memcpy(
+		&FXEchoProperties.clsid,
+		&FAPOFX_CLSID_FXEcho,
+		sizeof(FAudioGUID)
+	);
 	CreateFAPOBase(
 		&result->base,
 		&FXEchoProperties,

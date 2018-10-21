@@ -48,7 +48,7 @@ const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter =
 
 static FAPORegistrationProperties FXMasteringLimiterProperties =
 {
-	/* .clsid = */ FAPOFX_CLSID_FXMasteringLimiter,
+	/* .clsid = */ {0},
 	/* .FriendlyName = */
 	{
 		'F', 'X', 'M', 'a', 's', 't', 'e', 'r', 'i', 'n', 'g', 'L', 'i', 'm', 'i', 't', 'e', 'r', '\0'
@@ -116,6 +116,11 @@ uint32_t FAPOFXCreateMasteringLimiter(FAPO **pEffect)
 	FAudio_zero(params, sizeof(FAPOFXMasteringLimiterParameters) * 3);
 
 	/* Initialize... */
+	FAudio_memcpy(
+		&FXMasteringLimiterProperties.clsid,
+		&FAPOFX_CLSID_FXMasteringLimiter,
+		sizeof(FAudioGUID)
+	);
 	CreateFAPOBase(
 		&result->base,
 		&FXMasteringLimiterProperties,
