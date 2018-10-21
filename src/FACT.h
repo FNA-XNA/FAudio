@@ -459,9 +459,6 @@ FACTAPI uint32_t FACTCreateEngine(
 	FACTAudioEngine **ppEngine
 );
 
-/* Only for COM interopability! DO NOT USE THIS FUNCTION! */
-FACTAPI uint32_t FACTAudioEngine_Construct(FACTAudioEngine **ppEngine);
-
 FACTAPI uint32_t FACTAudioEngine_AddRef(FACTAudioEngine *pEngine);
 
 FACTAPI uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine);

@@ -34,11 +34,6 @@ uint32_t FACTCreateEngine(
 	FACTAudioEngine **ppEngine
 ) {
 	/* TODO: Anything fun with dwCreationFlags? */
-	return FACTAudioEngine_Construct(ppEngine);
-}
-
-uint32_t FACTAudioEngine_Construct(FACTAudioEngine **ppEngine)
-{
 	*ppEngine = (FACTAudioEngine*) FAudio_malloc(sizeof(FACTAudioEngine));
 	if (*ppEngine == NULL)
 	{

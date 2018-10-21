@@ -384,7 +384,7 @@ class XACT3EngineImpl : public IXACT3Engine
 public:
 	XACT3EngineImpl()
 	{
-		FACTAudioEngine_Construct(&engine);
+		FACTCreateEngine(0, &engine);
 	}
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppvInterface)
 	{
