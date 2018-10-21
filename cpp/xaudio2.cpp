@@ -1262,7 +1262,7 @@ public:
 	{
 		callback_list.com = NULL;
 		callback_list.next = NULL;
-		FAudio_Construct(&faudio, XAUDIO2_VERSION);
+		FAudioCOMConstructEXT(&faudio, XAUDIO2_VERSION);
 	}
 
 	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor)

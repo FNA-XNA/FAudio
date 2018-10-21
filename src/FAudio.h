@@ -402,8 +402,8 @@ FAUDIOAPI uint32_t FAudioCreate(
 
 #define FAUDIO_TARGET_VERSION 8 /* targeting compatibility with XAudio 2.8 */
 
-/* Only for COM interopability! DO NOT USE THIS FUNCTION! */
-FAUDIOAPI uint32_t FAudio_Construct(FAudio **ppFAudio, uint8_t version);
+/* See "extensions/COMConstructEXT.txt" for more details */
+FAUDIOAPI uint32_t FAudioCOMConstructEXT(FAudio **ppFAudio, uint8_t version);
 
 FAUDIOAPI uint32_t FAudio_AddRef(FAudio *audio);
 

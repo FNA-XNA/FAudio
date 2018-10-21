@@ -55,12 +55,12 @@ uint32_t FAudioCreate(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
-	FAudio_Construct(ppFAudio, FAUDIO_TARGET_VERSION);
+	FAudioCOMConstructEXT(ppFAudio, FAUDIO_TARGET_VERSION);
 	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
 	return 0;
 }
 
-uint32_t FAudio_Construct(FAudio **ppFAudio, uint8_t version)
+uint32_t FAudioCOMConstructEXT(FAudio **ppFAudio, uint8_t version)
 {
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
