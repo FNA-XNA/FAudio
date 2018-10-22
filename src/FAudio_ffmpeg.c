@@ -64,7 +64,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	   Need to verify but haven't come across any samples data with cbSize > 22 -@JohanSmet! */
 	if (pSourceVoice->src.format->cbSize > 22)
 	{
-		av_ctx->extradata = (uint8_t *) FAudio_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
+		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
 		FAudio_memcpy(av_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
 	}
 	else
@@ -73,14 +73,14 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		 * decode WMA data, so we create some fake extradata. This is taken
 		 * from <ffmpeg/libavformat/xwma.c>. */
 		av_ctx->extradata_size = 6;
-		av_ctx->extradata = (uint8_t *) FAudio_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
+		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[4] = 31;
 	}
 
 	if (avcodec_open2(av_ctx, codec, NULL) < 0)
 	{
-		FAudio_free(av_ctx->extradata);
+		pSourceVoice->audio->pFree(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -88,7 +88,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	av_frame = av_frame_alloc();
 	if (!av_frame) {
 		avcodec_close(av_ctx);
-		FAudio_free(av_ctx->extradata);
+		pSourceVoice->audio->pFree(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -98,7 +98,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		FAudio_assert(0 && "Got non-float format!!!");
 	}
 
-	pSourceVoice->src.ffmpeg = (FAudioFFmpeg *) FAudio_malloc(sizeof(FAudioFFmpeg));
+	pSourceVoice->src.ffmpeg = (FAudioFFmpeg *) pSourceVoice->audio->pMalloc(sizeof(FAudioFFmpeg));
 	FAudio_zero(pSourceVoice->src.ffmpeg, sizeof(FAudioFFmpeg));
 
 	pSourceVoice->src.ffmpeg->av_ctx = av_ctx;
@@ -111,10 +111,10 @@ void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
 
 	avcodec_close(ffmpeg->av_ctx);
-	FAudio_free(ffmpeg->av_ctx->extradata);
+	voice->audio->pFree(ffmpeg->av_ctx->extradata);
 	av_free(ffmpeg->av_ctx);
 
-	FAudio_free(ffmpeg);
+	voice->audio->pFree(ffmpeg);
 	voice->src.ffmpeg = NULL;
 }
 
@@ -123,7 +123,7 @@ void FAudio_INTERNAL_ResizeConvertCache(FAudioVoice *voice, uint32_t samples)
 	if (samples > voice->src.ffmpeg->convertCapacity)
 	{
 		voice->src.ffmpeg->convertCapacity = samples;
-		voice->src.ffmpeg->convertCache = (float*) FAudio_realloc(
+		voice->src.ffmpeg->convertCache = (float*) voice->audio->pRealloc(
 			voice->src.ffmpeg->convertCache,
 			sizeof(float) * voice->src.ffmpeg->convertCapacity
 		);
@@ -165,7 +165,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 				if (ffmpeg->paddingBytes < remain + AV_INPUT_BUFFER_PADDING_SIZE)
 				{
 					ffmpeg->paddingBytes = remain + AV_INPUT_BUFFER_PADDING_SIZE;
-					ffmpeg->paddingBuffer = (uint8_t *) FAudio_realloc(
+					ffmpeg->paddingBuffer = (uint8_t *) voice->audio->pRealloc(
 						ffmpeg->paddingBuffer, 
 						ffmpeg->paddingBytes
 					);
