@@ -450,36 +450,18 @@ uint32_t FAudio_CreateMasteringVoice(
 	audio->master = *ppMasteringVoice;
 	FAudio_AddRef(audio);
 	FAudio_PlatformInit(audio, DeviceIndex);
-	if (audio->active)
-	{
-		FAudio_PlatformStart(audio);
-	}
 	return 0;
 }
 
 uint32_t FAudio_StartEngine(FAudio *audio)
 {
-	if (!audio->active)
-	{
-		audio->active = 1;
-		if (audio->master != NULL)
-		{
-			FAudio_PlatformStart(audio);
-		}
-	}
+	audio->active = 1;
 	return 0;
 }
 
 void FAudio_StopEngine(FAudio *audio)
 {
-	if (audio->active)
-	{
-		audio->active = 0;
-		if (audio->master != NULL)
-		{
-			FAudio_PlatformStop(audio);
-		}
-	}
+	audio->active = 0;
 }
 
 uint32_t FAudio_CommitChanges(FAudio *audio)

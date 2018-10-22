@@ -56,10 +56,13 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 	audio = device->engineList;
 	while (audio != NULL)
 	{
-		FAudio_INTERNAL_UpdateEngine(
-			(FAudio*) audio->entry,
-			(float*) stream
-		);
+		if (((FAudio*) audio->entry)->active)
+		{
+			FAudio_INTERNAL_UpdateEngine(
+				(FAudio*) audio->entry,
+				(float*) stream
+			);
+		}
 		audio = audio->next;
 	}
 }
@@ -249,6 +252,9 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 
 		/* Add to the device list */
 		LinkedList_AddEntry(&devlist, device, devlock);
+
+		/* Start the thread! */
+		SDL_PauseAudioDevice(device->device, 0);
 	}
 	else /* Just add us to the existing device */
 	{
@@ -316,54 +322,6 @@ void FAudio_PlatformQuit(FAudio *audio)
 			}
 
 			return;
-		}
-		dev = dev->next;
-	}
-}
-
-void FAudio_PlatformStart(FAudio *audio)
-{
-	LinkedList *dev, *entry;
-
-	dev = devlist;
-	while (dev != NULL)
-	{
-		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
-		while (entry != NULL)
-		{
-			if (((FAudio*) entry->entry) == audio)
-			{
-				SDL_PauseAudioDevice(
-					((FAudioPlatformDevice*) dev->entry)->device,
-					0
-				);
-				return;
-			}
-			entry = entry->next;
-		}
-		dev = dev->next;
-	}
-}
-
-void FAudio_PlatformStop(FAudio *audio)
-{
-	LinkedList *dev, *entry;
-
-	dev = devlist;
-	while (dev != NULL)
-	{
-		entry = ((FAudioPlatformDevice*) dev->entry)->engineList;
-		while (entry != NULL)
-		{
-			if (((FAudio*) entry->entry) == audio)
-			{
-				SDL_PauseAudioDevice(
-					((FAudioPlatformDevice*) dev->entry)->device,
-					1
-				);
-				return;
-			}
-			entry = entry->next;
 		}
 		dev = dev->next;
 	}
