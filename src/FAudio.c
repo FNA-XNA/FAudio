@@ -453,7 +453,7 @@ uint32_t FAudio_CreateMasteringVoice(
 	return 0;
 }
 
-uint32_t FAudio_CreateMasteringVoice(
+uint32_t FAudio_CreateMasteringVoice8(
 	FAudio *audio,
 	FAudioMasteringVoice **ppMasteringVoice,
 	uint32_t InputChannels,

@@ -483,7 +483,7 @@ FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
 	const FAudioEffectChain *pEffectChain
 );
 
-FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
+FAUDIOAPI uint32_t FAudio_CreateMasteringVoice8(
 	FAudio *audio,
 	FAudioMasteringVoice **ppMasteringVoice,
 	uint32_t InputChannels,
