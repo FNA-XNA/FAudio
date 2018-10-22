@@ -114,6 +114,8 @@ void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
 	voice->audio->pFree(ffmpeg->av_ctx->extradata);
 	av_free(ffmpeg->av_ctx);
 
+	voice->audio->pFree(ffmpeg->convertCache);
+	voice->audio->pFree(ffmpeg->paddingBuffer);
 	voice->audio->pFree(ffmpeg);
 	voice->src.ffmpeg = NULL;
 }
