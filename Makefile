@@ -22,10 +22,6 @@ ifeq ($(WINDOWS_TARGET),1)
 	TARGET_SUFFIX = dll
 	UTIL_SUFFIX = .exe
 	LDFLAGS += -static-libgcc
-	ifeq ($(COM_WRAPPER), 1)
-		CFLAGS += -DFAUDIO_COM_WRAPPER
-		LDFLAGS += -lole32
-	endif
 else ifeq ($(UNAME), Darwin)
 	CFLAGS += -mmacosx-version-min=10.6 -fpic -fPIC
 	TARGET_PREFIX = lib

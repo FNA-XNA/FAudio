@@ -62,13 +62,51 @@ uint32_t FAudioCreate(
 
 uint32_t FAudioCOMConstructEXT(FAudio **ppFAudio, uint8_t version)
 {
+	return FAudioCOMConstructWithCustomAllocatorEXT(
+		ppFAudio,
+		version,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FAudioCreateWithCustomAllocatorEXT(
+	FAudio **ppFAudio,
+	uint32_t Flags,
+	FAudioProcessor XAudio2Processor,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
+	FAudioCOMConstructWithCustomAllocatorEXT(
+		ppFAudio,
+		FAUDIO_TARGET_VERSION,
+		customMalloc,
+		customFree,
+		customRealloc
+	);
+	FAudio_Initialize(*ppFAudio, Flags, XAudio2Processor);
+	return 0;
+}
+
+uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
+	FAudio **ppFAudio,
+	uint8_t version,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
 	FAudio_PlatformAddRef();
-	*ppFAudio = (FAudio*) FAudio_malloc(sizeof(FAudio));
+	*ppFAudio = (FAudio*) customMalloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
 	(*ppFAudio)->version = version;
 	(*ppFAudio)->sourceLock = FAudio_PlatformCreateMutex();
 	(*ppFAudio)->submixLock = FAudio_PlatformCreateMutex();
 	(*ppFAudio)->callbackLock = FAudio_PlatformCreateMutex();
+	(*ppFAudio)->pMalloc = customMalloc;
+	(*ppFAudio)->pFree = customFree;
+	(*ppFAudio)->pRealloc = customRealloc;
 	(*ppFAudio)->refcount = 1;
 	return 0;
 }
@@ -87,13 +125,13 @@ uint32_t FAudio_Release(FAudio *audio)
 	if (audio->refcount == 0)
 	{
 		FAudio_StopEngine(audio);
-		FAudio_free(audio->decodeCache);
-		FAudio_free(audio->resampleCache);
-		FAudio_free(audio->effectChainCache);
+		audio->pFree(audio->decodeCache);
+		audio->pFree(audio->resampleCache);
+		audio->pFree(audio->effectChainCache);
 		FAudio_PlatformDestroyMutex(audio->sourceLock);
 		FAudio_PlatformDestroyMutex(audio->submixLock);
 		FAudio_PlatformDestroyMutex(audio->callbackLock);
-		FAudio_free(audio);
+		audio->pFree(audio);
 		FAudio_PlatformRelease();
 	}
 	return refcount;
@@ -123,8 +161,8 @@ uint32_t FAudio_Initialize(
 	FAudio_assert(XAudio2Processor == FAUDIO_DEFAULT_PROCESSOR);
 
 	/* FIXME: This is lazy... */
-	audio->decodeCache = (float*) FAudio_malloc(sizeof(float));
-	audio->resampleCache = (float*) FAudio_malloc(sizeof(float));
+	audio->decodeCache = (float*) audio->pMalloc(sizeof(float));
+	audio->resampleCache = (float*) audio->pMalloc(sizeof(float));
 	audio->decodeSamples = 1;
 	audio->resampleSamples = 1;
 
@@ -139,7 +177,8 @@ uint32_t FAudio_RegisterForCallbacks(
 	LinkedList_AddEntry(
 		&audio->callbacks,
 		pCallback,
-		audio->callbackLock
+		audio->callbackLock,
+		audio->pMalloc
 	);
 	return 0;
 }
@@ -151,7 +190,8 @@ void FAudio_UnregisterForCallbacks(
 	LinkedList_RemoveEntry(
 		&audio->callbacks,
 		pCallback,
-		audio->callbackLock
+		audio->callbackLock,
+		audio->pFree
 	);
 }
 
@@ -167,7 +207,7 @@ uint32_t FAudio_CreateSourceVoice(
 ) {
 	uint32_t i;
 
-	*ppSourceVoice = (FAudioSourceVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	*ppSourceVoice = (FAudioSourceVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
 	(*ppSourceVoice)->type = FAUDIO_VOICE_SOURCE;
@@ -187,7 +227,7 @@ uint32_t FAudio_CreateSourceVoice(
 	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT	)
 	{
-		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) FAudio_malloc(
+		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) audio->pMalloc(
 			sizeof(FAudioWaveFormatExtensible)
 		);
 		/* convert PCM to EXTENSIBLE */
@@ -213,7 +253,7 @@ uint32_t FAudio_CreateSourceVoice(
 	else
 	{
 		/* direct copy anything else */
-		(*ppSourceVoice)->src.format = (FAudioWaveFormatEx*) FAudio_malloc(
+		(*ppSourceVoice)->src.format = (FAudioWaveFormatEx*) audio->pMalloc(
 			sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize
 		);
 		FAudio_memcpy(
@@ -285,7 +325,7 @@ uint32_t FAudio_CreateSourceVoice(
 
 	/* Default Levels */
 	(*ppSourceVoice)->volume = 1.0f;
-	(*ppSourceVoice)->channelVolume = (float*) FAudio_malloc(
+	(*ppSourceVoice)->channelVolume = (float*) audio->pMalloc(
 		sizeof(float) * (*ppSourceVoice)->outputChannels
 	);
 	for (i = 0; i < (*ppSourceVoice)->outputChannels; i += 1)
@@ -296,7 +336,7 @@ uint32_t FAudio_CreateSourceVoice(
 	/* Filters */
 	if (Flags & FAUDIO_VOICE_USEFILTER)
 	{
-		(*ppSourceVoice)->filterState = (FAudioFilterState*) FAudio_malloc(
+		(*ppSourceVoice)->filterState = (FAudioFilterState*) audio->pMalloc(
 			sizeof(FAudioFilterState) * (*ppSourceVoice)->src.format->nChannels
 		);
 		FAudio_zero(
@@ -321,7 +361,8 @@ uint32_t FAudio_CreateSourceVoice(
 	LinkedList_PrependEntry(
 		&audio->sources,
 		*ppSourceVoice,
-		audio->sourceLock
+		audio->sourceLock,
+		audio->pMalloc
 	);
 	FAudio_AddRef(audio);
 	return 0;
@@ -339,7 +380,7 @@ uint32_t FAudio_CreateSubmixVoice(
 ) {
 	uint32_t i;
 
-	*ppSubmixVoice = (FAudioSubmixVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	*ppSubmixVoice = (FAudioSubmixVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
 	(*ppSubmixVoice)->audio = audio;
 	(*ppSubmixVoice)->type = FAUDIO_VOICE_SUBMIX;
@@ -363,7 +404,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	
 	/* Default Levels */
 	(*ppSubmixVoice)->volume = 1.0f;
-	(*ppSubmixVoice)->channelVolume = (float*)FAudio_malloc(
+	(*ppSubmixVoice)->channelVolume = (float*) audio->pMalloc(
 		sizeof(float) * (*ppSubmixVoice)->outputChannels
 	);
 	for (i = 0; i < (*ppSubmixVoice)->outputChannels; i += 1)
@@ -374,7 +415,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	/* Filters */
 	if (Flags & FAUDIO_VOICE_USEFILTER)
 	{
-		(*ppSubmixVoice)->filterState = (FAudioFilterState*) FAudio_malloc(
+		(*ppSubmixVoice)->filterState = (FAudioFilterState*) audio->pMalloc(
 			sizeof(FAudioFilterState) * InputChannels
 		);
 		FAudio_zero(
@@ -390,7 +431,7 @@ uint32_t FAudio_CreateSubmixVoice(
 		(double) InputSampleRate /
 		(double) audio->master->master.inputSampleRate
 	);
-	(*ppSubmixVoice)->mix.inputCache = (float*) FAudio_malloc(
+	(*ppSubmixVoice)->mix.inputCache = (float*) audio->pMalloc(
 		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
 	);
 	FAudio_zero( /* Zero this now, for the first update */
@@ -402,7 +443,8 @@ uint32_t FAudio_CreateSubmixVoice(
 	FAudio_INTERNAL_InsertSubmixSorted(
 		&audio->submixes,
 		*ppSubmixVoice,
-		audio->submixLock
+		audio->submixLock,
+		audio->pMalloc
 	);
 	FAudio_AddRef(audio);
 	return 0;
@@ -422,7 +464,7 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* For now we only support one allocated master voice at a time */
 	FAudio_assert(audio->master == NULL);
 
-	*ppMasteringVoice = (FAudioMasteringVoice*) FAudio_malloc(sizeof(FAudioVoice));
+	*ppMasteringVoice = (FAudioMasteringVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppMasteringVoice, sizeof(FAudioMasteringVoice));
 	(*ppMasteringVoice)->audio = audio;
 	(*ppMasteringVoice)->type = FAUDIO_VOICE_MASTER;
@@ -572,31 +614,31 @@ uint32_t FAudioVoice_SetOutputVoices(
 	/* FIXME: This is lazy... */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
-		FAudio_free(voice->sendCoefficients[i]);
+		voice->audio->pFree(voice->sendCoefficients[i]);
 	}
 	if (voice->sendCoefficients != NULL)
 	{
-		FAudio_free(voice->sendCoefficients);
+		voice->audio->pFree(voice->sendCoefficients);
 	}
 	if (voice->sendMix != NULL)
 	{
-		FAudio_free(voice->sendMix);
+		voice->audio->pFree(voice->sendMix);
 	}
 	if (voice->sendFilter != NULL)
 	{
-		FAudio_free(voice->sendFilter);
+		voice->audio->pFree(voice->sendFilter);
 	}
 	if (voice->sendFilterState != NULL)
 	{
 		for (i = 0; i < voice->sends.SendCount; i += 1)
 		{
-			FAudio_free(voice->sendFilterState[i]);
+			voice->audio->pFree(voice->sendFilterState[i]);
 		}
-		FAudio_free(voice->sendFilterState);
+		voice->audio->pFree(voice->sendFilterState);
 	}
 	if (voice->sends.pSends != NULL)
 	{
-		FAudio_free(voice->sends.pSends);
+		voice->audio->pFree(voice->sends.pSends);
 	}
 
 	if (pSendList == NULL)
@@ -622,7 +664,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 
 	/* Copy send list */
 	voice->sends.SendCount = pSendList->SendCount;
-	voice->sends.pSends = (FAudioSendDescriptor*) FAudio_malloc(
+	voice->sends.pSends = (FAudioSendDescriptor*) voice->audio->pMalloc(
 		pSendList->SendCount * sizeof(FAudioSendDescriptor)
 	);
 	FAudio_memcpy(
@@ -632,18 +674,18 @@ uint32_t FAudioVoice_SetOutputVoices(
 	);
 
 	/* Allocate/Reset default output matrix, mixer function, filters */
-	voice->sendCoefficients = (float**) FAudio_malloc(
+	voice->sendCoefficients = (float**) voice->audio->pMalloc(
 		sizeof(float*) * pSendList->SendCount
 	);
-	voice->sendMix = (FAudioMixCallback*) FAudio_malloc(
+	voice->sendMix = (FAudioMixCallback*) voice->audio->pMalloc(
 		sizeof(FAudioMixCallback) * pSendList->SendCount
 	);
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
-		voice->sendFilter = (FAudioFilterParameters*) FAudio_malloc(
+		voice->sendFilter = (FAudioFilterParameters*) voice->audio->pMalloc(
 			sizeof(FAudioFilterParameters) * pSendList->SendCount
 		);
-		voice->sendFilterState = (FAudioFilterState**) FAudio_malloc(
+		voice->sendFilterState = (FAudioFilterState**) voice->audio->pMalloc(
 			sizeof(FAudioFilterState*) * pSendList->SendCount
 		);
 	}
@@ -657,7 +699,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 		{
 			outChannels = pSendList->pSends[i].pOutputVoice->mix.inputChannels;
 		}
-		voice->sendCoefficients[i] = (float*) FAudio_malloc(
+		voice->sendCoefficients[i] = (float*) voice->audio->pMalloc(
 			sizeof(float) * voice->outputChannels * outChannels
 		);
 		FAudio_INTERNAL_SetDefaultMatrix(
@@ -714,7 +756,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 			voice->sendFilter[i].Type = FAUDIO_DEFAULT_FILTER_TYPE;
 			voice->sendFilter[i].Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 			voice->sendFilter[i].OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
-			voice->sendFilterState[i] = (FAudioFilterState*) FAudio_malloc(
+			voice->sendFilterState[i] = (FAudioFilterState*) voice->audio->pMalloc(
 				sizeof(FAudioFilterState) * outChannels
 			);
 			FAudio_zero(
@@ -860,7 +902,7 @@ uint32_t FAudioVoice_SetEffectChain(
 				voice->effects.inPlaceProcessing[i] = (pProps->Flags & FAPO_FLAG_INPLACE_SUPPORTED) == FAPO_FLAG_INPLACE_SUPPORTED;
 				voice->effects.inPlaceProcessing[i] &= (channelCount == voice->effects.desc[i].OutputChannels);
 				channelCount = voice->effects.desc[i].OutputChannels;
-				FAudio_free(pProps);
+				voice->audio->pFree(pProps);
 			}
 		}
 		voice->outputChannels = channelCount;
@@ -917,7 +959,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 
 	if (voice->effects.parameters[EffectIndex] == NULL)
 	{
-		voice->effects.parameters[EffectIndex] = FAudio_malloc(
+		voice->effects.parameters[EffectIndex] = voice->audio->pMalloc(
 			ParametersByteSize
 		);
 		voice->effects.parameterSizes[EffectIndex] = ParametersByteSize;
@@ -925,7 +967,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 	FAudio_PlatformLockMutex(voice->effectLock);
 	if (voice->effects.parameterSizes[EffectIndex] < ParametersByteSize)
 	{
-		voice->effects.parameters[EffectIndex] = FAudio_realloc(
+		voice->effects.parameters[EffectIndex] = voice->audio->pRealloc(
 			voice->effects.parameters[EffectIndex],
 			ParametersByteSize
 		);
@@ -1252,9 +1294,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		LinkedList_RemoveEntry(
 			&voice->audio->sources,
 			voice,
-			voice->audio->sourceLock
+			voice->audio->sourceLock,
+			voice->audio->pFree
 		);
-		FAudio_free(voice->src.format);
+		voice->audio->pFree(voice->src.format);
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
@@ -1263,11 +1306,12 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		LinkedList_RemoveEntry(
 			&voice->audio->submixes,
 			voice,
-			voice->audio->submixLock
+			voice->audio->submixLock,
+			voice->audio->pFree
 		);
 
 		/* Delete submix data */
-		FAudio_free(voice->mix.inputCache);
+		voice->audio->pFree(voice->mix.inputCache);
 		if (voice->mix.resampler != NULL)
 		{
 			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
@@ -1284,31 +1328,31 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		FAudio_PlatformLockMutex(voice->sendLock);
 		for (i = 0; i < voice->sends.SendCount; i += 1)
 		{
-			FAudio_free(voice->sendCoefficients[i]);
+			voice->audio->pFree(voice->sendCoefficients[i]);
 		}
 		if (voice->sendCoefficients != NULL)
 		{
-			FAudio_free(voice->sendCoefficients);
+			voice->audio->pFree(voice->sendCoefficients);
 		}
 		if (voice->sendMix != NULL)
 		{
-			FAudio_free(voice->sendMix);
+			voice->audio->pFree(voice->sendMix);
 		}
 		if (voice->sendFilter != NULL)
 		{
-			FAudio_free(voice->sendFilter);
+			voice->audio->pFree(voice->sendFilter);
 		}
 		if (voice->sendFilterState != NULL)
 		{
 			for (i = 0; i < voice->sends.SendCount; i += 1)
 			{
-				FAudio_free(voice->sendFilterState[i]);
+				voice->audio->pFree(voice->sendFilterState[i]);
 			}
-			FAudio_free(voice->sendFilterState);
+			voice->audio->pFree(voice->sendFilterState);
 		}
 		if (voice->sends.pSends != NULL)
 		{
-			FAudio_free(voice->sends.pSends);
+			voice->audio->pFree(voice->sends.pSends);
 		}
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		FAudio_PlatformDestroyMutex(voice->sendLock);
@@ -1327,7 +1371,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		FAudio_PlatformLockMutex(voice->filterLock);
 		if (voice->filterState != NULL)
 		{
-			FAudio_free(voice->filterState);
+			voice->audio->pFree(voice->filterState);
 		}
 		FAudio_PlatformUnlockMutex(voice->filterLock);
 		FAudio_PlatformDestroyMutex(voice->filterLock);
@@ -1338,14 +1382,14 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		FAudio_PlatformLockMutex(voice->volumeLock);
 		if (voice->channelVolume != NULL)
 		{
-			FAudio_free(voice->channelVolume);
+			voice->audio->pFree(voice->channelVolume);
 		}
 		FAudio_PlatformUnlockMutex(voice->volumeLock);
 		FAudio_PlatformDestroyMutex(voice->volumeLock);
 	}
 
 	FAudio_Release(voice->audio);
-	FAudio_free(voice);
+	voice->audio->pFree(voice);
 }
 
 /* FAudioSourceVoice Interface */
@@ -1468,7 +1512,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 
 	/* Allocate, now that we have valid input */
-	entry = (FAudioBufferEntry*) FAudio_malloc(sizeof(FAudioBufferEntry));
+	entry = (FAudioBufferEntry*) voice->audio->pMalloc(sizeof(FAudioBufferEntry));
 	FAudio_memcpy(&entry->buffer, pBuffer, sizeof(FAudioBuffer));
 	entry->buffer.PlayBegin = playBegin;
 	entry->buffer.PlayLength = playLength;
@@ -1543,7 +1587,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 			);
 		}
 		next = entry->next;
-		FAudio_free(entry);
+		voice->audio->pFree(entry);
 		entry = next;
 	}
 

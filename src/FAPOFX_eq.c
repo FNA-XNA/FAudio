@@ -98,8 +98,8 @@ void FAPOFXEQ_Process(
 void FAPOFXEQ_Free(void* fapo)
 {
 	FAPOFXEQ *eq = (FAPOFXEQ*) fapo;
-	FAudio_free(eq->base.m_pParameterBlocks);
-	FAudio_free(fapo);
+	eq->base.pFree(eq->base.m_pParameterBlocks);
+	eq->base.pFree(fapo);
 }
 
 /* Public API */
@@ -107,13 +107,16 @@ void FAPOFXEQ_Free(void* fapo)
 uint32_t FAPOFXCreateEQ(
 	FAPO **pEffect,
 	const void *pInitData,
-	uint32_t InitDataByteSize
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
 ){
 	/* Allocate... */
-	FAPOFXEQ *result = (FAPOFXEQ*) FAudio_malloc(
+	FAPOFXEQ *result = (FAPOFXEQ*) customMalloc(
 		sizeof(FAPOFXEQ)
 	);
-	uint8_t *params = (uint8_t*) FAudio_malloc(
+	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAPOFXEQParameters) * 3
 	);
 	if (pInitData == NULL)
@@ -134,12 +137,15 @@ uint32_t FAPOFXCreateEQ(
 		&FAPOFX_CLSID_FXEQ,
 		sizeof(FAudioGUID)
 	);
-	CreateFAPOBase(
+	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
 		&FXEQProperties,
 		params,
 		sizeof(FAPOFXEQParameters),
-		1
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
 	);
 
 	/* Function table... */

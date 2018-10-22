@@ -119,7 +119,7 @@ uint32_t FAudioFXVolumeMeter_LockForProcess(
 
 	/* Allocate volume meter arrays */
 	fapo->channels = pInputLockedParameters->pFormat->nChannels;
-	levels[0].pPeakLevels = (float*) FAudio_malloc(
+	levels[0].pPeakLevels = (float*) fapo->base.pMalloc(
 		fapo->channels * sizeof(float) * 6
 	);
 	FAudio_zero(levels[0].pPeakLevels, fapo->channels * sizeof(float) * 6);
@@ -137,7 +137,7 @@ void FAudioFXVolumeMeter_UnlockForProcess(FAudioFXVolumeMeter *fapo)
 {
 	FAudioFXVolumeMeterLevels *levels = (FAudioFXVolumeMeterLevels*)
 		fapo->base.m_pParameterBlocks;
-	FAudio_free(levels[0].pPeakLevels);
+	fapo->base.pFree(levels[0].pPeakLevels);
 	fapo->base.m_fIsLocked = 0;
 }
 
@@ -206,19 +206,35 @@ void FAudioFXVolumeMeter_GetParameters(
 void FAudioFXVolumeMeter_Free(void* fapo)
 {
 	FAudioFXVolumeMeter *volumemeter = (FAudioFXVolumeMeter*) fapo;
-	FAudio_free(volumemeter->base.m_pParameterBlocks);
-	FAudio_free(fapo);
+	volumemeter->base.pFree(volumemeter->base.m_pParameterBlocks);
+	volumemeter->base.pFree(fapo);
 }
 
 /* Public API */
 
 uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 {
+	return FAudioCreateVolumeMeterWithCustomAllocatorEXT(
+		ppApo,
+		Flags,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FAudioCreateVolumeMeterWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
 	/* Allocate... */
-	FAudioFXVolumeMeter *result = (FAudioFXVolumeMeter*) FAudio_malloc(
+	FAudioFXVolumeMeter *result = (FAudioFXVolumeMeter*) customMalloc(
 		sizeof(FAudioFXVolumeMeter)
 	);
-	uint8_t *params = (uint8_t*) FAudio_malloc(
+	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAudioFXVolumeMeterLevels) * 3
 	);
 	FAudio_zero(params, sizeof(FAudioFXVolumeMeterLevels) * 3);
@@ -229,12 +245,15 @@ uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags)
 		&FAudioFX_CLSID_AudioVolumeMeter,
 		sizeof(FAudioGUID)
 	);
-	CreateFAPOBase(
+	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
 		&VolumeMeterProperties,
 		params,
 		sizeof(FAudioFXVolumeMeterLevels),
-		1
+		1,
+		customMalloc,
+		customFree,
+		customRealloc
 	);
 
 	/* Function table... */

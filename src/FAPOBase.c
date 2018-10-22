@@ -36,6 +36,28 @@ void CreateFAPOBase(
 	uint32_t uParameterBlockByteSize,
 	uint8_t fProducer
 ) {
+	CreateFAPOBaseWithCustomAllocatorEXT(
+		fapo,
+		pRegistrationProperties,
+		pParameterBlocks,
+		uParameterBlockByteSize,
+		fProducer,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+void CreateFAPOBaseWithCustomAllocatorEXT(
+	FAPOBase *fapo,
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
 	/* Base Classes/Interfaces */
 	#define ASSIGN_VT(name) \
 		fapo->base.name = (name##Func) FAPOBase_##name;
@@ -73,6 +95,11 @@ void CreateFAPOBase(
 	fapo->m_fNewerResultsReady = 0;
 	fapo->m_fProducer = fProducer;
 
+	/* Allocator Callbacks */
+	fapo->pMalloc = customMalloc;
+	fapo->pFree = customFree;
+	fapo->pRealloc = customRealloc;
+
 	/* Protected Variables */
 	fapo->m_lReferenceCount = 1;
 }
@@ -98,7 +125,7 @@ uint32_t FAPOBase_GetRegistrationProperties(
 	FAPOBase *fapo,
 	FAPORegistrationProperties **ppRegistrationProperties
 ) {
-	*ppRegistrationProperties = (FAPORegistrationProperties*) FAudio_malloc(
+	*ppRegistrationProperties = (FAPORegistrationProperties*) fapo->pMalloc(
 		sizeof(FAPORegistrationProperties)
 	);
 	FAudio_memcpy(

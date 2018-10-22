@@ -575,7 +575,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			category->instanceCount += 1;
 		}
 
-		newSound = (FACTSoundInstance*) FAudio_malloc(
+		newSound = (FACTSoundInstance*) cue->parentBank->parentEngine->pMalloc(
 			sizeof(FACTSoundInstance)
 		);
 		newSound->parentCue = cue;
@@ -596,7 +596,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			newSound->fadeStart = 0;
 			newSound->fadeTarget = 0;
 		}
-		newSound->tracks = (FACTTrackInstance*) FAudio_malloc(
+		newSound->tracks = (FACTTrackInstance*) cue->parentBank->parentEngine->pMalloc(
 			sizeof(FACTTrackInstance) * newSound->sound->trackCount
 		);
 		for (i = 0; i < newSound->sound->trackCount; i += 1)
@@ -621,7 +621,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			newSound->tracks[i].upcomingWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 			newSound->tracks[i].upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
-			newSound->tracks[i].events = (FACTEventInstance*) FAudio_malloc(
+			newSound->tracks[i].events = (FACTEventInstance*) cue->parentBank->parentEngine->pMalloc(
 				sizeof(FACTEventInstance) * newSound->sound->tracks[i].eventCount
 			);
 			for (j = 0; j < newSound->sound->tracks[i].eventCount; j += 1)
@@ -743,9 +743,11 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 				sound->tracks[i].upcomingWave.wave
 			);
 		}
-		FAudio_free(sound->tracks[i].events);
+		sound->parentCue->parentBank->parentEngine->pFree(
+			sound->tracks[i].events
+		);
 	}
-	FAudio_free(sound->tracks);
+	sound->parentCue->parentBank->parentEngine->pFree(sound->tracks);
 
 	if (sound->sound->category != FACTCATEGORY_INVALID)
 	{
@@ -760,7 +762,7 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
 		sound->parentCue->data->instanceCount -= 1;
 	}
-	FAudio_free(sound);
+	sound->parentCue->parentBank->parentEngine->pFree(sound);
 }
 
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
@@ -1490,9 +1492,11 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 							sound->tracks[i].upcomingWave.wave
 						);
 					}
-					FAudio_free(sound->tracks[i].events);
+					cue->parentBank->parentEngine->pFree(
+						sound->tracks[i].events
+					);
 				}
-				FAudio_free(sound->tracks);
+				cue->parentBank->parentEngine->pFree(sound->tracks);
 
 				if (sound->sound->category != FACTCATEGORY_INVALID)
 				{
@@ -1806,7 +1810,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	/* Category data */
 	FAudio_assert((ptr - start) == categoryOffset);
-	pEngine->categories = (FACTAudioCategory*) FAudio_malloc(
+	pEngine->categories = (FACTAudioCategory*) pEngine->pMalloc(
 		sizeof(FACTAudioCategory) * pEngine->categoryCount
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
@@ -1826,7 +1830,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	/* Variable data */
 	FAudio_assert((ptr - start) == variableOffset);
-	pEngine->variables = (FACTVariable*) FAudio_malloc(
+	pEngine->variables = (FACTVariable*) pEngine->pMalloc(
 		sizeof(FACTVariable) * pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
@@ -1838,7 +1842,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	}
 
 	/* Global variable storage. Some unused data for non-global vars */
-	pEngine->globalVariableValues = (float*) FAudio_malloc(
+	pEngine->globalVariableValues = (float*) pEngine->pMalloc(
 		sizeof(float) * pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
@@ -1850,11 +1854,11 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	if (pEngine->rpcCount > 0)
 	{
 		FAudio_assert((ptr - start) == rpcOffset);
-		pEngine->rpcs = (FACTRPC*) FAudio_malloc(
+		pEngine->rpcs = (FACTRPC*) pEngine->pMalloc(
 			sizeof(FACTRPC) *
 			pEngine->rpcCount
 		);
-		pEngine->rpcCodes = (uint32_t*) FAudio_malloc(
+		pEngine->rpcCodes = (uint32_t*) pEngine->pMalloc(
 			sizeof(uint32_t) *
 			pEngine->rpcCount
 		);
@@ -1864,7 +1868,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			pEngine->rpcs[i].variable = read_u16(&ptr);
 			pEngine->rpcs[i].pointCount = read_u8(&ptr);
 			pEngine->rpcs[i].parameter = read_u16(&ptr);
-			pEngine->rpcs[i].points = (FACTRPCPoint*) FAudio_malloc(
+			pEngine->rpcs[i].points = (FACTRPCPoint*) pEngine->pMalloc(
 				sizeof(FACTRPCPoint) *
 				pEngine->rpcs[i].pointCount
 			);
@@ -1881,11 +1885,11 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	if (pEngine->dspPresetCount > 0)
 	{
 		FAudio_assert((ptr - start) == dspPresetOffset);
-		pEngine->dspPresets = (FACTDSPPreset*) FAudio_malloc(
+		pEngine->dspPresets = (FACTDSPPreset*) pEngine->pMalloc(
 			sizeof(FACTDSPPreset) *
 			pEngine->dspPresetCount
 		);
-		pEngine->dspPresetCodes = (uint32_t*) FAudio_malloc(
+		pEngine->dspPresetCodes = (uint32_t*) pEngine->pMalloc(
 			sizeof(uint32_t) *
 			pEngine->dspPresetCount
 		);
@@ -1894,7 +1898,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
 			pEngine->dspPresets[i].accessibility = read_u8(&ptr);
 			pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
-			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) FAudio_malloc(
+			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) pEngine->pMalloc(
 				sizeof(FACTDSPParameter) *
 				pEngine->dspPresets[i].parameterCount
 			); /* This will be filled in just a moment... */
@@ -1929,14 +1933,14 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	/* Category Name data */
 	FAudio_assert((ptr - start) == categoryNameOffset);
-	pEngine->categoryNames = (char**) FAudio_malloc(
+	pEngine->categoryNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
 		pEngine->categoryCount
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
 		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
-		pEngine->categoryNames[i] = (char*) FAudio_malloc(memsize);
+		pEngine->categoryNames[i] = (char*) pEngine->pMalloc(memsize);
 		FAudio_memcpy(pEngine->categoryNames[i], ptr, memsize);
 		ptr += memsize;
 	}
@@ -1951,14 +1955,14 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	/* Variable Name data */
 	FAudio_assert((ptr - start) == variableNameOffset);
-	pEngine->variableNames = (char**) FAudio_malloc(
+	pEngine->variableNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
 		pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
 		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
-		pEngine->variableNames[i] = (char*) FAudio_malloc(memsize);
+		pEngine->variableNames[i] = (char*) pEngine->pMalloc(memsize);
 		FAudio_memcpy(pEngine->variableNames[i], ptr, memsize);
 		ptr += memsize;
 	}
@@ -1968,15 +1972,18 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	return 0;
 }
 
-void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
-{
+void FACT_INTERNAL_ParseTrackEvents(
+	uint8_t **ptr,
+	FACTTrack *track,
+	FAudioMallocFunc pMalloc
+) {
 	uint32_t evtInfo;
 	uint8_t minWeight, maxWeight, separator;
 	uint8_t i;
 	uint16_t j;
 
 	track->eventCount = read_u8(ptr);
-	track->events = (FACTEvent*) FAudio_malloc(
+	track->events = (FACTEvent*) pMalloc(
 		sizeof(FACTEvent) *
 		track->eventCount
 	);
@@ -2024,15 +2031,15 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].wave.complex.trackCount = read_u16(ptr);
 			track->events[i].wave.complex.variation = read_u16(ptr);
 			*ptr += 4; /* Unknown values */
-			track->events[i].wave.complex.tracks = (uint16_t*) FAudio_malloc(
+			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.wavebanks = (uint8_t*) FAudio_malloc(
+			track->events[i].wave.complex.wavebanks = (uint8_t*) pMalloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.weights = (uint8_t*) FAudio_malloc(
+			track->events[i].wave.complex.weights = (uint8_t*) pMalloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
@@ -2096,15 +2103,15 @@ void FACT_INTERNAL_ParseTrackEvents(uint8_t **ptr, FACTTrack *track)
 			track->events[i].wave.complex.trackCount = read_u16(ptr);
 			track->events[i].wave.complex.variation = read_u16(ptr);
 			*ptr += 4; /* Unknown values */
-			track->events[i].wave.complex.tracks = (uint16_t*) FAudio_malloc(
+			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.wavebanks = (uint8_t*) FAudio_malloc(
+			track->events[i].wave.complex.wavebanks = (uint8_t*) pMalloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
-			track->events[i].wave.complex.weights = (uint8_t*) FAudio_malloc(
+			track->events[i].wave.complex.weights = (uint8_t*) pMalloc(
 				sizeof(uint8_t) *
 				track->events[i].wave.complex.trackCount
 			);
@@ -2222,7 +2229,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		return -1; /* TODO: WRONG PLATFORM */
 	}
 
-	sb = (FACTSoundBank*) FAudio_malloc(sizeof(FACTSoundBank));
+	sb = (FACTSoundBank*) pEngine->pMalloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
 	sb->notifyOnDestroy = 0;
@@ -2257,31 +2264,31 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 	/* SoundBank Name */
 	memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
-	sb->name = (char*) FAudio_malloc(memsize);
+	sb->name = (char*) pEngine->pMalloc(memsize);
 	FAudio_memcpy(sb->name, ptr, memsize);
 	ptr += 64;
 
 	/* WaveBank Name data */
 	FAudio_assert((ptr - start) == wavebankNameOffset);
-	sb->wavebankNames = (char**) FAudio_malloc(
+	sb->wavebankNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
 		sb->wavebankCount
 	);
 	for (i = 0; i < sb->wavebankCount; i += 1)
 	{
 		memsize = FAudio_strlen((char*) ptr) + 1;
-		sb->wavebankNames[i] = (char*) FAudio_malloc(memsize);
+		sb->wavebankNames[i] = (char*) pEngine->pMalloc(memsize);
 		FAudio_memcpy(sb->wavebankNames[i], ptr, memsize);
 		ptr += 64;
 	}
 
 	/* Sound data */
 	FAudio_assert((ptr - start) == soundOffset);
-	sb->sounds = (FACTSound*) FAudio_malloc(
+	sb->sounds = (FACTSound*) pEngine->pMalloc(
 		sizeof(FACTSound) *
 		sb->soundCount
 	);
-	sb->soundCodes = (uint32_t*) FAudio_malloc(
+	sb->soundCodes = (uint32_t*) pEngine->pMalloc(
 		sizeof(uint32_t) *
 		sb->soundCount
 	);
@@ -2302,19 +2309,19 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		{
 			sb->sounds[i].trackCount = read_u8(&ptr);
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
-			sb->sounds[i].tracks = (FACTTrack*) FAudio_malloc(memsize);
+			sb->sounds[i].tracks = (FACTTrack*) pEngine->pMalloc(memsize);
 			FAudio_zero(sb->sounds[i].tracks, memsize);
 		}
 		else
 		{
 			sb->sounds[i].trackCount = 1;
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
-			sb->sounds[i].tracks = (FACTTrack*) FAudio_malloc(memsize);
+			sb->sounds[i].tracks = (FACTTrack*) pEngine->pMalloc(memsize);
 			FAudio_zero(sb->sounds[i].tracks, memsize);
 			sb->sounds[i].tracks[0].volume = 0.0f;
 			sb->sounds[i].tracks[0].filter = 0xFF;
 			sb->sounds[i].tracks[0].eventCount = 1;
-			sb->sounds[i].tracks[0].events = (FACTEvent*) FAudio_malloc(
+			sb->sounds[i].tracks[0].events = (FACTEvent*) pEngine->pMalloc(
 				sizeof(FACTEvent)
 			);
 			FAudio_zero(
@@ -2337,7 +2344,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			#define COPYRPCBLOCK(loc) \
 				loc.rpcCodeCount = read_u8(&ptr); \
 				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
-				loc.rpcCodes = (uint32_t*) FAudio_malloc(memsize); \
+				loc.rpcCodes = (uint32_t*) pEngine->pMalloc(memsize); \
 				FAudio_memcpy(loc.rpcCodes, ptr, memsize); \
 				ptr += memsize;
 
@@ -2393,7 +2400,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 			sb->sounds[i].dspCodeCount = read_u8(&ptr);
 			memsize = sizeof(uint32_t) * sb->sounds[i].dspCodeCount;
-			sb->sounds[i].dspCodes = (uint32_t*) FAudio_malloc(memsize);
+			sb->sounds[i].dspCodes = (uint32_t*) pEngine->pMalloc(memsize);
 			FAudio_memcpy(sb->sounds[i].dspCodes, ptr, memsize);
 			ptr += memsize;
 		}
@@ -2434,7 +2441,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				FAudio_assert((ptr - start) == sb->sounds[i].tracks[j].code);
 				FACT_INTERNAL_ParseTrackEvents(
 					&ptr,
-					&sb->sounds[i].tracks[j]
+					&sb->sounds[i].tracks[j],
+					pEngine->pMalloc
 				);
 			}
 		}
@@ -2443,7 +2451,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	/* All Cue data */
 	sb->variationCount = 0;
 	sb->transitionCount = 0;
-	sb->cues = (FACTCueData*) FAudio_malloc(
+	sb->cues = (FACTCueData*) pEngine->pMalloc(
 		sizeof(FACTCueData) *
 		sb->cueCount
 	);
@@ -2497,11 +2505,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	if (sb->variationCount > 0)
 	{
 		FAudio_assert((ptr - start) == variationOffset);
-		sb->variations = (FACTVariationTable*) FAudio_malloc(
+		sb->variations = (FACTVariationTable*) pEngine->pMalloc(
 			sizeof(FACTVariationTable) *
 			sb->variationCount
 		);
-		sb->variationCodes = (uint32_t*) FAudio_malloc(
+		sb->variationCodes = (uint32_t*) pEngine->pMalloc(
 			sizeof(uint32_t) *
 			sb->variationCount
 		);
@@ -2519,7 +2527,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		ptr += 2; /* Unknown value */
 		sb->variations[i].variable = read_s16(&ptr);
 		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
-		sb->variations[i].entries = (FACTVariation*) FAudio_malloc(
+		sb->variations[i].entries = (FACTVariation*) pEngine->pMalloc(
 			memsize
 		);
 		FAudio_zero(sb->variations[i].entries, memsize);
@@ -2581,11 +2589,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	if (sb->transitionCount > 0)
 	{
 		FAudio_assert((ptr - start) == transitionOffset);
-		sb->transitions = (FACTTransitionTable*) FAudio_malloc(
+		sb->transitions = (FACTTransitionTable*) pEngine->pMalloc(
 			sizeof(FACTTransitionTable) *
 			sb->transitionCount
 		);
-		sb->transitionCodes = (uint32_t*) FAudio_malloc(
+		sb->transitionCodes = (uint32_t*) pEngine->pMalloc(
 			sizeof(uint32_t) *
 			sb->transitionCount
 		);
@@ -2600,7 +2608,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		sb->transitionCodes[i] = (uint32_t) (ptr - start);
 		sb->transitions[i].entryCount = read_u32(&ptr);
 		memsize = sizeof(FACTTransition) * sb->transitions[i].entryCount;
-		sb->transitions[i].entries = (FACTTransition*) FAudio_malloc(
+		sb->transitions[i].entries = (FACTTransition*) pEngine->pMalloc(
 			memsize
 		);
 		FAudio_zero(sb->transitions[i].entries, memsize);
@@ -2627,20 +2635,25 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 	/* Cue Name data */
 	FAudio_assert((ptr - start) == cueNameOffset);
-	sb->cueNames = (char**) FAudio_malloc(
+	sb->cueNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
 		sb->cueCount
 	);
 	for (i = 0; i < sb->cueCount; i += 1)
 	{
 		memsize = FAudio_strlen((char*) ptr) + 1;
-		sb->cueNames[i] = (char*) FAudio_malloc(memsize);
+		sb->cueNames[i] = (char*) pEngine->pMalloc(memsize);
 		FAudio_memcpy(sb->cueNames[i], ptr, memsize);
 		ptr += memsize;
 	}
 
 	/* Add to the Engine SoundBank list */
-	LinkedList_AddEntry(&pEngine->sbList, sb, pEngine->sbLock);
+	LinkedList_AddEntry(
+		&pEngine->sbList,
+		sb,
+		pEngine->sbLock,
+		pEngine->pMalloc
+	);
 
 	/* Finally. */
 	FAudio_assert((ptr - start) == dwSize);
@@ -2679,7 +2692,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		return -1; /* TODO: NOT XACT FILE */
 	}
 
-	wb = (FACTWaveBank*) FAudio_malloc(sizeof(FACTWaveBank));
+	wb = (FACTWaveBank*) pEngine->pMalloc(sizeof(FACTWaveBank));
 	wb->parentEngine = pEngine;
 	wb->waveList = NULL;
 	wb->waveLock = FAudio_PlatformCreateMutex();
@@ -2697,13 +2710,13 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
 	wb->entryCount = wbinfo.dwEntryCount;
 	memsize = FAudio_strlen(wbinfo.szBankName) + 1;
-	wb->name = (char*) FAudio_malloc(memsize);
+	wb->name = (char*) pEngine->pMalloc(memsize);
 	FAudio_memcpy(wb->name, wbinfo.szBankName, memsize);
 	memsize = sizeof(FACTWaveBankEntry) * wbinfo.dwEntryCount;
-	wb->entries = (FACTWaveBankEntry*) FAudio_malloc(memsize);
+	wb->entries = (FACTWaveBankEntry*) pEngine->pMalloc(memsize);
 	FAudio_zero(wb->entries, memsize);
 	memsize = sizeof(uint32_t) * wbinfo.dwEntryCount;
-	wb->entryRefs = (uint32_t*) FAudio_malloc(memsize);
+	wb->entryRefs = (uint32_t*) pEngine->pMalloc(memsize);
 	FAudio_zero(wb->entryRefs, memsize);
 
 	/* FIXME: How much do we care about this? */
@@ -2804,7 +2817,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwLength > 0	)
 	{
 		/* The seek table data layout is an absolute disaster! */
-		wb->seekTables = (FACTSeekTable*) FAudio_malloc(
+		wb->seekTables = (FACTSeekTable*) pEngine->pMalloc(
 			wbinfo.dwEntryCount * sizeof(FACTSeekTable)
 		);
 		for (i = 0; i < wbinfo.dwEntryCount; i += 1)
@@ -2851,7 +2864,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				sizeof(uint32_t),
 				1
 			);
-			wb->seekTables[i].entries = (uint32_t*) FAudio_malloc(
+			wb->seekTables[i].entries = (uint32_t*) pEngine->pMalloc(
 				wb->seekTables[i].entryCount * sizeof(uint32_t)
 			);
 			io->read(
@@ -2879,7 +2892,12 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	*/
 
 	/* Add to the Engine WaveBank list */
-	LinkedList_AddEntry(&pEngine->wbList, wb, pEngine->wbLock);
+	LinkedList_AddEntry(
+		&pEngine->wbList,
+		wb,
+		pEngine->wbLock,
+		pEngine->pMalloc
+	);
 
 	/* Finally. */
 	*ppWaveBank = wb;

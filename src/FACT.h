@@ -453,10 +453,18 @@ static const uint32_t aWMABlockAlign[] =
 
 /* AudioEngine Interface */
 
-/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 FACTAPI uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
+);
+
+/* See "extensions/CustomAllocatorEXT.txt" for more details. */
+FACTAPI uint32_t FACTCreateEngineWithCustomAllocatorEXT(
+	uint32_t dwCreationFlags,
+	FACTAudioEngine **ppEngine,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
 );
 
 FACTAPI uint32_t FACTAudioEngine_AddRef(FACTAudioEngine *pEngine);

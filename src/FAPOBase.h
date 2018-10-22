@@ -89,6 +89,11 @@ struct FAPOBase
 
 	/* Protected Variables */
 	int32_t m_lReferenceCount; /* LONG */
+
+	/* Allocator callbacks, NOT part of XAPOBase spec! */
+	FAudioMallocFunc pMalloc;
+	FAudioFreeFunc pFree;
+	FAudioReallocFunc pRealloc;
 };
 #pragma pack(pop)
 
@@ -98,6 +103,18 @@ FAPOAPI void CreateFAPOBase(
 	uint8_t *pParameterBlocks,
 	uint32_t uParameterBlockByteSize,
 	uint8_t fProducer
+);
+
+/* See "extensions/CustomAllocatorEXT.txt" for more information. */
+FAPOAPI void CreateFAPOBaseWithCustomAllocatorEXT(
+	FAPOBase *fapo,
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
 );
 
 FAPOAPI int32_t FAPOBase_AddRef(FAPOBase *fapo);

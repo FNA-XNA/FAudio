@@ -140,6 +140,17 @@ FAPOFXAPI uint32_t FAPOFX_CreateFX(
 	uint32_t InitDataByteSize
 );
 
+/* See "extensions/CustomAllocatorEXT.txt" for more details. */
+FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

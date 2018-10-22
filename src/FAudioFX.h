@@ -223,8 +223,23 @@ typedef struct FAudioFXReverbI3DL2Parameters
 /* Functions */
 
 FAUDIOAPI uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags);
-
 FAUDIOAPI uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags);
+
+/* See "extensions/CustomAllocatorEXT.txt" for more information. */
+FAUDIOAPI uint32_t FAudioCreateVolumeMeterWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+FAUDIOAPI uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
 
 FAUDIOAPI void ReverbConvertI3DL2ToNative(
 	const FAudioFXReverbI3DL2Parameters *pI3DL2,

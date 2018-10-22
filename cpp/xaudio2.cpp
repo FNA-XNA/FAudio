@@ -1255,6 +1255,19 @@ private:
 // IXAudio2 implementation
 //
 
+void* __cdecl XAudio2_INTERNAL_Malloc(size_t size)
+{
+	return CoTaskMemAlloc(size);
+}
+void __cdecl XAudio2_INTERNAL_Free(void* ptr)
+{
+	CoTaskMemFree(ptr);
+}
+void* __cdecl XAudio2_INTERNAL_Realloc(void* ptr, size_t size)
+{
+	return CoTaskMemRealloc(ptr, size);
+}
+
 class XAudio2Impl : public IXAudio2
 {
 public:
@@ -1262,14 +1275,27 @@ public:
 	{
 		callback_list.com = NULL;
 		callback_list.next = NULL;
-		FAudioCOMConstructEXT(&faudio, XAUDIO2_VERSION);
+		FAudioCOMConstructWithCustomAllocatorEXT(
+			&faudio,
+			XAUDIO2_VERSION,
+			XAudio2_INTERNAL_Malloc,
+			XAudio2_INTERNAL_Free,
+			XAudio2_INTERNAL_Realloc
+		);
 	}
 
 	XAudio2Impl(UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor)
 	{
 		callback_list.com = NULL;
 		callback_list.next = NULL;
-		FAudioCreate(&faudio, Flags, XAudio2Processor);
+		FAudioCreateWithCustomAllocatorEXT(
+			&faudio,
+			Flags,
+			XAudio2Processor,
+			XAudio2_INTERNAL_Malloc,
+			XAudio2_INTERNAL_Free,
+			XAudio2_INTERNAL_Realloc
+		);
 	}
 
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppvInterface)

@@ -7,6 +7,20 @@ extern "C" {
 
 #include <FAudio.h>
 
+// CoTaskMem functionality, needed for XAudio2 compat
+#if defined _WIN32 || defined __CYGWIN__
+  #define DLLIMPORT __declspec(dllimport)
+#else
+  #if __GNUC__ >= 4
+    #define DLLIMPORT __attribute__((visibility ("default")))
+  #else
+    #define DLLIMPORT
+  #endif
+#endif
+extern "C" DLLIMPORT void * __stdcall CoTaskMemAlloc(size_t cb);
+extern "C" DLLIMPORT void __stdcall CoTaskMemFree(void* ptr);
+extern "C" DLLIMPORT void * __stdcall CoTaskMemRealloc(void* ptr, size_t cb);
+
 // common windows types
 #ifndef FAUDIO_USE_STD_TYPES
 

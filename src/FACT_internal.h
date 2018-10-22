@@ -405,6 +405,11 @@ struct FACTAudioEngine
 	FAudioThread apiThread;
 	FAudioMutex apiLock;
 	uint8_t initialized;
+
+	/* Allocator callbacks */
+	FAudioMallocFunc pMalloc;
+	FAudioFreeFunc pFree;
+	FAudioReallocFunc pRealloc;
 };
 
 struct FACTSoundBank

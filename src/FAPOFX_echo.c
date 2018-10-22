@@ -98,8 +98,8 @@ void FAPOFXEcho_Process(
 void FAPOFXEcho_Free(void* fapo)
 {
 	FAPOFXEcho *echo = (FAPOFXEcho*) fapo;
-	FAudio_free(echo->base.m_pParameterBlocks);
-	FAudio_free(fapo);
+	echo->base.pFree(echo->base.m_pParameterBlocks);
+	echo->base.pFree(fapo);
 }
 
 /* Public API */
@@ -107,13 +107,16 @@ void FAPOFXEcho_Free(void* fapo)
 uint32_t FAPOFXCreateEcho(
 	FAPO **pEffect,
 	const void *pInitData,
-	uint32_t InitDataByteSize
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
 ) {
 	/* Allocate... */
-	FAPOFXEcho *result = (FAPOFXEcho*) FAudio_malloc(
+	FAPOFXEcho *result = (FAPOFXEcho*) customMalloc(
 		sizeof(FAPOFXEcho)
 	);
-	uint8_t *params = (uint8_t*) FAudio_malloc(
+	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAPOFXEchoParameters) * 3
 	);
 	if (pInitData == NULL)
@@ -134,12 +137,15 @@ uint32_t FAPOFXCreateEcho(
 		&FAPOFX_CLSID_FXEcho,
 		sizeof(FAudioGUID)
 	);
-	CreateFAPOBase(
+	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
 		&FXEchoProperties,
 		params,
 		sizeof(FAPOFXEchoParameters),
-		1
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
 	);
 
 	/* Function table... */

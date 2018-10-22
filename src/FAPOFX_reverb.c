@@ -98,8 +98,8 @@ void FAPOFXReverb_Process(
 void FAPOFXReverb_Free(void* fapo)
 {
 	FAPOFXReverb *reverb = (FAPOFXReverb*) fapo;
-	FAudio_free(reverb->base.m_pParameterBlocks);
-	FAudio_free(fapo);
+	reverb->base.pFree(reverb->base.m_pParameterBlocks);
+	reverb->base.pFree(fapo);
 }
 
 /* Public API */
@@ -107,13 +107,16 @@ void FAPOFXReverb_Free(void* fapo)
 uint32_t FAPOFXCreateReverb(
 	FAPO **pEffect,
 	const void *pInitData,
-	uint32_t InitDataByteSize
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
 ) {
 	/* Allocate... */
-	FAPOFXReverb *result = (FAPOFXReverb*) FAudio_malloc(
+	FAPOFXReverb *result = (FAPOFXReverb*) customMalloc(
 		sizeof(FAPOFXReverb)
 	);
-	uint8_t *params = (uint8_t*) FAudio_malloc(
+	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAPOFXReverbParameters) * 3
 	);
 	if (pInitData == NULL)
@@ -134,12 +137,15 @@ uint32_t FAPOFXCreateReverb(
 		&FAPOFX_CLSID_FXReverb,
 		sizeof(FAudioGUID)
 	);
-	CreateFAPOBase(
+	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
 		&FXReverbProperties,
 		params,
 		sizeof(FAPOFXReverbParameters),
-		1
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
 	);
 
 	/* Function table... */

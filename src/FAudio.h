@@ -409,7 +409,6 @@ extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
 /* FAudio Interface */
 
-/* FIXME: Do we want to actually reproduce the COM stuff or what...? -flibit */
 FAUDIOAPI uint32_t FAudioCreate(
 	FAudio **ppFAudio,
 	uint32_t Flags,
@@ -750,6 +749,30 @@ struct FAudioVoiceCallback
 	OnVoiceProcessingPassEndFunc OnVoiceProcessingPassEnd;
 	OnVoiceProcessingPassStartFunc OnVoiceProcessingPassStart;
 };
+
+/* FAudio Custom Allocator API
+ * See "extensions/CustomAllocatorEXT.txt" for more information.
+ */
+
+typedef void* (FAUDIOCALL * FAudioMallocFunc)(size_t size);
+typedef void (FAUDIOCALL * FAudioFreeFunc)(void* ptr);
+typedef void* (FAUDIOCALL * FAudioReallocFunc)(void* ptr, size_t size);
+
+FAUDIOAPI uint32_t FAudioCreateWithCustomAllocatorEXT(
+	FAudio **ppFAudio,
+	uint32_t Flags,
+	FAudioProcessor XAudio2Processor,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+FAUDIOAPI uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
+	FAudio **ppFAudio,
+	uint8_t version,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
 
 /* FAudio I/O API */
 

@@ -98,8 +98,8 @@ void FAPOFXMasteringLimiter_Process(
 void FAPOFXMasteringLimiter_Free(void* fapo)
 {
 	FAPOFXMasteringLimiter *limiter = (FAPOFXMasteringLimiter*) fapo;
-	FAudio_free(limiter->base.m_pParameterBlocks);
-	FAudio_free(fapo);
+	limiter->base.pFree(limiter->base.m_pParameterBlocks);
+	limiter->base.pFree(fapo);
 }
 
 /* Public API */
@@ -107,13 +107,16 @@ void FAPOFXMasteringLimiter_Free(void* fapo)
 uint32_t FAPOFXCreateMasteringLimiter(
 	FAPO **pEffect,
 	const void *pInitData,
-	uint32_t InitDataByteSize
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
 ) {
 	/* Allocate... */
-	FAPOFXMasteringLimiter *result = (FAPOFXMasteringLimiter*) FAudio_malloc(
+	FAPOFXMasteringLimiter *result = (FAPOFXMasteringLimiter*) customMalloc(
 		sizeof(FAPOFXMasteringLimiter)
 	);
-	uint8_t *params = (uint8_t*) FAudio_malloc(
+	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAPOFXMasteringLimiterParameters) * 3
 	);
 	if (pInitData == NULL)
@@ -134,12 +137,15 @@ uint32_t FAPOFXCreateMasteringLimiter(
 		&FAPOFX_CLSID_FXMasteringLimiter,
 		sizeof(FAudioGUID)
 	);
-	CreateFAPOBase(
+	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
 		&FXMasteringLimiterProperties,
 		params,
 		sizeof(FAPOFXMasteringLimiterParameters),
-		1
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
 	);
 
 	/* Function table... */

@@ -33,9 +33,9 @@
 #include <math.h>
 #include <assert.h>
 
-#define FAudio_malloc(size) malloc(size)
-#define FAudio_realloc(mem, size) realloc(mem, size)
-#define FAudio_free(mem) free(mem)
+#define FAudio_malloc malloc
+#define FAudio_realloc realloc
+#define FAudio_free free
 #define FAudio_alloca(x) alloca(uint8_t, x)
 #define FAudio_dealloca(x) dealloca(x)
 #define FAudio_zero(ptr, size) memset(ptr, '\0', size)
@@ -75,23 +75,9 @@
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
 
-/* When running with the COM wrapper, you'll need to make sure that memory is
- * allocated with CoTaskMemAlloc because the application as well as XAPOFX
- * expects memory to be allocated/freed using these routines.
- * -flibit
- */
-#ifdef FAUDIO_COM_WRAPPER
-__declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
-__declspec(dllimport) void * __stdcall CoTaskMemRealloc(void* pv, size_t cb);
-__declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
-#define FAudio_malloc CoTaskMemAlloc
-#define FAudio_realloc CoTaskMemRealloc
-#define FAudio_free CoTaskMemFree
-#else
-#define FAudio_malloc(size) SDL_malloc(size)
-#define FAudio_realloc(mem, size) SDL_realloc(mem, size)
-#define FAudio_free(mem) SDL_free(mem)
-#endif
+#define FAudio_malloc SDL_malloc
+#define FAudio_realloc SDL_realloc
+#define FAudio_free SDL_free
 #define FAudio_alloca(x) SDL_stack_alloc(uint8_t, x)
 #define FAudio_dealloca(x) SDL_stack_free(x)
 #define FAudio_zero(ptr, size) SDL_memset(ptr, '\0', size)
@@ -182,17 +168,20 @@ struct LinkedList
 void LinkedList_AddEntry(
 	LinkedList **start,
 	void* toAdd,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioMallocFunc pMalloc
 );
 void LinkedList_PrependEntry(
 	LinkedList **start,
 	void* toAdd,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioMallocFunc pMalloc
 );
 void LinkedList_RemoveEntry(
 	LinkedList **start,
 	void* toRemove,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioFreeFunc pFree
 );
 
 /* Internal FAudio Types */
@@ -268,6 +257,11 @@ struct FAudio
 	float *decodeCache;
 	float *resampleCache;
 	float *effectChainCache;
+
+	/* Allocator callbacks */
+	FAudioMallocFunc pMalloc;
+	FAudioFreeFunc pFree;
+	FAudioReallocFunc pRealloc;
 };
 
 struct FAudioVoice
@@ -360,7 +354,8 @@ struct FAudioVoice
 void FAudio_INTERNAL_InsertSubmixSorted(
 	LinkedList **start,
 	FAudioSubmixVoice *toAdd,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioMallocFunc pMalloc
 );
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);

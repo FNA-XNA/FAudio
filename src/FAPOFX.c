@@ -31,7 +31,10 @@
 	extern uint32_t FAPOFXCreate##effect( \
 		FAPO **pEffect, \
 		const void *pInitData, \
-		uint32_t InitDataByteSize \
+		uint32_t InitDataByteSize, \
+		FAudioMallocFunc customMalloc, \
+		FAudioFreeFunc customFree, \
+		FAudioReallocFunc customRealloc \
 	);
 CREATE_FUNC(EQ)
 CREATE_FUNC(MasteringLimiter)
@@ -45,10 +48,37 @@ uint32_t FAPOFX_CreateFX(
 	const void *pInitData,
 	uint32_t InitDataByteSize
 ) {
+	return FAPOFX_CreateFXWithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		pInitData,
+		InitDataByteSize,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
 	#define CHECK_AND_RETURN(effect) \
 		if (FAudio_memcmp(clsid, &FAPOFX_CLSID_FX##effect, sizeof(FAudioGUID)) == 0) \
 		{ \
-			return FAPOFXCreate##effect(pEffect, pInitData, InitDataByteSize); \
+			return FAPOFXCreate##effect( \
+				pEffect, \
+				pInitData, \
+				InitDataByteSize, \
+				customMalloc, \
+				customFree, \
+				customRealloc \
+			); \
 		}
 	CHECK_AND_RETURN(EQ)
 	CHECK_AND_RETURN(MasteringLimiter)

@@ -5,17 +5,6 @@
 
 #include <assert.h>
 
-#if defined _WIN32 || defined __CYGWIN__
-  #define DLLIMPORT __declspec(dllimport)
-#else
-  #if __GNUC__ >= 4
-    #define DLLIMPORT __attribute__((visibility ("default")))
-  #else
-    #define DLLIMPORT
-  #endif
-#endif
-extern "C" DLLIMPORT void * __stdcall CoTaskMemAlloc(size_t cb);
-
 /* IXACT3Cue Implementation */
 
 class XACT3CueImpl : public IXACT3Cue
@@ -379,12 +368,31 @@ extern size_t FAUDIOCALL wrap_io_read(
 extern int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence);
 extern int FAUDIOCALL wrap_io_close(void *data);
 
+void* __cdecl XACT3_INTERNAL_Malloc(size_t size)
+{
+	return CoTaskMemAlloc(size);
+}
+void __cdecl XACT3_INTERNAL_Free(void* ptr)
+{
+	CoTaskMemFree(ptr);
+}
+void* __cdecl XACT3_INTERNAL_Realloc(void* ptr, size_t size)
+{
+	return CoTaskMemRealloc(ptr, size);
+}
+
 class XACT3EngineImpl : public IXACT3Engine
 {
 public:
 	XACT3EngineImpl()
 	{
-		FACTCreateEngine(0, &engine);
+		FACTCreateEngineWithCustomAllocatorEXT(
+			0,
+			&engine,
+			XACT3_INTERNAL_Malloc,
+			XACT3_INTERNAL_Free,
+			XACT3_INTERNAL_Realloc
+		);
 	}
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppvInterface)
 	{

@@ -33,8 +33,24 @@ uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
 ) {
+	return FACTCreateEngineWithCustomAllocatorEXT(
+		dwCreationFlags,
+		ppEngine,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FACTCreateEngineWithCustomAllocatorEXT(
+	uint32_t dwCreationFlags,
+	FACTAudioEngine **ppEngine,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
 	/* TODO: Anything fun with dwCreationFlags? */
-	*ppEngine = (FACTAudioEngine*) FAudio_malloc(sizeof(FACTAudioEngine));
+	*ppEngine = (FACTAudioEngine*) customMalloc(sizeof(FACTAudioEngine));
 	if (*ppEngine == NULL)
 	{
 		return -1; /* TODO: E_OUTOFMEMORY */
@@ -43,6 +59,9 @@ uint32_t FACTCreateEngine(
 	(*ppEngine)->sbLock = FAudio_PlatformCreateMutex();
 	(*ppEngine)->wbLock = FAudio_PlatformCreateMutex();
 	(*ppEngine)->apiLock = FAudio_PlatformCreateMutex();
+	(*ppEngine)->pMalloc = customMalloc;
+	(*ppEngine)->pFree = customFree;
+	(*ppEngine)->pRealloc = customRealloc;
 	(*ppEngine)->refcount = 1;
 	return 0;
 }
@@ -69,7 +88,7 @@ uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine)
 	FAudio_PlatformDestroyMutex(pEngine->wbLock);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	FAudio_PlatformDestroyMutex(pEngine->apiLock);
-	FAudio_free(pEngine);
+	pEngine->pFree(pEngine);
 	return 0;
 }
 
@@ -231,6 +250,9 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 {
 	uint32_t i, refcount;
 	FAudioMutex mutex;
+	FAudioMallocFunc pMalloc;
+	FAudioFreeFunc pFree;
+	FAudioReallocFunc pRealloc;
 
 	/* Close thread, then lock ASAP */
 	pEngine->initialized = 0;
@@ -255,35 +277,35 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	/* Category data */
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		FAudio_free(pEngine->categoryNames[i]);
+		pEngine->pFree(pEngine->categoryNames[i]);
 	}
-	FAudio_free(pEngine->categoryNames);
-	FAudio_free(pEngine->categories);
+	pEngine->pFree(pEngine->categoryNames);
+	pEngine->pFree(pEngine->categories);
 
 	/* Variable data */
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		FAudio_free(pEngine->variableNames[i]);
+		pEngine->pFree(pEngine->variableNames[i]);
 	}
-	FAudio_free(pEngine->variableNames);
-	FAudio_free(pEngine->variables);
-	FAudio_free(pEngine->globalVariableValues);
+	pEngine->pFree(pEngine->variableNames);
+	pEngine->pFree(pEngine->variables);
+	pEngine->pFree(pEngine->globalVariableValues);
 
 	/* RPC data */
 	for (i = 0; i < pEngine->rpcCount; i += 1)
 	{
-		FAudio_free(pEngine->rpcs[i].points);
+		pEngine->pFree(pEngine->rpcs[i].points);
 	}
-	FAudio_free(pEngine->rpcs);
-	FAudio_free(pEngine->rpcCodes);
+	pEngine->pFree(pEngine->rpcs);
+	pEngine->pFree(pEngine->rpcCodes);
 
 	/* DSP data */
 	for (i = 0; i < pEngine->dspPresetCount; i += 1)
 	{
-		FAudio_free(pEngine->dspPresets[i].parameters);
+		pEngine->pFree(pEngine->dspPresets[i].parameters);
 	}
-	FAudio_free(pEngine->dspPresets);
-	FAudio_free(pEngine->dspPresetCodes);
+	pEngine->pFree(pEngine->dspPresets);
+	pEngine->pFree(pEngine->dspPresetCodes);
 
 	/* Audio resources */
 	if (pEngine->reverbVoice != NULL)
@@ -296,7 +318,13 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	/* Finally. */
 	refcount = pEngine->refcount;
 	mutex = pEngine->apiLock;
+	pMalloc = pEngine->pMalloc;
+	pFree = pEngine->pFree;
+	pRealloc = pEngine->pRealloc;
 	FAudio_zero(pEngine, sizeof(FACTAudioEngine));
+	pEngine->pMalloc = pMalloc;
+	pEngine->pFree = pFree;
+	pEngine->pRealloc = pRealloc;
 	pEngine->refcount = refcount;
 	pEngine->apiLock = mutex;
 
@@ -840,7 +868,7 @@ uint32_t FACTSoundBank_Prepare(
 		return 1;
 	}
 
-	*ppCue = (FACTCue*) FAudio_malloc(sizeof(FACTCue));
+	*ppCue = (FACTCue*) pSoundBank->parentEngine->pMalloc(sizeof(FACTCue));
 	FAudio_zero(*ppCue, sizeof(FACTCue));
 
 	FAudio_PlatformLockMutex(pSoundBank->parentEngine->apiLock);
@@ -883,7 +911,7 @@ uint32_t FACTSoundBank_Prepare(
 	}
 
 	/* Instance data */
-	(*ppCue)->variableValues = (float*) FAudio_malloc(
+	(*ppCue)->variableValues = (float*) pSoundBank->parentEngine->pMalloc(
 		sizeof(float) * pSoundBank->parentEngine->variableCount
 	);
 	for (i = 0; i < pSoundBank->parentEngine->variableCount; i += 1)
@@ -1056,22 +1084,23 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		LinkedList_RemoveEntry(
 			&pSoundBank->parentEngine->sbList,
 			pSoundBank,
-			pSoundBank->parentEngine->sbLock
+			pSoundBank->parentEngine->sbLock,
+			pSoundBank->parentEngine->pFree
 		);
 	}
 
 	/* SoundBank Name */
-	FAudio_free(pSoundBank->name);
+	pSoundBank->parentEngine->pFree(pSoundBank->name);
 
 	/* Cue data */
-	FAudio_free(pSoundBank->cues);
+	pSoundBank->parentEngine->pFree(pSoundBank->cues);
 
 	/* WaveBank Name data */
 	for (i = 0; i < pSoundBank->wavebankCount; i += 1)
 	{
-		FAudio_free(pSoundBank->wavebankNames[i]);
+		pSoundBank->parentEngine->pFree(pSoundBank->wavebankNames[i]);
 	}
-	FAudio_free(pSoundBank->wavebankNames);
+	pSoundBank->parentEngine->pFree(pSoundBank->wavebankNames);
 
 	/* Sound data */
 	for (i = 0; i < pSoundBank->soundCount; i += 1)
@@ -1089,50 +1118,56 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 				{
 					if (pSoundBank->sounds[i].tracks[j].events[k].wave.isComplex)
 					{
-						FAudio_free(
+						pSoundBank->parentEngine->pFree(
 							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.tracks
 						);
-						FAudio_free(
+						pSoundBank->parentEngine->pFree(
 							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.wavebanks
 						);
-						FAudio_free(
+						pSoundBank->parentEngine->pFree(
 							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.weights
 						);
 					}
 				}
 				#undef MATCH
 			}
-			FAudio_free(pSoundBank->sounds[i].tracks[j].events);
+			pSoundBank->parentEngine->pFree(
+				pSoundBank->sounds[i].tracks[j].events
+			);
 		}
-		FAudio_free(pSoundBank->sounds[i].tracks);
-		FAudio_free(pSoundBank->sounds[i].rpcCodes);
-		FAudio_free(pSoundBank->sounds[i].dspCodes);
+		pSoundBank->parentEngine->pFree(pSoundBank->sounds[i].tracks);
+		pSoundBank->parentEngine->pFree(pSoundBank->sounds[i].rpcCodes);
+		pSoundBank->parentEngine->pFree(pSoundBank->sounds[i].dspCodes);
 	}
-	FAudio_free(pSoundBank->sounds);
-	FAudio_free(pSoundBank->soundCodes);
+	pSoundBank->parentEngine->pFree(pSoundBank->sounds);
+	pSoundBank->parentEngine->pFree(pSoundBank->soundCodes);
 
 	/* Variation data */
 	for (i = 0; i < pSoundBank->variationCount; i += 1)
 	{
-		FAudio_free(pSoundBank->variations[i].entries);
+		pSoundBank->parentEngine->pFree(
+			pSoundBank->variations[i].entries
+		);
 	}
-	FAudio_free(pSoundBank->variations);
-	FAudio_free(pSoundBank->variationCodes);
+	pSoundBank->parentEngine->pFree(pSoundBank->variations);
+	pSoundBank->parentEngine->pFree(pSoundBank->variationCodes);
 
 	/* Transition data */
 	for (i = 0; i < pSoundBank->transitionCount; i += 1)
 	{
-		FAudio_free(pSoundBank->transitions[i].entries);
+		pSoundBank->parentEngine->pFree(
+			pSoundBank->transitions[i].entries
+		);
 	}
-	FAudio_free(pSoundBank->transitions);
-	FAudio_free(pSoundBank->transitionCodes);
+	pSoundBank->parentEngine->pFree(pSoundBank->transitions);
+	pSoundBank->parentEngine->pFree(pSoundBank->transitionCodes);
 
 	/* Cue Name data */
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
-		FAudio_free(pSoundBank->cueNames[i]);
+		pSoundBank->parentEngine->pFree(pSoundBank->cueNames[i]);
 	}
-	FAudio_free(pSoundBank->cueNames);
+	pSoundBank->parentEngine->pFree(pSoundBank->cueNames);
 
 	/* Finally. */
 	if (pSoundBank->notifyOnDestroy)
@@ -1143,7 +1178,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	}
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	FAudio_free(pSoundBank);
+	pSoundBank->parentEngine->pFree(pSoundBank);
 	return 0;
 }
 
@@ -1221,24 +1256,27 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		LinkedList_RemoveEntry(
 			&pWaveBank->parentEngine->wbList,
 			pWaveBank,
-			pWaveBank->parentEngine->wbLock
+			pWaveBank->parentEngine->wbLock,
+			pWaveBank->parentEngine->pFree
 		);
 	}
 
 	/* Free everything, finally. */
-	FAudio_free(pWaveBank->name);
-	FAudio_free(pWaveBank->entries);
-	FAudio_free(pWaveBank->entryRefs);
+	pWaveBank->parentEngine->pFree(pWaveBank->name);
+	pWaveBank->parentEngine->pFree(pWaveBank->entries);
+	pWaveBank->parentEngine->pFree(pWaveBank->entryRefs);
 	if (pWaveBank->seekTables != NULL)
 	{
 		for (i = 0; i < pWaveBank->entryCount; i += 1)
 		{
 			if (pWaveBank->seekTables[i].entries != NULL)
 			{
-				FAudio_free(pWaveBank->seekTables[i].entries);
+				pWaveBank->parentEngine->pFree(
+					pWaveBank->seekTables[i].entries
+				);
 			}
 		}
-		FAudio_free(pWaveBank->seekTables);
+		pWaveBank->parentEngine->pFree(pWaveBank->seekTables);
 	}
 	FAudio_close(pWaveBank->io);
 	if (pWaveBank->notifyOnDestroy)
@@ -1251,7 +1289,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FAudio_PlatformDestroyMutex(pWaveBank->ioLock);
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	FAudio_free(pWaveBank);
+	pWaveBank->parentEngine->pFree(pWaveBank);
 	return 0;
 }
 
@@ -1379,7 +1417,7 @@ uint32_t FACTWaveBank_Prepare(
 		return 1;
 	}
 
-	*ppWave = (FACTWave*) FAudio_malloc(sizeof(FACTWave));
+	*ppWave = (FACTWave*) pWaveBank->parentEngine->pMalloc(sizeof(FACTWave));
 
 	FAudio_PlatformLockMutex(pWaveBank->parentEngine->apiLock);
 
@@ -1494,7 +1532,9 @@ uint32_t FACTWaveBank_Prepare(
 				format.wfx.nBlockAlign
 			);
 		}
-		(*ppWave)->streamCache = (uint8_t*) FAudio_malloc((*ppWave)->streamSize);
+		(*ppWave)->streamCache = (uint8_t*) pWaveBank->parentEngine->pMalloc(
+			(*ppWave)->streamSize
+		);
 		(*ppWave)->streamOffset = entry->PlayRegion.dwOffset;
 
 		/* FIXME: Streaming doesn't support subregions right now >_< */
@@ -1536,7 +1576,8 @@ uint32_t FACTWaveBank_Prepare(
 	LinkedList_AddEntry(
 		&pWaveBank->waveList,
 		*ppWave,
-		pWaveBank->waveLock
+		pWaveBank->waveLock,
+		pWaveBank->parentEngine->pMalloc
 	);
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
@@ -1614,7 +1655,8 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	LinkedList_RemoveEntry(
 		&pWave->parentBank->waveList,
 		pWave,
-		pWave->parentBank->waveLock
+		pWave->parentBank->waveLock,
+		pWave->parentBank->parentEngine->pFree
 	);
 
 	FAudioVoice_DestroyVoice(pWave->voice);
@@ -1628,9 +1670,9 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
 	if (pWave->streamCache != NULL)
 	{
-		FAudio_free(pWave->streamCache);
+		pWave->parentBank->parentEngine->pFree(pWave->streamCache);
 	}
-	FAudio_free(pWave);
+	pWave->parentBank->parentEngine->pFree(pWave);
 	return 0;
 }
 
@@ -1887,7 +1929,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 		FAudio_assert(cue != NULL && "Could not find Cue reference!");
 	}
 
-	FAudio_free(pCue->variableValues);
+	pCue->parentBank->parentEngine->pFree(pCue->variableValues);
 	if (pCue->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
@@ -1896,7 +1938,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	}
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	FAudio_free(pCue);
+	pCue->parentBank->parentEngine->pFree(pCue);
 	return 0;
 }
 
@@ -2366,7 +2408,9 @@ uint32_t FACTCue_GetProperties(
 			pCue->playingSound->sound->trackCount
 		);
 	}
-	cueProps = (FACTCueInstanceProperties*) FAudio_malloc(allocSize);
+	cueProps = (FACTCueInstanceProperties*) pCue->parentBank->parentEngine->pMalloc(
+		allocSize
+	);
 	FAudio_zero(cueProps, allocSize);
 
 	/* Cue Properties */

@@ -29,10 +29,11 @@
 void LinkedList_AddEntry(
 	LinkedList **start,
 	void* toAdd,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioMallocFunc pMalloc
 ) {
 	LinkedList *newEntry, *latest;
-	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
+	newEntry = (LinkedList*) pMalloc(sizeof(LinkedList));
 	newEntry->entry = toAdd;
 	newEntry->next = NULL;
 	FAudio_PlatformLockMutex(lock);
@@ -55,10 +56,11 @@ void LinkedList_AddEntry(
 void LinkedList_PrependEntry(
 	LinkedList **start,
 	void* toAdd,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioMallocFunc pMalloc
 ) {
 	LinkedList *newEntry;
-	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
+	newEntry = (LinkedList*) pMalloc(sizeof(LinkedList));
 	newEntry->entry = toAdd;
 	FAudio_PlatformLockMutex(lock);
 	newEntry->next = *start;
@@ -69,7 +71,8 @@ void LinkedList_PrependEntry(
 void LinkedList_RemoveEntry(
 	LinkedList **start,
 	void* toRemove,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioFreeFunc pFree
 ) {
 	LinkedList *latest, *prev;
 	latest = *start;
@@ -87,7 +90,7 @@ void LinkedList_RemoveEntry(
 			{
 				prev->next = latest->next;
 			}
-			FAudio_free(latest);
+			pFree(latest);
 			FAudio_PlatformUnlockMutex(lock);
 			return;
 		}
@@ -101,10 +104,11 @@ void LinkedList_RemoveEntry(
 void FAudio_INTERNAL_InsertSubmixSorted(
 	LinkedList **start,
 	FAudioSubmixVoice *toAdd,
-	FAudioMutex lock
+	FAudioMutex lock,
+	FAudioMallocFunc pMalloc
 ) {
 	LinkedList *newEntry, *latest;
-	newEntry = (LinkedList*) FAudio_malloc(sizeof(LinkedList));
+	newEntry = (LinkedList*) pMalloc(sizeof(LinkedList));
 	newEntry->entry = toAdd;
 	newEntry->next = NULL;
 	FAudio_PlatformLockMutex(lock);
@@ -255,7 +259,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					}
 				}
 
-				FAudio_free(toDelete);
+				voice->audio->pFree(toDelete);
 			}
 		}
 
@@ -856,7 +860,7 @@ void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t samples)
 	if (samples > audio->decodeSamples)
 	{
 		audio->decodeSamples = samples;
-		audio->decodeCache = (float*) FAudio_realloc(
+		audio->decodeCache = (float*) audio->pRealloc(
 			audio->decodeCache,
 			sizeof(float) * audio->decodeSamples
 		);
@@ -868,7 +872,7 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 	if (samples > audio->resampleSamples)
 	{
 		audio->resampleSamples = samples;
-		audio->resampleCache = (float*) FAudio_realloc(
+		audio->resampleCache = (float*) audio->pRealloc(
 			audio->resampleCache,
 			sizeof(float) * audio->resampleSamples
 		);
@@ -880,7 +884,7 @@ void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples)
 	if (samples > audio->effectChainSamples)
 	{
 		audio->effectChainSamples = samples;
-		audio->effectChainCache = (float*) FAudio_realloc(
+		audio->effectChainCache = (float*) audio->pRealloc(
 			audio->effectChainCache,
 			sizeof(float) * audio->effectChainSamples
 		);
@@ -923,7 +927,7 @@ void FAudio_INTERNAL_AllocEffectChain(
 		pEffectChain->pEffectDescriptors[i].pEffect->AddRef(pEffectChain->pEffectDescriptors[i].pEffect);
 	}
 
-	voice->effects.desc = (FAudioEffectDescriptor*) FAudio_malloc(
+	voice->effects.desc = (FAudioEffectDescriptor*) voice->audio->pMalloc(
 		voice->effects.count * sizeof(FAudioEffectDescriptor)
 	);
 	FAudio_memcpy(
@@ -932,7 +936,7 @@ void FAudio_INTERNAL_AllocEffectChain(
 		voice->effects.count * sizeof(FAudioEffectDescriptor)
 	);
 	#define ALLOC_EFFECT_PROPERTY(prop, type) \
-		voice->effects.prop = (type*) FAudio_malloc( \
+		voice->effects.prop = (type*) voice->audio->pMalloc( \
 			voice->effects.count * sizeof(type) \
 		); \
 		FAudio_zero( \
@@ -961,11 +965,11 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 		voice->effects.desc[i].pEffect->Release(voice->effects.desc[i].pEffect);
 	}
 
-	FAudio_free(voice->effects.desc);
-	FAudio_free(voice->effects.parameters);
-	FAudio_free(voice->effects.parameterSizes);
-	FAudio_free(voice->effects.parameterUpdates);
-	FAudio_free(voice->effects.inPlaceProcessing);
+	voice->audio->pFree(voice->effects.desc);
+	voice->audio->pFree(voice->effects.parameters);
+	voice->audio->pFree(voice->effects.parameterSizes);
+	voice->audio->pFree(voice->effects.parameterUpdates);
+	voice->audio->pFree(voice->effects.inPlaceProcessing);
 }
 
 /* PCM Decoding */

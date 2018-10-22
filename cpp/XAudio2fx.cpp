@@ -67,17 +67,42 @@ private:
 // Create functions
 //
 
+void* __cdecl XAudio2FX_INTERNAL_Malloc(size_t size)
+{
+	return CoTaskMemAlloc(size);
+}
+void __cdecl XAudio2FX_INTERNAL_Free(void* ptr)
+{
+	CoTaskMemFree(ptr);
+}
+void* __cdecl XAudio2FX_INTERNAL_Realloc(void* ptr, size_t size)
+{
+	return CoTaskMemRealloc(ptr, size);
+}
+
 void *CreateAudioVolumeMeterInternal() 
 {
 	FAPO *fapo_object = NULL;
-	FAudioCreateVolumeMeter(&fapo_object, 0);
+	FAudioCreateVolumeMeterWithCustomAllocatorEXT(
+		&fapo_object,
+		0,
+		XAudio2FX_INTERNAL_Malloc,
+		XAudio2FX_INTERNAL_Free,
+		XAudio2FX_INTERNAL_Realloc
+	);
 	return new XAudio2VolumeMeter(fapo_object);
 }
 
 void *CreateAudioReverbInternal() 
 {
 	FAPO *fapo_object = NULL;
-	FAudioCreateReverb(&fapo_object, 0);
+	FAudioCreateReverbWithCustomAllocatorEXT(
+		&fapo_object,
+		0,
+		XAudio2FX_INTERNAL_Malloc,
+		XAudio2FX_INTERNAL_Free,
+		XAudio2FX_INTERNAL_Realloc
+	);
 	return new XAudio2Reverb(fapo_object);
 }
 

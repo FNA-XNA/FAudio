@@ -79,8 +79,12 @@ typedef struct DspDelay
 	float *buffer;
 } DspDelay;
 
-static void DspDelay_Initialize(DspDelay *filter, int32_t sampleRate, float delay_ms)
-{
+static void DspDelay_Initialize(
+	DspDelay *filter,
+	int32_t sampleRate,
+	float delay_ms,
+	FAudioMallocFunc pMalloc
+) {
 	FAudio_assert(delay_ms >= 0 && delay_ms <= DSP_DELAY_MAX_DELAY_MS);
 	FAudio_assert(filter != NULL);
 
@@ -89,7 +93,7 @@ static void DspDelay_Initialize(DspDelay *filter, int32_t sampleRate, float dela
 	filter->delay = FAudioFX_INTERNAL_MsToSamples(delay_ms, sampleRate);
 	filter->read_idx = 0;
 	filter->write_idx = filter->delay;
-	filter->buffer = (float *)FAudio_malloc(filter->capacity * sizeof(float));
+	filter->buffer = (float*) pMalloc(filter->capacity * sizeof(float));
 	FAudio_zero(filter->buffer, filter->capacity * sizeof(float));
 }
 
@@ -151,10 +155,10 @@ static inline void DspDelay_Reset(DspDelay *filter)
 	FAudio_zero(filter->buffer, filter->capacity * sizeof(float));
 }
 
-static void DspDelay_Destroy(DspDelay *filter)
+static void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 {
 	FAudio_assert(filter != NULL);
-	FAudio_free(filter->buffer);
+	pFree(filter->buffer);
 }
 
 /* component - comb filter */
@@ -177,11 +181,16 @@ static inline float DspComb_FeedbackFromRT60(DspComb *filter, float rt60_ms)
 	return (float)FAudio_pow(10.0f, exponent);
 }
 
-static void DspComb_Initialize(DspComb *filter, int32_t sampleRate, float delay_ms, float rt60_ms)
-{
+static void DspComb_Initialize(
+	DspComb *filter,
+	int32_t sampleRate,
+	float delay_ms,
+	float rt60_ms,
+	FAudioMallocFunc pMalloc
+) {
 	FAudio_assert(filter != NULL);
 
-	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms);
+	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms, pMalloc);
 	filter->feedback_gain = DspComb_FeedbackFromRT60(filter, rt60_ms);
 }
 
@@ -212,10 +221,10 @@ static inline void DspComb_Reset(DspComb *filter)
 	DspDelay_Reset(&filter->delay);
 }
 
-static void DspComb_Destroy(DspComb *filter)
+static void DspComb_Destroy(DspComb *filter, FAudioFreeFunc pFree)
 {
 	FAudio_assert(filter != NULL);
-	DspDelay_Destroy(&filter->delay);
+	DspDelay_Destroy(&filter->delay, pFree);
 }
 
 /* component - bi-quad filter */
@@ -358,10 +367,17 @@ static void DspCombShelving_Initialize(
 	float low_frequency,
 	float low_gain,
 	float high_frequency,
-	float high_gain
+	float high_gain,
+	FAudioMallocFunc pMalloc
 ) {
 	FAudio_assert(filter != NULL);
-	DspComb_Initialize(&filter->comb, sampleRate, delay_ms, rt60_ms);
+	DspComb_Initialize(
+		&filter->comb,
+		sampleRate,
+		delay_ms,
+		rt60_ms,
+		pMalloc
+	);
 	DspBiQuad_Initialize(
 		&filter->low_shelving, 
 		sampleRate, 
@@ -408,11 +424,13 @@ static void DspCombShelving_Reset(DspCombShelving *filter)
 	DspBiQuad_Reset(&filter->high_shelving);
 }
 
-static void DspCombShelving_Destroy(DspCombShelving *filter)
-{
+static void DspCombShelving_Destroy(
+	DspCombShelving *filter,
+	FAudioFreeFunc pFree
+) {
 	FAudio_assert(filter != NULL);
 
-	DspComb_Destroy(&filter->comb);
+	DspComb_Destroy(&filter->comb, pFree);
 	DspBiQuad_Destroy(&filter->low_shelving);
 	DspBiQuad_Destroy(&filter->high_shelving);
 }
@@ -424,11 +442,16 @@ typedef struct DspAllPass
 	float feedback_gain;
 } DspAllPass;
 
-static void DspAllPass_Initialize(DspAllPass *filter, int32_t sampleRate, float delay_ms, float gain)
-{
+static void DspAllPass_Initialize(
+	DspAllPass *filter,
+	int32_t sampleRate,
+	float delay_ms,
+	float gain,
+	FAudioMallocFunc pMalloc
+) {
 	FAudio_assert(filter != NULL);
 
-	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms);
+	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms, pMalloc);
 	filter->feedback_gain = gain;
 }
 
@@ -460,10 +483,10 @@ static void DspAllPass_Reset(DspAllPass *filter)
 	DspDelay_Reset(&filter->delay);
 }
 
-static void DspAllPass_Destroy(DspAllPass *filter)
+static void DspAllPass_Destroy(DspAllPass *filter, FAudioFreeFunc pFree)
 {
 	FAudio_assert(filter != NULL);
-	DspDelay_Destroy(&filter->delay);
+	DspDelay_Destroy(&filter->delay, pFree);
 }
 
 /*
@@ -602,28 +625,43 @@ typedef struct DspReverb
 	float dry_ratio;
 } DspReverb;
 
-DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out_channels)
-{
+DspReverb *DspReverb_Create(
+	int32_t sampleRate,
+	int32_t in_channels,
+	int32_t out_channels,
+	FAudioMallocFunc pMalloc
+) {
 	DspReverb *reverb;
 	int32_t i, c;
 
 	FAudio_assert(in_channels == 1 || in_channels == 2);
 	FAudio_assert(out_channels == 1 || out_channels == 2 || out_channels == 6);
 
-	reverb = (DspReverb *)FAudio_malloc(sizeof(DspReverb));
+	reverb = (DspReverb*) pMalloc(sizeof(DspReverb));
 	FAudio_zero(reverb, sizeof(DspReverb));
-	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10);
+	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10, pMalloc);
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 	{
-		DspAllPass_Initialize(&reverb->apf_in[i], sampleRate, APF_IN_DELAYS[i], 0.5f);
+		DspAllPass_Initialize(
+			&reverb->apf_in[i],
+			sampleRate,
+			APF_IN_DELAYS[i],
+			0.5f,
+			pMalloc
+		);
 	}
 
 	reverb->reverb_channels = (out_channels == 6) ? 4 : out_channels;
 
 	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
-		DspDelay_Initialize(&reverb->channel[c].reverb_delay, sampleRate, 10);
+		DspDelay_Initialize(
+			&reverb->channel[c].reverb_delay,
+			sampleRate,
+			10,
+			pMalloc
+		);
 
 		for (i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
@@ -635,7 +673,8 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 				500, 
 				-6, 
 				5000, 
-				-6
+				-6,
+				pMalloc
 			);
 		}
 
@@ -645,7 +684,8 @@ DspReverb *DspReverb_Create(int32_t sampleRate, int32_t in_channels, int32_t out
 				&reverb->channel[c].apf_out[i], 
 				sampleRate, 
 				APF_OUT_DELAYS[i] + STEREO_SPREAD[c], 
-				0.5f
+				0.5f,
+				pMalloc
 			);
 		}
 
@@ -1010,35 +1050,41 @@ void DspReverb_Reset(DspReverb *reverb)
 	}
 }
 
-void DspReverb_Destroy(DspReverb *reverb)
+void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 {
 	int32_t i, c;
 
-	DspDelay_Destroy(&reverb->early_delay);
+	DspDelay_Destroy(&reverb->early_delay, pFree);
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
 	{
-		DspAllPass_Destroy(&reverb->apf_in[i]);
+		DspAllPass_Destroy(&reverb->apf_in[i], pFree);
 	}
 
 	for (c = 0; c < reverb->reverb_channels; ++c)
 	{
-		DspDelay_Destroy(&reverb->channel[c].reverb_delay);
+		DspDelay_Destroy(&reverb->channel[c].reverb_delay, pFree);
 
 		for (i = 0; i < REVERB_COUNT_COMB; ++i)
 		{
-			DspCombShelving_Destroy(&reverb->channel[c].lpf_comb[i]);
+			DspCombShelving_Destroy(
+				&reverb->channel[c].lpf_comb[i],
+				pFree
+			);
 		}
 
 		DspBiQuad_Destroy(&reverb->channel[c].room_high_shelf);
 
 		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
 		{
-			DspAllPass_Destroy(&reverb->channel[c].apf_out[i]);
+			DspAllPass_Destroy(
+				&reverb->channel[c].apf_out[i],
+				pFree
+			);
 		}
 	}
 
-	FAudio_free(reverb);
+	pFree(reverb);
 }
 
 /* Reverb FAPO Implementation */
@@ -1260,7 +1306,12 @@ uint32_t FAudioFXReverb_LockForProcess(
 	/* create the network if necessary */
 	if (fapo->reverb == NULL) 
 	{
-		fapo->reverb = DspReverb_Create(fapo->sampleRate, fapo->inChannels, fapo->outChannels);
+		fapo->reverb = DspReverb_Create(
+			fapo->sampleRate,
+			fapo->inChannels,
+			fapo->outChannels,
+			fapo->base.pMalloc
+		);
 	}
 
 	/* call	parent to do basic validation */
@@ -1399,18 +1450,34 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 void FAudioFXReverb_Free(void* fapo)
 {
 	FAudioFXReverb *reverb = (FAudioFXReverb*) fapo;
-	DspReverb_Destroy(reverb->reverb);
-	FAudio_free(reverb->base.m_pParameterBlocks);
-	FAudio_free(fapo);
+	DspReverb_Destroy(reverb->reverb, reverb->base.pFree);
+	reverb->base.pFree(reverb->base.m_pParameterBlocks);
+	reverb->base.pFree(fapo);
 }
 
 /* Public API */
 
 uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags)
 {
+	return FAudioCreateReverbWithCustomAllocatorEXT(
+		ppApo,
+		Flags,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
 	/* Allocate... */
-	FAudioFXReverb *result = (FAudioFXReverb*) FAudio_malloc(sizeof(FAudioFXReverb));
-	uint8_t *params = (uint8_t*) FAudio_malloc(
+	FAudioFXReverb *result = (FAudioFXReverb*) customMalloc(sizeof(FAudioFXReverb));
+	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAudioFXReverbParameters) * 3
 	);
 
@@ -1420,12 +1487,15 @@ uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags)
 		&FAudioFX_CLSID_AudioReverb,
 		sizeof(FAudioGUID)
 	);
-	CreateFAPOBase(
+	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
 		&ReverbProperties,
 		params,
 		sizeof(FAudioFXReverbParameters),
-		0
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
 	);
 
 	result->inChannels = 0;

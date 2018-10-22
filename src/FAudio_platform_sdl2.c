@@ -130,7 +130,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 	if (deviceList == NULL)
 	{
 		/* Allocate a new device container*/
-		device = (FAudioPlatformDevice*) FAudio_malloc(
+		device = (FAudioPlatformDevice*) audio->pMalloc(
 			sizeof(FAudioPlatformDevice)
 		);
 		device->name = name;
@@ -139,7 +139,8 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		LinkedList_AddEntry(
 			&device->engineList,
 			audio,
-			device->engineLock
+			device->engineLock,
+			audio->pMalloc
 		);
 
 		/* Build the device format */
@@ -183,10 +184,11 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			LinkedList_RemoveEntry(
 				&device->engineList,
 				audio,
-				device->engineLock
+				device->engineLock,
+				audio->pFree
 			);
 			FAudio_PlatformDestroyMutex(device->engineLock);
-			FAudio_free(device);
+			audio->pFree(device);
 			SDL_Log("%s\n", SDL_GetError());
 			FAudio_assert(0 && "Failed to open audio device!");
 			return;
@@ -251,7 +253,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		audio->master->master.inputSampleRate = have.freq;
 
 		/* Add to the device list */
-		LinkedList_AddEntry(&devlist, device, devlock);
+		LinkedList_AddEntry(&devlist, device, devlock, audio->pMalloc);
 
 		/* Start the thread! */
 		SDL_PauseAudioDevice(device->device, 0);
@@ -273,7 +275,8 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		LinkedList_AddEntry(
 			&device->engineList,
 			audio,
-			device->engineLock
+			device->engineLock,
+			audio->pMalloc
 		);
 	}
 }
@@ -304,7 +307,8 @@ void FAudio_PlatformQuit(FAudio *audio)
 			LinkedList_RemoveEntry(
 				&device->engineList,
 				audio,
-				device->engineLock
+				device->engineLock,
+				audio->pFree
 			);
 
 			if (device->engineList == NULL)
@@ -315,10 +319,11 @@ void FAudio_PlatformQuit(FAudio *audio)
 				LinkedList_RemoveEntry(
 					&devlist,
 					device,
-					devlock
+					devlock,
+					audio->pFree
 				);
 				FAudio_PlatformDestroyMutex(device->engineLock);
-				FAudio_free(device);
+				audio->pFree(device);
 			}
 
 			return;

@@ -6,6 +6,19 @@
 // CXAPOBase
 //
 
+void* __cdecl XAPOBase_INTERNAL_Malloc(size_t size)
+{
+	return CoTaskMemAlloc(size);
+}
+void __cdecl XAPOBase_INTERNAL_Free(void* ptr)
+{
+	CoTaskMemFree(ptr);
+}
+void* __cdecl XAPOBase_INTERNAL_Realloc(void* ptr, size_t size)
+{
+	return CoTaskMemRealloc(ptr, size);
+}
+
 CXAPOBase::CXAPOBase(FAPOBase *base) 
 	: fapo_base(base), 
 	  own_fapo_base(false) 
@@ -19,11 +32,16 @@ CXAPOBase::CXAPOBase(const XAPO_REGISTRATION_PROPERTIES* pRegistrationProperties
 	: fapo_base(new FAPOBase()),
 	own_fapo_base(true) 
 {
-	CreateFAPOBase(fapo_base,
-		pRegistrationProperties, 
-		pParameterBlocks, 
-		uParameterBlockByteSize, 
-		fProducer);
+	CreateFAPOBaseWithCustomAllocatorEXT(
+		fapo_base,
+		pRegistrationProperties,
+		pParameterBlocks,
+		uParameterBlockByteSize,
+		fProducer,
+		XAPOBase_INTERNAL_Malloc,
+		XAPOBase_INTERNAL_Free,
+		XAPOBase_INTERNAL_Realloc
+	);
 }
 
 CXAPOBase::~CXAPOBase() 
@@ -74,14 +92,6 @@ ULONG CXAPOBase::Release()
 
 	return refcount;
 }
-
-/* When testing an FAPO effect with Microsoft XAudio2 (not the FAudio wrapper), you'll need to make sure
-   that *ppRegistrationProperties is allocated with CoTaskMemAlloc because CreateVoice will use CoTaskMemFree
-   to release the memory.
-
-	extern "C" __declspec(dllimport) void * __stdcall CoTaskMemAlloc(size_t cb);
-	*ppRegistrationProperties = (XAPO_REGISTRATION_PROPERTIES *) CoTaskMemAlloc(sizeof(XAPO_REGISTRATION_PROPERTIES));
-*/
 
 HRESULT CXAPOBase::GetRegistrationProperties(XAPO_REGISTRATION_PROPERTIES** ppRegistrationProperties) 
 {
