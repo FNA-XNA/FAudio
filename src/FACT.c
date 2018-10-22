@@ -1407,6 +1407,7 @@ uint32_t FACTWaveBank_Prepare(
 	FACTWave **ppWave
 ) {
 	FAudioBuffer buffer;
+	FAudioBufferWMA bufferWMA;
 	FAudioVoiceSends sends;
 	FAudioSendDescriptor send;
 	FAudioADPCMWaveFormat format;
@@ -1485,8 +1486,6 @@ uint32_t FACTWaveBank_Prepare(
 		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
 		format.wfx.wBitsPerSample = 16;
 		format.wfx.cbSize = 0;
-
-		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
 	else /* Includes 0x1 - XMA */
 	{
@@ -1532,6 +1531,11 @@ uint32_t FACTWaveBank_Prepare(
 				format.wfx.nBlockAlign
 			);
 		}
+		else
+		{
+			/* TODO: WMA streaming support */
+			FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
+		}
 		(*ppWave)->streamCache = (uint8_t*) pWaveBank->parentEngine->pMalloc(
 			(*ppWave)->streamSize
 		);
@@ -1569,7 +1573,26 @@ uint32_t FACTWaveBank_Prepare(
 			buffer.LoopCount = nLoopCount;
 		}
 		buffer.pContext = NULL;
-		FAudioSourceVoice_SubmitSourceBuffer((*ppWave)->voice, &buffer, NULL);
+		if (format.wfx.wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
+		{
+			bufferWMA.pDecodedPacketCumulativeBytes =
+				pWaveBank->seekTables[nWaveIndex].entries;
+			bufferWMA.PacketCount =
+				pWaveBank->seekTables[nWaveIndex].entryCount;
+			FAudioSourceVoice_SubmitSourceBuffer(
+				(*ppWave)->voice,
+				&buffer,
+				&bufferWMA
+			);
+		}
+		else
+		{
+			FAudioSourceVoice_SubmitSourceBuffer(
+				(*ppWave)->voice,
+				&buffer,
+				NULL
+			);
+		}
 	}
 
 	/* Add to the WaveBank Wave list */
