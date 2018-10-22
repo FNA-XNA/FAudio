@@ -104,8 +104,11 @@ void FAPOFXMasteringLimiter_Free(void* fapo)
 
 /* Public API */
 
-uint32_t FAPOFXCreateMasteringLimiter(FAPO **pEffect)
-{
+uint32_t FAPOFXCreateMasteringLimiter(
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize
+) {
 	/* Allocate... */
 	FAPOFXMasteringLimiter *result = (FAPOFXMasteringLimiter*) FAudio_malloc(
 		sizeof(FAPOFXMasteringLimiter)
@@ -113,7 +116,17 @@ uint32_t FAPOFXCreateMasteringLimiter(FAPO **pEffect)
 	uint8_t *params = (uint8_t*) FAudio_malloc(
 		sizeof(FAPOFXMasteringLimiterParameters) * 3
 	);
-	FAudio_zero(params, sizeof(FAPOFXMasteringLimiterParameters) * 3);
+	if (pInitData == NULL)
+	{
+		FAudio_zero(params, sizeof(FAPOFXMasteringLimiterParameters) * 3);
+	}
+	else
+	{
+		FAudio_assert(InitDataByteSize == sizeof(FAPOFXMasteringLimiterParameters));
+		FAudio_memcpy(params, pInitData, InitDataByteSize);
+		FAudio_memcpy(params + InitDataByteSize, pInitData, InitDataByteSize);
+		FAudio_memcpy(params + (InitDataByteSize * 2), pInitData, InitDataByteSize);
+	}
 
 	/* Initialize... */
 	FAudio_memcpy(

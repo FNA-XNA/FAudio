@@ -27,17 +27,28 @@
 #include "FAPOFX.h"
 #include "FAudio_internal.h"
 
-extern uint32_t FAPOFXCreateEQ(FAPO **pEffect);
-extern uint32_t FAPOFXCreateMasteringLimiter(FAPO **pEffect);
-extern uint32_t FAPOFXCreateReverb(FAPO **pEffect);
-extern uint32_t FAPOFXCreateEcho(FAPO **pEffect);
+#define CREATE_FUNC(effect) \
+	extern uint32_t FAPOFXCreate##effect( \
+		FAPO **pEffect, \
+		const void *pInitData, \
+		uint32_t InitDataByteSize \
+	);
+CREATE_FUNC(EQ)
+CREATE_FUNC(MasteringLimiter)
+CREATE_FUNC(Reverb)
+CREATE_FUNC(Echo)
+#undef CREATE_FUNC
 
-uint32_t FAPOFX_CreateFX(const FAudioGUID *clsid, FAPO **pEffect)
-{
+uint32_t FAPOFX_CreateFX(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize
+) {
 	#define CHECK_AND_RETURN(effect) \
 		if (FAudio_memcmp(clsid, &FAPOFX_CLSID_FX##effect, sizeof(FAudioGUID)) == 0) \
 		{ \
-			return FAPOFXCreate##effect(pEffect); \
+			return FAPOFXCreate##effect(pEffect, pInitData, InitDataByteSize); \
 		}
 	CHECK_AND_RETURN(EQ)
 	CHECK_AND_RETURN(MasteringLimiter)

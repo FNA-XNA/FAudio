@@ -104,8 +104,11 @@ void FAPOFXEcho_Free(void* fapo)
 
 /* Public API */
 
-uint32_t FAPOFXCreateEcho(FAPO **pEffect)
-{
+uint32_t FAPOFXCreateEcho(
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize
+) {
 	/* Allocate... */
 	FAPOFXEcho *result = (FAPOFXEcho*) FAudio_malloc(
 		sizeof(FAPOFXEcho)
@@ -113,7 +116,17 @@ uint32_t FAPOFXCreateEcho(FAPO **pEffect)
 	uint8_t *params = (uint8_t*) FAudio_malloc(
 		sizeof(FAPOFXEchoParameters) * 3
 	);
-	FAudio_zero(params, sizeof(FAPOFXEchoParameters) * 3);
+	if (pInitData == NULL)
+	{
+		FAudio_zero(params, sizeof(FAPOFXEchoParameters) * 3);
+	}
+	else
+	{
+		FAudio_assert(InitDataByteSize == sizeof(FAPOFXEchoParameters));
+		FAudio_memcpy(params, pInitData, InitDataByteSize);
+		FAudio_memcpy(params + InitDataByteSize, pInitData, InitDataByteSize);
+		FAudio_memcpy(params + (InitDataByteSize * 2), pInitData, InitDataByteSize);
+	}
 
 	/* Initialize... */
 	FAudio_memcpy(

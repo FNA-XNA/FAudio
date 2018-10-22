@@ -133,7 +133,12 @@ typedef struct FAPOFXEchoParameters
 
 /* Functions */
 
-FAPOFXAPI uint32_t FAPOFX_CreateFX(const FAudioGUID *clsid, FAPO **pEffect);
+FAPOFXAPI uint32_t FAPOFX_CreateFX(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize
+);
 
 #ifdef __cplusplus
 }
