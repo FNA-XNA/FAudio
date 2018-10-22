@@ -296,8 +296,8 @@ uint32_t FAudio_CreateSourceVoice(
 				i = FAudio_FFMPEG_init(*ppSourceVoice);	
 				if (i != 0)
 				{
-					FAudio_free((*ppSourceVoice)->src.format);
-					FAudio_free(*ppSourceVoice);
+					audio->pFree((*ppSourceVoice)->src.format);
+					audio->pFree(*ppSourceVoice);
 					return i;	
 				}
 			#else
