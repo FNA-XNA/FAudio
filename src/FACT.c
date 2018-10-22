@@ -165,7 +165,7 @@ uint32_t FACTAudioEngine_Initialize(
 	pEngine->master = pParams->pMasteringVoice;
 	if (pEngine->master == NULL)
 	{
-		if (pParams->pRendererID == NULL)
+		if (pParams->pRendererID == NULL || pParams->pRendererID[0] == 0)
 		{
 			deviceIndex = 0;
 		}

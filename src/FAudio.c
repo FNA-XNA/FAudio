@@ -453,6 +453,47 @@ uint32_t FAudio_CreateMasteringVoice(
 	return 0;
 }
 
+uint32_t FAudio_CreateMasteringVoice(
+	FAudio *audio,
+	FAudioMasteringVoice **ppMasteringVoice,
+	uint32_t InputChannels,
+	uint32_t InputSampleRate,
+	uint32_t Flags,
+	uint16_t *szDeviceId,
+	const FAudioEffectChain *pEffectChain,
+	FAudioStreamCategory StreamCategory
+) {
+	/* Eventually, we'll want the old CreateMastering to call the new one.
+	 * That will depend on us being able to use DeviceID though.
+	 * For now, use our little ID hack to turn szDeviceId into DeviceIndex.
+	 * -flibit
+	 */
+	uint32_t DeviceIndex;
+	if (szDeviceId == NULL || szDeviceId[0] == 0)
+	{
+		DeviceIndex = 0;
+	}
+	else
+	{
+		DeviceIndex = szDeviceId[0] - L'0';
+		if (DeviceIndex > FAudio_PlatformGetDeviceCount())
+		{
+			DeviceIndex = 0;
+		}
+	}
+
+	/* Note that StreamCategory is ignored! */
+	return FAudio_CreateMasteringVoice(
+		audio,
+		ppMasteringVoice,
+		InputChannels,
+		InputSampleRate,
+		Flags,
+		DeviceIndex,
+		pEffectChain
+	);
+}
+
 uint32_t FAudio_StartEngine(FAudio *audio)
 {
 	audio->active = 1;

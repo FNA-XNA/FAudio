@@ -73,6 +73,22 @@ typedef enum FAudioFilterType
 	FAudioNotchFilter
 } FAudioFilterType;
 
+typedef enum FAudioStreamCategory
+{
+	AudioCategory_Other,
+	AudioCategory_ForegroundOnlyMedia,
+	AudioCategory_BackgroundCapableMedia,
+	AudioCategory_Communications,
+	AudioCategory_Alerts,
+	AudioCategory_SoundEffects,
+	AudioCategory_GameEffects,
+	AudioCategory_GameMedia,
+	AudioCategory_GameChat,
+	AudioCategory_Speech,
+	AudioCategory_Movie,
+	AudioCategory_Media
+} FAudioStreamCategory;
+
 /* FIXME: The original enum violates ISO C and is platform specific anyway... */
 typedef uint32_t FAudioProcessor;
 #define FAUDIO_DEFAULT_PROCESSOR 0xFFFFFFFF
@@ -465,6 +481,17 @@ FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
 	uint32_t Flags,
 	uint32_t DeviceIndex,
 	const FAudioEffectChain *pEffectChain
+);
+
+FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
+	FAudio *audio,
+	FAudioMasteringVoice **ppMasteringVoice,
+	uint32_t InputChannels,
+	uint32_t InputSampleRate,
+	uint32_t Flags,
+	uint16_t *szDeviceId,
+	const FAudioEffectChain *pEffectChain,
+	FAudioStreamCategory StreamCategory
 );
 
 FAUDIOAPI uint32_t FAudio_StartEngine(FAudio *audio);
