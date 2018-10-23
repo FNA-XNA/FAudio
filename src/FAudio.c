@@ -225,9 +225,9 @@ uint32_t FAudio_CreateSourceVoice(
 	FAudio_assert(MaxFrequencyRatio <= FAUDIO_MAX_FREQ_RATIO);
 	(*ppSourceVoice)->src.maxFreqRatio = MaxFrequencyRatio;
 
-	if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
+	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT ||
-		pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2) 
+		pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2	)
 	{
 		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) audio->pMalloc(
 			sizeof(FAudioWaveFormatExtensible)
@@ -292,24 +292,24 @@ uint32_t FAudio_CreateSourceVoice(
 		}
 		else if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_WMAUDIO2, sizeof(FAudioGUID)) == 0)
 		{
-			#ifdef HAVE_FFMPEG
-				i = FAudio_FFMPEG_init(*ppSourceVoice);	
-				if (i != 0)
-				{
-					audio->pFree((*ppSourceVoice)->src.format);
-					audio->pFree(*ppSourceVoice);
-					return i;	
-				}
-			#else
-				FAudio_assert(0 && "xWMA is not supported!");
-			#endif
+#ifdef HAVE_FFMPEG
+			i = FAudio_FFMPEG_init(*ppSourceVoice);
+			if (i != 0)
+			{
+				audio->pFree((*ppSourceVoice)->src.format);
+				audio->pFree(*ppSourceVoice);
+				return i;
+			}
+#else
+			FAudio_assert(0 && "xWMA is not supported!");
+#endif /* HAVE_FFMPEG */
 		}
 		else
 		{
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
 		}
 	}
-	else if((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
+	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		(*ppSourceVoice)->src.decode = ((*ppSourceVoice)->src.format->nChannels == 2) ?
 			FAudio_INTERNAL_DecodeStereoMSADPCM :
@@ -417,7 +417,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	/* Sends/Effects */
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
-	
+
 	/* Default Levels */
 	(*ppSubmixVoice)->volume = 1.0f;
 	(*ppSubmixVoice)->channelVolume = (float*) audio->pMalloc(
@@ -1315,12 +1315,12 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		);
 		voice->audio->pFree(voice->src.format);
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
-		#ifdef HAVE_FFMPEG
-			if (voice->src.ffmpeg) 
-			{
-				FAudio_FFMPEG_free(voice);
-			}
-		#endif /* HAVE_FFMPEG */
+#ifdef HAVE_FFMPEG
+		if (voice->src.ffmpeg)
+		{
+			FAudio_FFMPEG_free(voice);
+		}
+#endif /* HAVE_FFMPEG */
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -1458,8 +1458,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	FAudioBufferEntry *entry, *list;
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 #ifdef HAVE_FFMPEG
-	FAudio_assert((voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
-				  (voice->src.ffmpeg == NULL && pBufferWMA == NULL));
+	FAudio_assert(	(voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
+			(voice->src.ffmpeg == NULL && pBufferWMA == NULL)	);
 #endif
 
 	/* Start off with whatever they just sent us... */
@@ -1550,12 +1550,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->buffer.PlayLength = playLength;
 	entry->buffer.LoopBegin = loopBegin;
 	entry->buffer.LoopLength = loopLength;
-	#ifdef HAVE_FFMPEG
+#ifdef HAVE_FFMPEG
 	if (pBufferWMA != NULL)
 	{
 		FAudio_memcpy(&entry->bufferWMA, pBufferWMA, sizeof(FAudioBufferWMA));
 	}
-	#endif /* HAVE_FFMPEG */
+#endif /* HAVE_FFMPEG */
 	entry->next = NULL;
 
 	if (	voice->audio->version <= 7 && (

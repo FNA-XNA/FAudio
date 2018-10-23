@@ -197,9 +197,9 @@ typedef struct FAudioBufferEntry FAudioBufferEntry;
 struct FAudioBufferEntry
 {
 	FAudioBuffer buffer;
-	#ifdef HAVE_FFMPEG
+#ifdef HAVE_FFMPEG
 	FAudioBufferWMA bufferWMA;
-	#endif /* HAVE_FFMPEG */
+#endif /* HAVE_FFMPEG */
 	FAudioBufferEntry *next;
 };
 
@@ -314,9 +314,9 @@ struct FAudioVoice
 			uint32_t curBufferOffset;
 
 			/* FFmpeg */
-			#ifdef HAVE_FFMPEG
-				struct FAudioFFmpeg *ffmpeg;
-			#endif /* HAVE_FFMPEG*/
+#ifdef HAVE_FFMPEG
+			struct FAudioFFmpeg *ffmpeg;
+#endif /* HAVE_FFMPEG*/
 
 			/* Read-only */
 			float maxFreqRatio;

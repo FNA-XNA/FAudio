@@ -9,7 +9,7 @@ extern "C" {
 }
 #endif
 
-typedef struct FAudioFFmpeg 
+typedef struct FAudioFFmpeg
 {
 	AVCodecContext *av_ctx;
 	AVFrame *av_frame;
@@ -45,7 +45,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	}
 
 	av_ctx = avcodec_alloc_context3(codec);
-	if(!av_ctx)
+	if (!av_ctx)
 	{
 		FAudio_assert(0 && "WMAv2 codec not supported!");
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
@@ -86,14 +86,15 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	}
 
 	av_frame = av_frame_alloc();
-	if (!av_frame) {
+	if (!av_frame)
+	{
 		avcodec_close(av_ctx);
 		pSourceVoice->audio->pFree(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
-	if(av_ctx->sample_fmt != AV_SAMPLE_FMT_FLT && av_ctx->sample_fmt != AV_SAMPLE_FMT_FLTP)
+	if (av_ctx->sample_fmt != AV_SAMPLE_FMT_FLT && av_ctx->sample_fmt != AV_SAMPLE_FMT_FLTP)
 	{
 		FAudio_assert(0 && "Got non-float format!!!");
 	}
@@ -168,7 +169,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 				{
 					ffmpeg->paddingBytes = remain + AV_INPUT_BUFFER_PADDING_SIZE;
 					ffmpeg->paddingBuffer = (uint8_t *) voice->audio->pRealloc(
-						ffmpeg->paddingBuffer, 
+						ffmpeg->paddingBuffer,
 						ffmpeg->paddingBytes
 					);
 				}
@@ -191,10 +192,10 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 			continue;
 		}
 
-		if (averr) 
+		if (averr)
 		{
 			FAudio_assert(0 && "avcodec_receive_frame failed" && averr);
-			return; 
+			return;
 		}
 		else
 		{
@@ -220,8 +221,8 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 	else
 	{
 		FAudio_memcpy(
-			ffmpeg->convertCache, 
-			ffmpeg->av_frame->data[0], 
+			ffmpeg->convertCache,
+			ffmpeg->av_frame->data[0],
 			total_samples * sizeof(float)
 		);
 	}
@@ -264,8 +265,8 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 
 	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 
-	while (done < *samples) 
-	{	
+	while (done < *samples)
+	{
 		/* check for available data in decoded cache, refill if necessary */
 		if (ffmpeg->convertOffset >= ffmpeg->convertSamples)
 		{
@@ -280,8 +281,8 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 
 		todo = FAudio_min(available, *samples - done);
 		FAudio_memcpy(
-			decodeCache + (done * voice->src.format->nChannels), 
-			ffmpeg->convertCache + ffmpeg->convertOffset, 
+			decodeCache + (done * voice->src.format->nChannels),
+			ffmpeg->convertCache + ffmpeg->convertOffset,
 			todo * voice->src.format->nChannels * sizeof(float)
 		);
 
