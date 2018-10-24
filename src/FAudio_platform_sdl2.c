@@ -210,7 +210,6 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		}
 
 		/* Write up the format */
-		device->format.Samples.wValidBitsPerSample = 32;
 		device->format.Format.wBitsPerSample = 32;
 		device->format.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
 		device->format.Format.nChannels = have.channels;
@@ -224,6 +223,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			device->format.Format.nBlockAlign
 		);
 		device->format.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+		device->format.Samples.wValidBitsPerSample = 32;
 		device->format.dwChannelMask = GetMask(device->format.Format.nChannels);
 		FAudio_memcpy(&device->format.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
 		device->bufferSize = have.samples;
@@ -363,10 +363,8 @@ void FAudio_PlatformGetDeviceDetails(
 	{
 		details->OutputFormat.Format.nChannels = 2;
 	}
-	details->OutputFormat.dwChannelMask = GetMask(details->OutputFormat.Format.nChannels);
-	details->OutputFormat.Samples.wValidBitsPerSample = 32;
 	details->OutputFormat.Format.wBitsPerSample = 32;
-	details->OutputFormat.Format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
+	details->OutputFormat.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
 	details->OutputFormat.Format.nBlockAlign = (
 		details->OutputFormat.Format.nChannels *
 		(details->OutputFormat.Format.wBitsPerSample / 8)
@@ -375,6 +373,10 @@ void FAudio_PlatformGetDeviceDetails(
 		details->OutputFormat.Format.nSamplesPerSec *
 		details->OutputFormat.Format.nBlockAlign
 	);
+	details->OutputFormat.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+	details->OutputFormat.Samples.wValidBitsPerSample = 32;
+	details->OutputFormat.dwChannelMask = GetMask(details->OutputFormat.Format.nChannels);
+	FAudio_memcpy(&details->OutputFormat.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
 }
 
 FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(
