@@ -67,15 +67,15 @@ private:
 // Create functions
 //
 
-void* __cdecl XAudio2FX_INTERNAL_Malloc(size_t size)
+void* CDECL XAudio2FX_INTERNAL_Malloc(size_t size)
 {
 	return CoTaskMemAlloc(size);
 }
-void __cdecl XAudio2FX_INTERNAL_Free(void* ptr)
+void CDECL XAudio2FX_INTERNAL_Free(void* ptr)
 {
 	CoTaskMemFree(ptr);
 }
-void* __cdecl XAudio2FX_INTERNAL_Realloc(void* ptr, size_t size)
+void* CDECL XAudio2FX_INTERNAL_Realloc(void* ptr, size_t size)
 {
 	return CoTaskMemRealloc(ptr, size);
 }

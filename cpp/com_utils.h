@@ -21,6 +21,12 @@ extern "C" DLLIMPORT void * __stdcall CoTaskMemAlloc(size_t cb);
 extern "C" DLLIMPORT void __stdcall CoTaskMemFree(void* ptr);
 extern "C" DLLIMPORT void * __stdcall CoTaskMemRealloc(void* ptr, size_t cb);
 
+#ifdef __WINE__
+#define CDECL
+#else
+#define CDECL __cdecl
+#endif
+
 // common windows types
 #ifndef FAUDIO_USE_STD_TYPES
 

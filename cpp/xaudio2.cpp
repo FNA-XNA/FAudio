@@ -974,9 +974,9 @@ private:
 // IXAudio2MasteringVoice implementation
 //
 
-#if (XAUDIO2_VERSION >= 8)
+#if (XAUDIO2_VERSION >= 8) && !defined(__WINE__)
 uint32_t device_index_from_device_id(FAudio *faudio, LPCWSTR deviceId);
-#endif // (XAUDIO2_VERSION >= 8)
+#endif // (XAUDIO2_VERSION >= 8) && !defined(__WINE__)
 
 class XAudio2MasteringVoiceImpl : public IXAudio2MasteringVoice
 {
@@ -1021,10 +1021,12 @@ public:
 
 		uint32_t device_index = 0;
 
+#ifndef __WINE__
 		if (szDeviceId != NULL)
 		{
 			device_index = device_index_from_device_id(faudio, szDeviceId);
 		}
+#endif // !__WINE__
 
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(
@@ -1255,15 +1257,15 @@ private:
 // IXAudio2 implementation
 //
 
-void* __cdecl XAudio2_INTERNAL_Malloc(size_t size)
+void* CDECL XAudio2_INTERNAL_Malloc(size_t size)
 {
 	return CoTaskMemAlloc(size);
 }
-void __cdecl XAudio2_INTERNAL_Free(void* ptr)
+void CDECL XAudio2_INTERNAL_Free(void* ptr)
 {
 	CoTaskMemFree(ptr);
 }
-void* __cdecl XAudio2_INTERNAL_Realloc(void* ptr, size_t size)
+void* CDECL XAudio2_INTERNAL_Realloc(void* ptr, size_t size)
 {
 	return CoTaskMemRealloc(ptr, size);
 }

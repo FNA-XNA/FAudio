@@ -6,15 +6,15 @@
 // CXAPOBase
 //
 
-void* __cdecl XAPOBase_INTERNAL_Malloc(size_t size)
+void* CDECL XAPOBase_INTERNAL_Malloc(size_t size)
 {
 	return CoTaskMemAlloc(size);
 }
-void __cdecl XAPOBase_INTERNAL_Free(void* ptr)
+void CDECL XAPOBase_INTERNAL_Free(void* ptr)
 {
 	CoTaskMemFree(ptr);
 }
-void* __cdecl XAPOBase_INTERNAL_Realloc(void* ptr, size_t size)
+void* CDECL XAPOBase_INTERNAL_Realloc(void* ptr, size_t size)
 {
 	return CoTaskMemRealloc(ptr, size);
 }

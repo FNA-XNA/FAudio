@@ -3,6 +3,7 @@ Use FAudio as a substitute for XAudio2 without changing or recompiling the host 
 Works on:
 - Windows 
 - Wine on Linux as a native (= Windows binary) DLL
+- Wine on Linux as a builtin (= Linux binary) DLL
 
 ## Building
 
@@ -34,6 +35,23 @@ The project includes two shell scripts to set up your environment for cross-comp
 
 The results are stored in either the ```build_win32``` or ```build_win64``` subdirectory. 
 
+### Building builtin Wine DLLs 
+The C++/COM wrapper has a separate Makefile for building Wine linux shared libraries. It's assumed that you're running a 64-bit Linux system.
+
+#### Building 64-bit shared libraries
+- will be used by 64-bit Windows applications
+- check if the ```WINEDIR``` variable in ```Makefile.wine``` points to the Wine directory on your system.
+- build FACT as usual (```make```)
+- build the C++/COM wrapper: ```make -f Makefile.wine```
+
+#### Building 32-bit shared libraries
+- will be used by 32-bit Windows applications
+- check if the ```WINEDIR``` variable in ```Makefile.wine``` points to the Wine directory on your system.
+- Note: your sytem has to be setup to build 32-bit binaries (e.g. multilib). You'll also need a 32-bit SDL2 with working sound drivers.
+- make sure the 32-bit ```sdl-config ```is first on your ```PATH``` so it's pickup up by the build process
+- build 32-bit FACT: ```CFLAGS=-m32 make clean all```
+- build 32-bit C++/COM wrapper: ```ARCH=32 make -f Makefile.wine clean all```
+
 ## Using the wrapper
 
 ### Windows - XAudio version 2.8+
@@ -55,6 +73,11 @@ A Wine prefix is a directory that contains a Wine configuration, registry, and n
 
 The ```wine_setup_native``` script (in the ```cpp/scripts``` subdirectory) does just this. Run it from a directory containing the wrapper DLLs (32 or 64 bit) and it will create symbolic links in the Wine prefix and modify the Wine registry to make sure Wine only uses the native DLLs.
 
+### Wine - builtin DLLs
+The native DLLs use Wine's sound layers, replacing the builtin DLLs lets you bypass these. The WINEDLLPATH environment variable can be used to add DLL search directories to Wine but unfortunately these do not override the standard directories. In order to use the wrapper DLLs the standard Wine shared libraries (e.g in /opt/wine-staging/lib(64)/wine) have to be removed / renamed first. Also Wine has to be configured to use the builtin DLLs before the native DLLs for xaudio (see ```winecfg```).
+
+Please note: the version 2.8+ wrapper builtin DLLs do not implement device enumeration. The Windows device id's are pretty meaningless when passed to a linux SDL implementation.
+
 ### How can I check if the wrapper DLLs are actually being used?
 - Build the wrapper DLLs with tracing enabled (at the top of ```xaudio2.cpp```)
     - check to see if log entries are added when running the application
@@ -74,5 +97,5 @@ The COM wrapper DLLs depend on both FAudio.dll and SDL2.dll. During the build pr
     - Are you using PulseAudio? Try setting the ```PULSE_LATENCY_MSEC``` environment variable to 60 to fix this.
 3. Wine games are silent after installing the native DLLs
     - Some MinGW setups will silently link to libwinpthread-1.dll, resulting in failure to load the DLLs if this is not present. Usually this is quickly solved with a line like `ln -sf /usr/i686-w64-mingw32/sys-root/mingw/bin/libwinpthread-1.dll $WINEPREFIX/drive_c/windows/system32/libwinpthread-1.dll`
-4. Wine audio may sound choppy with the COM wrapper
+4. Wine audio may sound choppy with the native DLLs
     - Set `SDL_AUDIODRIVER=directsound`. For Proton, this is `SDL_AUDIODRIVER=directsound %command%` in the Steam Launch Options.

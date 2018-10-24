@@ -368,15 +368,15 @@ extern size_t FAUDIOCALL wrap_io_read(
 extern int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence);
 extern int FAUDIOCALL wrap_io_close(void *data);
 
-void* __cdecl XACT3_INTERNAL_Malloc(size_t size)
+void* CDECL XACT3_INTERNAL_Malloc(size_t size)
 {
 	return CoTaskMemAlloc(size);
 }
-void __cdecl XACT3_INTERNAL_Free(void* ptr)
+void CDECL XACT3_INTERNAL_Free(void* ptr)
 {
 	CoTaskMemFree(ptr);
 }
-void* __cdecl XACT3_INTERNAL_Realloc(void* ptr, size_t size)
+void* CDECL XACT3_INTERNAL_Realloc(void* ptr, size_t size)
 {
 	return CoTaskMemRealloc(ptr, size);
 }
