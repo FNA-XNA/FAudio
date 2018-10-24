@@ -45,7 +45,7 @@ typedef struct FAudioPlatformDevice
 LinkedList *devlist = NULL;
 FAudioMutex devlock = NULL;
 
-/* Speaker Channel Mask Helper */
+/* WaveFormatExtensible Helpers */
 
 static inline uint32_t GetMask(uint16_t channels)
 {
@@ -58,6 +58,29 @@ static inline uint32_t GetMask(uint16_t channels)
 	if (channels == 8) return SPEAKER_7POINT1;
 	FAudio_assert(0 && "Unrecognized speaker layout!");
 	return SPEAKER_STEREO;
+}
+
+static inline void WriteWaveFormatExtensible(
+	FAudioWaveFormatExtensible *fmt,
+	int channels,
+	int samplerate
+) {
+	fmt->Format.wBitsPerSample = 32;
+	fmt->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
+	fmt->Format.nChannels = channels;
+	fmt->Format.nSamplesPerSec = samplerate;
+	fmt->Format.nBlockAlign = (
+		fmt->Format.nChannels *
+		(fmt->Format.wBitsPerSample / 8)
+	);
+	fmt->Format.nAvgBytesPerSec = (
+		fmt->Format.nSamplesPerSec *
+		fmt->Format.nBlockAlign
+	);
+	fmt->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+	fmt->Samples.wValidBitsPerSample = 32;
+	fmt->dwChannelMask = GetMask(fmt->Format.nChannels);
+	FAudio_memcpy(&fmt->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
 }
 
 /* Mixer Thread */
@@ -210,22 +233,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		}
 
 		/* Write up the format */
-		device->format.Format.wBitsPerSample = 32;
-		device->format.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
-		device->format.Format.nChannels = have.channels;
-		device->format.Format.nSamplesPerSec = have.freq;
-		device->format.Format.nBlockAlign = (
-			device->format.Format.nChannels *
-			(device->format.Format.wBitsPerSample / 8)
-		);
-		device->format.Format.nAvgBytesPerSec = (
-			device->format.Format.nSamplesPerSec *
-			device->format.Format.nBlockAlign
-		);
-		device->format.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
-		device->format.Samples.wValidBitsPerSample = 32;
-		device->format.dwChannelMask = GetMask(device->format.Format.nChannels);
-		FAudio_memcpy(&device->format.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+		WriteWaveFormatExtensible(&device->format, have.channels, have.freq);
 		device->bufferSize = have.samples;
 
 		/* Give the output format to the engine */
@@ -328,6 +336,7 @@ void FAudio_PlatformGetDeviceDetails(
 	FAudioDeviceDetails *details
 ) {
 	const char *name, *envvar;
+	int channels, rate;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 	if (index > FAudio_PlatformGetDeviceCount())
@@ -354,29 +363,16 @@ void FAudio_PlatformGetDeviceDetails(
 
 	/* TODO: SDL_GetAudioDeviceSpec! */
 	envvar = SDL_getenv("SDL_AUDIO_FREQUENCY");
-	if (!envvar || ((details->OutputFormat.Format.nSamplesPerSec = SDL_atoi(envvar)) == 0))
+	if (!envvar || ((rate = SDL_atoi(envvar)) == 0))
 	{
-		details->OutputFormat.Format.nSamplesPerSec = 48000;
+		rate = 48000;
 	}
 	envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
-	if (!envvar || ((details->OutputFormat.Format.nChannels = SDL_atoi(envvar)) == 0))
+	if (!envvar || ((channels = SDL_atoi(envvar)) == 0))
 	{
-		details->OutputFormat.Format.nChannels = 2;
+		channels = 2;
 	}
-	details->OutputFormat.Format.wBitsPerSample = 32;
-	details->OutputFormat.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
-	details->OutputFormat.Format.nBlockAlign = (
-		details->OutputFormat.Format.nChannels *
-		(details->OutputFormat.Format.wBitsPerSample / 8)
-	);
-	details->OutputFormat.Format.nAvgBytesPerSec = (
-		details->OutputFormat.Format.nSamplesPerSec *
-		details->OutputFormat.Format.nBlockAlign
-	);
-	details->OutputFormat.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
-	details->OutputFormat.Samples.wValidBitsPerSample = 32;
-	details->OutputFormat.dwChannelMask = GetMask(details->OutputFormat.Format.nChannels);
-	FAudio_memcpy(&details->OutputFormat.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+	WriteWaveFormatExtensible(&details->OutputFormat, channels, rate);
 }
 
 FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(
