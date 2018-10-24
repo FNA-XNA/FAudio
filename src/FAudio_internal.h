@@ -454,6 +454,13 @@ DECODE_FUNC(StereoMSADPCM)
 DECODE_FUNC(FFMPEG)
 #undef DECODE_FUNC
 
+/* FFmpeg */
+
+#ifdef HAVE_FFMPEG
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice);
+void FAudio_FFMPEG_free(FAudioSourceVoice *voice);
+#endif /* HAVE_FFMPEG */
+
 /* Platform Functions */
 
 void FAudio_PlatformAddRef(void);
@@ -480,12 +487,6 @@ uint32_t FAudio_PlatformResample(
 	float *output,
 	uint32_t outLen
 );
-
-/* FFmpeg */
-#ifdef HAVE_FFMPEG
-uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice);
-void FAudio_FFMPEG_free(FAudioSourceVoice *voice);
-#endif /* HAVE_FFMPEG */
 
 /* Threading */
 

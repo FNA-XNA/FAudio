@@ -45,6 +45,21 @@ typedef struct FAudioPlatformDevice
 LinkedList *devlist = NULL;
 FAudioMutex devlock = NULL;
 
+/* Speaker Channel Mask Helper */
+
+static inline uint32_t GetMask(uint16_t channels)
+{
+	if (channels == 1) return SPEAKER_MONO;
+	if (channels == 2) return SPEAKER_STEREO;
+	if (channels == 3) return SPEAKER_2POINT1;
+	if (channels == 4) return SPEAKER_QUAD;
+	if (channels == 5) return SPEAKER_4POINT1;
+	if (channels == 6) return SPEAKER_5POINT1;
+	if (channels == 8) return SPEAKER_7POINT1;
+	FAudio_assert(0 && "Unrecognized speaker layout!");
+	return SPEAKER_STEREO;
+}
+
 /* Mixer Thread */
 
 void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
@@ -209,38 +224,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			device->format.Format.nBlockAlign
 		);
 		device->format.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
-		if (have.channels == 1)
-		{
-			device->format.dwChannelMask = SPEAKER_MONO;
-		}
-		else if (have.channels == 2)
-		{
-			device->format.dwChannelMask = SPEAKER_STEREO;
-		}
-		else if (have.channels == 3)
-		{
-			device->format.dwChannelMask = SPEAKER_2POINT1;
-		}
-		else if (have.channels == 4)
-		{
-			device->format.dwChannelMask = SPEAKER_QUAD;
-		}
-		else if (have.channels == 5)
-		{
-			device->format.dwChannelMask = SPEAKER_4POINT1;
-		}
-		else if (have.channels == 6)
-		{
-			device->format.dwChannelMask = SPEAKER_5POINT1;
-		}
-		else if (have.channels == 8)
-		{
-			device->format.dwChannelMask = SPEAKER_7POINT1;
-		}
-		else
-		{
-			FAudio_assert(0 && "Unrecognized speaker layout!");
-		}
+		device->format.dwChannelMask = GetMask(device->format.Format.nChannels);
 		FAudio_memcpy(&device->format.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
 		device->bufferSize = have.samples;
 
@@ -379,38 +363,7 @@ void FAudio_PlatformGetDeviceDetails(
 	{
 		details->OutputFormat.Format.nChannels = 2;
 	}
-	if (details->OutputFormat.Format.nChannels == 1)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_MONO;
-	}
-	else if (details->OutputFormat.Format.nChannels == 2)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_STEREO;
-	}
-	else if (details->OutputFormat.Format.nChannels == 3)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_2POINT1;
-	}
-	else if (details->OutputFormat.Format.nChannels == 4)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_QUAD;
-	}
-	else if (details->OutputFormat.Format.nChannels == 5)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_4POINT1;
-	}
-	else if (details->OutputFormat.Format.nChannels == 6)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_5POINT1;
-	}
-	else if (details->OutputFormat.Format.nChannels == 8)
-	{
-		details->OutputFormat.dwChannelMask = SPEAKER_7POINT1;
-	}
-	else
-	{
-		FAudio_assert(0 && "Unrecognized speaker layout!");
-	}
+	details->OutputFormat.dwChannelMask = GetMask(details->OutputFormat.Format.nChannels);
 	details->OutputFormat.Samples.wValidBitsPerSample = 32;
 	details->OutputFormat.Format.wBitsPerSample = 32;
 	details->OutputFormat.Format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
@@ -533,7 +486,7 @@ FAudioIOStream* FAudio_fopen(const char *path)
 
 FAudioIOStream* FAudio_memopen(void *mem, int len)
 {
-	FAudioIOStream *io = (FAudioIOStream*) SDL_malloc(
+	FAudioIOStream *io = (FAudioIOStream*) FAudio_malloc(
 		sizeof(FAudioIOStream)
 	);
 	SDL_RWops *rwops = SDL_RWFromMem(mem, len);
@@ -554,7 +507,7 @@ uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 void FAudio_close(FAudioIOStream *io)
 {
 	io->close(io->data);
-	SDL_free(io);
+	FAudio_free(io);
 }
 
 /* UTF8->UTF16 Conversion, taken from PhysicsFS */
