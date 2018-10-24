@@ -26,6 +26,8 @@ else
 	WINELIBDIR = $(WINEDIR)/lib64
 endif
 
+CXXFLAGS += -I$(WINEDIR)/include/wine/wine/windows
+
 LDFLAGS += $(MACHINE) -Wl,-Bsymbolic -Wl,-z,defs -Wl,-init,__wine_spec_init,-fini,__wine_spec_fini 
 LDFLAGS += -Wl,-z,max-page-size=0x1000 -Wl,-z,max-page-size=0x1000 -L$(WINELIBDIR) -L..
 		
