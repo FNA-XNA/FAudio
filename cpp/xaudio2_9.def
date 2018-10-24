@@ -4,3 +4,4 @@ EXPORTS
     CreateAudioVolumeMeter @3
     X3DAudioCalculate @5
     X3DAudioInitialize @6
+    CreateFX @7

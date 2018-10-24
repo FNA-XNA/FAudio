@@ -47,9 +47,14 @@ XAUDIO2_SRC_x28 = \
 	com_utils.cpp \
 	xaudio2.cpp \
 	XAudio2fx.cpp \
-	X3DAudio.cpp
+	X3DAudio.cpp \
+	XAPOFX.cpp
 
-X3DAUDIO_SRC = 	X3DAudio.cpp
+X3DAUDIO_SRC = X3DAudio.cpp
+
+XAPOFX_SRC = \
+	com_utils_xapofx.cpp \
+	XAPOFX.cpp
 
 XACT3_SRC = \
 	com_utils_xact.cpp \
@@ -104,6 +109,21 @@ X3DAUDIO16_OBJ = $(X3DAUDIO_SRC:%.cpp=$(BUILD_DIR)/%_x16.o)
 
 X3DAUDIO17_TARGET = $(BUILD_DIR)/x3daudio1_7.dll.so
 X3DAUDIO17_OBJ = $(X3DAUDIO_SRC:%.cpp=$(BUILD_DIR)/%_x17.o)
+
+XAPOFX11_TARGET = $(BUILD_DIR)/xapofx1_1.dll.so
+XAPOFX11_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx11.o)
+
+XAPOFX12_TARGET = $(BUILD_DIR)/xapofx1_2.dll.so
+XAPOFX12_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx12.o)
+
+XAPOFX13_TARGET = $(BUILD_DIR)/xapofx1_3.dll.so
+XAPOFX13_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx13.o)
+
+XAPOFX14_TARGET = $(BUILD_DIR)/xapofx1_4.dll.so
+XAPOFX14_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx14.o)
+
+XAPOFX15_TARGET = $(BUILD_DIR)/xapofx1_5.dll.so
+XAPOFX15_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx15.o)
 
 XACT30_TARGET = $(BUILD_DIR)/xactengine3_0.dll.so
 XACT30_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x30.o)
@@ -179,6 +199,21 @@ $(BUILD_DIR)/%_x16.o:%.cpp
 $(BUILD_DIR)/%_x17.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+$(BUILD_DIR)/%_fx11.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx12.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx13.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx14.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx15.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 $(BUILD_DIR)/%_x30.o:%.cpp
 	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=0 -c -o $@ $<
 
@@ -208,6 +243,8 @@ all: $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET)
      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) \
      $(X3DAUDIO13_TARGET) $(X3DAUDIO14_TARGET) $(X3DAUDIO15_TARGET) \
      $(X3DAUDIO16_TARGET) $(X3DAUDIO17_TARGET) $(XAPO_TARGET) \
+     $(XAPOFX11_TARGET) $(XAPOFX12_TARGET) $(XAPOFX13_TARGET) \
+     $(XAPOFX14_TARGET) $(XAPOFX15_TARGET) \
      $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
      $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET)
 
@@ -298,7 +335,7 @@ $(X3DAUDIO13_TARGET) : directories $(X3DAUDIO13_OBJ)
 	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/x3daudio1_3_def.o -E x3daudio.def $(X3DAUDIO13_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 	$(CXX) $(LDFLAGS) -shared -o $@ $(X3DAUDIO13_OBJ) $(BUILD_DIR)/x3daudio1_3_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
-		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+		-lwine -lm -lc -lFAudio
 	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E x3daudio.def $(X3DAUDIO13_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 
@@ -306,7 +343,7 @@ $(X3DAUDIO14_TARGET) : directories $(X3DAUDIO14_OBJ)
 	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/x3daudio1_4_def.o -E x3daudio.def $(X3DAUDIO14_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 	$(CXX) $(LDFLAGS) -shared -o $@ $(X3DAUDIO14_OBJ) $(BUILD_DIR)/x3daudio1_4_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
-		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+		-lwine -lm -lc -lFAudio
 	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E x3daudio.def $(X3DAUDIO14_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 
@@ -314,7 +351,7 @@ $(X3DAUDIO15_TARGET) : directories $(X3DAUDIO15_OBJ)
 	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/x3daudio1_5_def.o -E x3daudio.def $(X3DAUDIO15_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 	$(CXX) $(LDFLAGS) -shared -o $@ $(X3DAUDIO15_OBJ) $(BUILD_DIR)/x3daudio1_5_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
-		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+		-lwine -lm -lc -lFAudio
 	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E x3daudio.def $(X3DAUDIO15_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 
@@ -322,7 +359,7 @@ $(X3DAUDIO16_TARGET) : directories $(X3DAUDIO16_OBJ)
 	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/x3daudio1_6_def.o -E x3daudio.def $(X3DAUDIO16_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 	$(CXX) $(LDFLAGS) -shared -o $@ $(X3DAUDIO16_OBJ) $(BUILD_DIR)/x3daudio1_6_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
-		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+		-lwine -lm -lc -lFAudio
 	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E x3daudio.def $(X3DAUDIO16_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 
@@ -330,9 +367,49 @@ $(X3DAUDIO17_TARGET) : directories $(X3DAUDIO17_OBJ)
 	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/x3daudio1_7_def.o -E x3daudio.def $(X3DAUDIO17_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
 	$(CXX) $(LDFLAGS) -shared -o $@ $(X3DAUDIO17_OBJ) $(BUILD_DIR)/x3daudio1_7_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
-		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+		-lwine -lm -lc -lFAudio
 	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E x3daudio.def $(X3DAUDIO17_OBJ) \
 		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def 
+
+$(XAPOFX11_TARGET) : directories $(XAPOFX11_OBJ) $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/xapofx1_1_def.o -E xapofx.def $(XAPOFX11_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+	$(CXX) $(LDFLAGS) -shared -o $@ $(XAPOFX11_OBJ) $(BUILD_DIR)/xapofx1_1_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
+		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E xapofx.def $(XAPOFX11_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+
+$(XAPOFX12_TARGET) : directories $(XAPOFX12_OBJ) $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/xapofx1_2_def.o -E xapofx.def $(XAPOFX12_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+	$(CXX) $(LDFLAGS) -shared -o $@ $(XAPOFX12_OBJ) $(BUILD_DIR)/xapofx1_2_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
+		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E xapofx.def $(XAPOFX12_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+
+$(XAPOFX13_TARGET) : directories $(XAPOFX13_OBJ) $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/xapofx1_3_def.o -E xapofx.def $(XAPOFX13_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+	$(CXX) $(LDFLAGS) -shared -o $@ $(XAPOFX13_OBJ) $(BUILD_DIR)/xapofx1_3_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
+		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E xapofx.def $(XAPOFX13_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+
+$(XAPOFX14_TARGET) : directories $(XAPOFX14_OBJ) $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/xapofx1_4_def.o -E xapofx.def $(XAPOFX14_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+	$(CXX) $(LDFLAGS) -shared -o $@ $(XAPOFX14_OBJ) $(BUILD_DIR)/xapofx1_4_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
+		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E xapofx.def $(XAPOFX14_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+
+$(XAPOFX15_TARGET) : directories $(XAPOFX15_OBJ) $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/xapofx1_5_def.o -E xapofx.def $(XAPOFX15_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
+	$(CXX) $(LDFLAGS) -shared -o $@ $(XAPOFX15_OBJ) $(BUILD_DIR)/xapofx1_5_def.o $(WINELIBDIR)/wine/libwinecrt0.a \
+		-lwine -lm -lc -lFAudio $(XAPO_TARGET)
+	$(WINEBUILD) $(WBFLAGS) --dll --fake-module -o $@.fake -E xapofx.def $(XAPOFX15_OBJ) \
+		-L$(WINELIBDIR)/wine $(WINELIBDIR)/wine/libwinecrt0.a $(WINELIBDIR)/wine/libkernel32.def $(WINELIBDIR)/wine/libntdll.def $(WINELIBDIR)/wine/libole32.def
 
 $(XACT30_TARGET) : directories $(XACT30_OBJ)
 	$(WINEBUILD) $(WBFLAGS) --dll -o $(BUILD_DIR)/xact_def.o -E xact3_7.def $(XACT30_OBJ) \
@@ -410,6 +487,8 @@ clean:
 	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) \
 	      $(X3DAUDIO13_TARGET) $(X3DAUDIO14_TARGET) $(X3DAUDIO15_TARGET) \
 	      $(X3DAUDIO16_TARGET) $(X3DAUDIO17_TARGET) $(XAPO_TARGET) \
+	      $(XAPOFX11_TARGET) $(XAPOFX12_TARGET) $(XAPOFX13_TARGET) \
+	      $(XAPOFX14_TARGET) $(XAPOFX15_TARGET) \
 	      $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
 	      $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET) \
 	      $(BUILD_DIR)/*.o $(BUILD_DIR)/*.fake
