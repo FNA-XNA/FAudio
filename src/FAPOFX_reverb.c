@@ -112,6 +112,12 @@ uint32_t FAPOFXCreateReverb(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 ) {
+	const FAPOFXReverbParameters fxdefault =
+	{
+		FAPOFXREVERB_DEFAULT_DIFFUSION,
+		FAPOFXREVERB_DEFAULT_ROOMSIZE,
+	};
+
 	/* Allocate... */
 	FAPOFXReverb *result = (FAPOFXReverb*) customMalloc(
 		sizeof(FAPOFXReverb)
@@ -122,6 +128,16 @@ uint32_t FAPOFXCreateReverb(
 	if (pInitData == NULL)
 	{
 		FAudio_zero(params, sizeof(FAPOFXReverbParameters) * 3);
+		#define INITPARAMS(offset) \
+			FAudio_memcpy( \
+				params + sizeof(FAPOFXReverbParameters) * offset, \
+				&fxdefault, \
+				sizeof(FAPOFXReverbParameters) \
+			);
+		INITPARAMS(0)
+		INITPARAMS(1)
+		INITPARAMS(2)
+		#undef INITPARAMS
 	}
 	else
 	{

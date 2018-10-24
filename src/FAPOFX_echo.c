@@ -112,6 +112,13 @@ uint32_t FAPOFXCreateEcho(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 ) {
+	const FAPOFXEchoParameters fxdefault =
+	{
+		FAPOFXECHO_DEFAULT_WETDRYMIX,
+		FAPOFXECHO_DEFAULT_FEEDBACK,
+		FAPOFXECHO_DEFAULT_DELAY
+	};
+
 	/* Allocate... */
 	FAPOFXEcho *result = (FAPOFXEcho*) customMalloc(
 		sizeof(FAPOFXEcho)
@@ -122,6 +129,16 @@ uint32_t FAPOFXCreateEcho(
 	if (pInitData == NULL)
 	{
 		FAudio_zero(params, sizeof(FAPOFXEchoParameters) * 3);
+		#define INITPARAMS(offset) \
+			FAudio_memcpy( \
+				params + sizeof(FAPOFXEchoParameters) * offset, \
+				&fxdefault, \
+				sizeof(FAPOFXEchoParameters) \
+			);
+		INITPARAMS(0)
+		INITPARAMS(1)
+		INITPARAMS(2)
+		#undef INITPARAMS
 	}
 	else
 	{

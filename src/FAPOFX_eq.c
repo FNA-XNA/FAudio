@@ -112,6 +112,22 @@ uint32_t FAPOFXCreateEQ(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 ){
+	const FAPOFXEQParameters fxdefault =
+	{
+		FAPOFXEQ_DEFAULT_FREQUENCY_CENTER_0,
+		FAPOFXEQ_DEFAULT_GAIN,
+		FAPOFXEQ_DEFAULT_BANDWIDTH,
+		FAPOFXEQ_DEFAULT_FREQUENCY_CENTER_1,
+		FAPOFXEQ_DEFAULT_GAIN,
+		FAPOFXEQ_DEFAULT_BANDWIDTH,
+		FAPOFXEQ_DEFAULT_FREQUENCY_CENTER_2,
+		FAPOFXEQ_DEFAULT_GAIN,
+		FAPOFXEQ_DEFAULT_BANDWIDTH,
+		FAPOFXEQ_DEFAULT_FREQUENCY_CENTER_3,
+		FAPOFXEQ_DEFAULT_GAIN,
+		FAPOFXEQ_DEFAULT_BANDWIDTH
+	};
+
 	/* Allocate... */
 	FAPOFXEQ *result = (FAPOFXEQ*) customMalloc(
 		sizeof(FAPOFXEQ)
@@ -122,6 +138,16 @@ uint32_t FAPOFXCreateEQ(
 	if (pInitData == NULL)
 	{
 		FAudio_zero(params, sizeof(FAPOFXEQParameters) * 3);
+		#define INITPARAMS(offset) \
+			FAudio_memcpy( \
+				params + sizeof(FAPOFXEQParameters) * offset, \
+				&fxdefault, \
+				sizeof(FAPOFXEQParameters) \
+			);
+		INITPARAMS(0)
+		INITPARAMS(1)
+		INITPARAMS(2)
+		#undef INITPARAMS
 	}
 	else
 	{

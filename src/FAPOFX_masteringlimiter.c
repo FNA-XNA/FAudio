@@ -112,6 +112,12 @@ uint32_t FAPOFXCreateMasteringLimiter(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 ) {
+	const FAPOFXMasteringLimiterParameters fxdefault =
+	{
+		FAPOFXMASTERINGLIMITER_DEFAULT_RELEASE,
+		FAPOFXMASTERINGLIMITER_DEFAULT_LOUDNESS
+	};
+
 	/* Allocate... */
 	FAPOFXMasteringLimiter *result = (FAPOFXMasteringLimiter*) customMalloc(
 		sizeof(FAPOFXMasteringLimiter)
@@ -122,6 +128,16 @@ uint32_t FAPOFXCreateMasteringLimiter(
 	if (pInitData == NULL)
 	{
 		FAudio_zero(params, sizeof(FAPOFXMasteringLimiterParameters) * 3);
+		#define INITPARAMS(offset) \
+			FAudio_memcpy( \
+				params + sizeof(FAPOFXMasteringLimiterParameters) * offset, \
+				&fxdefault, \
+				sizeof(FAPOFXMasteringLimiterParameters) \
+			);
+		INITPARAMS(0)
+		INITPARAMS(1)
+		INITPARAMS(2)
+		#undef INITPARAMS
 	}
 	else
 	{
