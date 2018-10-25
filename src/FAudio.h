@@ -75,18 +75,18 @@ typedef enum FAudioFilterType
 
 typedef enum FAudioStreamCategory
 {
-	AudioCategory_Other,
-	AudioCategory_ForegroundOnlyMedia,
-	AudioCategory_BackgroundCapableMedia,
-	AudioCategory_Communications,
-	AudioCategory_Alerts,
-	AudioCategory_SoundEffects,
-	AudioCategory_GameEffects,
-	AudioCategory_GameMedia,
-	AudioCategory_GameChat,
-	AudioCategory_Speech,
-	AudioCategory_Movie,
-	AudioCategory_Media
+	FAudioStreamCategory_Other,
+	FAudioStreamCategory_ForegroundOnlyMedia,
+	FAudioStreamCategory_BackgroundCapableMedia,
+	FAudioStreamCategory_Communications,
+	FAudioStreamCategory_Alerts,
+	FAudioStreamCategory_SoundEffects,
+	FAudioStreamCategory_GameEffects,
+	FAudioStreamCategory_GameMedia,
+	FAudioStreamCategory_GameChat,
+	FAudioStreamCategory_Speech,
+	FAudioStreamCategory_Movie,
+	FAudioStreamCategory_Media
 } FAudioStreamCategory;
 
 /* FIXME: The original enum violates ISO C and is platform specific anyway... */
