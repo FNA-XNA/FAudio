@@ -5,7 +5,8 @@
 UNAME = $(shell uname)
 ARCH = $(shell uname -m)
 
-LDFLAGS += `sdl2-config --libs`
+# Install information
+INSTALL_PREFIX ?= /usr/local
 
 # Detect Windows target
 WINDOWS_TARGET=0
@@ -17,7 +18,7 @@ ifneq (,$(findstring w64-mingw32,$(CC))) # mingw-w64 on Linux
 endif
 
 # Compiler
-ifeq ($(WINDOWS_TARGET),1)
+ifeq ($(WINDOWS_TARGET), 1)
 	TARGET_PREFIX = 
 	TARGET_SUFFIX = dll
 	UTIL_SUFFIX = .exe
@@ -34,7 +35,9 @@ else
 	UTIL_SUFFIX = 
 endif
 
+# Compile/Link flags
 CFLAGS += -g -Wall -pedantic
+LDFLAGS += `sdl2-config --libs`
 
 # Source lists
 FAUDIOSRC = \
@@ -90,7 +93,29 @@ all: $(FAUDIOOBJ)
 clean:
 	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX)
 
-.PHONY: testparse facttool testreverb testvolumemeter testfilter testxwma
+.PHONY: install uninstall testparse facttool testreverb testvolumemeter testfilter testxwma
+
+install: all
+	cp $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
+	cp src/FAudio.h $(INSTALL_PREFIX)/include/FAudio.h
+	cp src/FAudioFX.h $(INSTALL_PREFIX)/include/FAudioFX.h
+	cp src/F3DAudio.h $(INSTALL_PREFIX)/include/F3DAudio.h
+	cp src/FAPOFX.h $(INSTALL_PREFIX)/include/FAPOFX.h
+	cp src/FAPO.h $(INSTALL_PREFIX)/include/FAPO.h
+	cp src/FAPOBase.h $(INSTALL_PREFIX)/include/FAPOBase.h
+	cp src/FACT.h $(INSTALL_PREFIX)/include/FACT.h
+	cp src/FACT3D.h $(INSTALL_PREFIX)/include/FACT3D.h
+
+uninstall:
+	rm -f $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
+	rm -f $(INSTALL_PREFIX)/include/FAudio.h
+	rm -f $(INSTALL_PREFIX)/include/FAudioFX.h
+	rm -f $(INSTALL_PREFIX)/include/F3DAudio.h
+	rm -f $(INSTALL_PREFIX)/include/FAPOFX.h
+	rm -f $(INSTALL_PREFIX)/include/FAPO.h
+	rm -f $(INSTALL_PREFIX)/include/FAPOBase.h
+	rm -f $(INSTALL_PREFIX)/include/FACT.h
+	rm -f $(INSTALL_PREFIX)/include/FACT3D.h
 
 testparse:
 	$(CC) -g -Wall -pedantic -o testparse$(UTIL_SUFFIX) \
