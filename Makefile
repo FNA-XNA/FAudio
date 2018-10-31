@@ -7,6 +7,7 @@ ARCH = $(shell uname -m)
 
 # Install information
 INSTALL_PREFIX ?= /usr/local
+INSTALL ?= install -D
 
 # Detect Windows target
 WINDOWS_TARGET=0
@@ -96,15 +97,15 @@ clean:
 .PHONY: install uninstall testparse facttool testreverb testvolumemeter testfilter testxwma
 
 install: all
-	cp $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
-	cp src/FAudio.h $(INSTALL_PREFIX)/include/FAudio.h
-	cp src/FAudioFX.h $(INSTALL_PREFIX)/include/FAudioFX.h
-	cp src/F3DAudio.h $(INSTALL_PREFIX)/include/F3DAudio.h
-	cp src/FAPOFX.h $(INSTALL_PREFIX)/include/FAPOFX.h
-	cp src/FAPO.h $(INSTALL_PREFIX)/include/FAPO.h
-	cp src/FAPOBase.h $(INSTALL_PREFIX)/include/FAPOBase.h
-	cp src/FACT.h $(INSTALL_PREFIX)/include/FACT.h
-	cp src/FACT3D.h $(INSTALL_PREFIX)/include/FACT3D.h
+	$(INSTALL) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
+	$(INSTALL) src/FAudio.h $(INSTALL_PREFIX)/include/FAudio.h
+	$(INSTALL) src/FAudioFX.h $(INSTALL_PREFIX)/include/FAudioFX.h
+	$(INSTALL) src/F3DAudio.h $(INSTALL_PREFIX)/include/F3DAudio.h
+	$(INSTALL) src/FAPOFX.h $(INSTALL_PREFIX)/include/FAPOFX.h
+	$(INSTALL) src/FAPO.h $(INSTALL_PREFIX)/include/FAPO.h
+	$(INSTALL) src/FAPOBase.h $(INSTALL_PREFIX)/include/FAPOBase.h
+	$(INSTALL) src/FACT.h $(INSTALL_PREFIX)/include/FACT.h
+	$(INSTALL) src/FACT3D.h $(INSTALL_PREFIX)/include/FACT3D.h
 
 uninstall:
 	rm -f $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
