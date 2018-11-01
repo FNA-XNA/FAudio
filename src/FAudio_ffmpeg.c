@@ -267,7 +267,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
 	uint32_t decSampleSize = voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8;
 	uint32_t outSampleSize = voice->src.format->nChannels * sizeof(float);
-	uint32_t done = 0, available, todo;
+	uint32_t done = 0, available, todo, cumulative;
 
 	/* check if we need to reposition in the stream */
 	if (voice->src.curBufferOffset != ffmpeg->decOffset)
@@ -282,10 +282,19 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 			packetIdx -= 1;
 		}
 
+		if (packetIdx == 0)
+		{
+			cumulative = 0;
+		}
+		else
+		{
+			cumulative = bufferWMA->pDecodedPacketCumulativeBytes[packetIdx - 1];
+		}
+
 		/* seek to the wanted position in the stream */
 		ffmpeg->encOffset = packetIdx * voice->src.format->nBlockAlign;
 		FAudio_INTERNAL_FillConvertCache(voice, buffer);
-		ffmpeg->convertOffset = (byteOffset - (packetIdx > 0) ? bufferWMA->pDecodedPacketCumulativeBytes[packetIdx-1] : 0) / outSampleSize;
+		ffmpeg->convertOffset = (byteOffset - cumulative) / outSampleSize;
 		ffmpeg->decOffset = voice->src.curBufferOffset;
 	}
 
