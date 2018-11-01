@@ -1426,6 +1426,7 @@ void F3DAudioCalculate(
 	uint32_t Flags,
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
+	uint32_t i;
 	F3DAUDIO_VECTOR emitterToListener;
 	float eToLDistance, normalizedDistance, dp;
 
@@ -1538,6 +1539,10 @@ void F3DAudioCalculate(
 	if (	(Flags & F3DAUDIO_CALCULATE_DELAY) &&
 		SPEAKERMASK(Instance) == SPEAKER_STEREO	)
 	{
+		for (i = 0; i < pDSPSettings->DstChannelCount; i += 1)
+		{
+			pDSPSettings->pDelayTimes[i] = 0.0f;
+		}
 		FAudio_assert(0 && "DELAY not implemented!");
 	}
 }
