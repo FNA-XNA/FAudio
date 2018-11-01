@@ -1174,15 +1174,21 @@ static inline void CalculateMatrix(
 	uint32_t DstChannelCount,
 	F3DAUDIO_VECTOR emitterToListener,
 	float eToLDistance,
+	float normalizedDistance,
 	float* MatrixCoefficients
 ) {
 	uint32_t iEC;
 	float curEmAzimuth;
 	const ConfigInfo* curConfig = GetConfigInfo(ChannelMask);
-	float nd = eToLDistance / pEmitter->CurveDistanceScaler;
-	float attenuation = ComputeDistanceAttenuation(nd, pEmitter->pVolumeCurve);
+	float attenuation = ComputeDistanceAttenuation(
+		normalizedDistance,
+		pEmitter->pVolumeCurve
+	);
 	/* TODO: this could be skipped if the destination has no LFE */
-	float LFEattenuation = ComputeDistanceAttenuation(nd, pEmitter->pLFECurve);
+	float LFEattenuation = ComputeDistanceAttenuation(
+		normalizedDistance,
+		pEmitter->pLFECurve
+	);
 
 	F3DAUDIO_VECTOR listenerToEmitter;
 	F3DAUDIO_VECTOR listenerToEmChannel;
@@ -1421,7 +1427,22 @@ void F3DAudioCalculate(
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
 	F3DAUDIO_VECTOR emitterToListener;
-	float eToLDistance, dp;
+	float eToLDistance, normalizedDistance, dp;
+
+	#define DEFAULT_POINTS(name, x1, y1, x2, y2) \
+		static F3DAUDIO_DISTANCE_CURVE_POINT name##Points[2] = \
+		{ \
+			{ x1, y1 }, \
+			{ x2, y2 } \
+		}; \
+		static F3DAUDIO_DISTANCE_CURVE name##Default = \
+		{ \
+			(F3DAUDIO_DISTANCE_CURVE_POINT*) &name##Points[0], 2 \
+		};
+	DEFAULT_POINTS(lpfDirect, 0.0f, 1.0f, 1.0f, 0.75f)
+	DEFAULT_POINTS(lpfReverb, 0.0f, 0.75f, 1.0f, 0.75f)
+	DEFAULT_POINTS(reverb, 0.0f, 1.0f, 1.0f, 0.0f)
+	#undef DEFAULT_POINTS
 
 	/* For XACT, this calculates "Distance" */
 	emitterToListener = VectorSub(pListener->Position, pEmitter->Position);
@@ -1429,6 +1450,9 @@ void F3DAudioCalculate(
 	pDSPSettings->EmitterToListenerDistance = eToLDistance;
 
 	F3DAudioCheckCalculateParams(Instance, pListener, pEmitter, Flags, pDSPSettings);
+
+	/* This is used by MATRIX, LPF, and REVERB */
+	normalizedDistance = eToLDistance / pEmitter->CurveDistanceScaler;
 
 	if (Flags & F3DAUDIO_CALCULATE_MATRIX)
 	{
@@ -1441,7 +1465,38 @@ void F3DAudioCalculate(
 			pDSPSettings->DstChannelCount,
 			emitterToListener,
 			eToLDistance,
+			normalizedDistance,
 			pDSPSettings->pMatrixCoefficients
+		);
+	}
+
+	if (Flags & F3DAUDIO_CALCULATE_LPF_DIRECT)
+	{
+		pDSPSettings->LPFDirectCoefficient = ComputeDistanceAttenuation(
+			normalizedDistance,
+			(pEmitter->pLPFDirectCurve != NULL) ?
+				pEmitter->pLPFDirectCurve :
+				&lpfDirectDefault
+		);
+	}
+
+	if (Flags & F3DAUDIO_CALCULATE_LPF_REVERB)
+	{
+		pDSPSettings->LPFReverbCoefficient = ComputeDistanceAttenuation(
+			normalizedDistance,
+			(pEmitter->pLPFReverbCurve != NULL) ?
+				pEmitter->pLPFReverbCurve :
+				&lpfReverbDefault
+		);
+	}
+
+	if (Flags & F3DAUDIO_CALCULATE_REVERB)
+	{
+		pDSPSettings->ReverbLevel = ComputeDistanceAttenuation(
+			normalizedDistance,
+			(pEmitter->pReverbCurve != NULL) ?
+				pEmitter->pReverbCurve :
+				&reverbDefault
 		);
 	}
 
@@ -1483,22 +1538,5 @@ void F3DAudioCalculate(
 	if (Flags & F3DAUDIO_CALCULATE_DELAY)
 	{
 		FAudio_assert(0 && "DELAY not implemented!");
-	}
-	if (Flags & F3DAUDIO_CALCULATE_LPF_DIRECT)
-	{
-		/* A default value of 0.75 is fine as a zero order approximation. */
-		pDSPSettings->LPFDirectCoefficient = 0.75f;
-		FAudio_assert(0 && "LPF_DIRECT not implemented!");
-	}
-	if (Flags & F3DAUDIO_CALCULATE_LPF_REVERB)
-	{
-		/* Ditto. */
-		pDSPSettings->LPFReverbCoefficient = 0.75f;
-		FAudio_assert(0 && "LPF_REVERB not implemented!");
-	}
-	if (Flags & F3DAUDIO_CALCULATE_REVERB)
-	{
-		pDSPSettings->ReverbLevel = 0.0f;
-		FAudio_assert(0 && "REVERB not implemented!");
 	}
 }
