@@ -1535,7 +1535,8 @@ void F3DAudioCalculate(
 	}
 
 	/* Unimplemented Flags */
-	if (Flags & F3DAUDIO_CALCULATE_DELAY)
+	if (	(Flags & F3DAUDIO_CALCULATE_DELAY) &&
+		SPEAKERMASK(Instance) == SPEAKER_STEREO	)
 	{
 		FAudio_assert(0 && "DELAY not implemented!");
 	}
