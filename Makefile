@@ -85,23 +85,32 @@ endif
 
 
 # Object code lists
-FAUDIOOBJ = $(FAUDIOSRC:%.c=%.o)
+ifneq ($(FAUDIO_OUT),)
+	FAUDIO_LIBOUT ?= $(FAUDIO_OUT)
+else
+	FAUDIO_OUT = src
+	FAUDIO_LIBOUT = .
+endif
+FAUDIOOBJ = $(FAUDIOSRC:src/%.c=$(FAUDIO_OUT)/%.o)
+
+# Final library name
+FAUDIOLIB = $(FAUDIO_LIBOUT)/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
 
 # Targets
 
 all: $(FAUDIOOBJ)
-	$(CC) $(CFLAGS) -shared -o $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) $(FAUDIOOBJ) $(LDFLAGS)
+	$(CC) $(CFLAGS) -shared -o $(FAUDIOLIB) $(FAUDIOOBJ) $(LDFLAGS)
 
-%.o: %.c
+$(FAUDIO_OUT)/%.o: src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
 
 clean:
-	rm -f $(FAUDIOOBJ) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX)
+	rm -f $(FAUDIOOBJ) $(FAUDIOLIB) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX)
 
 .PHONY: install uninstall testparse facttool testreverb testvolumemeter testfilter testxwma
 
 install: all
-	$(INSTALL) $(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX) $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
+	$(INSTALL) $(FAUDIOLIB) $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
 	$(INSTALL) src/FAudio.h $(INSTALL_PREFIX)/include/FAudio.h
 	$(INSTALL) src/FAudioFX.h $(INSTALL_PREFIX)/include/FAudioFX.h
 	$(INSTALL) src/F3DAudio.h $(INSTALL_PREFIX)/include/F3DAudio.h
