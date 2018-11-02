@@ -62,7 +62,7 @@ FAUDIOSRC = \
 	src/FAPOFX_reverb.c \
 	src/FAPOFX_echo.c \
 	src/FAudio_platform_sdl2.c
-ifneq ($(COM_WRAPPER), 1)
+ifneq ($(DISABLE_XNASONG), 1)
 	FAUDIOSRC += src/XNA_Song.c
 endif
 
