@@ -37,7 +37,11 @@ else
 endif
 
 # Compile/Link flags
-CFLAGS += -g -Wall -pedantic
+ifeq ($(FAUDIO_RELEASE),1)
+	CFLAGS += -O3
+else
+	CFLAGS += -g -Wall -pedantic
+endif
 LDFLAGS += `sdl2-config --libs`
 
 # Source lists
