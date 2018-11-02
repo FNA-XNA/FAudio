@@ -105,7 +105,7 @@ $(FAUDIO_OUT)/%.o: src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
 
 clean:
-	rm -f $(FAUDIOOBJ) $(FAUDIOLIB) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX)
+	rm -f $(FAUDIOOBJ) $(FAUDIOLIB) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX) testxwma$(UTIL_SUFFIX)
 
 .PHONY: install uninstall testparse facttool testreverb testvolumemeter testfilter testxwma
 
