@@ -31,6 +31,50 @@
 
 const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter =
 {
+	0xC4137916,
+	0x2BE1,
+	0x46FD,
+	{
+		0x85,
+		0x99,
+		0x44,
+		0x15,
+		0x36,
+		0xF4,
+		0x98,
+		0x56
+	}
+};
+
+static FAPORegistrationProperties FXMasteringLimiterProperties =
+{
+	/* .clsid = */ {0},
+	/* .FriendlyName = */
+	{
+		'F', 'X', 'M', 'a', 's', 't', 'e', 'r', 'i', 'n', 'g', 'L', 'i', 'm', 'i', 't', 'e', 'r', '\0'
+	},
+	/*.CopyrightInfo = */
+	{
+		'C', 'o', 'p', 'y', 'r', 'i', 'g', 'h', 't', ' ', '(', 'c', ')',
+		'E', 't', 'h', 'a', 'n', ' ', 'L', 'e', 'e', '\0'
+	},
+	/*.MajorVersion = */ 0,
+	/*.MinorVersion = */ 0,
+	/*.Flags = */(
+		FAPO_FLAG_FRAMERATE_MUST_MATCH |
+		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
+		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
+		FAPO_FLAG_INPLACE_SUPPORTED |
+		FAPO_FLAG_INPLACE_REQUIRED
+	),
+	/*.MinInputBufferCount = */ 1,
+	/*.MaxInputBufferCount = */  1,
+	/*.MinOutputBufferCount = */ 1,
+	/*.MaxOutputBufferCount =*/ 1
+};
+
+const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter_LEGACY =
+{
 	0xA90BC001,
 	0xE897,
 	0xE897,
@@ -46,7 +90,7 @@ const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter =
 	}
 };
 
-static FAPORegistrationProperties FXMasteringLimiterProperties =
+static FAPORegistrationProperties FXMasteringLimiterProperties_LEGACY =
 {
 	/* .clsid = */ {0},
 	/* .FriendlyName = */
@@ -128,7 +172,8 @@ uint32_t FAPOFXCreateMasteringLimiter(
 	uint32_t InitDataByteSize,
 	FAudioMallocFunc customMalloc,
 	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
+	FAudioReallocFunc customRealloc,
+	uint8_t legacy
 ) {
 	const FAPOFXMasteringLimiterParameters fxdefault =
 	{
@@ -167,13 +212,18 @@ uint32_t FAPOFXCreateMasteringLimiter(
 
 	/* Initialize... */
 	FAudio_memcpy(
+		&FXMasteringLimiterProperties_LEGACY.clsid,
+		&FAPOFX_CLSID_FXMasteringLimiter_LEGACY,
+		sizeof(FAudioGUID)
+	);
+	FAudio_memcpy(
 		&FXMasteringLimiterProperties.clsid,
 		&FAPOFX_CLSID_FXMasteringLimiter,
 		sizeof(FAudioGUID)
 	);
 	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
-		&FXMasteringLimiterProperties,
+		legacy ? &FXMasteringLimiterProperties_LEGACY : &FXMasteringLimiterProperties,
 		params,
 		sizeof(FAPOFXMasteringLimiterParameters),
 		0,

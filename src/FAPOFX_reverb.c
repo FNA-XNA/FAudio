@@ -31,6 +31,50 @@
 
 const FAudioGUID FAPOFX_CLSID_FXReverb =
 {
+	0x7D9ACA56,
+	0xCB68,
+	0x4807,
+	{
+		0xB6,
+		0x32,
+		0xB1,
+		0x37,
+		0x35,
+		0x2E,
+		0x85,
+		0x96
+	}
+};
+
+static FAPORegistrationProperties FXReverbProperties =
+{
+	/* .clsid = */ {0},
+	/* .FriendlyName = */
+	{
+		'F', 'X', 'R', 'e', 'v', 'e', 'r', 'b', '\0'
+	},
+	/*.CopyrightInfo = */
+	{
+		'C', 'o', 'p', 'y', 'r', 'i', 'g', 'h', 't', ' ', '(', 'c', ')',
+		'E', 't', 'h', 'a', 'n', ' ', 'L', 'e', 'e', '\0'
+	},
+	/*.MajorVersion = */ 0,
+	/*.MinorVersion = */ 0,
+	/*.Flags = */(
+		FAPO_FLAG_FRAMERATE_MUST_MATCH |
+		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH |
+		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH |
+		FAPO_FLAG_INPLACE_SUPPORTED |
+		FAPO_FLAG_INPLACE_REQUIRED
+	),
+	/*.MinInputBufferCount = */ 1,
+	/*.MaxInputBufferCount = */  1,
+	/*.MinOutputBufferCount = */ 1,
+	/*.MaxOutputBufferCount =*/ 1
+};
+
+const FAudioGUID FAPOFX_CLSID_FXReverb_LEGACY =
+{
 	0xA90BC001,
 	0xE897,
 	0xE897,
@@ -46,7 +90,7 @@ const FAudioGUID FAPOFX_CLSID_FXReverb =
 	}
 };
 
-static FAPORegistrationProperties FXReverbProperties =
+static FAPORegistrationProperties FXReverbProperties_LEGACY =
 {
 	/* .clsid = */ {0},
 	/* .FriendlyName = */
@@ -128,7 +172,8 @@ uint32_t FAPOFXCreateReverb(
 	uint32_t InitDataByteSize,
 	FAudioMallocFunc customMalloc,
 	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
+	FAudioReallocFunc customRealloc,
+	uint8_t legacy
 ) {
 	const FAPOFXReverbParameters fxdefault =
 	{
@@ -167,13 +212,18 @@ uint32_t FAPOFXCreateReverb(
 
 	/* Initialize... */
 	FAudio_memcpy(
+		&FXReverbProperties_LEGACY.clsid,
+		&FAPOFX_CLSID_FXReverb_LEGACY,
+		sizeof(FAudioGUID)
+	);
+	FAudio_memcpy(
 		&FXReverbProperties.clsid,
 		&FAPOFX_CLSID_FXReverb,
 		sizeof(FAudioGUID)
 	);
 	CreateFAPOBaseWithCustomAllocatorEXT(
 		&result->base,
-		&FXReverbProperties,
+		legacy ? &FXReverbProperties_LEGACY : &FXReverbProperties,
 		params,
 		sizeof(FAPOFXReverbParameters),
 		0,
