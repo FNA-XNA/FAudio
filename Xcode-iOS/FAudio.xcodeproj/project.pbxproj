@@ -7,38 +7,38 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7B7E14162190E10C00616654 /* F3DAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D612190C8E50020B14B /* F3DAudio.c */; };
+		7B7E14172190E10C00616654 /* FACT_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D602190C8E50020B14B /* FACT_internal.c */; };
+		7B7E14182190E10C00616654 /* FACT.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6A2190C8E50020B14B /* FACT.c */; };
+		7B7E14192190E10C00616654 /* FACT3D.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D652190C8E50020B14B /* FACT3D.c */; };
+		7B7E141A2190E10C00616654 /* FAPOBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D642190C8E50020B14B /* FAPOBase.c */; };
+		7B7E141B2190E10C00616654 /* FAPOFX_echo.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D682190C8E50020B14B /* FAPOFX_echo.c */; };
+		7B7E141C2190E10C00616654 /* FAPOFX_eq.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6B2190C8E50020B14B /* FAPOFX_eq.c */; };
+		7B7E141D2190E10C00616654 /* FAPOFX_masteringlimiter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D632190C8E50020B14B /* FAPOFX_masteringlimiter.c */; };
+		7B7E141E2190E10C00616654 /* FAPOFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6D2190C8E50020B14B /* FAPOFX_reverb.c */; };
+		7B7E141F2190E10C00616654 /* FAPOFX.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D672190C8E50020B14B /* FAPOFX.c */; };
+		7B7E14202190E10C00616654 /* FAudio_internal_simd.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D662190C8E50020B14B /* FAudio_internal_simd.c */; };
+		7B7E14212190E10C00616654 /* FAudio_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D622190C8E50020B14B /* FAudio_internal.c */; };
+		7B7E14222190E10C00616654 /* FAudio_platform_sdl2.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6C2190C8E50020B14B /* FAudio_platform_sdl2.c */; };
+		7B7E14232190E10C00616654 /* FAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D692190C8E50020B14B /* FAudio.c */; };
+		7B7E14242190E10C00616654 /* FAudioFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6E2190C8E50020B14B /* FAudioFX_reverb.c */; };
+		7B7E14252190E10C00616654 /* FAudioFX_volumemeter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D5F2190C8E50020B14B /* FAudioFX_volumemeter.c */; };
 		7BD20D6F2190C8E50020B14B /* FAudioFX_volumemeter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D5F2190C8E50020B14B /* FAudioFX_volumemeter.c */; };
-		7BD20D702190C8E50020B14B /* FAudioFX_volumemeter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D5F2190C8E50020B14B /* FAudioFX_volumemeter.c */; };
 		7BD20D712190C8E50020B14B /* FACT_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D602190C8E50020B14B /* FACT_internal.c */; };
-		7BD20D722190C8E50020B14B /* FACT_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D602190C8E50020B14B /* FACT_internal.c */; };
 		7BD20D732190C8E50020B14B /* F3DAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D612190C8E50020B14B /* F3DAudio.c */; };
-		7BD20D742190C8E50020B14B /* F3DAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D612190C8E50020B14B /* F3DAudio.c */; };
 		7BD20D752190C8E50020B14B /* FAudio_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D622190C8E50020B14B /* FAudio_internal.c */; };
-		7BD20D762190C8E50020B14B /* FAudio_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D622190C8E50020B14B /* FAudio_internal.c */; };
 		7BD20D772190C8E50020B14B /* FAPOFX_masteringlimiter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D632190C8E50020B14B /* FAPOFX_masteringlimiter.c */; };
-		7BD20D782190C8E50020B14B /* FAPOFX_masteringlimiter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D632190C8E50020B14B /* FAPOFX_masteringlimiter.c */; };
 		7BD20D792190C8E50020B14B /* FAPOBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D642190C8E50020B14B /* FAPOBase.c */; };
-		7BD20D7A2190C8E50020B14B /* FAPOBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D642190C8E50020B14B /* FAPOBase.c */; };
 		7BD20D7B2190C8E50020B14B /* FACT3D.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D652190C8E50020B14B /* FACT3D.c */; };
-		7BD20D7C2190C8E50020B14B /* FACT3D.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D652190C8E50020B14B /* FACT3D.c */; };
 		7BD20D7D2190C8E50020B14B /* FAudio_internal_simd.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D662190C8E50020B14B /* FAudio_internal_simd.c */; };
-		7BD20D7E2190C8E50020B14B /* FAudio_internal_simd.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D662190C8E50020B14B /* FAudio_internal_simd.c */; };
 		7BD20D7F2190C8E50020B14B /* FAPOFX.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D672190C8E50020B14B /* FAPOFX.c */; };
-		7BD20D802190C8E50020B14B /* FAPOFX.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D672190C8E50020B14B /* FAPOFX.c */; };
 		7BD20D812190C8E50020B14B /* FAPOFX_echo.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D682190C8E50020B14B /* FAPOFX_echo.c */; };
-		7BD20D822190C8E50020B14B /* FAPOFX_echo.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D682190C8E50020B14B /* FAPOFX_echo.c */; };
 		7BD20D832190C8E50020B14B /* FAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D692190C8E50020B14B /* FAudio.c */; };
-		7BD20D842190C8E50020B14B /* FAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D692190C8E50020B14B /* FAudio.c */; };
 		7BD20D852190C8E50020B14B /* FACT.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6A2190C8E50020B14B /* FACT.c */; };
-		7BD20D862190C8E50020B14B /* FACT.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6A2190C8E50020B14B /* FACT.c */; };
 		7BD20D872190C8E50020B14B /* FAPOFX_eq.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6B2190C8E50020B14B /* FAPOFX_eq.c */; };
-		7BD20D882190C8E50020B14B /* FAPOFX_eq.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6B2190C8E50020B14B /* FAPOFX_eq.c */; };
 		7BD20D892190C8E50020B14B /* FAudio_platform_sdl2.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6C2190C8E50020B14B /* FAudio_platform_sdl2.c */; };
-		7BD20D8A2190C8E50020B14B /* FAudio_platform_sdl2.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6C2190C8E50020B14B /* FAudio_platform_sdl2.c */; };
 		7BD20D8B2190C8E50020B14B /* FAPOFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6D2190C8E50020B14B /* FAPOFX_reverb.c */; };
-		7BD20D8C2190C8E50020B14B /* FAPOFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6D2190C8E50020B14B /* FAPOFX_reverb.c */; };
 		7BD20D8D2190C8E50020B14B /* FAudioFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6E2190C8E50020B14B /* FAudioFX_reverb.c */; };
-		7BD20D8E2190C8E50020B14B /* FAudioFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6E2190C8E50020B14B /* FAudioFX_reverb.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -51,7 +51,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7B1CDD952190C39500175C7B /* CopyFiles */ = {
+		7B7E140B2190E0CB00616654 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "include/$(PRODUCT_NAME)";
@@ -64,7 +64,7 @@
 
 /* Begin PBXFileReference section */
 		7B1CDD452190C0A200175C7B /* libFAudio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libFAudio.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		7B1CDD992190C39500175C7B /* libFAudio-tv.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libFAudio-tv.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B7E140D2190E0CB00616654 /* libFAudio-tv.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libFAudio-tv.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BD20D552190C8C20020B14B /* FACT3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FACT3D.h; path = ../src/FACT3D.h; sourceTree = "<group>"; };
 		7BD20D562190C8C20020B14B /* FAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudio.h; path = ../src/FAudio.h; sourceTree = "<group>"; };
 		7BD20D572190C8C20020B14B /* FAPOFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPOFX.h; path = ../src/FAPOFX.h; sourceTree = "<group>"; };
@@ -101,7 +101,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7B1CDD942190C39500175C7B /* Frameworks */ = {
+		7B7E140A2190E0CB00616654 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -124,7 +124,7 @@
 			isa = PBXGroup;
 			children = (
 				7B1CDD452190C0A200175C7B /* libFAudio.a */,
-				7B1CDD992190C39500175C7B /* libFAudio-tv.a */,
+				7B7E140D2190E0CB00616654 /* libFAudio-tv.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,21 +189,21 @@
 			productReference = 7B1CDD452190C0A200175C7B /* libFAudio.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		7B1CDD812190C39500175C7B /* FAudio-tv */ = {
+		7B7E140C2190E0CB00616654 /* FAudio-tv */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7B1CDD962190C39500175C7B /* Build configuration list for PBXNativeTarget "FAudio-tv" */;
+			buildConfigurationList = 7B7E14132190E0CB00616654 /* Build configuration list for PBXNativeTarget "FAudio-tv" */;
 			buildPhases = (
-				7B1CDD822190C39500175C7B /* Sources */,
-				7B1CDD942190C39500175C7B /* Frameworks */,
-				7B1CDD952190C39500175C7B /* CopyFiles */,
+				7B7E14092190E0CB00616654 /* Sources */,
+				7B7E140A2190E0CB00616654 /* Frameworks */,
+				7B7E140B2190E0CB00616654 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = "FAudio-tv";
-			productName = "FAudio-iOS";
-			productReference = 7B1CDD992190C39500175C7B /* libFAudio-tv.a */;
+			productName = "FAudio-tv";
+			productReference = 7B7E140D2190E0CB00616654 /* libFAudio-tv.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
@@ -216,6 +216,9 @@
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					7B1CDD442190C0A200175C7B = {
+						CreatedOnToolsVersion = 10.1;
+					};
+					7B7E140C2190E0CB00616654 = {
 						CreatedOnToolsVersion = 10.1;
 					};
 				};
@@ -233,7 +236,7 @@
 			projectRoot = "";
 			targets = (
 				7B1CDD442190C0A200175C7B /* FAudio */,
-				7B1CDD812190C39500175C7B /* FAudio-tv */,
+				7B7E140C2190E0CB00616654 /* FAudio-tv */,
 			);
 		};
 /* End PBXProject section */
@@ -262,26 +265,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7B1CDD822190C39500175C7B /* Sources */ = {
+		7B7E14092190E0CB00616654 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7BD20D842190C8E50020B14B /* FAudio.c in Sources */,
-				7BD20D862190C8E50020B14B /* FACT.c in Sources */,
-				7BD20D7A2190C8E50020B14B /* FAPOBase.c in Sources */,
-				7BD20D8C2190C8E50020B14B /* FAPOFX_reverb.c in Sources */,
-				7BD20D742190C8E50020B14B /* F3DAudio.c in Sources */,
-				7BD20D782190C8E50020B14B /* FAPOFX_masteringlimiter.c in Sources */,
-				7BD20D802190C8E50020B14B /* FAPOFX.c in Sources */,
-				7BD20D7C2190C8E50020B14B /* FACT3D.c in Sources */,
-				7BD20D8A2190C8E50020B14B /* FAudio_platform_sdl2.c in Sources */,
-				7BD20D722190C8E50020B14B /* FACT_internal.c in Sources */,
-				7BD20D882190C8E50020B14B /* FAPOFX_eq.c in Sources */,
-				7BD20D822190C8E50020B14B /* FAPOFX_echo.c in Sources */,
-				7BD20D762190C8E50020B14B /* FAudio_internal.c in Sources */,
-				7BD20D8E2190C8E50020B14B /* FAudioFX_reverb.c in Sources */,
-				7BD20D702190C8E50020B14B /* FAudioFX_volumemeter.c in Sources */,
-				7BD20D7E2190C8E50020B14B /* FAudio_internal_simd.c in Sources */,
+				7B7E14162190E10C00616654 /* F3DAudio.c in Sources */,
+				7B7E14172190E10C00616654 /* FACT_internal.c in Sources */,
+				7B7E14182190E10C00616654 /* FACT.c in Sources */,
+				7B7E14192190E10C00616654 /* FACT3D.c in Sources */,
+				7B7E141A2190E10C00616654 /* FAPOBase.c in Sources */,
+				7B7E141B2190E10C00616654 /* FAPOFX_echo.c in Sources */,
+				7B7E141C2190E10C00616654 /* FAPOFX_eq.c in Sources */,
+				7B7E141D2190E10C00616654 /* FAPOFX_masteringlimiter.c in Sources */,
+				7B7E141E2190E10C00616654 /* FAPOFX_reverb.c in Sources */,
+				7B7E141F2190E10C00616654 /* FAPOFX.c in Sources */,
+				7B7E14202190E10C00616654 /* FAudio_internal_simd.c in Sources */,
+				7B7E14212190E10C00616654 /* FAudio_internal.c in Sources */,
+				7B7E14222190E10C00616654 /* FAudio_platform_sdl2.c in Sources */,
+				7B7E14232190E10C00616654 /* FAudio.c in Sources */,
+				7B7E14242190E10C00616654 /* FAudioFX_reverb.c in Sources */,
+				7B7E14252190E10C00616654 /* FAudioFX_volumemeter.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,11 +342,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../SDL2/include;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos appletvos appletvsimulator";
 			};
 			name = Debug;
 		};
@@ -392,10 +397,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../SDL2/include;
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos appletvos appletvsimulator";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -404,11 +411,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HEADER_SEARCH_PATHS = ../../SDL2/include/;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -417,16 +424,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HEADER_SEARCH_PATHS = ../../SDL2/include/;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
-		7B1CDD972190C39500175C7B /* Debug */ = {
+		7B7E14142190E0CB00616654 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -435,11 +442,12 @@
 				SDKROOT = appletvos;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "appletvsimulator appletvos";
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 12.1;
 			};
 			name = Debug;
 		};
-		7B1CDD982190C39500175C7B /* Release */ = {
+		7B7E14152190E0CB00616654 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -448,7 +456,8 @@
 				SDKROOT = appletvos;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "appletvsimulator appletvos";
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 12.1;
 			};
 			name = Release;
 		};
@@ -473,11 +482,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7B1CDD962190C39500175C7B /* Build configuration list for PBXNativeTarget "FAudio-tv" */ = {
+		7B7E14132190E0CB00616654 /* Build configuration list for PBXNativeTarget "FAudio-tv" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7B1CDD972190C39500175C7B /* Debug */,
-				7B1CDD982190C39500175C7B /* Release */,
+				7B7E14142190E0CB00616654 /* Debug */,
+				7B7E14152190E0CB00616654 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
