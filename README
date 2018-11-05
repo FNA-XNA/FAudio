@@ -25,6 +25,8 @@ For Windows, see the 'visualc/' directory.
 
 For Xbox One, see the 'visualc-winrt/' directory.
 
+For iOS/tvOS, see the 'Xcode-iOS/' directory.
+
 Found an issue?
 ---------------
 Issues and patches can be reported via GitHub:
