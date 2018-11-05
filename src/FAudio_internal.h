@@ -380,6 +380,22 @@ void FAudio_INTERNAL_AllocEffectChain(
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 
+#define CREATE_FAPOFX_FUNC(effect) \
+	extern uint32_t FAPOFXCreate##effect( \
+		FAPO **pEffect, \
+		const void *pInitData, \
+		uint32_t InitDataByteSize, \
+		FAudioMallocFunc customMalloc, \
+		FAudioFreeFunc customFree, \
+		FAudioReallocFunc customRealloc, \
+		uint8_t legacy \
+	);
+CREATE_FAPOFX_FUNC(EQ)
+CREATE_FAPOFX_FUNC(MasteringLimiter)
+CREATE_FAPOFX_FUNC(Reverb)
+CREATE_FAPOFX_FUNC(Echo)
+#undef CREATE_FAPOFX_FUNC
+
 /* SIMD Stuff */
 
 /* Callbacks declared as functions (rather than function pointers) are

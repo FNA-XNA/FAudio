@@ -27,21 +27,6 @@
 #include "FAPOFX.h"
 #include "FAudio_internal.h"
 
-#define CREATE_FUNC(effect) \
-	extern uint32_t FAPOFXCreate##effect( \
-		FAPO **pEffect, \
-		const void *pInitData, \
-		uint32_t InitDataByteSize, \
-		FAudioMallocFunc customMalloc, \
-		FAudioFreeFunc customFree, \
-		FAudioReallocFunc customRealloc \
-	);
-CREATE_FUNC(EQ)
-CREATE_FUNC(MasteringLimiter)
-CREATE_FUNC(Reverb)
-CREATE_FUNC(Echo)
-#undef CREATE_FUNC
-
 uint32_t FAPOFX_CreateFX(
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
@@ -77,7 +62,20 @@ uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
 				InitDataByteSize, \
 				customMalloc, \
 				customFree, \
-				customRealloc \
+				customRealloc, \
+				0 \
+			); \
+		} \
+		else if (FAudio_memcmp(clsid, &FAPOFX_CLSID_FX##effect##_LEGACY, sizeof(FAudioGUID)) == 0) \
+		{ \
+			return FAPOFXCreate##effect( \
+				pEffect, \
+				pInitData, \
+				InitDataByteSize, \
+				customMalloc, \
+				customFree, \
+				customRealloc, \
+				1 \
 			); \
 		}
 	CHECK_AND_RETURN(EQ)

@@ -37,10 +37,11 @@ extern "C" {
 
 /* GUIDs */
 
-extern const FAudioGUID FAPOFX_CLSID_FXEQ;
-extern const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter;
-extern const FAudioGUID FAPOFX_CLSID_FXReverb;
-extern const FAudioGUID FAPOFX_CLSID_FXEcho;
+/* "Legacy" GUIDs are from XAPOFX <= 1.5. They were removed in XAudio 2.8 and later. */
+extern const FAudioGUID FAPOFX_CLSID_FXEQ, FAPOFX_CLSID_FXEQ_LEGACY;
+extern const FAudioGUID FAPOFX_CLSID_FXMasteringLimiter, FAPOFX_CLSID_FXMasteringLimiter_LEGACY;
+extern const FAudioGUID FAPOFX_CLSID_FXReverb, FAPOFX_CLSID_FXReverb_LEGACY;
+extern const FAudioGUID FAPOFX_CLSID_FXEcho, FAPOFX_CLSID_FXEcho_LEGACY;
 
 /* Structures */
 
