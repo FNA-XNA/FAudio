@@ -220,7 +220,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 7B1CDD402190C0A200175C7B /* Build configuration list for PBXProject "FAudio-iOS" */;
+			buildConfigurationList = 7B1CDD402190C0A200175C7B /* Build configuration list for PBXProject "FAudio" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -451,7 +451,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7B1CDD402190C0A200175C7B /* Build configuration list for PBXProject "FAudio-iOS" */ = {
+		7B1CDD402190C0A200175C7B /* Build configuration list for PBXProject "FAudio" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7B1CDD4C2190C0A200175C7B /* Debug */,
