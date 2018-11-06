@@ -268,48 +268,15 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
-	if (buffer)
-	{
-		end = (buffer->LoopCount > 0) ?
-			(buffer->LoopBegin + buffer->LoopLength) :
-			buffer->PlayBegin + buffer->PlayLength;
-		endRead = EXTRA_DECODE_PADDING;
-
-		voice->src.decode(
-			voice,
-			buffer,
-			&endRead,
-			end,
-			voice->audio->decodeCache + (
-				decoded * voice->src.format->nChannels
-			)
-		);
-
-		if (endRead < EXTRA_DECODE_PADDING)
-		{
-			FAudio_zero(
-				voice->audio->decodeCache + (
-					decoded * voice->src.format->nChannels
-				),
-				sizeof(float) * (
-					EXTRA_DECODE_PADDING - endRead *
-					voice->src.format->nChannels
-				)
-			);
-		}
-	}
-	else
-	{
-		FAudio_zero(
-			voice->audio->decodeCache + (
-				decoded * voice->src.format->nChannels
-			),
-			sizeof(float) * (
-				EXTRA_DECODE_PADDING *
-				voice->src.format->nChannels
-			)
-		);
-	}
+	FAudio_zero(
+		voice->audio->decodeCache + (
+			decoded * voice->src.format->nChannels
+		),
+		sizeof(float) * (
+			EXTRA_DECODE_PADDING *
+			voice->src.format->nChannels
+		)
+	);
 
 	*toDecode = decoded;
 }
