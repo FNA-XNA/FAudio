@@ -294,7 +294,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					decoded * voice->src.format->nChannels
 				),
 				sizeof(float) * (
-					EXTRA_DECODE_PADDING - endRead *
+					(EXTRA_DECODE_PADDING - endRead) *
 					voice->src.format->nChannels
 				)
 			);
@@ -457,7 +457,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		voice->src.callback->OnVoiceProcessingPassStart(
 			voice->src.callback,
-			voice->src.decodeSamples * sizeof(int16_t)
+			voice->src.decodeSamples * (voice->src.format->wBitsPerSample / 8)
 		);
 	}
 

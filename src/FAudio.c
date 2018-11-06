@@ -367,7 +367,7 @@ uint32_t FAudio_CreateSourceVoice(
 		(double) MaxFrequencyRatio *
 		(double) (*ppSourceVoice)->src.format->nSamplesPerSec /
 		(double) audio->master->master.inputSampleRate
-	) + EXTRA_DECODE_PADDING * 2;
+	) + EXTRA_DECODE_PADDING * (*ppSourceVoice)->src.format->nChannels;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		audio,
 		(*ppSourceVoice)->src.decodeSamples * (*ppSourceVoice)->src.format->nChannels
@@ -1756,7 +1756,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 		(double) voice->src.maxFreqRatio *
 		(double) NewSourceSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
-	) + EXTRA_DECODE_PADDING * 2;
+	) + EXTRA_DECODE_PADDING * voice->src.format->nChannels;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		voice->audio,
 		newDecodeSamples * voice->src.format->nChannels
