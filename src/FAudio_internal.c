@@ -176,6 +176,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			)
 		);
 
+		voice->src.curBufferOffset += decoding;
 		voice->src.totalSamples += decoding;
 
 		/* End-of-buffer behavior */
@@ -268,15 +269,49 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
-	FAudio_zero(
-		voice->audio->decodeCache + (
-			decoded * voice->src.format->nChannels
-		),
-		sizeof(float) * (
-			EXTRA_DECODE_PADDING *
-			voice->src.format->nChannels
-		)
-	);
+	if (buffer)
+	{
+		end = (buffer->LoopCount > 0) ?
+			(buffer->LoopBegin + buffer->LoopLength) :
+			buffer->PlayBegin + buffer->PlayLength;
+		endRead = EXTRA_DECODE_PADDING;
+
+		voice->src.decode(
+			voice,
+			buffer,
+			&endRead,
+			end,
+			voice->audio->decodeCache + (
+				decoded * voice->src.format->nChannels
+			)
+		);
+		/* Do NOT increment curBufferOffset! */
+
+		if (endRead < EXTRA_DECODE_PADDING)
+		{
+			FAudio_zero(
+				voice->audio->decodeCache + (
+					decoded * voice->src.format->nChannels
+				),
+				sizeof(float) * (
+					EXTRA_DECODE_PADDING - endRead *
+					voice->src.format->nChannels
+				)
+			);
+		}
+	}
+	else
+	{
+		FAudio_zero(
+			voice->audio->decodeCache + (
+				decoded * voice->src.format->nChannels
+			),
+			sizeof(float) * (
+				EXTRA_DECODE_PADDING *
+				voice->src.format->nChannels
+			)
+		);
+	}
 
 	*toDecode = decoded;
 }
@@ -956,7 +991,6 @@ void FAudio_INTERNAL_DecodePCM8(
 		decodeCache,
 		*samples * voice->src.format->nChannels
 	);
-	voice->src.curBufferOffset += *samples;
 }
 
 void FAudio_INTERNAL_DecodePCM16(
@@ -974,7 +1008,6 @@ void FAudio_INTERNAL_DecodePCM16(
 		decodeCache,
 		*samples * voice->src.format->nChannels
 	);
-	voice->src.curBufferOffset += *samples;
 }
 
 void FAudio_INTERNAL_DecodePCM32F(
@@ -992,7 +1025,6 @@ void FAudio_INTERNAL_DecodePCM32F(
 		),
 		sizeof(float) * *samples * voice->src.format->nChannels
 	);
-	voice->src.curBufferOffset += *samples;
 }
 
 /* MSADPCM Decoding */
@@ -1190,7 +1222,6 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 		);
 		decodeCache += copy;
 		done += copy;
-		voice->src.curBufferOffset += copy;
 		midOffset = 0;
 	}
 
@@ -1242,7 +1273,6 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		);
 		decodeCache += copy * 2;
 		done += copy;
-		voice->src.curBufferOffset += copy;
 		midOffset = 0;
 	}
 
