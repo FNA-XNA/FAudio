@@ -40,7 +40,7 @@ endif
 ifeq ($(FAUDIO_RELEASE),1)
 	CFLAGS += -O3
 else
-	CFLAGS += -g -Wall -pedantic
+	CFLAGS += -g -Wall
 endif
 LDFLAGS += `sdl2-config --libs`
 
