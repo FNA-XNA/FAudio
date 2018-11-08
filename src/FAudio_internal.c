@@ -283,8 +283,8 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			(buffer->LoopBegin + buffer->LoopLength) :
 			buffer->PlayBegin + buffer->PlayLength;
 		endRead = FAudio_min(
-			end - voice->src.curBufferOffset
-			EXTRA_DECODE_PADDING,
+			end - voice->src.curBufferOffset,
+			EXTRA_DECODE_PADDING
 		);
 
 		voice->src.decode(
