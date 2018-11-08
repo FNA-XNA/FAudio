@@ -206,9 +206,8 @@ struct FAudioBufferEntry
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,	/* Buffer to decode */
-	uint32_t *samples,	/* On in/output, requested/actual number of samples decoded */
-	uint32_t end,		/* Must decode no further than this offset */
-	float *decodeCache	/* Decode into here */
+	float *decodeCache,	/* Decode into here */
+	uint32_t samples	/* Samples to decode */
 );
 
 typedef void (FAUDIOCALL * FAudioResampleCallback)(
@@ -458,9 +457,8 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 	extern void FAudio_INTERNAL_Decode##type( \
 		FAudioVoice *voice, \
 		FAudioBuffer *buffer, \
-		uint32_t *samples, \
-		uint32_t end, \
-		float *decodeCache \
+		float *decodeCache, \
+		uint32_t samples \
 	);
 DECODE_FUNC(PCM8)
 DECODE_FUNC(PCM16)

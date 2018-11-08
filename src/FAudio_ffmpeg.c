@@ -260,9 +260,8 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 void FAudio_INTERNAL_DecodeFFMPEG(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
+	float *decodeCache,
+	uint32_t samples
 ) {
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
 	uint32_t decSampleSize = voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8;
@@ -312,9 +311,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		ffmpeg->decOffset = voice->src.curBufferOffset;
 	}
 
-	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
-
-	while (done < *samples)
+	while (done < samples)
 	{
 		/* check for available data in decoded cache, refill if necessary */
 		if (ffmpeg->convertOffset >= ffmpeg->convertSamples)
@@ -328,7 +325,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 			break;
 		}
 
-		todo = FAudio_min(available, *samples - done);
+		todo = FAudio_min(available, samples - done);
 		FAudio_memcpy(
 			decodeCache + (done * voice->src.format->nChannels),
 			ffmpeg->convertCache + ffmpeg->convertOffset,
@@ -339,8 +336,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		ffmpeg->convertOffset += todo * voice->src.format->nChannels;
 	}
 
-	*samples = done;
-	ffmpeg->decOffset += *samples;
+	ffmpeg->decOffset += samples;
 }
 
 #else

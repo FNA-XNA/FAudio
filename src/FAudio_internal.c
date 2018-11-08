@@ -134,7 +134,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
-	uint32_t end, endRead, decoding, wanted, decoded = 0;
+	uint32_t end, endRead, decoding, decoded = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
 	FAudioBufferEntry *toDelete;
 
@@ -144,7 +144,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	while (decoded < *toDecode && buffer != NULL)
 	{
 		decoding = (uint32_t) *toDecode - decoded;
-		wanted = decoding;
 
 		/* Start-of-buffer behavior */
 		if (voice->src.newBuffer)
@@ -164,23 +163,26 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		end = (buffer->LoopCount > 0) ?
 			(buffer->LoopBegin + buffer->LoopLength) :
 			buffer->PlayBegin + buffer->PlayLength;
+		endRead = FAudio_min(
+			end - voice->src.curBufferOffset,
+			decoding
+		);
 
 		/* Decode... */
 		voice->src.decode(
 			voice,
 			buffer,
-			&decoding,
-			end,
 			voice->audio->decodeCache + (
 				decoded * voice->src.format->nChannels
-			)
+			),
+			endRead
 		);
 
-		voice->src.curBufferOffset += decoding;
-		voice->src.totalSamples += decoding;
+		voice->src.curBufferOffset += endRead;
+		voice->src.totalSamples += endRead;
 
 		/* End-of-buffer behavior */
-		if (decoding < wanted)
+		if (endRead < decoding)
 		{
 			if (buffer->LoopCount > 0)
 			{
@@ -222,11 +224,11 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					/* FIXME: I keep going past the buffer so fuck it */
 					FAudio_zero(
 						voice->audio->decodeCache + (
-							(decoded + decoding) *
+							(decoded + endRead) *
 							voice->src.format->nChannels
 						),
 						sizeof(float) * (
-							(*toDecode - (decoded + decoding)) *
+							(*toDecode - (decoded + endRead)) *
 							voice->src.format->nChannels
 						)
 					);
@@ -271,7 +273,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		}
 
 		/* Finally. */
-		decoded += decoding;
+		decoded += endRead;
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
@@ -280,16 +282,18 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		end = (buffer->LoopCount > 0) ?
 			(buffer->LoopBegin + buffer->LoopLength) :
 			buffer->PlayBegin + buffer->PlayLength;
-		endRead = EXTRA_DECODE_PADDING;
+		endRead = FAudio_min(
+			end - voice->src.curBufferOffset
+			EXTRA_DECODE_PADDING,
+		);
 
 		voice->src.decode(
 			voice,
 			buffer,
-			&endRead,
-			end,
 			voice->audio->decodeCache + (
 				decoded * voice->src.format->nChannels
-			)
+			),
+			endRead
 		);
 		/* Do NOT increment curBufferOffset! */
 
@@ -985,51 +989,45 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 void FAudio_INTERNAL_DecodePCM8(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
+	float *decodeCache,
+	uint32_t samples
 ) {
-	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 	FAudio_INTERNAL_Convert_U8_To_F32(
 		((uint8_t*) buffer->pAudioData) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
 		decodeCache,
-		*samples * voice->src.format->nChannels
+		samples * voice->src.format->nChannels
 	);
 }
 
 void FAudio_INTERNAL_DecodePCM16(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
+	float *decodeCache,
+	uint32_t samples
 ) {
-	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 	FAudio_INTERNAL_Convert_S16_To_F32(
 		((int16_t*) buffer->pAudioData) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
 		decodeCache,
-		*samples * voice->src.format->nChannels
+		samples * voice->src.format->nChannels
 	);
 }
 
 void FAudio_INTERNAL_DecodePCM32F(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
+	float *decodeCache,
+	uint32_t samples
 ) {
-	*samples = FAudio_min(*samples, end - voice->src.curBufferOffset);
 	FAudio_memcpy(
 		decodeCache,
 		((float*) buffer->pAudioData) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
-		sizeof(float) * *samples * voice->src.format->nChannels
+		sizeof(float) * samples * voice->src.format->nChannels
 	);
 }
 
@@ -1186,9 +1184,8 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
+	float *decodeCache,
+	uint32_t samples
 ) {
 	/* Loop variables */
 	uint32_t copy, done = 0;
@@ -1213,9 +1210,9 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	midOffset = (voice->src.curBufferOffset % bsize);
 
 	/* Read in each block directly to the decode cache */
-	while (done < *samples && voice->src.curBufferOffset < end)
+	while (done < samples)
 	{
-		copy = FAudio_min(*samples - done, bsize - midOffset);
+		copy = FAudio_min(samples - done, bsize - midOffset);
 		FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 			&buf,
 			blockCache,
@@ -1230,16 +1227,13 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 		done += copy;
 		midOffset = 0;
 	}
-
-	*samples = done;
 }
 
 void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	uint32_t *samples,
-	uint32_t end,
-	float *decodeCache
+	float *decodeCache,
+	uint32_t samples
 ) {
 	/* Loop variables */
 	uint32_t copy, done = 0;
@@ -1264,9 +1258,9 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	midOffset = (voice->src.curBufferOffset % bsize);
 
 	/* Read in each block directly to the decode cache */
-	while (done < *samples && voice->src.curBufferOffset < end)
+	while (done < samples)
 	{
-		copy = FAudio_min(*samples - done, bsize - midOffset);
+		copy = FAudio_min(samples - done, bsize - midOffset);
 		FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 			&buf,
 			blockCache,
@@ -1281,6 +1275,4 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		done += copy;
 		midOffset = 0;
 	}
-
-	*samples = done;
 }
