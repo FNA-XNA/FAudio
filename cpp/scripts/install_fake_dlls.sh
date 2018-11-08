@@ -1,7 +1,8 @@
 #!/bin/bash
 
-export PROTONFOLDER="~/.steam/steam/compatibilitytools.d/flibitProton/dist"
+export PROTONFOLDER=~/.steam/steam/compatibilitytools.d/flibitProton/dist
 
+set -x
 set -e
 
 cp build_wine64/libFAudio.so $PROTONFOLDER/lib64/
