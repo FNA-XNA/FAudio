@@ -208,6 +208,8 @@ uint32_t FAudio_CreateSourceVoice(
 ) {
 	uint32_t i;
 
+	FAudio_debug_fmt("Source format", pSourceFormat);
+
 	*ppSourceVoice = (FAudioSourceVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
@@ -372,6 +374,8 @@ uint32_t FAudio_CreateSourceVoice(
 		audio,
 		(*ppSourceVoice)->src.decodeSamples * (*ppSourceVoice)->src.format->nChannels
 	);
+
+	FAudio_debug("-> %p\n", *ppSourceVoice);
 
 	/* Add to list, finally. */
 	LinkedList_PrependEntry(
@@ -581,7 +585,7 @@ void FAudio_SetDebugConfiguration(
 	FAudioDebugConfiguration *pDebugConfiguration,
 	void* pReserved
 ) {
-	FAudio_assert(0 && "TODO: Debug configuration!");
+	g_debugConfig = *pDebugConfiguration;
 }
 
 /* FAudioVoice Interface */
@@ -1456,6 +1460,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	uint32_t adpcmMask, *adpcmByteCount;
 	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
+
+	FAudio_debug(	"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}\n",
+			voice, pBuffer->Flags, pBuffer->AudioBytes, pBuffer->pAudioData,
+			pBuffer->PlayBegin, pBuffer->PlayLength,
+			pBuffer->LoopBegin, pBuffer->LoopLength, pBuffer->LoopCount	);
+
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 #ifdef HAVE_FFMPEG
 	FAudio_assert(	(voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
@@ -1588,6 +1598,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		 */
 		FAudio_assert(list != entry);
 	}
+	FAudio_debug("%p: appended buffer %p\n", voice, &entry->buffer);
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	return 0;
 }

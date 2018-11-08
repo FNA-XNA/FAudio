@@ -38,7 +38,7 @@ endif
 
 # Compile/Link flags
 ifeq ($(FAUDIO_RELEASE),1)
-	CFLAGS += -O3
+	CFLAGS += -O3 -DFAUDIO_RELEASE=1
 else
 	CFLAGS += -g -Wall
 endif
