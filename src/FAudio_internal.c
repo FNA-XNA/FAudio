@@ -26,6 +26,68 @@
 
 #include "FAudio_internal.h"
 
+#define LOGPFX "FAUDIO "
+
+FAudioDebugConfiguration g_debugConfig = {0};
+
+void FAudio_debug_(const char *func, const char *fmt, ...)
+{
+	char out[1024];
+	va_list va;
+	const char *e = getenv("FAUDIO_DEBUG");
+	static const char *colon_space = ": ";
+	if ((!e || !*e || *e == '0') && g_debugConfig.TraceMask == 0)
+		return;
+	strcpy(out, LOGPFX);
+	strncat(out, func, sizeof(out));
+	strncat(out, colon_space, sizeof(out));
+	strncat(out, fmt, sizeof(out));
+	va_start(va, fmt);
+	FAudio_LogV(out, va);
+	va_end(va);
+}
+
+static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)
+{
+	switch(fmt->wFormatTag){
+		case FAUDIO_FORMAT_PCM:
+			return "PCM";
+		case FAUDIO_FORMAT_MSADPCM:
+			return "MSADPCM";
+		case FAUDIO_FORMAT_IEEE_FLOAT:
+			return "IEEE_FLOAT";
+		case FAUDIO_FORMAT_WMAUDIO2:
+			return "WMAUDIO2";
+		case FAUDIO_FORMAT_EXTENSIBLE:
+			return "EXTENSIBLE";
+		default:
+			return "UNKNOWN!";
+	}
+}
+
+static const char *get_subformat_string(const FAudioWaveFormatEx *fmt)
+{
+	const FAudioWaveFormatExtensible *fmtex = (const FAudioWaveFormatExtensible *)fmt;
+
+	if (fmt->wFormatTag != FAUDIO_FORMAT_EXTENSIBLE)
+		return "N/A";
+
+	if (!FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)))
+		return "IEEE_FLOAT";
+
+	if (!FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)))
+		return "PCM";
+
+	return "UNKNOWN!";
+}
+
+void FAudio_debug_fmt_(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt)
+{
+	FAudio_debug_(	func, "%s {wFormatTag: 0x%x %s, nChannels: %u, nSamplesPerSec: %u, wBitsPerSample: %u, SubFormat: %s}\n",
+			prefix, fmt->wFormatTag, get_wformattag_string(fmt), fmt->nChannels, fmt->nSamplesPerSec,
+			fmt->wBitsPerSample, get_subformat_string(fmt)	);
+}
+
 void LinkedList_AddEntry(
 	LinkedList **start,
 	void* toAdd,
@@ -222,6 +284,10 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			endRead
 		);
 
+		FAudio_debug(	"Voice %p, buffer %p, decoded %u samples from [%u,%u)\n",
+				voice, buffer, endRead, voice->src.curBufferOffset,
+				voice->src.curBufferOffset + endRead	);
+
 		voice->src.curBufferOffset += endRead;
 		voice->src.totalSamples += endRead;
 
@@ -258,6 +324,8 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					voice->src.curBufferOffsetDec = 0;
 					voice->src.totalSamples = 0;
 				}
+
+				FAudio_debug("Voice %p, finished with buffer %p\n", voice, buffer);
 
 				/* Change active buffer, delete finished buffer */
 				toDelete = voice->src.bufferList;

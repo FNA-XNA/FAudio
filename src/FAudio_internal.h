@@ -26,8 +26,10 @@
 
 #include "FAudio.h"
 #include "FAPOBase.h"
+#include <stdarg.h>
 
 #ifdef FAUDIO_UNKNOWN_PLATFORM
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -71,9 +73,11 @@
 #define FAudio_qsort qsort
 
 #define FAudio_assert assert
+#define FAudio_LogV(x, va) vfprintf(stderr, x, va)
 #else
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
+#include <SDL_log.h>
 
 #define FAudio_malloc SDL_malloc
 #define FAudio_realloc SDL_realloc
@@ -113,6 +117,7 @@
 #define FAudio_qsort SDL_qsort
 
 #define FAudio_assert SDL_assert
+#define FAudio_LogV(x, va) SDL_LogMessageV(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, x, va)
 #endif
 
 /* Easy Macros */
@@ -233,6 +238,8 @@ typedef void (FAUDIOCALL * FAudioMixCallback)(
 typedef void* FAudioPlatformFixedRateSRC;
 
 typedef float FAudioFilterState[4];
+
+extern FAudioDebugConfiguration g_debugConfig;
 
 /* Public FAudio Types */
 
@@ -378,6 +385,20 @@ void FAudio_INTERNAL_AllocEffectChain(
 	const FAudioEffectChain *pEffectChain
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
+
+#if FAUDIO_RELEASE
+
+#define FAudio_debug(fmt, ...)
+#define FAudio_debug_fmt(prefix, fmt)
+
+#else
+
+#define FAudio_debug(fmt, ...) FAudio_debug_(__func__, fmt, __VA_ARGS__)
+void FAudio_debug_(const char *func, const char *fmt, ...) __attribute__((format(printf,2,3)));
+#define FAudio_debug_fmt(prefix, fmt) FAudio_debug_fmt_(__func__, prefix, fmt)
+void FAudio_debug_fmt_(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt);
+
+#endif
 
 #define CREATE_FAPOFX_FUNC(effect) \
 	extern uint32_t FAPOFXCreate##effect( \
