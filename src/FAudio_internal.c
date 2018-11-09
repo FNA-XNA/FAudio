@@ -130,65 +130,60 @@ void FAudio_INTERNAL_InsertSubmixSorted(
 	FAudio_PlatformUnlockMutex(lock);
 }
 
+static uint32_t FAudio_INTERNAL_GetBytesRequested(
+	FAudioSourceVoice *voice,
+	uint32_t decoding
+) {
+	uint32_t end;
+	FAudioBuffer *buffer;
+	FAudioBufferEntry *list = voice->src.bufferList;
+#ifdef HAVE_FFMPEG
+	if (voice->src.ffmpeg != NULL)
+	{
+		/* Always 0, per the spec */
+		return 0;
+	}
+#endif /* HAVE_FFMPEG */
+	while (list != NULL && decoding > 0)
+	{
+		buffer = &list->buffer;
+		if (buffer->LoopCount > 0)
+		{
+			end = (
+				/* Current loop... */
+				((buffer->LoopBegin + buffer->LoopLength) - voice->src.curBufferOffset) +
+				/* Remaining loops... */
+				(buffer->LoopLength * buffer->LoopCount - 1) +
+				/* ... Final iteration */
+				buffer->PlayLength
+			);
+		}
+		else
+		{
+			end = (buffer->PlayBegin + buffer->PlayLength) - voice->src.curBufferOffset;
+		}
+		if (end > decoding)
+		{
+			decoding = 0;
+			break;
+		}
+		decoding -= end;
+		list = list->next;
+	}
+
+	return decoding * voice->src.format->nBlockAlign;
+}
+
 static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
 ) {
 	uint32_t end, endRead, decoding, decoded = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
-	FAudioBufferEntry *toDelete, *list;
+	FAudioBufferEntry *toDelete;
 
 	/* This should never go past the max ratio size */
 	FAudio_assert(*toDecode <= voice->src.decodeSamples);
-
-	/* Last call for buffer data! */
-	if (	voice->src.callback != NULL &&
-		voice->src.callback->OnVoiceProcessingPassStart != NULL)
-	{
-		decoding = *toDecode;
-		list = voice->src.bufferList;
-#ifdef HAVE_FFMPEG
-		if (voice->src.ffmpeg != NULL)
-		{
-			/* Always 0, per the spec */
-			decoding = 0;
-		}
-#endif /* HAVE_FFMPEG */
-		while (list != NULL && decoding > 0)
-		{
-			buffer = &list->buffer;
-			if (buffer->LoopCount > 0)
-			{
-				end = (
-					/* Current loop... */
-					((buffer->LoopBegin + buffer->LoopLength) - voice->src.curBufferOffset) +
-					/* Remaining loops... */
-					(buffer->LoopLength * buffer->LoopCount - 1) +
-					/* ... Final iteration */
-					buffer->PlayLength
-				);
-			}
-			else
-			{
-				end = (buffer->PlayBegin + buffer->PlayLength) - voice->src.curBufferOffset;
-			}
-			if (end > decoding)
-			{
-				decoding = 0;
-				break;
-			}
-			decoding -= end;
-			list = list->next;
-		}
-
-		/* FIXME: ADPCM BlockAlign? */
-		voice->src.callback->OnVoiceProcessingPassStart(
-			voice->src.callback,
-			decoding * voice->src.format->nBlockAlign
-		);
-
-		buffer = &voice->src.bufferList->buffer;
-	}
 
 	while (decoded < *toDecode && buffer != NULL)
 	{
@@ -379,14 +374,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	*toDecode = decoded;
-
-	if (	voice->src.callback != NULL &&
-		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
-	{
-		voice->src.callback->OnVoiceProcessingPassEnd(
-			voice->src.callback
-		);
-	}
 }
 
 static inline void FAudio_INTERNAL_FilterVoice(
@@ -546,7 +533,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		/* Last call for buffer data! */
 		if (	voice->src.callback != NULL &&
-			voice->src.callback->OnVoiceProcessingPassStart != NULL)
+			voice->src.callback->OnVoiceProcessingPassStart != NULL	)
 		{
 			/* FIXME: ADPCM BlockAlign? */
 			voice->src.callback->OnVoiceProcessingPassStart(
@@ -569,9 +556,27 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			return;
 		}
 	}
+	else if (	voice->src.callback != NULL &&
+			voice->src.callback->OnVoiceProcessingPassStart != NULL	)
+	{
+		/* FIXME: ADPCM BlockAlign? */
+		voice->src.callback->OnVoiceProcessingPassStart(
+			voice->src.callback,
+			FAudio_INTERNAL_GetBytesRequested(voice, toDecode)
+		);
+	}
 
 	/* Decode... */
 	FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
+
+	/* Okay, we're done messing with client data */
+	if (	voice->src.callback != NULL &&
+		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+	{
+		voice->src.callback->OnVoiceProcessingPassEnd(
+			voice->src.callback
+		);
+	}
 
 	/* Nothing to resample? */
 	if (toDecode == 0)
