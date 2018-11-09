@@ -196,6 +196,23 @@ void FAudio_UnregisterForCallbacks(
 	);
 }
 
+#if HAVE_LIBSAMPLERATE
+static uint32_t initialize_libsamplerate(FAudioSourceVoice *voice)
+{
+	int src_err;
+
+	voice->src.libsrc = src_new(SRC_SINC_FASTEST, voice->src.format->nChannels, &src_err);
+	if (!voice->src.libsrc)
+	{
+		return FAUDIO_E_UNSUPPORTED_FORMAT;
+	}
+
+	voice->src.resample = NULL;
+
+	return 0;
+}
+#endif
+
 uint32_t FAudio_CreateSourceVoice(
 	FAudio *audio,
 	FAudioSourceVoice **ppSourceVoice,
@@ -320,6 +337,15 @@ uint32_t FAudio_CreateSourceVoice(
 		FAudio_assert(0 && "Unsupported format tag!");
 	}
 
+#if HAVE_LIBSAMPLERATE
+	i = initialize_libsamplerate(*ppSourceVoice);
+	if (i != 0)
+	{
+		audio->pFree((*ppSourceVoice)->src.format);
+		audio->pFree(*ppSourceVoice);
+		return i;
+	}
+#else
 	if ((*ppSourceVoice)->src.format->nChannels == 1)
 	{
 		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleMono;
@@ -332,6 +358,7 @@ uint32_t FAudio_CreateSourceVoice(
 	{
 		(*ppSourceVoice)->src.resample = FAudio_INTERNAL_ResampleGeneric;
 	}
+#endif
 
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 
@@ -1315,6 +1342,9 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		);
 		voice->audio->pFree(voice->src.format);
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
+#if HAVE_LIBSAMPLERATE
+		src_delete(voice->src.libsrc);
+#endif
 #ifdef HAVE_FFMPEG
 		if (voice->src.ffmpeg)
 		{

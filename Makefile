@@ -83,6 +83,16 @@ ifeq ($(FAUDIO_FFMPEG), 1)
 	LDFLAGS += $(FFMPEG_LDFLAGS)
 endif
 
+# libsamplerate for high quality samplerate conversion
+ifeq ($(FAUDIO_LIBSAMPLERATE), 1)
+	LIBSAMPLERATE_CFLAGS = `pkg-config samplerate --cflags`
+	LIBSAMPLERATE_LDFLAGS = `pkg-config samplerate --libs`
+
+	LIBSAMPLERATE_CFLAGS += -DHAVE_LIBSAMPLERATE=1
+
+	CFLAGS += $(LIBSAMPLERATE_CFLAGS)
+	LDFLAGS += $(LIBSAMPLERATE_LDFLAGS)
+endif
 
 # Object code lists
 ifneq ($(FAUDIO_OUT),)

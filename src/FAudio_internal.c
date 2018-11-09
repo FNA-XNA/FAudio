@@ -475,6 +475,26 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	return (float*) dstParams.pBuffer;
 }
 
+#if HAVE_LIBSAMPLERATE
+void FAudio_INTERNAL_Resample_LIBSAMPLERATE(
+	FAudioSourceVoice *voice,
+	float *restrict dCache,
+	float *restrict resampleCache,
+	uint64_t in_frames,
+	uint64_t out_frames
+) {
+	SRC_DATA data = {0};
+
+	data.data_in = dCache;
+	data.data_out = resampleCache;
+	data.input_frames = in_frames;
+	data.output_frames = out_frames;
+	data.src_ratio = voice->src.libsrc_ratio;
+
+	src_process(voice->src.libsrc, &data);
+}
+#endif
+
 static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 {
 	/* Iterators */
@@ -507,6 +527,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			(double) voice->src.format->nSamplesPerSec /
 			(double) outputRate
 		);
+#if HAVE_LIBSAMPLERATE
+		voice->src.libsrc_ratio = 1. / stepd;
+		src_set_ratio(voice->src.libsrc, voice->src.libsrc_ratio);
+#endif
 		voice->src.resampleStep = DOUBLE_TO_FIXED(stepd);
 		voice->src.resampleFreq = voice->src.freqRatio * voice->src.format->nSamplesPerSec;
 	}
@@ -609,6 +633,15 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 	else
 	{
+#if HAVE_LIBSAMPLERATE
+		FAudio_INTERNAL_Resample_LIBSAMPLERATE(
+			voice,
+			voice->audio->decodeCache,
+			voice->audio->resampleCache,
+			toDecode,
+			toResample
+		);
+#else
 		voice->src.resample(
 			voice->audio->decodeCache,
 			voice->audio->resampleCache,
@@ -617,6 +650,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			toResample,
 			voice->src.format->nChannels
 		);
+#endif
 	}
 
 	/* Update buffer offsets */

@@ -27,6 +27,10 @@
 #include "FAudio.h"
 #include "FAPOBase.h"
 
+#if HAVE_LIBSAMPLERATE
+#include <samplerate.h>
+#endif
+
 #ifdef FAUDIO_UNKNOWN_PLATFORM
 #include <stdlib.h>
 #include <string.h>
@@ -316,6 +320,12 @@ struct FAudioVoice
 #ifdef HAVE_FFMPEG
 			struct FAudioFFmpeg *ffmpeg;
 #endif /* HAVE_FFMPEG*/
+
+			/* libsamplerate */
+#if HAVE_LIBSAMPLERATE
+			SRC_STATE *libsrc;
+			double libsrc_ratio;
+#endif
 
 			/* Read-only */
 			float maxFreqRatio;
