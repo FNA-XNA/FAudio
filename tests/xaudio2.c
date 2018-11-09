@@ -48,6 +48,7 @@
 #include <unistd.h>
 #endif
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
 
@@ -91,6 +92,7 @@ static HRESULT (WINAPI *pCreateAudioVolumeMeter)(IUnknown**) = NULL;
 static int failure_count = 0;
 static int success_count = 0;
 
+static void ok_(const char *file, int line, BOOL success, const char *fmt, ...) __attribute__((format(printf, 4, 5)));
 #define ok(success, fmt, ...) ok_(__FILE__, __LINE__, success, fmt, ##__VA_ARGS__)
 static void ok_(const char *file, int line, BOOL success, const char *fmt, ...)
 {
@@ -162,13 +164,35 @@ static FAudioEngineCallback ecb = {
 };
 #endif
 
-static IXAudio2VoiceCallback vcb1;
-static IXAudio2VoiceCallback vcb2;
+struct simple_streaming_callback {
+    IXAudio2VoiceCallback IXAudio2VoiceCallback_iface;
+    IXAudio27SourceVoice *xa27src;
+    IXAudio2SourceVoice *xa2src;
+};
 
-static void WINAPI VCB_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *This,
+static struct simple_streaming_callback vcb1, vcb2;
+
+static void WINAPI VCB_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *iface,
         UINT32 BytesRequired)
 {
-    if(This == &vcb1){
+    struct simple_streaming_callback *This = (struct simple_streaming_callback *)iface;
+    XAUDIO2_VOICE_STATE state;
+
+    if(xaudio27)
+        IXAudio27SourceVoice_GetState(This->xa27src, &state);
+    else
+        IXAudio2SourceVoice_GetState(This->xa2src, &state, 0);
+
+    /* Underrun allowance may vary, but 0.03 seconds buffered should be enough
+     * to not require more bytes. */
+    if(state.SamplesPlayed < 22050 - 3 * 441){
+        ok(BytesRequired == 0, "Plenty of data buffered, but more bytes requested. Buffered: %"PRIu64" samples, requested: %u bytes\n",
+                22050 - state.SamplesPlayed, BytesRequired);
+    }else if(state.SamplesPlayed == 22050){
+        ok(BytesRequired > 0, "End of buffer reached, but no more bytes requested.\n");
+    }
+
+    if(iface == &vcb1.IXAudio2VoiceCallback_iface){
         ok(!xaudio27 || pass_state == (buffers_called ? 4 : 3), "Callbacks called out of order: %u\n", pass_state);
         ++pass_state;
     }else{
@@ -177,9 +201,9 @@ static void WINAPI VCB_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *This,
     }
 }
 
-static void WINAPI VCB_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *This)
+static void WINAPI VCB_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *iface)
 {
-    if(This == &vcb1){
+    if(iface == &vcb1.IXAudio2VoiceCallback_iface){
         ok(!xaudio27 || pass_state == (buffers_called ? 6 : 4), "Callbacks called out of order: %u\n", pass_state);
         ++pass_state;
     }else{
@@ -188,15 +212,15 @@ static void WINAPI VCB_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *This)
     }
 }
 
-static void WINAPI VCB_OnStreamEnd(IXAudio2VoiceCallback *This)
+static void WINAPI VCB_OnStreamEnd(IXAudio2VoiceCallback *iface)
 {
     ok(0, "Unexpected OnStreamEnd\n");
 }
 
-static void WINAPI VCB_OnBufferStart(IXAudio2VoiceCallback *This,
+static void WINAPI VCB_OnBufferStart(IXAudio2VoiceCallback *iface,
         void *pBufferContext)
 {
-    if(This == &vcb1){
+    if(iface == &vcb1.IXAudio2VoiceCallback_iface){
         ok(!xaudio27 || pass_state == 5, "Callbacks called out of order: %u\n", pass_state);
         ++pass_state;
     }else{
@@ -206,10 +230,10 @@ static void WINAPI VCB_OnBufferStart(IXAudio2VoiceCallback *This,
     }
 }
 
-static void WINAPI VCB_OnBufferEnd(IXAudio2VoiceCallback *This,
+static void WINAPI VCB_OnBufferEnd(IXAudio2VoiceCallback *iface,
         void *pBufferContext)
 {
-    if(This == &vcb1){
+    if(iface == &vcb1.IXAudio2VoiceCallback_iface){
         ok(!xaudio27 || pass_state == 5, "Callbacks called out of order: %u\n", pass_state);
         ++pass_state;
     }else{
@@ -242,27 +266,31 @@ static IXAudio2VoiceCallbackVtbl vcb_vtbl = {
     VCB_OnVoiceError
 };
 
-static IXAudio2VoiceCallback vcb1 = { &vcb_vtbl };
-static IXAudio2VoiceCallback vcb2 = { &vcb_vtbl };
+static struct simple_streaming_callback vcb1 = { {&vcb_vtbl} };
+static struct simple_streaming_callback vcb2 = { {&vcb_vtbl} };
 #else
-static FAudioVoiceCallback vcb1 = {
-    VCB_OnBufferEnd,
-    VCB_OnBufferStart,
-    VCB_OnLoopEnd,
-    VCB_OnStreamEnd,
-    VCB_OnVoiceError,
-    VCB_OnVoiceProcessingPassEnd,
-    VCB_OnVoiceProcessingPassStart
+static struct simple_streaming_callback vcb1 = {
+    {
+        VCB_OnBufferEnd,
+        VCB_OnBufferStart,
+        VCB_OnLoopEnd,
+        VCB_OnStreamEnd,
+        VCB_OnVoiceError,
+        VCB_OnVoiceProcessingPassEnd,
+        VCB_OnVoiceProcessingPassStart
+    }
 };
 
-static FAudioVoiceCallback vcb2 = {
-    VCB_OnBufferEnd,
-    VCB_OnBufferStart,
-    VCB_OnLoopEnd,
-    VCB_OnStreamEnd,
-    VCB_OnVoiceError,
-    VCB_OnVoiceProcessingPassEnd,
-    VCB_OnVoiceProcessingPassStart
+static struct simple_streaming_callback vcb2 = {
+    {
+        VCB_OnBufferEnd,
+        VCB_OnBufferStart,
+        VCB_OnLoopEnd,
+        VCB_OnStreamEnd,
+        VCB_OnVoiceError,
+        VCB_OnVoiceProcessingPassEnd,
+        VCB_OnVoiceProcessingPassStart
+    }
 };
 #endif
 
@@ -324,17 +352,19 @@ static void test_simple_streaming(IXAudio2 *xa)
     fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
     fmt.cbSize = 0;
 
-    XA2CALL(CreateSourceVoice, &src, &fmt, 0, 1.f, &vcb1, NULL, NULL);
+    XA2CALL(CreateSourceVoice, &src, &fmt, 0, 1.f, &vcb1.IXAudio2VoiceCallback_iface, NULL, NULL);
     ok(hr == S_OK, "CreateSourceVoice failed: %08x\n", hr);
 
     if(xaudio27){
         XAUDIO27_VOICE_DETAILS details;
+        vcb1.xa27src = (IXAudio27SourceVoice*)src;
         IXAudio27SourceVoice_GetVoiceDetails((IXAudio27SourceVoice*)src, &details);
         ok(details.CreationFlags == 0, "Got wrong flags: 0x%x\n", details.CreationFlags);
         ok(details.InputChannels == 2, "Got wrong channel count: 0x%x\n", details.InputChannels);
         ok(details.InputSampleRate == 44100, "Got wrong sample rate: 0x%x\n", details.InputSampleRate);
     }else{
         XAUDIO2_VOICE_DETAILS details;
+        vcb1.xa2src = src;
         IXAudio2SourceVoice_GetVoiceDetails(src, &details);
         ok(details.CreationFlags == 0, "Got wrong creation flags: 0x%x\n", details.CreationFlags);
         ok(details.ActiveFlags == 0, "Got wrong active flags: 0x%x\n", details.CreationFlags);
@@ -354,17 +384,19 @@ static void test_simple_streaming(IXAudio2 *xa)
     ok(hr == S_OK, "Start failed: %08x\n", hr);
 
     /* create second source voice */
-    XA2CALL(CreateSourceVoice, &src2, &fmt, 0, 1.f, &vcb2, NULL, NULL);
+    XA2CALL(CreateSourceVoice, &src2, &fmt, 0, 1.f, &vcb2.IXAudio2VoiceCallback_iface, NULL, NULL);
     ok(hr == S_OK, "CreateSourceVoice failed: %08x\n", hr);
 
     if(xaudio27){
         XAUDIO27_VOICE_DETAILS details;
+        vcb2.xa27src = (IXAudio27SourceVoice*)src2;
         IXAudio27SourceVoice_GetVoiceDetails((IXAudio27SourceVoice*)src2, &details);
         ok(details.CreationFlags == 0, "Got wrong flags: 0x%x\n", details.CreationFlags);
         ok(details.InputChannels == 2, "Got wrong channel count: 0x%x\n", details.InputChannels);
         ok(details.InputSampleRate == 44100, "Got wrong sample rate: 0x%x\n", details.InputSampleRate);
     }else{
         XAUDIO2_VOICE_DETAILS details;
+        vcb2.xa2src = src2;
         IXAudio2SourceVoice_GetVoiceDetails(src2, &details);
         ok(details.CreationFlags == 0, "Got wrong creation flags: 0x%x\n", details.CreationFlags);
         ok(details.ActiveFlags == 0, "Got wrong active flags: 0x%x\n", details.CreationFlags);
