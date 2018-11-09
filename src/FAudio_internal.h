@@ -473,6 +473,7 @@ DECODE_FUNC(FFMPEG)
 #ifdef HAVE_FFMPEG
 uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice);
 void FAudio_FFMPEG_free(FAudioSourceVoice *voice);
+void FAudio_FFMPEG_reset(FAudioSourceVoice *voice);
 #endif /* HAVE_FFMPEG */
 
 /* Platform Functions */

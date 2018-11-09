@@ -184,6 +184,12 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		/* End-of-buffer behavior */
 		if (endRead < decoding)
 		{
+#ifdef HAVE_FFMPEG
+			if (voice->src.ffmpeg != NULL)
+			{
+				FAudio_FFMPEG_reset(voice);
+			}
+#endif /* HAVE_FFMPEG */
 			if (buffer->LoopCount > 0)
 			{
 				voice->src.curBufferOffset = buffer->LoopBegin;

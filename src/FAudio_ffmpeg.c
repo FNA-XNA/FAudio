@@ -54,6 +54,12 @@ typedef struct FAudioFFmpeg
 	float *convertCache;
 } FAudioFFmpeg;
 
+void FAudio_FFMPEG_reset(FAudioSourceVoice *voice)
+{
+	voice->src.ffmpeg->encOffset = 0;
+	voice->src.ffmpeg->decOffset = 0;
+}
+
 uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 {
 	AVCodecContext *av_ctx;
