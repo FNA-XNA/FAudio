@@ -9,7 +9,7 @@ CROSSCC = x86_64-w64-mingw32-gcc
 
 LDFLAGS += -lFAudio
 
-CFLAGS += -O2 -g -Wall
+CFLAGS += -g -Wall
 
 crosstest: faudio_tests.exe
 
