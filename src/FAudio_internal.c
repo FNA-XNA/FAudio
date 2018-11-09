@@ -141,6 +141,52 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	/* This should never go past the max ratio size */
 	FAudio_assert(*toDecode <= voice->src.decodeSamples);
 
+	/* Last call for buffer data! */
+	if (	voice->src.callback != NULL &&
+		voice->src.callback->OnVoiceProcessingPassStart != NULL)
+	{
+		decoding = *toDecode;
+#ifdef HAVE_FFMPEG
+		if (voice->src.ffmpeg != NULL)
+		{
+			/* Always 0, per the spec */
+			decoding = 0;
+		}
+#endif /* HAVE_FFMPEG */
+		while (buffer != NULL && decoding > 0)
+		{
+			if (buffer->LoopCount > 0)
+			{
+				end = (
+					/* Current loop... */
+					((buffer->LoopBegin + buffer->LoopLength) - voice->src.curBufferOffset) +
+					/* Remaining loops... */
+					(buffer->LoopLength * buffer->LoopCount - 1) +
+					/* ... Final iteration */
+					buffer->PlayLength
+				);
+			}
+			else
+			{
+				end = (buffer->PlayBegin + buffer->PlayLength) - voice->src.curBufferOffset;
+			}
+			if (end > decoding)
+			{
+				decoding = 0;
+				break;
+			}
+			decoding -= end;
+		}
+
+		/* FIXME: ADPCM BlockAlign? */
+		voice->src.callback->OnVoiceProcessingPassStart(
+			voice->src.callback,
+			decoding * voice->src.format->nBlockAlign
+		);
+
+		buffer = &voice->src.bufferList->buffer;
+	}
+
 	while (decoded < *toDecode && buffer != NULL)
 	{
 		decoding = (uint32_t) *toDecode - decoded;
@@ -330,6 +376,14 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	*toDecode = decoded;
+
+	if (	voice->src.callback != NULL &&
+		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+	{
+		voice->src.callback->OnVoiceProcessingPassEnd(
+			voice->src.callback
+		);
+	}
 }
 
 static inline void FAudio_INTERNAL_FilterVoice(
@@ -467,31 +521,12 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.resampleFreq = voice->src.freqRatio * voice->src.format->nSamplesPerSec;
 	}
 
-	/* Last call for buffer data! */
-	if (	voice->src.callback != NULL &&
-		voice->src.callback->OnVoiceProcessingPassStart != NULL)
-	{
-		voice->src.callback->OnVoiceProcessingPassStart(
-			voice->src.callback,
-			voice->src.decodeSamples * (voice->src.format->wBitsPerSample / 8)
-		);
-	}
-
 	if (voice->src.active == 2)
 	{
 		/* We're just playing tails, skip all buffer stuff */
 		mixed = voice->src.resampleSamples;
 		FAudio_zero(voice->audio->resampleCache, mixed * sizeof(float));
 		goto sendwork;
-	}
-
-	FAudio_PlatformLockMutex(voice->src.bufferLock);
-
-	/* Nothing to do? */
-	if (voice->src.bufferList == NULL)
-	{
-		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-		goto end;
 	}
 
 	/* Base decode size, int to fixed... */
@@ -501,6 +536,37 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* ... fixed to int, truncating extra fraction from rounding. */
 	toDecode >>= FIXED_PRECISION;
 
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
+
+	/* Nothing to do? */
+	if (voice->src.bufferList == NULL)
+	{
+		/* Last call for buffer data! */
+		if (	voice->src.callback != NULL &&
+			voice->src.callback->OnVoiceProcessingPassStart != NULL)
+		{
+			/* FIXME: ADPCM BlockAlign? */
+			voice->src.callback->OnVoiceProcessingPassStart(
+				voice->src.callback,
+				toDecode * voice->src.format->nBlockAlign
+			);
+		}
+
+		/* Still nothing? Fine, whatever. */
+		if (voice->src.bufferList == NULL)
+		{
+			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+			if (	voice->src.callback != NULL &&
+				voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+			{
+				voice->src.callback->OnVoiceProcessingPassEnd(
+					voice->src.callback
+				);
+			}
+			return;
+		}
+	}
+
 	/* Decode... */
 	FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
 
@@ -508,7 +574,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (toDecode == 0)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-		goto end;
+		return;
 	}
 
 	/* int to fixed... */
@@ -567,7 +633,7 @@ sendwork:
 	if (voice->sends.SendCount == 0)
 	{
 		FAudio_PlatformUnlockMutex(voice->sendLock);
-		goto end;
+		return;
 	}
 
 	/* Filters */
@@ -640,16 +706,6 @@ sendwork:
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
-
-	/* Done, finally. */
-end:
-	if (	voice->src.callback != NULL &&
-		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
-	{
-		voice->src.callback->OnVoiceProcessingPassEnd(
-			voice->src.callback
-		);
-	}
 }
 
 static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
