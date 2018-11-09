@@ -136,7 +136,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 ) {
 	uint32_t end, endRead, decoding, decoded = 0;
 	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
-	FAudioBufferEntry *toDelete;
+	FAudioBufferEntry *toDelete, *list;
 
 	/* This should never go past the max ratio size */
 	FAudio_assert(*toDecode <= voice->src.decodeSamples);
@@ -146,6 +146,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		voice->src.callback->OnVoiceProcessingPassStart != NULL)
 	{
 		decoding = *toDecode;
+		list = voice->src.bufferList;
 #ifdef HAVE_FFMPEG
 		if (voice->src.ffmpeg != NULL)
 		{
@@ -153,8 +154,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			decoding = 0;
 		}
 #endif /* HAVE_FFMPEG */
-		while (buffer != NULL && decoding > 0)
+		while (list != NULL && decoding > 0)
 		{
+			buffer = &list->buffer;
 			if (buffer->LoopCount > 0)
 			{
 				end = (
@@ -176,6 +178,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				break;
 			}
 			decoding -= end;
+			list = list->next;
 		}
 
 		/* FIXME: ADPCM BlockAlign? */
