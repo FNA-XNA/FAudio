@@ -78,12 +78,16 @@ install_dll xactengine3_5 1
 install_dll xactengine3_6 1
 install_dll xactengine3_7 1
 
-install_dll xapofx1_0 0
-install_dll xapofx1_1 0
-install_dll xapofx1_2 0
-install_dll xapofx1_3 0
-install_dll xapofx1_4 0
-install_dll xapofx1_5 0
+install_dll xapofx1_1 1
+install_dll xapofx1_2 1
+install_dll xapofx1_3 1
+install_dll xapofx1_4 1
+install_dll xapofx1_5 1
 
 ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
 ln -sf "$dll_path/SDL2.dll" "$wine_path/SDL2.dll"
+ln -sf "$dll_path/avcodec-58.dll" "$wine_path/avcodec-58.dll"
+ln -sf "$dll_path/avutil-56.dll" "$wine_path/avutil-56.dll"
+ln -sf "$dll_path/swresample-3.dll" "$wine_path/swresample-3.dll"
+ln -sf "$dll_path/libwinpthread-1.dll" "$wine_path/libwinpthread-1.dll"
+
