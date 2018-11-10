@@ -494,12 +494,7 @@ public:
 	COM_METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL *pEnabled)
 	{
 		TRACE_FUNC();
-		uint8_t result;
-		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, &result);
-		if (pEnabled)
-		{
-			*pEnabled = result;
-		}
+		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, pEnabled);
 	}
 
 	COM_METHOD(HRESULT) SetEffectParameters(
@@ -813,12 +808,7 @@ public:
 	COM_METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL *pEnabled)
 	{
 		TRACE_FUNC();
-		uint8_t result;
-		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, &result);
-		if (pEnabled)
-		{
-			*pEnabled = result;
-		}
+		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, pEnabled);
 	}
 
 	COM_METHOD(HRESULT) SetEffectParameters(
@@ -1086,12 +1076,7 @@ public:
 	COM_METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL *pEnabled)
 	{
 		TRACE_FUNC();
-		uint8_t result;
-		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, &result);
-		if (pEnabled)
-		{
-			*pEnabled = result;
-		}
+		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, pEnabled);
 	}
 
 	COM_METHOD(HRESULT) SetEffectParameters(
