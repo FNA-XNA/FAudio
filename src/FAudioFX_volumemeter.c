@@ -147,7 +147,7 @@ void FAudioFXVolumeMeter_Process(
 	const FAPOProcessBufferParameters* pInputProcessParameters,
 	uint32_t OutputProcessParameterCount,
 	FAPOProcessBufferParameters* pOutputProcessParameters,
-	uint8_t IsEnabled
+	int32_t IsEnabled
 ) {
 	float peak;
 	float total;

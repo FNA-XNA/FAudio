@@ -1400,7 +1400,7 @@ void FAudioFXReverb_Process(
 	const FAPOProcessBufferParameters* pInputProcessParameters,
 	uint32_t OutputProcessParameterCount,
 	FAPOProcessBufferParameters* pOutputProcessParameters,
-	uint8_t IsEnabled
+	int32_t IsEnabled
 ) {
 	FAudioFXReverbParameters *params;
 	uint8_t update_params = FAPOBase_ParametersChanged(&fapo->base);

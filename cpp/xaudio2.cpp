@@ -293,7 +293,7 @@ static void FAPOCALL Process(
 	const FAPOProcessBufferParameters *pInputProcessParameters,
 	uint32_t OutputProcessParameterCount,
 	FAPOProcessBufferParameters *pOutputProcessParameters,
-	uint8_t IsEnabled
+	int32_t IsEnabled
 ) {
 	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
