@@ -174,7 +174,7 @@ public static class FAudio
 	public struct FAudioEffectDescriptor
 	{
 		public IntPtr pEffect; /* void* */
-		public byte InitialState;
+		public int InitialState;
 		public uint OutputChannels;
 	}
 
@@ -246,10 +246,10 @@ public static class FAudio
 	{
 		public uint TraceMask;
 		public uint BreakMask;
-		public byte LogThreadID;
-		public byte LogFileline;
-		public byte LogFunctionName;
-		public byte LogTiming;
+		public int LogThreadID;
+		public int LogFileline;
+		public int LogFunctionName;
+		public int LogTiming;
 	}
 
 	/* Constants */
@@ -456,7 +456,7 @@ public static class FAudio
 	public static extern void FAudioVoice_GetEffectState(
 		IntPtr voice, /* FAudioVoice* */
 		uint EffectIndex,
-		out byte pEnabled
+		out int pEnabled
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -1064,7 +1064,7 @@ public static class FAudio
 		public IntPtr pCue; /* FACTCue* */
 		public ushort variableIndex;
 		public float variableValue;
-		public byte local;
+		public int local;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]

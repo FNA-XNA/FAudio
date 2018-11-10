@@ -957,7 +957,7 @@ uint32_t FAudioVoice_DisableEffect(
 void FAudioVoice_GetEffectState(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
-	uint8_t *pEnabled
+	int32_t *pEnabled
 ) {
 	FAudio_PlatformLockMutex(voice->effectLock);
 	*pEnabled = voice->effects.desc[EffectIndex].InitialState;

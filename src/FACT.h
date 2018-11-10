@@ -322,7 +322,7 @@ typedef struct FACTNotificationVariable
 	FACTCue *pCue;
 	uint16_t variableIndex;
 	float variableValue;
-	uint8_t local;
+	int32_t local;
 } FACTNotificationVariable;
 
 typedef struct FACTNotificationGUI

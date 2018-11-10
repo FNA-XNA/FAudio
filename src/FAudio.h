@@ -188,7 +188,7 @@ typedef struct FAPO FAPO;
 typedef struct FAudioEffectDescriptor
 {
 	FAPO *pEffect;
-	uint8_t InitialState;
+	int32_t InitialState;
 	uint32_t OutputChannels;
 } FAudioEffectDescriptor;
 
@@ -253,10 +253,10 @@ typedef struct FAudioDebugConfiguration
 {
 	uint32_t TraceMask;
 	uint32_t BreakMask;
-	uint8_t LogThreadID;
-	uint8_t LogFileline;
-	uint8_t LogFunctionName;
-	uint8_t LogTiming;
+	int32_t LogThreadID;
+	int32_t LogFileline;
+	int32_t LogFunctionName;
+	int32_t LogTiming;
 } FAudioDebugConfiguration;
 
 #pragma pack(pop)
@@ -542,7 +542,7 @@ FAUDIOAPI uint32_t FAudioVoice_DisableEffect(
 FAUDIOAPI void FAudioVoice_GetEffectState(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
-	uint8_t *pEnabled
+	int32_t *pEnabled
 );
 
 FAUDIOAPI uint32_t FAudioVoice_SetEffectParameters(
