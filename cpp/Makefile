@@ -25,7 +25,8 @@ XAUDIO2_SRC_x28 = \
 	xaudio2.cpp \
 	XAudio2fx.cpp \
 	win_device.cpp \
-	X3DAudio.cpp
+	X3DAudio.cpp \
+	XAPOFX.cpp
 
 X3DAUDIO_SRC = 	X3DAudio.cpp
 
@@ -225,10 +226,10 @@ $(XAUDIO27_TARGET) : directories $(XAUDIO27_OBJ) $(XAPO_TARGET)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO27_OBJ) $(XAPO_TARGET) $(LDFLAGS)
 
 $(XAUDIO28_TARGET) : directories $(XAUDIO28_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO28_OBJ) $(XAPO_TARGET) $(XAPOFX15_TARGET) $(LDFLAGS) -lsetupapi
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO28_OBJ) $(XAPO_TARGET) $(LDFLAGS) -lsetupapi
 
 $(XAUDIO29_TARGET) : directories $(XAUDIO29_OBJ) $(XAPO_TARGET)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO29_OBJ) $(XAPO_TARGET) $(XAPOFX15_TARGET) $(LDFLAGS) -lsetupapi
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAUDIO29_OBJ) $(XAPO_TARGET) $(LDFLAGS) -lsetupapi
 
 $(X3DAUDIO_TARGET) : directories $(X3DAUDIO_OBJ)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $(X3DAUDIO_OBJ) $(LDFLAGS)
@@ -303,7 +304,7 @@ clean:
 	      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
 	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \
               $(XAPOFX11_TARGET) $(XAPOFX12_TARGET) $(XAPOFX13_TARGET) \
-	      $(XAPOFX14_TARGET) $(XAPOFX15_TARGET) \
+              $(XAPOFX14_TARGET) $(XAPOFX15_TARGET) \
 	      $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
 	      $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET) \
 	      $(BUILD_DIR)/*.o $(BUILD_DIR)/*.dll
