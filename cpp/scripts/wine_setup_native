@@ -63,11 +63,11 @@ install_dll xaudio2_7 1
 install_dll xaudio2_8 1
 install_dll xaudio2_9 1
 
-install_dll x3daudio1_3 0
-install_dll x3daudio1_4 0
-install_dll x3daudio1_5 0
-install_dll x3daudio1_6 0
-install_dll x3daudio1_7 0
+install_dll x3daudio1_3 1
+install_dll x3daudio1_4 1
+install_dll x3daudio1_5 1
+install_dll x3daudio1_6 1
+install_dll x3daudio1_7 1
 
 install_dll xactengine3_0 1
 install_dll xactengine3_1 1
