@@ -101,7 +101,7 @@
 #define FAudio_floor(x) SDL_floor(x)
 #define FAudio_abs(x) SDL_abs(x)
 #define FAudio_ldexp(v, e) SDL_scalbn(v, e)
-#define FAudio_exp(x) exp(x) /* TODO: SDL_exp */
+#define FAudio_exp(x) SDL_exp(x)
 
 #define FAudio_cosf(x) SDL_cosf(x)
 #define FAudio_sinf(x) SDL_sinf(x)
