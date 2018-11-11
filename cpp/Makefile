@@ -25,9 +25,14 @@ XAUDIO2_SRC_x28 = \
 	xaudio2.cpp \
 	XAudio2fx.cpp \
 	win_device.cpp \
-	X3DAudio.cpp
+	X3DAudio.cpp \
+	XAPOFX.cpp
 
 X3DAUDIO_SRC = 	X3DAudio.cpp
+
+XAPOFX_SRC = \
+	com_utils_xapofx.cpp \
+	XAPOFX.cpp
 
 XACT3_SRC = \
 	com_utils_xact.cpp \
@@ -71,6 +76,21 @@ XAUDIO29_OBJ = $(XAUDIO2_SRC_x28:%.cpp=$(BUILD_DIR)/%_x29.o) $(BUILD_DIR)/xaudio
 
 X3DAUDIO_TARGET = $(BUILD_DIR)/x3daudio1_7.dll
 X3DAUDIO_OBJ = $(X3DAUDIO_SRC:%.cpp=$(BUILD_DIR)/%.o)
+
+XAPOFX11_TARGET = $(BUILD_DIR)/xapofx1_1.dll
+XAPOFX11_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx11.o)
+
+XAPOFX12_TARGET = $(BUILD_DIR)/xapofx1_2.dll
+XAPOFX12_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx12.o)
+
+XAPOFX13_TARGET = $(BUILD_DIR)/xapofx1_3.dll
+XAPOFX13_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx13.o)
+
+XAPOFX14_TARGET = $(BUILD_DIR)/xapofx1_4.dll
+XAPOFX14_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx14.o)
+
+XAPOFX15_TARGET = $(BUILD_DIR)/xapofx1_5.dll
+XAPOFX15_OBJ = $(XAPOFX_SRC:%.cpp=$(BUILD_DIR)/%_fx15.o)
 
 XACT30_TARGET = $(BUILD_DIR)/xactengine3_0.dll
 XACT30_OBJ = $(XACT3_SRC:%.cpp=$(BUILD_DIR)/%_x30.o) $(BUILD_DIR)/xactdll_x30.o
@@ -131,6 +151,21 @@ $(BUILD_DIR)/%_x28.o:%.cpp
 $(BUILD_DIR)/%_x29.o:%.cpp
 	$(CXX) $(CXXFLAGS) -DXAUDIO2_VERSION=9 -DUNICODE -c -o $@ $<
 
+$(BUILD_DIR)/%_fx11.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx12.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx13.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx14.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/%_fx15.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 $(BUILD_DIR)/%_x30.o:%.cpp
 	$(CXX) $(CXXFLAGS) -DXACT3_VERSION=0 -c -o $@ $<
 
@@ -158,6 +193,8 @@ $(BUILD_DIR)/%_x37.o:%.cpp
 all: $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \
      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \
+     $(XAPOFX11_TARGET) $(XAPOFX12_TARGET) $(XAPOFX13_TARGET) \
+     $(XAPOFX14_TARGET) $(XAPOFX15_TARGET) \
      $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
      $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET)
 
@@ -201,6 +238,21 @@ $(X3DAUDIO_TARGET) : directories $(X3DAUDIO_OBJ)
 	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_5.dll
 	cp $(X3DAUDIO_TARGET) $(BUILD_DIR)/x3daudio1_6.dll
 
+$(XAPOFX11_TARGET) : directories $(XAPOFX11_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAPOFX11_OBJ) $(XAPO_TARGET) $(LDFLAGS)
+
+$(XAPOFX12_TARGET) : directories $(XAPOFX12_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAPOFX12_OBJ) $(XAPO_TARGET) $(LDFLAGS)
+
+$(XAPOFX13_TARGET) : directories $(XAPOFX13_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAPOFX13_OBJ) $(XAPO_TARGET) $(LDFLAGS)
+
+$(XAPOFX14_TARGET) : directories $(XAPOFX14_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAPOFX14_OBJ) $(XAPO_TARGET) $(LDFLAGS)
+
+$(XAPOFX15_TARGET) : directories $(XAPOFX15_OBJ)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(XAPOFX15_OBJ) $(XAPO_TARGET) $(LDFLAGS)
+
 $(XACT30_TARGET) : directories $(XACT30_OBJ)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $(XACT30_OBJ) $(LDFLAGS)
 
@@ -240,15 +292,19 @@ directories:
 	mkdir -p $(BUILD_DIR)
 	cp ../FAudio.dll $(BUILD_DIR)
 	cp `sdl2-config --prefix`/bin/SDL2.dll $(BUILD_DIR)
+	cp `sdl2-config --prefix`/bin/libwinpthread*.dll $(BUILD_DIR)
 	if [ -n "${FAUDIO_FFMPEG}" ] && [ -n "${FAUDIO_FFMPEG_PREFIX}" ]; then	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/avcodec*.dll $(BUILD_DIR);	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/avutil*.dll $(BUILD_DIR);	\
+		cp $(FAUDIO_FFMPEG_PREFIX)/bin/swresample*.dll $(BUILD_DIR);	\
 	fi
 
 clean:
 	rm -f $(XAUDIO20_TARGET) $(XAUDIO21_TARGET) $(XAUDIO22_TARGET) $(XAUDIO23_TARGET) \
 	      $(XAUDIO24_TARGET) $(XAUDIO25_TARGET) $(XAUDIO26_TARGET) $(XAUDIO27_TARGET) \
-	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \ \
+	      $(XAUDIO28_TARGET) $(XAUDIO29_TARGET) $(X3DAUDIO_TARGET) $(XAPO_TARGET) \
+              $(XAPOFX11_TARGET) $(XAPOFX12_TARGET) $(XAPOFX13_TARGET) \
+              $(XAPOFX14_TARGET) $(XAPOFX15_TARGET) \
 	      $(XACT30_TARGET) $(XACT31_TARGET) $(XACT32_TARGET) $(XACT33_TARGET) \
 	      $(XACT34_TARGET) $(XACT35_TARGET) $(XACT36_TARGET) $(XACT37_TARGET) \
 	      $(BUILD_DIR)/*.o $(BUILD_DIR)/*.dll
