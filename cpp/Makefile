@@ -11,7 +11,7 @@ else
 	BUILD_DIR = build_win32
 endif
 
-#Mingw dir
+# Mingw dir
 MINGW_DIR = $(shell sdl2-config --prefix)
 
 # Source lists
