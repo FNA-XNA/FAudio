@@ -96,7 +96,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	   Need to verify but haven't come across any samples data with cbSize > 22 -@JohanSmet! */
 	if (pSourceVoice->src.format->cbSize > 22)
 	{
-		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
+		av_ctx->extradata = (uint8_t *) av_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
 		FAudio_memcpy(av_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
 	}
 	else
@@ -105,14 +105,14 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		 * decode WMA data, so we create some fake extradata. This is taken
 		 * from <ffmpeg/libavformat/xwma.c>. */
 		av_ctx->extradata_size = 6;
-		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(AV_INPUT_BUFFER_PADDING_SIZE);
+		av_ctx->extradata = (uint8_t *) av_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[4] = 31;
 	}
 
 	if (avcodec_open2(av_ctx, codec, NULL) < 0)
 	{
-		pSourceVoice->audio->pFree(av_ctx->extradata);
+		av_free(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -121,7 +121,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	if (!av_frame)
 	{
 		avcodec_close(av_ctx);
-		pSourceVoice->audio->pFree(av_ctx->extradata);
+		av_free(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -144,7 +144,7 @@ void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
 
 	avcodec_close(ffmpeg->av_ctx);
-	voice->audio->pFree(ffmpeg->av_ctx->extradata);
+	av_free(ffmpeg->av_ctx->extradata);
 	av_free(ffmpeg->av_ctx);
 
 	voice->audio->pFree(ffmpeg->convertCache);
