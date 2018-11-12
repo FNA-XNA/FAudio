@@ -481,17 +481,19 @@ void FAudio_INTERNAL_Resample_LIBSAMPLERATE(
 	float *restrict dCache,
 	float *restrict resampleCache,
 	uint64_t in_frames,
-	uint64_t out_frames
+	uint64_t *out_frames
 ) {
 	SRC_DATA data = {0};
 
 	data.data_in = dCache;
 	data.data_out = resampleCache;
 	data.input_frames = in_frames;
-	data.output_frames = out_frames;
+	data.output_frames = *out_frames;
 	data.src_ratio = voice->src.libsrc_ratio;
 
 	src_process(voice->src.libsrc, &data);
+
+	*out_frames = data.output_frames_gen;
 }
 #endif
 
@@ -546,130 +548,134 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		goto sendwork;
 	}
 
-	/* Base decode size, int to fixed... */
-	toDecode = voice->src.resampleSamples * voice->src.resampleStep;
-	/* ... rounded up based on current offset... */
-	toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
-	/* ... fixed to int, truncating extra fraction from rounding. */
-	toDecode >>= FIXED_PRECISION;
+	mixed = 0;
+	while(mixed < voice->src.resampleSamples){
+		/* Base decode size, int to fixed... */
+		toDecode = (voice->src.resampleSamples - mixed) * voice->src.resampleStep;
+		/* ... rounded up based on current offset... */
+		toDecode += voice->src.curBufferOffsetDec + FIXED_FRACTION_MASK;
+		/* ... fixed to int, truncating extra fraction from rounding. */
+		toDecode >>= FIXED_PRECISION;
 
-	FAudio_PlatformLockMutex(voice->src.bufferLock);
+		FAudio_PlatformLockMutex(voice->src.bufferLock);
 
-	/* Nothing to do? */
-	if (voice->src.bufferList == NULL)
-	{
-		/* Last call for buffer data! */
-		if (	voice->src.callback != NULL &&
-			voice->src.callback->OnVoiceProcessingPassStart != NULL	)
+		/* Nothing to do? */
+		if (voice->src.bufferList == NULL)
+		{
+			/* Last call for buffer data! */
+			if (	voice->src.callback != NULL &&
+				voice->src.callback->OnVoiceProcessingPassStart != NULL	)
+			{
+				/* FIXME: ADPCM BlockAlign? */
+				voice->src.callback->OnVoiceProcessingPassStart(
+					voice->src.callback,
+					toDecode * voice->src.format->nBlockAlign
+				);
+			}
+
+			/* Still nothing? Fine, whatever. */
+			if (voice->src.bufferList == NULL)
+			{
+				FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+				if (	voice->src.callback != NULL &&
+					voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+				{
+					voice->src.callback->OnVoiceProcessingPassEnd(
+						voice->src.callback
+					);
+				}
+				return;
+			}
+		}
+		else if (	voice->src.callback != NULL &&
+				voice->src.callback->OnVoiceProcessingPassStart != NULL	)
 		{
 			/* FIXME: ADPCM BlockAlign? */
 			voice->src.callback->OnVoiceProcessingPassStart(
 				voice->src.callback,
-				toDecode * voice->src.format->nBlockAlign
+				FAudio_INTERNAL_GetBytesRequested(voice, toDecode)
 			);
 		}
 
-		/* Still nothing? Fine, whatever. */
-		if (voice->src.bufferList == NULL)
+		/* Decode... */
+		FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
+
+		/* Okay, we're done messing with client data */
+		if (	voice->src.callback != NULL &&
+			voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+		{
+			voice->src.callback->OnVoiceProcessingPassEnd(
+				voice->src.callback
+			);
+		}
+
+		/* Nothing to resample? */
+		if (toDecode == 0)
 		{
 			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-			if (	voice->src.callback != NULL &&
-				voice->src.callback->OnVoiceProcessingPassEnd != NULL)
-			{
-				voice->src.callback->OnVoiceProcessingPassEnd(
-					voice->src.callback
-				);
-			}
 			return;
 		}
-	}
-	else if (	voice->src.callback != NULL &&
-			voice->src.callback->OnVoiceProcessingPassStart != NULL	)
-	{
-		/* FIXME: ADPCM BlockAlign? */
-		voice->src.callback->OnVoiceProcessingPassStart(
-			voice->src.callback,
-			FAudio_INTERNAL_GetBytesRequested(voice, toDecode)
-		);
-	}
 
-	/* Decode... */
-	FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
+		/* int to fixed... */
+		toResample = toDecode << FIXED_PRECISION;
+		/* ... round back down based on current offset... */
+		toResample -= voice->src.curBufferOffsetDec;
+		/* ... undo step size, fixed to int. */
+		toResample /= voice->src.resampleStep;
+		/* FIXME: I feel like this should be an assert but I suck */
+		toResample = FAudio_min(toResample, voice->src.resampleSamples);
 
-	/* Okay, we're done messing with client data */
-	if (	voice->src.callback != NULL &&
-		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
-	{
-		voice->src.callback->OnVoiceProcessingPassEnd(
-			voice->src.callback
-		);
-	}
-
-	/* Nothing to resample? */
-	if (toDecode == 0)
-	{
-		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-		return;
-	}
-
-	/* int to fixed... */
-	toResample = toDecode << FIXED_PRECISION;
-	/* ... round back down based on current offset... */
-	toResample -= voice->src.curBufferOffsetDec;
-	/* ... undo step size, fixed to int. */
-	toResample /= voice->src.resampleStep;
-	/* FIXME: I feel like this should be an assert but I suck */
-	toResample = FAudio_min(toResample, voice->src.resampleSamples);
-
-	/* Resample... */
-	if (voice->src.resampleStep == FIXED_ONE)
-	{
-		/* Actually, just copy directly... */
-		FAudio_memcpy(
-			voice->audio->resampleCache,
-			voice->audio->decodeCache,
-			(size_t) toResample * voice->src.format->nChannels * sizeof(float)
-		);
-	}
-	else
-	{
+		/* Resample... */
+		if (voice->src.resampleStep == FIXED_ONE)
+		{
+			/* Actually, just copy directly... */
+			FAudio_memcpy(
+				voice->audio->resampleCache,
+				voice->audio->decodeCache,
+				(size_t) toResample * voice->src.format->nChannels * sizeof(float)
+			);
+		}
+		else
+		{
 #if HAVE_LIBSAMPLERATE
-		FAudio_INTERNAL_Resample_LIBSAMPLERATE(
-			voice,
-			voice->audio->decodeCache,
-			voice->audio->resampleCache,
-			toDecode,
-			toResample
-		);
+			FAudio_INTERNAL_Resample_LIBSAMPLERATE(
+				voice,
+				voice->audio->decodeCache,
+				voice->audio->resampleCache + mixed * voice->src.format->nChannels,
+				toDecode,
+				&toResample
+			);
 #else
-		voice->src.resample(
-			voice->audio->decodeCache,
-			voice->audio->resampleCache,
-			&voice->src.resampleOffset,
-			voice->src.resampleStep,
-			toResample,
-			voice->src.format->nChannels
-		);
+			voice->src.resample(
+				voice->audio->decodeCache,
+				voice->audio->resampleCache,
+				&voice->src.resampleOffset,
+				voice->src.resampleStep,
+				toResample,
+				voice->src.format->nChannels
+			);
 #endif
-	}
+		}
 
-	/* Update buffer offsets */
-	if (voice->src.bufferList != NULL)
-	{
-		/* Increment fixed offset by resample size, int to fixed... */
-		voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
-		/* ... chop off any ints we got from the above increment */
-		voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
-	}
-	else
-	{
-		voice->src.curBufferOffsetDec = 0;
-		voice->src.curBufferOffset = 0;
+		mixed += toResample;
+
+		/* Update buffer offsets */
+		if (voice->src.bufferList != NULL)
+		{
+			/* Increment fixed offset by resample size, int to fixed... */
+			voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
+			/* ... chop off any ints we got from the above increment */
+			voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
+		}
+		else
+		{
+			voice->src.curBufferOffsetDec = 0;
+			voice->src.curBufferOffset = 0;
+		}
 	}
 
 	/* Done with buffers, finally. */
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-	mixed = (uint32_t) toResample;
 
 sendwork:
 	FAudio_PlatformLockMutex(voice->sendLock);
