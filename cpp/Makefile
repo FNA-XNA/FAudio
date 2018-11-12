@@ -293,6 +293,7 @@ directories:
 	cp ../FAudio.dll $(BUILD_DIR)
 	cp `sdl2-config --prefix`/bin/SDL2.dll $(BUILD_DIR)
 	cp `sdl2-config --prefix`/bin/libwinpthread*.dll $(BUILD_DIR)
+	cp `sdl2-config --prefix`/bin/libiconv*.dll $(BUILD_DIR)
 	if [ -n "${FAUDIO_FFMPEG}" ] && [ -n "${FAUDIO_FFMPEG_PREFIX}" ]; then	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/avcodec*.dll $(BUILD_DIR);	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/avutil*.dll $(BUILD_DIR);	\
