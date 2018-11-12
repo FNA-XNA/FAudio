@@ -83,17 +83,20 @@ install_dll xapofx1_5
 ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
 ln -sf "$dll_path/SDL2.dll" "$wine_path/SDL2.dll"
 ln -sf "$dll_path/libwinpthread-1.dll" "$wine_path/libwinpthread-1.dll"
-ln -sf "$dll_path/libiconv-2.dll" "$wine_path/libiconv-2.dll"
 
-if [ -f "$dll_path/avcodec-58.dll"];then 
+if [ -f "$dll_path/libiconv-2.dll" ];then 
+	ln -sf "$dll_path/libiconv-2.dll" "$wine_path/libiconv-2.dll"
+fi
+
+if [ -f "$dll_path/avcodec-58.dll" ];then 
 	ln -sf "$dll_path/avcodec-58.dll" "$wine_path/avcodec-58.dll"
 fi
 
-if [ -f "$dll_path/avutil-56.dll"];then 
+if [ -f "$dll_path/avutil-56.dll" ];then 
 	ln -sf "$dll_path/avutil-56.dll" "$wine_path/avutil-56.dll"
 fi
 
-if [ -f "$dll_path/swresample-3.dll"];then 
+if [ -f "$dll_path/swresample-3.dll" ];then 
 	ln -sf "$dll_path/swresample-3.dll" "$wine_path/swresample-3.dll"
 fi
 

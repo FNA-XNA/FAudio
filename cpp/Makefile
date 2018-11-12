@@ -11,6 +11,9 @@ else
 	BUILD_DIR = build_win32
 endif
 
+# Mingw dir
+MINGW_DIR = $(shell sdl2-config --prefix)
+
 # Source lists
 XAPO_SRC = XAPOBase.cpp
 
@@ -290,11 +293,16 @@ $(BUILD_DIR)/xactdll_x30.o: xact3_7.def
 
 directories:
 	mkdir -p $(BUILD_DIR)
+
 	cp ../FAudio.dll $(BUILD_DIR)
-	cp `sdl2-config --prefix`/bin/SDL2.dll $(BUILD_DIR)
-	cp `sdl2-config --prefix`/bin/libwinpthread*.dll $(BUILD_DIR)
-	cp `sdl2-config --prefix`/bin/libiconv*.dll $(BUILD_DIR)
-	if [ -n "${FAUDIO_FFMPEG}" ] && [ -n "${FAUDIO_FFMPEG_PREFIX}" ]; then	\
+	cp $(MINGW_DIR)/bin/SDL2.dll $(BUILD_DIR)
+	cp $(MINGW_DIR)/bin/libwinpthread*.dll $(BUILD_DIR)
+
+	if [ -f $(MINGW_DIR)/bin/libiconv*.dll ]; then \
+		cp $(MINGW_DIR)/bin/libiconv*.dll $(BUILD_DIR); \
+	fi
+
+	if [ -n $(FAUDIO_FFMPEG) ] && [ -n $(FAUDIO_FFMPEG_PREFIX) ]; then	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/avcodec*.dll $(BUILD_DIR);	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/avutil*.dll $(BUILD_DIR);	\
 		cp $(FAUDIO_FFMPEG_PREFIX)/bin/swresample*.dll $(BUILD_DIR);	\
