@@ -227,6 +227,11 @@ void xaudio_wave_play(AudioContext *context)
 	context->source_voice->Start();
 }
 
+void xaudio_wave_stop(AudioContext *context)
+{
+	context->source_voice->Stop(XAUDIO2_PLAY_TAILS);
+}
+
 void xaudio_effect_change(AudioContext *context, bool enabled, ReverbParameters *params)
 {
 	HRESULT hr;
@@ -253,6 +258,7 @@ AudioContext *xaudio_create_context(bool output_5p1, AudioVoiceType effect_on_vo
 	audio_create_voice = xaudio_create_voice;
 	audio_wave_load = xaudio_wave_load;
 	audio_wave_play = xaudio_wave_play;
+	audio_wave_stop = xaudio_wave_stop;
 	audio_effect_change = xaudio_effect_change;
 
 	// create XAudio object

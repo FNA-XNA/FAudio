@@ -84,6 +84,7 @@ typedef void (*PFN_AUDIO_CREATE_VOICE)(AudioContext *p_context, float *p_buffer,
 
 typedef void (*PFN_AUDIO_WAVE_LOAD)(AudioContext *p_context, AudioSampleWave sample, bool stereo);
 typedef void (*PFN_AUDIO_WAVE_PLAY)(AudioContext *p_context);
+typedef void (*PFN_AUDIO_WAVE_STOP)(AudioContext *p_context);
 
 typedef void(*PFN_AUDIO_EFFECT_CHANGE)(AudioContext *p_context, bool p_enabled, ReverbParameters *p_params);
 
@@ -95,6 +96,7 @@ extern PFN_AUDIO_CREATE_VOICE audio_create_voice;
 
 extern PFN_AUDIO_WAVE_LOAD audio_wave_load;
 extern PFN_AUDIO_WAVE_PLAY audio_wave_play;
+extern PFN_AUDIO_WAVE_STOP audio_wave_stop;
 
 extern PFN_AUDIO_EFFECT_CHANGE audio_effect_change;
 

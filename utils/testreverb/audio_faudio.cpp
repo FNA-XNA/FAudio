@@ -192,6 +192,11 @@ void faudio_wave_play(AudioContext *context)
 	FAudioSourceVoice_Start(context->source_voice, 0, FAUDIO_COMMIT_NOW);
 }
 
+void faudio_wave_stop(AudioContext *context)
+{
+	FAudioSourceVoice_Stop(context->source_voice, FAUDIO_PLAY_TAILS, FAUDIO_COMMIT_NOW);
+}
+
 void faudio_effect_change(AudioContext *context, bool enabled, ReverbParameters *params)
 {
 	if (context->reverb_enabled && !enabled)
@@ -224,6 +229,7 @@ AudioContext *faudio_create_context(bool output_5p1, AudioVoiceType effect_on_vo
 	audio_create_voice = faudio_create_voice;
 	audio_wave_load = faudio_wave_load;
 	audio_wave_play = faudio_wave_play;
+	audio_wave_stop = faudio_wave_stop;
 	audio_effect_change = faudio_effect_change;
 
 	// create Faudio object

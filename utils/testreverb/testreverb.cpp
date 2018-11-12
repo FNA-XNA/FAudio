@@ -30,6 +30,7 @@ void FAudioTool_Update()
 	bool update_engine = false;
 	bool update_wave = false;
 	bool play_wave = false;
+	bool stop_wave = false;
 	bool update_effect = false;
 
 	// gui
@@ -61,6 +62,7 @@ void FAudioTool_Update()
 		update_wave |= ImGui::RadioButton("Snare Drum (Mezzo-Forte)", &wave_index, (int)AudioWave_SnareDrum03); 
 
 		play_wave = ImGui::Button("Play"); ImGui::SameLine();
+		stop_wave = ImGui::Button("Stop"); ImGui::SameLine();
 		update_wave |= ImGui::Checkbox("Stereo", &wave_stereo);
 		
 	ImGui::End();
@@ -180,6 +182,11 @@ void FAudioTool_Update()
 
 	if (play_wave) {
 		audio_wave_play(player);
+	}
+
+	if (stop_wave)
+	{
+		audio_wave_stop(player);
 	}
 
 	if ((update_engine || update_effect))

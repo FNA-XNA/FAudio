@@ -82,6 +82,7 @@ PFN_AUDIO_DESTROY_CONTEXT audio_destroy_context = NULL;
 PFN_AUDIO_CREATE_VOICE audio_create_voice = NULL;
 PFN_AUDIO_WAVE_LOAD audio_wave_load = NULL;
 PFN_AUDIO_WAVE_PLAY audio_wave_play = NULL;
+PFN_AUDIO_WAVE_STOP audio_wave_stop = NULL;
 PFN_AUDIO_EFFECT_CHANGE audio_effect_change = NULL;
 
 extern AudioContext *xaudio_create_context(bool output_5p1, AudioVoiceType effect_on_voice);
