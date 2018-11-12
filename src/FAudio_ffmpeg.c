@@ -273,24 +273,40 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	uint32_t decSampleSize = voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8;
 	uint32_t outSampleSize = voice->src.format->nChannels * sizeof(float);
 	uint32_t done = 0, available, todo, cumulative;
+	uint32_t reseek = 0;
 
 	/* check if we need to reposition in the stream */
 	if (voice->src.curBufferOffset < ffmpeg->decOffset)
 	{
 		/* If curBufferOffset is behind, it's because we had to do some
 		 * padding, which should not affect the stream offset. To fix,
-		 * we simply rewind by a couple samples. Pretty safe.
+		 * we simply rewind by a couple samples. Pretty safe if it doesn't
+		 * cross back into the previous decoded block.
 		 */
-		ffmpeg->convertOffset -= (
+		uint32_t delta = (
 			ffmpeg->decOffset - voice->src.curBufferOffset
-		) * voice->src.format->nChannels;
-		ffmpeg->decOffset = voice->src.curBufferOffset;
+			) * voice->src.format->nChannels;
+
+		if (ffmpeg->convertOffset >= delta)
+		{
+			ffmpeg->convertOffset -= delta;
+			ffmpeg->decOffset = voice->src.curBufferOffset;
+		}
+		else
+		{
+			reseek = 1;
+		}
 	}
 	else if (voice->src.curBufferOffset > ffmpeg->decOffset)
 	{
 		/* If we're starting in the middle, we have to seek to the
 		 * starting position. AFAIK this shouldn't happen mid-stream.
 		 */
+		reseek = 1;
+	}
+
+	if (reseek)
+	{
 		FAudioBufferWMA *bufferWMA = &voice->src.bufferList->bufferWMA;
 		uint32_t byteOffset = voice->src.curBufferOffset * decSampleSize;
 		uint32_t packetIdx = bufferWMA->PacketCount - 1;
