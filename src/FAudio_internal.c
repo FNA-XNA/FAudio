@@ -515,7 +515,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		/* We're just playing tails, skip all buffer stuff */
 		mixed = voice->src.resampleSamples;
-		FAudio_zero(voice->audio->resampleCache, mixed * sizeof(float));
+		FAudio_zero(
+			voice->audio->resampleCache,
+			mixed * voice->src.format->nChannels * sizeof(float)
+		);
 		goto sendwork;
 	}
 
