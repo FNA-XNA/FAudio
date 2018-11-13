@@ -394,7 +394,12 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 #else
 
 #define FAudio_debug(fmt, ...) FAudio_debug_(__func__, fmt, __VA_ARGS__)
-void FAudio_debug_(const char *func, const char *fmt, ...) __attribute__((format(printf,2,3)));
+#if defined(_MSC_VER)
+/* VC doesn't support __attribute__ at all, and there's no replacement for format. */
+void FAudio_debug_(const char *func, const char *fmt, ...);
+#else
+void FAudio_debug_(const char *func, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+#endif
 #define FAudio_debug_fmt(prefix, fmt) FAudio_debug_fmt_(__func__, prefix, fmt)
 void FAudio_debug_fmt_(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt);
 
