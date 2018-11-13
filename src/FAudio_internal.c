@@ -49,35 +49,36 @@ void FAudio_debug_(const char *func, const char *fmt, ...)
 
 static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)
 {
-	switch(fmt->wFormatTag){
-		case FAUDIO_FORMAT_PCM:
-			return "PCM";
-		case FAUDIO_FORMAT_MSADPCM:
-			return "MSADPCM";
-		case FAUDIO_FORMAT_IEEE_FLOAT:
-			return "IEEE_FLOAT";
-		case FAUDIO_FORMAT_WMAUDIO2:
-			return "WMAUDIO2";
-		case FAUDIO_FORMAT_EXTENSIBLE:
-			return "EXTENSIBLE";
-		default:
-			return "UNKNOWN!";
+#define FMT_STRING(suffix) \
+	if (fmt->wFormatTag == FAUDIO_FORMAT_##suffix) \
+	{ \
+		return #suffix; \
 	}
+	FMT_STRING(PCM)
+	FMT_STRING(MSADPCM)
+	FMT_STRING(IEEE_FLOAT)
+	FMT_STRING(WMAUDIO2)
+	FMT_STRING(EXTENSIBLE)
+#undef FMT_STRING
+	return "UNKNOWN!";
 }
 
 static const char *get_subformat_string(const FAudioWaveFormatEx *fmt)
 {
-	const FAudioWaveFormatExtensible *fmtex = (const FAudioWaveFormatExtensible *)fmt;
+	const FAudioWaveFormatExtensible *fmtex = (const FAudioWaveFormatExtensible*) fmt;
 
 	if (fmt->wFormatTag != FAUDIO_FORMAT_EXTENSIBLE)
+	{
 		return "N/A";
-
+	}
 	if (!FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)))
+	{
 		return "IEEE_FLOAT";
-
+	}
 	if (!FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)))
+	{
 		return "PCM";
-
+	}
 	return "UNKNOWN!";
 }
 
