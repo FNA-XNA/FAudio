@@ -36,6 +36,29 @@
 
 /* Internal Functions */
 
+#define SWAP_16(x) \
+	((x >> 8)	& 0x00FF) | \
+	((x << 8)	& 0xFF00)
+#define DOSWAP_16(x) x = SWAP_16(x);
+
+#define SWAP_32(x) \
+	((x >> 24)	& 0x000000FF) | \
+	((x >> 8)	& 0x0000FF00) | \
+	((x << 8)	& 0x00FF0000) | \
+	((x << 24)	& 0xFF000000)
+#define DOSWAP_32(x) x = SWAP_32(x);
+
+#define SWAP_64(x) \
+	((x >> 32)	& 0x00000000000000FF) | \
+	((x >> 24)	& 0x000000000000FF00) | \
+	((x >> 16)	& 0x0000000000FF0000) | \
+	((x >> 8)	& 0x00000000FF000000) | \
+	((x << 8)	& 0x000000FF00000000) | \
+	((x << 16)	& 0x0000FF0000000000) | \
+	((x << 24)	& 0x00FF000000000000) | \
+	((x << 32)	& 0xFF00000000000000)
+#define DOSWAP_64(x) x = SWAP_32(x);
+
 float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
 	return (float) FAudio_pow(10.0, decibel / 2000.0);
@@ -1716,24 +1739,24 @@ void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 
 /* Parsing functions */
 
-#define READ_FUNC(type, size, suffix) \
-	static inline type read_##suffix(uint8_t **ptr) \
+#define READ_FUNC(type, size, suffix, swapped) \
+	static inline type read_##suffix(uint8_t **ptr, const uint8_t swapendian) \
 	{ \
 		type result = *((type*) *ptr); \
 		*ptr += size; \
-		return result; \
+		return swapendian ? (swapped) : result; \
 	}
 
-READ_FUNC(uint8_t, 1, u8)
-READ_FUNC(uint16_t, 2, u16)
-READ_FUNC(uint32_t, 4, u32)
-READ_FUNC(int16_t, 2, s16)
-READ_FUNC(int32_t, 4, s32)
-READ_FUNC(float, 4, f32)
+READ_FUNC(uint8_t, 1, u8, result)
+READ_FUNC(uint16_t, 2, u16, SWAP_16(result))
+READ_FUNC(uint32_t, 4, u32, SWAP_32(result))
+READ_FUNC(int16_t, 2, s16, SWAP_16(result))
+READ_FUNC(int32_t, 4, s32, SWAP_32(result))
+READ_FUNC(float, 4, f32, result)
 
 #undef READ_FUNC
 
-static inline float read_volbyte(uint8_t **ptr)
+static inline float read_volbyte(uint8_t **ptr, const uint8_t swapendian)
 {
 	/* FIXME: This magnificent beauty came from Mathematica!
 	 * The byte values for all possible input dB values from the .xap are here:
@@ -1743,7 +1766,7 @@ static inline float read_volbyte(uint8_t **ptr)
 	 * Thanks to Kenny for plotting all that data.
 	 * -flibit
 	 */
-	return (float) ((3969.0 * FAudio_log10(read_u8(ptr) / 28240.0)) + 8715.0);
+	return (float) ((3969.0 * FAudio_log10(read_u8(ptr, swapendian) / 28240.0)) + 8715.0);
 }
 
 uint32_t FACT_INTERNAL_ParseAudioEngine(
@@ -1767,10 +1790,12 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	uint8_t *ptr = (uint8_t*) pParams->pGlobalSettingsBuffer;
 	uint8_t *start = ptr;
-
-	if (	read_u32(&ptr) != 0x46534758 /* 'XGSF' */ ||
-		read_u16(&ptr) != FACT_CONTENT_VERSION ||
-		read_u16(&ptr) != 42 /* Tool version */	)
+	
+	uint8_t se = 0; /* Swap Endian */
+	uint32_t magic = read_u32(&ptr, 0);
+	if (	(magic != 0x46534758 && !(se = (magic == 0x58475346))) /* 'XGSF' */ ||
+		read_u16(&ptr, se) != FACT_CONTENT_VERSION ||
+		read_u16(&ptr, se) != 42 /* Tool version */	)
 	{
 		return -1; /* TODO: NOT XACT FILE */
 	}
@@ -1780,33 +1805,35 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	/* Last modified, unused */
 	ptr += 8;
 
-	/* XACT Version */
-	if (read_u8(&ptr) != 3)
+	/* XACT Version (Windows == 3, Xbox == 7) */
+	uint8_t version = read_u8(&ptr, se);
+	if (	version != 3 &&
+		version != 7	)
 	{
 		return -1; /* TODO: VERSION TOO OLD */
 	}
 
 	/* Object counts */
-	pEngine->categoryCount = read_u16(&ptr);
-	pEngine->variableCount = read_u16(&ptr);
-	blob1Count = read_u16(&ptr);
-	blob2Count = read_u16(&ptr);
-	pEngine->rpcCount = read_u16(&ptr);
-	pEngine->dspPresetCount = read_u16(&ptr);
-	pEngine->dspParameterCount = read_u16(&ptr);
+	pEngine->categoryCount = read_u16(&ptr, se);
+	pEngine->variableCount = read_u16(&ptr, se);
+	blob1Count = read_u16(&ptr, se);
+	blob2Count = read_u16(&ptr, se);
+	pEngine->rpcCount = read_u16(&ptr, se);
+	pEngine->dspPresetCount = read_u16(&ptr, se);
+	pEngine->dspParameterCount = read_u16(&ptr, se);
 
 	/* Object offsets */
-	categoryOffset = read_u32(&ptr);
-	variableOffset = read_u32(&ptr);
-	blob1Offset = read_u32(&ptr);
-	categoryNameIndexOffset = read_u32(&ptr);
-	blob2Offset = read_u32(&ptr);
-	variableNameIndexOffset = read_u32(&ptr);
-	categoryNameOffset = read_u32(&ptr);
-	variableNameOffset = read_u32(&ptr);
-	rpcOffset = read_u32(&ptr);
-	dspPresetOffset = read_u32(&ptr);
-	dspParameterOffset = read_u32(&ptr);
+	categoryOffset = read_u32(&ptr, se);
+	variableOffset = read_u32(&ptr, se);
+	blob1Offset = read_u32(&ptr, se);
+	categoryNameIndexOffset = read_u32(&ptr, se);
+	blob2Offset = read_u32(&ptr, se);
+	variableNameIndexOffset = read_u32(&ptr, se);
+	categoryNameOffset = read_u32(&ptr, se);
+	variableNameOffset = read_u32(&ptr, se);
+	rpcOffset = read_u32(&ptr, se);
+	dspPresetOffset = read_u32(&ptr, se);
+	dspParameterOffset = read_u32(&ptr, se);
 
 	/* Category data */
 	FAudio_assert((ptr - start) == categoryOffset);
@@ -1815,15 +1842,15 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		pEngine->categories[i].instanceLimit = read_u8(&ptr);
-		pEngine->categories[i].fadeInMS = read_u16(&ptr);
-		pEngine->categories[i].fadeOutMS = read_u16(&ptr);
-		pEngine->categories[i].maxInstanceBehavior = read_u8(&ptr) >> 3;
-		pEngine->categories[i].parentCategory = read_u16(&ptr);
+		pEngine->categories[i].instanceLimit = read_u8(&ptr, se);
+		pEngine->categories[i].fadeInMS = read_u16(&ptr, se);
+		pEngine->categories[i].fadeOutMS = read_u16(&ptr, se);
+		pEngine->categories[i].maxInstanceBehavior = read_u8(&ptr, se) >> 3;
+		pEngine->categories[i].parentCategory = read_u16(&ptr, se);
 		pEngine->categories[i].volume = FACT_INTERNAL_CalculateAmplitudeRatio(
-			read_volbyte(&ptr)
+			read_volbyte(&ptr, se)
 		);
-		pEngine->categories[i].visibility = read_u8(&ptr);
+		pEngine->categories[i].visibility = read_u8(&ptr, se);
 		pEngine->categories[i].instanceCount = 0;
 		pEngine->categories[i].currentVolume = 1.0f;
 	}
@@ -1835,10 +1862,10 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		pEngine->variables[i].accessibility = read_u8(&ptr);
-		pEngine->variables[i].initialValue = read_f32(&ptr);
-		pEngine->variables[i].minValue = read_f32(&ptr);
-		pEngine->variables[i].maxValue = read_f32(&ptr);
+		pEngine->variables[i].accessibility = read_u8(&ptr, se);
+		pEngine->variables[i].initialValue = read_f32(&ptr, se);
+		pEngine->variables[i].minValue = read_f32(&ptr, se);
+		pEngine->variables[i].maxValue = read_f32(&ptr, se);
 	}
 
 	/* Global variable storage. Some unused data for non-global vars */
@@ -1865,18 +1892,18 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		for (i = 0; i < pEngine->rpcCount; i += 1)
 		{
 			pEngine->rpcCodes[i] = (uint32_t) (ptr - start);
-			pEngine->rpcs[i].variable = read_u16(&ptr);
-			pEngine->rpcs[i].pointCount = read_u8(&ptr);
-			pEngine->rpcs[i].parameter = read_u16(&ptr);
+			pEngine->rpcs[i].variable = read_u16(&ptr, se);
+			pEngine->rpcs[i].pointCount = read_u8(&ptr, se);
+			pEngine->rpcs[i].parameter = read_u16(&ptr, se);
 			pEngine->rpcs[i].points = (FACTRPCPoint*) pEngine->pMalloc(
 				sizeof(FACTRPCPoint) *
 				pEngine->rpcs[i].pointCount
 			);
 			for (j = 0; j < pEngine->rpcs[i].pointCount; j += 1)
 			{
-				pEngine->rpcs[i].points[j].x = read_f32(&ptr);
-				pEngine->rpcs[i].points[j].y = read_f32(&ptr);
-				pEngine->rpcs[i].points[j].type = read_u8(&ptr);
+				pEngine->rpcs[i].points[j].x = read_f32(&ptr, se);
+				pEngine->rpcs[i].points[j].y = read_f32(&ptr, se);
+				pEngine->rpcs[i].points[j].type = read_u8(&ptr, se);
 			}
 		}
 	}
@@ -1896,8 +1923,8 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		for (i = 0; i < pEngine->dspPresetCount; i += 1)
 		{
 			pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
-			pEngine->dspPresets[i].accessibility = read_u8(&ptr);
-			pEngine->dspPresets[i].parameterCount = read_u32(&ptr);
+			pEngine->dspPresets[i].accessibility = read_u8(&ptr, se);
+			pEngine->dspPresets[i].parameterCount = read_u32(&ptr, se);
 			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) pEngine->pMalloc(
 				sizeof(FACTDSPParameter) *
 				pEngine->dspPresets[i].parameterCount
@@ -1914,11 +1941,11 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			);
 			for (j = 0; j < pEngine->dspPresets[i].parameterCount; j += 1)
 			{
-				pEngine->dspPresets[i].parameters[j].type = read_u8(&ptr);
-				pEngine->dspPresets[i].parameters[j].value = read_f32(&ptr);
-				pEngine->dspPresets[i].parameters[j].minVal = read_f32(&ptr);
-				pEngine->dspPresets[i].parameters[j].maxVal = read_f32(&ptr);
-				pEngine->dspPresets[i].parameters[j].unknown = read_u16(&ptr);
+				pEngine->dspPresets[i].parameters[j].type = read_u8(&ptr, se);
+				pEngine->dspPresets[i].parameters[j].value = read_f32(&ptr, se);
+				pEngine->dspPresets[i].parameters[j].minVal = read_f32(&ptr, se);
+				pEngine->dspPresets[i].parameters[j].maxVal = read_f32(&ptr, se);
+				pEngine->dspPresets[i].parameters[j].unknown = read_u16(&ptr, se);
 			}
 		}
 	}
@@ -1974,6 +2001,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 void FACT_INTERNAL_ParseTrackEvents(
 	uint8_t **ptr,
+	uint8_t se,
 	FACTTrack *track,
 	FAudioMallocFunc pMalloc
 ) {
@@ -1982,7 +2010,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 	uint8_t i;
 	uint16_t j;
 
-	track->eventCount = read_u8(ptr);
+	track->eventCount = read_u8(ptr, se);
 	track->events = (FACTEvent*) pMalloc(
 		sizeof(FACTEvent) *
 		track->eventCount
@@ -1990,30 +2018,30 @@ void FACT_INTERNAL_ParseTrackEvents(
 	FAudio_zero(track->events, sizeof(FACTEvent) * track->eventCount);
 	for (i = 0; i < track->eventCount; i += 1)
 	{
-		evtInfo = read_u32(ptr);
-		track->events[i].randomOffset = read_u16(ptr);
+		evtInfo = read_u32(ptr, se);
+		track->events[i].randomOffset = read_u16(ptr, se);
 
 		track->events[i].type = evtInfo & 0x001F;
 		track->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
 
-		separator = read_u8(ptr);
+		separator = read_u8(ptr, se);
 		FAudio_assert(separator == 0xFF); /* Separator? */
 
 		#define EVTTYPE(t) (track->events[i].type == t)
 		if (EVTTYPE(FACTEVENT_STOP))
 		{
-			track->events[i].stop.flags = read_u8(ptr);
+			track->events[i].stop.flags = read_u8(ptr, se);
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVE))
 		{
 			/* Basic Wave */
 			track->events[i].wave.isComplex = 0;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.simple.track = read_u16(ptr);
-			track->events[i].wave.simple.wavebank = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr);
-			track->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.flags = read_u8(ptr, se);
+			track->events[i].wave.simple.track = read_u16(ptr, se);
+			track->events[i].wave.simple.wavebank = read_u8(ptr, se);
+			track->events[i].wave.loopCount = read_u8(ptr, se);
+			track->events[i].wave.position = read_u16(ptr, se);
+			track->events[i].wave.angle = read_u16(ptr, se);
 
 			/* No Effect Variation */
 			track->events[i].wave.variationFlags = 0;
@@ -2022,14 +2050,14 @@ void FACT_INTERNAL_ParseTrackEvents(
 		{
 			/* Complex Wave */
 			track->events[i].wave.isComplex = 1;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr);
-			track->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.flags = read_u8(ptr, se);
+			track->events[i].wave.loopCount = read_u8(ptr, se);
+			track->events[i].wave.position = read_u16(ptr, se);
+			track->events[i].wave.angle = read_u16(ptr, se);
 
 			/* Track Variation */
-			track->events[i].wave.complex.trackCount = read_u16(ptr);
-			track->events[i].wave.complex.variation = read_u16(ptr);
+			track->events[i].wave.complex.trackCount = read_u16(ptr, se);
+			track->events[i].wave.complex.variation = read_u16(ptr, se);
 			*ptr += 4; /* Unknown values */
 			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
@@ -2045,10 +2073,10 @@ void FACT_INTERNAL_ParseTrackEvents(
 			);
 			for (j = 0; j < track->events[i].wave.complex.trackCount; j += 1)
 			{
-				track->events[i].wave.complex.tracks[j] = read_u16(ptr);
-				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
-				minWeight = read_u8(ptr);
-				maxWeight = read_u8(ptr);
+				track->events[i].wave.complex.tracks[j] = read_u16(ptr, se);
+				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr, se);
+				minWeight = read_u8(ptr, se);
+				maxWeight = read_u8(ptr, se);
 				track->events[i].wave.complex.weights[j] = (
 					maxWeight - minWeight
 				);
@@ -2061,47 +2089,47 @@ void FACT_INTERNAL_ParseTrackEvents(
 		{
 			/* Basic Wave */
 			track->events[i].wave.isComplex = 0;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.simple.track = read_u16(ptr);
-			track->events[i].wave.simple.wavebank = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr);
-			track->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.flags = read_u8(ptr, se);
+			track->events[i].wave.simple.track = read_u16(ptr, se);
+			track->events[i].wave.simple.wavebank = read_u8(ptr, se);
+			track->events[i].wave.loopCount = read_u8(ptr, se);
+			track->events[i].wave.position = read_u16(ptr, se);
+			track->events[i].wave.angle = read_u16(ptr, se);
 
 			/* Effect Variation */
-			track->events[i].wave.minPitch = read_s16(ptr);
-			track->events[i].wave.maxPitch = read_s16(ptr);
-			track->events[i].wave.minVolume = read_volbyte(ptr);
-			track->events[i].wave.maxVolume = read_volbyte(ptr);
-			track->events[i].wave.minFrequency = read_f32(ptr);
-			track->events[i].wave.maxFrequency = read_f32(ptr);
-			track->events[i].wave.minQFactor = read_f32(ptr);
-			track->events[i].wave.maxQFactor = read_f32(ptr);
-			track->events[i].wave.variationFlags = read_u16(ptr);
+			track->events[i].wave.minPitch = read_s16(ptr, se);
+			track->events[i].wave.maxPitch = read_s16(ptr, se);
+			track->events[i].wave.minVolume = read_volbyte(ptr, se);
+			track->events[i].wave.maxVolume = read_volbyte(ptr, se);
+			track->events[i].wave.minFrequency = read_f32(ptr, se);
+			track->events[i].wave.maxFrequency = read_f32(ptr, se);
+			track->events[i].wave.minQFactor = read_f32(ptr, se);
+			track->events[i].wave.maxQFactor = read_f32(ptr, se);
+			track->events[i].wave.variationFlags = read_u16(ptr, se);
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
 		{
 			/* Complex Wave */
 			track->events[i].wave.isComplex = 1;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr);
-			track->events[i].wave.angle = read_u16(ptr);
+			track->events[i].wave.flags = read_u8(ptr, se);
+			track->events[i].wave.loopCount = read_u8(ptr, se);
+			track->events[i].wave.position = read_u16(ptr, se);
+			track->events[i].wave.angle = read_u16(ptr, se);
 
 			/* Effect Variation */
-			track->events[i].wave.minPitch = read_s16(ptr);
-			track->events[i].wave.maxPitch = read_s16(ptr);
-			track->events[i].wave.minVolume = read_volbyte(ptr);
-			track->events[i].wave.maxVolume = read_volbyte(ptr);
-			track->events[i].wave.minFrequency = read_f32(ptr);
-			track->events[i].wave.maxFrequency = read_f32(ptr);
-			track->events[i].wave.minQFactor = read_f32(ptr);
-			track->events[i].wave.maxQFactor = read_f32(ptr);
-			track->events[i].wave.variationFlags = read_u16(ptr);
+			track->events[i].wave.minPitch = read_s16(ptr, se);
+			track->events[i].wave.maxPitch = read_s16(ptr, se);
+			track->events[i].wave.minVolume = read_volbyte(ptr, se);
+			track->events[i].wave.maxVolume = read_volbyte(ptr, se);
+			track->events[i].wave.minFrequency = read_f32(ptr, se);
+			track->events[i].wave.maxFrequency = read_f32(ptr, se);
+			track->events[i].wave.minQFactor = read_f32(ptr, se);
+			track->events[i].wave.maxQFactor = read_f32(ptr, se);
+			track->events[i].wave.variationFlags = read_u16(ptr, se);
 
 			/* Track Variation */
-			track->events[i].wave.complex.trackCount = read_u16(ptr);
-			track->events[i].wave.complex.variation = read_u16(ptr);
+			track->events[i].wave.complex.trackCount = read_u16(ptr, se);
+			track->events[i].wave.complex.variation = read_u16(ptr, se);
 			*ptr += 4; /* Unknown values */
 			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
@@ -2117,10 +2145,10 @@ void FACT_INTERNAL_ParseTrackEvents(
 			);
 			for (j = 0; j < track->events[i].wave.complex.trackCount; j += 1)
 			{
-				track->events[i].wave.complex.tracks[j] = read_u16(ptr);
-				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
-				minWeight = read_u8(ptr);
-				maxWeight = read_u8(ptr);
+				track->events[i].wave.complex.tracks[j] = read_u16(ptr, se);
+				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr, se);
+				minWeight = read_u8(ptr, se);
+				maxWeight = read_u8(ptr, se);
 				track->events[i].wave.complex.weights[j] = (
 					maxWeight - minWeight
 				);
@@ -2131,32 +2159,32 @@ void FACT_INTERNAL_ParseTrackEvents(
 				EVTTYPE(FACTEVENT_PITCHREPEATING) ||
 				EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 		{
-			track->events[i].value.settings = read_u8(ptr);
+			track->events[i].value.settings = read_u8(ptr, se);
 			if (track->events[i].value.settings & 1) /* Ramp */
 			{
 				track->events[i].value.repeats = 0;
-				track->events[i].value.ramp.initialValue = read_f32(ptr);
-				track->events[i].value.ramp.initialSlope = read_f32(ptr) * 100;
-				track->events[i].value.ramp.slopeDelta = read_f32(ptr);
-				track->events[i].value.ramp.duration = read_u16(ptr);
+				track->events[i].value.ramp.initialValue = read_f32(ptr, se);
+				track->events[i].value.ramp.initialSlope = read_f32(ptr, se) * 100;
+				track->events[i].value.ramp.slopeDelta = read_f32(ptr, se);
+				track->events[i].value.ramp.duration = read_u16(ptr, se);
 			}
 			else /* Equation */
 			{
-				track->events[i].value.equation.flags = read_u8(ptr);
+				track->events[i].value.equation.flags = read_u8(ptr, se);
 
 				/* SetValue, SetRandomValue, anything else? */
 				FAudio_assert(track->events[i].value.equation.flags & 0x0C);
 
-				track->events[i].value.equation.value1 = read_f32(ptr);
-				track->events[i].value.equation.value2 = read_f32(ptr);
+				track->events[i].value.equation.value1 = read_f32(ptr, se);
+				track->events[i].value.equation.value2 = read_f32(ptr, se);
 
 				*ptr += 5; /* Unknown values */
 
 				if (	EVTTYPE(FACTEVENT_PITCHREPEATING) ||
 					EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 				{
-					track->events[i].value.repeats = read_u16(ptr);
-					track->events[i].value.frequency = read_u16(ptr);
+					track->events[i].value.repeats = read_u16(ptr, se);
+					track->events[i].value.frequency = read_u16(ptr, se);
 				}
 				else
 				{
@@ -2166,15 +2194,15 @@ void FACT_INTERNAL_ParseTrackEvents(
 		}
 		else if (EVTTYPE(FACTEVENT_MARKER))
 		{
-			track->events[i].marker.marker = read_u32(ptr);
+			track->events[i].marker.marker = read_u32(ptr, se);
 			track->events[i].marker.repeats = 0;
 			track->events[i].marker.frequency = 0;
 		}
 		else if (EVTTYPE(FACTEVENT_MARKERREPEATING))
 		{
-			track->events[i].marker.marker = read_u32(ptr);
-			track->events[i].marker.repeats = read_u16(ptr);
-			track->events[i].marker.frequency = read_u16(ptr);
+			track->events[i].marker.marker = read_u32(ptr, se);
+			track->events[i].marker.repeats = read_u16(ptr, se);
+			track->events[i].marker.frequency = read_u16(ptr, se);
 		}
 		else
 		{
@@ -2210,9 +2238,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	uint8_t *ptr = (uint8_t*) pvBuffer;
 	uint8_t *start = ptr;
 
-	if (	read_u32(&ptr) != 0x4B424453 /* 'SDBK' */ ||
-		read_u16(&ptr) != FACT_CONTENT_VERSION ||
-		read_u16(&ptr) != 43 /* Tool version */	)
+	uint32_t magic = read_u32(&ptr, 0);
+	uint8_t se = 0; /* Swap Endian */
+	if (	(magic != 0x4B424453 && !(se = (magic == 0x5344424B))) /* 'SDBK' */ ||
+		read_u16(&ptr, se) != FACT_CONTENT_VERSION ||
+		read_u16(&ptr, se) != 43 /* Tool version */	)
 	{
 		return -1; /* TODO: NOT XACT FILE */
 	}
@@ -2223,8 +2253,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	/* Last modified, unused */
 	ptr += 8;
 
-	/* Windows == 1, Xbox == 0 (I think?) */
-	if (read_u8(&ptr) != 1)
+	/* Windows == 1, Xbox == 3 */
+	uint8_t platform = read_u8(&ptr, se);
+	if (	platform != 1 &&
+		platform != 3	)
 	{
 		return -1; /* TODO: WRONG PLATFORM */
 	}
@@ -2234,33 +2266,33 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb->cueList = NULL;
 	sb->notifyOnDestroy = 0;
 
-	cueSimpleCount = read_u16(&ptr);
-	cueComplexCount = read_u16(&ptr);
+	cueSimpleCount = read_u16(&ptr, se);
+	cueComplexCount = read_u16(&ptr, se);
 
 	ptr += 2; /* Unknown value */
 
-	cueTotalAlign = read_u16(&ptr); /* FIXME: Why? */
+	cueTotalAlign = read_u16(&ptr, se); /* FIXME: Why? */
 	sb->cueCount = cueSimpleCount + cueComplexCount;
-	sb->wavebankCount = read_u8(&ptr);
-	sb->soundCount = read_u16(&ptr);
+	sb->wavebankCount = read_u8(&ptr, se);
+	sb->soundCount = read_u16(&ptr, se);
 
 	/* Cue name length, unused */
 	ptr += 2;
 
 	ptr += 2; /* Unknown value */
 
-	cueSimpleOffset = read_s32(&ptr);
-	cueComplexOffset = read_s32(&ptr);
-	cueNameOffset = read_s32(&ptr);
+	cueSimpleOffset = read_s32(&ptr, se);
+	cueComplexOffset = read_s32(&ptr, se);
+	cueNameOffset = read_s32(&ptr, se);
 
 	ptr += 4; /* Unknown value */
 
-	variationOffset = read_s32(&ptr);
-	transitionOffset = read_s32(&ptr);
-	wavebankNameOffset = read_s32(&ptr);
-	cueHashOffset = read_s32(&ptr);
-	cueNameIndexOffset = read_s32(&ptr);
-	soundOffset = read_s32(&ptr);
+	variationOffset = read_s32(&ptr, se);
+	transitionOffset = read_s32(&ptr, se);
+	wavebankNameOffset = read_s32(&ptr, se);
+	cueHashOffset = read_s32(&ptr, se);
+	cueNameIndexOffset = read_s32(&ptr, se);
+	soundOffset = read_s32(&ptr, se);
 
 	/* SoundBank Name */
 	memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
@@ -2295,11 +2327,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	for (i = 0; i < sb->soundCount; i += 1)
 	{
 		sb->soundCodes[i] = (uint32_t) (ptr - start);
-		sb->sounds[i].flags = read_u8(&ptr);
-		sb->sounds[i].category = read_u16(&ptr);
-		sb->sounds[i].volume = read_volbyte(&ptr);
-		sb->sounds[i].pitch = read_s16(&ptr);
-		sb->sounds[i].priority = read_u8(&ptr);
+		sb->sounds[i].flags = read_u8(&ptr, se);
+		sb->sounds[i].category = read_u16(&ptr, se);
+		sb->sounds[i].volume = read_volbyte(&ptr, se);
+		sb->sounds[i].pitch = read_s16(&ptr, se);
+		sb->sounds[i].priority = read_u8(&ptr, se);
 
 		/* Length of sound entry, unused */
 		ptr += 2;
@@ -2307,7 +2339,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		/* Simple/Complex Track data */
 		if (sb->sounds[i].flags & 0x01)
 		{
-			sb->sounds[i].trackCount = read_u8(&ptr);
+			sb->sounds[i].trackCount = read_u8(&ptr, se);
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
 			sb->sounds[i].tracks = (FACTTrack*) pEngine->pMalloc(memsize);
 			FAudio_zero(sb->sounds[i].tracks, memsize);
@@ -2331,18 +2363,18 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->sounds[i].tracks[0].events[0].type = FACTEVENT_PLAYWAVE;
 			sb->sounds[i].tracks[0].events[0].wave.position = 0; /* FIXME */
 			sb->sounds[i].tracks[0].events[0].wave.angle = 0; /* FIXME */
-			sb->sounds[i].tracks[0].events[0].wave.simple.track = read_u16(&ptr);
-			sb->sounds[i].tracks[0].events[0].wave.simple.wavebank = read_u8(&ptr);
+			sb->sounds[i].tracks[0].events[0].wave.simple.track = read_u16(&ptr, se);
+			sb->sounds[i].tracks[0].events[0].wave.simple.wavebank = read_u8(&ptr, se);
 		}
 
 		/* RPC Code data */
 		if (sb->sounds[i].flags & 0x0E)
 		{
-			const uint16_t rpcDataLength = read_u16(&ptr);
+			const uint16_t rpcDataLength = read_u16(&ptr, se);
 			ptrBookmark = ptr - 2;
 
 			#define COPYRPCBLOCK(loc) \
-				loc.rpcCodeCount = read_u8(&ptr); \
+				loc.rpcCodeCount = read_u8(&ptr, se); \
 				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
 				loc.rpcCodes = (uint32_t*) pEngine->pMalloc(memsize); \
 				FAudio_memcpy(loc.rpcCodes, ptr, memsize); \
@@ -2398,7 +2430,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			/* DSP presets length, unused */
 			ptr += 2;
 
-			sb->sounds[i].dspCodeCount = read_u8(&ptr);
+			sb->sounds[i].dspCodeCount = read_u8(&ptr, se);
 			memsize = sizeof(uint32_t) * sb->sounds[i].dspCodeCount;
 			sb->sounds[i].dspCodes = (uint32_t*) pEngine->pMalloc(memsize);
 			FAudio_memcpy(sb->sounds[i].dspCodes, ptr, memsize);
@@ -2415,11 +2447,11 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		{
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				sb->sounds[i].tracks[j].volume = read_volbyte(&ptr);
+				sb->sounds[i].tracks[j].volume = read_volbyte(&ptr, se);
 
-				sb->sounds[i].tracks[j].code = read_u32(&ptr);
+				sb->sounds[i].tracks[j].code = read_u32(&ptr, se);
 
-				sb->sounds[i].tracks[j].filter = read_u8(&ptr);
+				sb->sounds[i].tracks[j].filter = read_u8(&ptr, se);
 				if (sb->sounds[i].tracks[j].filter & 0x01)
 				{
 					sb->sounds[i].tracks[j].filter =
@@ -2431,8 +2463,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 					sb->sounds[i].tracks[j].filter = 0xFF;
 				}
 
-				sb->sounds[i].tracks[j].qfactor = read_u8(&ptr);
-				sb->sounds[i].tracks[j].frequency = read_u16(&ptr);
+				sb->sounds[i].tracks[j].qfactor = read_u8(&ptr, se);
+				sb->sounds[i].tracks[j].frequency = read_u16(&ptr, se);
 			}
 
 			/* All Track events are stored at the end of the block */
@@ -2441,6 +2473,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				FAudio_assert((ptr - start) == sb->sounds[i].tracks[j].code);
 				FACT_INTERNAL_ParseTrackEvents(
 					&ptr,
+					se,
 					&sb->sounds[i].tracks[j],
 					pEngine->pMalloc
 				);
@@ -2461,8 +2494,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	FAudio_assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
 	for (i = 0; i < cueSimpleCount; i += 1, cur += 1)
 	{
-		sb->cues[cur].flags = read_u8(&ptr);
-		sb->cues[cur].sbCode = read_u32(&ptr);
+		sb->cues[cur].flags = read_u8(&ptr, se);
+		sb->cues[cur].sbCode = read_u32(&ptr, se);
 		sb->cues[cur].transitionOffset = 0;
 		sb->cues[cur].instanceLimit = 0xFF;
 		sb->cues[cur].fadeInMS = 0;
@@ -2475,18 +2508,18 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	FAudio_assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
 	for (i = 0; i < cueComplexCount; i += 1, cur += 1)
 	{
-		sb->cues[cur].flags = read_u8(&ptr);
-		sb->cues[cur].sbCode = read_u32(&ptr);
-		sb->cues[cur].transitionOffset = read_u32(&ptr);
+		sb->cues[cur].flags = read_u8(&ptr, se);
+		sb->cues[cur].sbCode = read_u32(&ptr, se);
+		sb->cues[cur].transitionOffset = read_u32(&ptr, se);
 		if (sb->cues[cur].transitionOffset == 0xFFFFFFFF)
 		{
 			/* FIXME: Why */
 			sb->cues[cur].transitionOffset = 0;
 		}
-		sb->cues[cur].instanceLimit = read_u8(&ptr);
-		sb->cues[cur].fadeInMS = read_u16(&ptr);
-		sb->cues[cur].fadeOutMS = read_u16(&ptr);
-		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr) >> 3;
+		sb->cues[cur].instanceLimit = read_u8(&ptr, se);
+		sb->cues[cur].fadeInMS = read_u16(&ptr, se);
+		sb->cues[cur].fadeOutMS = read_u16(&ptr, se);
+		sb->cues[cur].maxInstanceBehavior = read_u8(&ptr, se) >> 3;
 		sb->cues[cur].instanceCount = 0;
 
 		if (!(sb->cues[cur].flags & 0x04))
@@ -2522,10 +2555,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
 		sb->variationCodes[i] = (uint32_t) (ptr - start);
-		sb->variations[i].entryCount = read_u16(&ptr);
-		sb->variations[i].flags = (read_u16(&ptr) >> 3) & 0x07;
+		sb->variations[i].entryCount = read_u16(&ptr, se);
+		sb->variations[i].flags = (read_u16(&ptr, se) >> 3) & 0x07;
 		ptr += 2; /* Unknown value */
-		sb->variations[i].variable = read_s16(&ptr);
+		sb->variations[i].variable = read_s16(&ptr, se);
 		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
 		sb->variations[i].entries = (FACTVariation*) pEngine->pMalloc(
 			memsize
@@ -2538,10 +2571,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->variations[i].isComplex = 0;
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
-				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
-				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
-				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
-				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+				sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
+				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr, se);
+				sb->variations[i].entries[j].minWeight = read_u8(&ptr, se) / 255.0f;
+				sb->variations[i].entries[j].maxWeight = read_u8(&ptr, se) / 255.0f;
 			}
 		}
 		else if (sb->variations[i].flags == 1)
@@ -2550,9 +2583,9 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->variations[i].isComplex = 1;
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
-				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
-				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
-				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+				sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
+				sb->variations[i].entries[j].minWeight = read_u8(&ptr, se) / 255.0f;
+				sb->variations[i].entries[j].maxWeight = read_u8(&ptr, se) / 255.0f;
 			}
 		}
 		else if (sb->variations[i].flags == 3)
@@ -2561,10 +2594,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->variations[i].isComplex = 1;
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
-				sb->variations[i].entries[j].soundCode = read_u32(&ptr);
-				sb->variations[i].entries[j].minWeight = read_f32(&ptr);
-				sb->variations[i].entries[j].maxWeight = read_f32(&ptr);
-				sb->variations[i].entries[j].linger = read_u32(&ptr);
+				sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
+				sb->variations[i].entries[j].minWeight = read_f32(&ptr, se);
+				sb->variations[i].entries[j].maxWeight = read_f32(&ptr, se);
+				sb->variations[i].entries[j].linger = read_u32(&ptr, se);
 			}
 		}
 		else if (sb->variations[i].flags == 4)
@@ -2573,8 +2606,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->variations[i].isComplex = 0;
 			for (j = 0; j < sb->variations[i].entryCount; j += 1)
 			{
-				sb->variations[i].entries[j].simple.track = read_u16(&ptr);
-				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+				sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
+				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr, se);
 				sb->variations[i].entries[j].minWeight = 0.0f;
 				sb->variations[i].entries[j].maxWeight = 1.0f;
 			}
@@ -2606,7 +2639,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	for (i = 0; i < sb->transitionCount; i += 1)
 	{
 		sb->transitionCodes[i] = (uint32_t) (ptr - start);
-		sb->transitions[i].entryCount = read_u32(&ptr);
+		sb->transitions[i].entryCount = read_u32(&ptr, se);
 		memsize = sizeof(FACTTransition) * sb->transitions[i].entryCount;
 		sb->transitions[i].entries = (FACTTransition*) pEngine->pMalloc(
 			memsize
@@ -2614,14 +2647,14 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		FAudio_zero(sb->transitions[i].entries, memsize);
 		for (j = 0; j < sb->transitions[i].entryCount; j += 1)
 		{
-			sb->transitions[i].entries[j].soundCode = read_s32(&ptr);
-			sb->transitions[i].entries[j].srcMarkerMin = read_u32(&ptr);
-			sb->transitions[i].entries[j].srcMarkerMax = read_u32(&ptr);
-			sb->transitions[i].entries[j].dstMarkerMin = read_u32(&ptr);
-			sb->transitions[i].entries[j].dstMarkerMax = read_u32(&ptr);
-			sb->transitions[i].entries[j].fadeIn = read_u16(&ptr);
-			sb->transitions[i].entries[j].fadeOut = read_u16(&ptr);
-			sb->transitions[i].entries[j].flags = read_u16(&ptr);
+			sb->transitions[i].entries[j].soundCode = read_s32(&ptr, se);
+			sb->transitions[i].entries[j].srcMarkerMin = read_u32(&ptr, se);
+			sb->transitions[i].entries[j].srcMarkerMax = read_u32(&ptr, se);
+			sb->transitions[i].entries[j].dstMarkerMin = read_u32(&ptr, se);
+			sb->transitions[i].entries[j].dstMarkerMax = read_u32(&ptr, se);
+			sb->transitions[i].entries[j].fadeIn = read_u16(&ptr, se);
+			sb->transitions[i].entries[j].fadeOut = read_u16(&ptr, se);
+			sb->transitions[i].entries[j].flags = read_u16(&ptr, se);
 		}
 	}
 
@@ -2676,15 +2709,27 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint16_t isStreaming,
 	FACTWaveBank **ppWaveBank
 ) {
+	uint8_t se = 0; /* Swap Endian */
 	FACTWaveBank *wb;
 	size_t memsize;
-	uint32_t i;
+	uint32_t i, j;
 	FACTWaveBankHeader header;
 	FACTWaveBankData wbinfo;
 	uint32_t compactEntry;
 	int32_t seekTableOffset;
 
 	io->read(io->data, &header, sizeof(header), 1);
+	if (se = header.dwSignature == 0x57424E44)
+	{
+		DOSWAP_32(header.dwSignature);
+		DOSWAP_32(header.dwVersion);
+		DOSWAP_32(header.dwHeaderVersion);
+		for (i = 0; i < FACT_WAVEBANK_SEGIDX_COUNT; i += 1)
+		{
+			DOSWAP_32(header.Segments[i].dwOffset);
+			DOSWAP_32(header.Segments[i].dwLength);
+		}
+	}
 	if (	header.dwSignature != 0x444E4257 ||
 		header.dwVersion != FACT_CONTENT_VERSION ||
 		header.dwHeaderVersion != 44	)
@@ -2707,6 +2752,16 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		FAUDIO_SEEK_SET
 	);
 	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
+	if (se)
+	{
+		DOSWAP_32(wbinfo.dwFlags);
+		DOSWAP_32(wbinfo.dwEntryCount);
+		DOSWAP_32(wbinfo.dwEntryMetaDataElementSize);
+		DOSWAP_32(wbinfo.dwEntryNameElementSize);
+		DOSWAP_32(wbinfo.dwAlignment);
+		DOSWAP_32(wbinfo.CompactFormat.dwValue);
+		DOSWAP_64(wbinfo.BuildTime);
+	}
 	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
 	wb->entryCount = wbinfo.dwEntryCount;
 	memsize = FAudio_strlen(wbinfo.szBankName) + 1;
@@ -2739,6 +2794,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				sizeof(compactEntry),
 				1
 			);
+			if (se)
+			{
+				DOSWAP_32(compactEntry);
+			}
 			wb->entries[i].PlayRegion.dwOffset = (
 				(compactEntry & ((1 << 21) - 1)) *
 				wbinfo.dwAlignment
@@ -2768,6 +2827,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			sizeof(compactEntry),
 			1
 		);
+		if (se)
+		{
+			DOSWAP_32(compactEntry);
+		}
 		wb->entries[i].PlayRegion.dwOffset = (
 			(compactEntry & ((1 << 21) - 1)) *
 			wbinfo.dwAlignment
@@ -2797,6 +2860,15 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				wbinfo.dwEntryMetaDataElementSize,
 				1
 			);
+			if (se)
+			{
+				DOSWAP_32(wb->entries[i].dwFlagsAndDuration);
+				DOSWAP_32(wb->entries[i].Format.dwValue);
+				DOSWAP_32(wb->entries[i].PlayRegion.dwOffset);
+				DOSWAP_32(wb->entries[i].PlayRegion.dwLength);
+				DOSWAP_32(wb->entries[i].LoopRegion.dwStartSample);
+				DOSWAP_32(wb->entries[i].LoopRegion.dwTotalSamples);
+			}
 			wb->entries[i].PlayRegion.dwOffset +=
 				header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwOffset;
 		}
@@ -2837,6 +2909,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				sizeof(int32_t),
 				1
 			);
+			if (se)
+			{
+				DOSWAP_32(seekTableOffset);
+			}
 
 			/* If the offset is -1, this wave needs no table */
 			if (seekTableOffset == -1)
@@ -2864,6 +2940,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				sizeof(uint32_t),
 				1
 			);
+			if (se)
+			{
+				DOSWAP_32(wb->seekTables[i].entryCount);
+			}
 			wb->seekTables[i].entries = (uint32_t*) pEngine->pMalloc(
 				wb->seekTables[i].entryCount * sizeof(uint32_t)
 			);
@@ -2873,6 +2953,13 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				wb->seekTables[i].entryCount * sizeof(uint32_t),
 				1
 			);
+			if (se)
+			{
+				for (j = 0; j < wb->seekTables[i].entryCount; j += 1)
+				{
+					DOSWAP_32(wb->seekTables[i].entries[j]);
+				}
+			}
 		}
 	}
 	else

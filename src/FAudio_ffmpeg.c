@@ -60,7 +60,7 @@ void FAudio_FFMPEG_reset(FAudioSourceVoice *voice)
 	voice->src.ffmpeg->decOffset = 0;
 }
 
-uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t format)
 {
 	AVCodecContext *av_ctx;
 	AVFrame *av_frame;
@@ -69,17 +69,21 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	pSourceVoice->src.decode = FAudio_INTERNAL_DecodeFFMPEG;
 
 	/* initialize ffmpeg state */
-	codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
+	codec = avcodec_find_decoder(
+		format == FAUDIO_FORMAT_WMAUDIO2 ? AV_CODEC_ID_WMAV2 :
+		format == FAUDIO_FORMAT_XMAUDIO2 ? AV_CODEC_ID_XMA2 :
+		NULL
+	);
 	if (!codec)
 	{
-		FAudio_assert(0 && "WMAv2 codec not supported!");
+		FAudio_assert(0 && "FFmpeg codec not supported!");
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
 	av_ctx = avcodec_alloc_context3(codec);
 	if (!av_ctx)
 	{
-		FAudio_assert(0 && "WMAv2 codec not supported!");
+		FAudio_assert(0 && "FFmpeg codec not supported!");
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
@@ -99,7 +103,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
 		FAudio_memcpy(av_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
 	}
-	else
+	else if (format == FAUDIO_FORMAT_WMAUDIO2)
 	{
 		/* xWMA doesn't provide the extradata info that FFmpeg needs to
 		 * decode WMA data, so we create some fake extradata. This is taken
@@ -108,6 +112,18 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[4] = 31;
+	}
+	else if (format == FAUDIO_FORMAT_XMAUDIO2)
+	{
+		/* FFmpeg expects XMA2WAVEFORMATEX or XMA2WAVEFORMAT.
+		 * For more info, check <ffmpeg/libavcodec/wmaprodec.c>. */
+		av_ctx->extradata_size = 34;
+		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(AV_INPUT_BUFFER_PADDING_SIZE);
+		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
+		av_ctx->extradata[1] = 1;
+		av_ctx->extradata[5] = pSourceVoice->src.format->nChannels == 2 ? 3 : 0;
+		av_ctx->extradata[31] = 4;
+		av_ctx->extradata[33] = 1;
 	}
 
 	if (avcodec_open2(av_ctx, codec, NULL) < 0)
