@@ -30,18 +30,20 @@
 
 FAudioDebugConfiguration g_debugConfig = {0};
 
-void FAudio_debug_(const char *func, const char *fmt, ...)
+void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...)
 {
 	char out[1024];
 	va_list va;
 	const char *e = getenv("FAUDIO_DEBUG");
 	static const char *colon_space = ": ";
 	if ((!e || !*e || *e == '0') && g_debugConfig.TraceMask == 0)
+	{
 		return;
-	strcpy(out, LOGPFX);
-	strncat(out, func, sizeof(out));
-	strncat(out, colon_space, sizeof(out));
-	strncat(out, fmt, sizeof(out));
+	}
+	FAudio_strlcpy(out, LOGPFX, sizeof(out - 1));
+	FAudio_strlcat(out, func, sizeof(out) - 1);
+	FAudio_strlcat(out, colon_space, sizeof(out) - 1);
+	FAudio_strlcat(out, fmt, sizeof(out) - 1);
 	va_start(va, fmt);
 	FAudio_LogV(out, va);
 	va_end(va);
@@ -82,11 +84,11 @@ static const char *get_subformat_string(const FAudioWaveFormatEx *fmt)
 	return "UNKNOWN!";
 }
 
-void FAudio_debug_fmt_(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt)
+void FAudio_INTERNAL_debug_fmt(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt)
 {
-	FAudio_debug_(	func, "%s {wFormatTag: 0x%x %s, nChannels: %u, nSamplesPerSec: %u, wBitsPerSample: %u, SubFormat: %s}\n",
-			prefix, fmt->wFormatTag, get_wformattag_string(fmt), fmt->nChannels, fmt->nSamplesPerSec,
-			fmt->wBitsPerSample, get_subformat_string(fmt)	);
+	FAudio_INTERNAL_debug(	func, "%s {wFormatTag: 0x%x %s, nChannels: %u, nSamplesPerSec: %u, wBitsPerSample: %u, SubFormat: %s}\n",
+				prefix, fmt->wFormatTag, get_wformattag_string(fmt), fmt->nChannels, fmt->nSamplesPerSec,
+				fmt->wBitsPerSample, get_subformat_string(fmt)	);
 }
 
 void LinkedList_AddEntry(

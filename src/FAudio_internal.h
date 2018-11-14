@@ -49,6 +49,7 @@
 #define FAudio_strlen(ptr) strlen(ptr)
 #define FAudio_strcmp(str1, str2) strcmp(str1, str2)
 #define FAudio_strlcpy(ptr1, ptr2, size) strlcpy(ptr1, ptr2, size)
+#define FAudio_strlcat(ptr1, ptr2, size) strlcat(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) pow(x, y)
 #define FAudio_log(x) log(x)
@@ -93,6 +94,7 @@
 #define FAudio_strlen(ptr) SDL_strlen(ptr)
 #define FAudio_strcmp(str1, str2) SDL_strcmp(str1, str2)
 #define FAudio_strlcpy(ptr1, ptr2, size) SDL_strlcpy(ptr1, ptr2, size)
+#define FAudio_strlcat(ptr1, ptr2, size) SDL_strlcat(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) SDL_pow(x, y)
 #define FAudio_log(x) SDL_log(x)
@@ -393,16 +395,16 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 
 #else
 
-#define FAudio_debug(fmt, ...) FAudio_debug_(__func__, fmt, __VA_ARGS__)
 #if defined(_MSC_VER)
 /* VC doesn't support __attribute__ at all, and there's no replacement for format. */
-void FAudio_debug_(const char *func, const char *fmt, ...);
+void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...);
 #else
-void FAudio_debug_(const char *func, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...) __attribute__((format(printf,2,3)));
 #endif
-#define FAudio_debug_fmt(prefix, fmt) FAudio_debug_fmt_(__func__, prefix, fmt)
-void FAudio_debug_fmt_(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt);
+void FAudio_INTERNAL_debug_fmt(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt);
 
+#define FAudio_debug(fmt, ...) FAudio_INTERNAL_debug(__func__, fmt, __VA_ARGS__)
+#define FAudio_debug_fmt(prefix, fmt) FAudio_INTERNAL_debug_fmt(__func__, prefix, fmt)
 #endif
 
 #define CREATE_FAPOFX_FUNC(effect) \
