@@ -905,7 +905,7 @@ end:
 	);
 }
 
-void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
+static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *output)
 {
 	uint32_t totalSamples;
 	LinkedList *list;
@@ -1009,6 +1009,23 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 		list = list->next;
 	}
 	FAudio_PlatformUnlockMutex(audio->callbackLock);
+}
+
+void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
+{
+	if (audio->pClientEngineProc)
+	{
+		audio->pClientEngineProc(
+			&FAudio_INTERNAL_GenerateOutput,
+			audio,
+			output,
+			audio->clientEngineUser
+		);
+	}
+	else
+	{
+		FAudio_INTERNAL_GenerateOutput(audio, output);
+	}
 }
 
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t samples)
