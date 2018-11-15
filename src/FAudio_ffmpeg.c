@@ -301,7 +301,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		 */
 		uint32_t delta = (
 			ffmpeg->decOffset - voice->src.curBufferOffset
-		);
+			) * voice->src.format->nChannels;
 
 		if (ffmpeg->convertOffset >= delta)
 		{
