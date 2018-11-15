@@ -556,6 +556,15 @@ uint32_t FAudio_CreateMasteringVoice8(
 	);
 }
 
+void FAudio_SetEngineProcedureEXT(
+	FAudio *audio,
+	FAudioEngineProcedureEXT clientEngineProc,
+	void *user
+) {
+	audio->pClientEngineProc = clientEngineProc;
+	audio->clientEngineUser = user;
+}
+
 uint32_t FAudio_StartEngine(FAudio *audio)
 {
 	audio->active = 1;
