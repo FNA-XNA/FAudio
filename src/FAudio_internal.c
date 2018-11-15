@@ -40,7 +40,7 @@ void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...)
 	{
 		return;
 	}
-	FAudio_strlcpy(out, LOGPFX, sizeof(out - 1));
+	FAudio_strlcpy(out, LOGPFX, sizeof(out) - 1);
 	FAudio_strlcat(out, func, sizeof(out) - 1);
 	FAudio_strlcat(out, colon_space, sizeof(out) - 1);
 	FAudio_strlcat(out, fmt, sizeof(out) - 1);

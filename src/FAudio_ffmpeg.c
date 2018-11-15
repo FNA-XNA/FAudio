@@ -100,7 +100,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t format)
 	   Need to verify but haven't come across any samples data with cbSize > 22 -@JohanSmet! */
 	if (pSourceVoice->src.format->cbSize > 22)
 	{
-		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
+		av_ctx->extradata = (uint8_t *) av_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
 		FAudio_memcpy(av_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
 	}
 	else if (format == FAUDIO_FORMAT_WMAUDIO2)
@@ -109,7 +109,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t format)
 		 * decode WMA data, so we create some fake extradata. This is taken
 		 * from <ffmpeg/libavformat/xwma.c>. */
 		av_ctx->extradata_size = 6;
-		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(AV_INPUT_BUFFER_PADDING_SIZE);
+		av_ctx->extradata = (uint8_t *) av_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[4] = 31;
 	}
@@ -118,7 +118,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t format)
 		/* FFmpeg expects XMA2WAVEFORMATEX or XMA2WAVEFORMAT.
 		 * For more info, check <ffmpeg/libavcodec/wmaprodec.c>. */
 		av_ctx->extradata_size = 34;
-		av_ctx->extradata = (uint8_t *) pSourceVoice->audio->pMalloc(AV_INPUT_BUFFER_PADDING_SIZE);
+		av_ctx->extradata = (uint8_t *) av_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[1] = 1;
 		av_ctx->extradata[5] = pSourceVoice->src.format->nChannels == 2 ? 3 : 0;
@@ -128,7 +128,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t format)
 
 	if (avcodec_open2(av_ctx, codec, NULL) < 0)
 	{
-		pSourceVoice->audio->pFree(av_ctx->extradata);
+		av_free(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -137,7 +137,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t format)
 	if (!av_frame)
 	{
 		avcodec_close(av_ctx);
-		pSourceVoice->audio->pFree(av_ctx->extradata);
+		av_free(av_ctx->extradata);
 		av_free(av_ctx);
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -160,7 +160,7 @@ void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
 
 	avcodec_close(ffmpeg->av_ctx);
-	voice->audio->pFree(ffmpeg->av_ctx->extradata);
+	av_free(ffmpeg->av_ctx->extradata);
 	av_free(ffmpeg->av_ctx);
 
 	voice->audio->pFree(ffmpeg->convertCache);
@@ -289,24 +289,40 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	uint32_t decSampleSize = voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8;
 	uint32_t outSampleSize = voice->src.format->nChannels * sizeof(float);
 	uint32_t done = 0, available, todo, cumulative;
+	uint32_t reseek = 0;
 
 	/* check if we need to reposition in the stream */
 	if (voice->src.curBufferOffset < ffmpeg->decOffset)
 	{
 		/* If curBufferOffset is behind, it's because we had to do some
 		 * padding, which should not affect the stream offset. To fix,
-		 * we simply rewind by a couple samples. Pretty safe.
+		 * we simply rewind by a couple samples. Pretty safe if it doesn't
+		 * cross back into the previous decoded block.
 		 */
-		ffmpeg->convertOffset -= (
+		uint32_t delta = (
 			ffmpeg->decOffset - voice->src.curBufferOffset
-		) * voice->src.format->nChannels;
-		ffmpeg->decOffset = voice->src.curBufferOffset;
+			) * voice->src.format->nChannels;
+
+		if (ffmpeg->convertOffset >= delta)
+		{
+			ffmpeg->convertOffset -= delta;
+			ffmpeg->decOffset = voice->src.curBufferOffset;
+		}
+		else
+		{
+			reseek = 1;
+		}
 	}
 	else if (voice->src.curBufferOffset > ffmpeg->decOffset)
 	{
 		/* If we're starting in the middle, we have to seek to the
 		 * starting position. AFAIK this shouldn't happen mid-stream.
 		 */
+		reseek = 1;
+	}
+
+	if (reseek)
+	{
 		FAudioBufferWMA *bufferWMA = &voice->src.bufferList->bufferWMA;
 		uint32_t byteOffset = voice->src.curBufferOffset * decSampleSize;
 		uint32_t packetIdx = bufferWMA->PacketCount - 1;
