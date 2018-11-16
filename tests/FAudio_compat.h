@@ -31,6 +31,7 @@ typedef FAudioVoiceDetails XAUDIO2_VOICE_DETAILS;
 typedef FAudioVoiceDetails XAUDIO27_VOICE_DETAILS;
 typedef FAudioVoiceState XAUDIO2_VOICE_STATE;
 typedef FAudioWaveFormatEx WAVEFORMATEX;
+typedef FAudioPerformanceData XAUDIO2_PERFORMANCE_DATA;
 
 typedef FAudioEngineCallback IXAudio2EngineCallback;
 typedef FAudioVoiceCallback IXAudio2VoiceCallback;
@@ -43,6 +44,7 @@ typedef FAudio IXAudio27;
 #define IXAudio27_CreateSubmixVoice FAudio_CreateSubmixVoice
 #define IXAudio27_GetDeviceCount FAudio_GetDeviceCount
 #define IXAudio27_GetDeviceDetails FAudio_GetDeviceDetails
+#define IXAudio27_GetPerformanceData FAudio_GetPerformanceData
 #define IXAudio27_Initialize FAudio_Initialize
 #define IXAudio27_RegisterForCallbacks FAudio_RegisterForCallbacks
 #define IXAudio27_Release FAudio_Release
@@ -54,6 +56,7 @@ typedef FAudio IXAudio2;
 #define IXAudio2_CreateMasteringVoice FAudio_CreateMasteringVoice
 #define IXAudio2_CreateSourceVoice FAudio_CreateSourceVoice
 #define IXAudio2_CreateSubmixVoice FAudio_CreateSubmixVoice
+#define IXAudio2_GetPerformanceData FAudio_GetPerformanceData
 #define IXAudio2_RegisterForCallbacks FAudio_RegisterForCallbacks
 #define IXAudio2_StartEngine FAudio_StartEngine
 #define IXAudio2_StopEngine FAudio_StopEngine

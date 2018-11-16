@@ -309,7 +309,16 @@ static void test_simple_streaming(IXAudio2 *xa)
     XAUDIO2_VOICE_STATE state;
     XAUDIO2_EFFECT_DESCRIPTOR effect;
     XAUDIO2_EFFECT_CHAIN chain;
+    XAUDIO2_PERFORMANCE_DATA perfdata;
     DWORD chmask;
+
+    memset(&perfdata, 0, sizeof(perfdata));
+    XA2CALL_V(GetPerformanceData, &perfdata);
+    ok(perfdata.ActiveSourceVoiceCount == 0, "Got wrong ActiveSourceVoiceCount: %u\n",
+            perfdata.ActiveSourceVoiceCount);
+    ok(perfdata.TotalSourceVoiceCount == 0, "Got wrong TotalSourceVoiceCount: %u\n",
+            perfdata.TotalSourceVoiceCount);
+    ok(perfdata.CurrentLatencyInSamples == 0, "Expected zero latency before mastering voice creation, got %u\n", perfdata.CurrentLatencyInSamples);
 
     memset(&ecb_state, 0, sizeof(ecb_state));
     memset(&src1_state, 0, sizeof(src1_state));
@@ -460,6 +469,14 @@ static void test_simple_streaming(IXAudio2 *xa)
     }
 
     ok(state.SamplesPlayed == 22050, "Got wrong samples played\n");
+
+    memset(&perfdata, 0, sizeof(perfdata));
+    XA2CALL_V(GetPerformanceData, &perfdata);
+    ok(perfdata.ActiveSourceVoiceCount == 2, "Got wrong ActiveSourceVoiceCount: %u\n",
+            perfdata.ActiveSourceVoiceCount);
+    ok(perfdata.TotalSourceVoiceCount == 2, "Got wrong TotalSourceVoiceCount: %u\n",
+            perfdata.TotalSourceVoiceCount);
+    ok(perfdata.CurrentLatencyInSamples > 0, "Got zero latency?\n");
 
     FAtest_free((void*)buf.pAudioData);
     FAtest_free((void*)buf2.pAudioData);

@@ -586,7 +586,39 @@ void FAudio_GetPerformanceData(
 	FAudio *audio,
 	FAudioPerformanceData *pPerfData
 ) {
-	FAudio_assert(0 && "TODO: Performance metrics!");
+	LinkedList *list;
+	FAudioSourceVoice *source;
+
+	memset(pPerfData, 0, sizeof(*pPerfData));
+
+	FAudio_PlatformLockMutex(audio->sourceLock);
+	list = audio->sources;
+	while (list != NULL)
+	{
+		source = (FAudioSourceVoice*) list->entry;
+		pPerfData->TotalSourceVoiceCount++;
+		if (source->src.active)
+		{
+			pPerfData->ActiveSourceVoiceCount++;
+		}
+		list = list->next;
+	}
+	FAudio_PlatformUnlockMutex(audio->sourceLock);
+
+	FAudio_PlatformLockMutex(audio->submixLock);
+	list = audio->submixes;
+	while (list != NULL)
+	{
+		pPerfData->ActiveSubmixVoiceCount++;
+		list = list->next;
+	}
+	FAudio_PlatformUnlockMutex(audio->submixLock);
+
+	if(audio->master)
+	{
+		/* estimate, should use real latency from platform */
+		pPerfData->CurrentLatencyInSamples = 2 * audio->updateSize;
+	}
 }
 
 void FAudio_SetDebugConfiguration(
