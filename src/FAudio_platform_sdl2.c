@@ -196,7 +196,12 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			0,
 			&want,
 			&have,
+#if SDL_VERSION_ATLEAST(2, 0, 9)
 			SDL_AUDIO_ALLOW_SAMPLES_CHANGE
+#else
+#warning Please update to SDL 2.0.9 ASAP!
+			0
+#endif
 		);
 		if (device->device == 0)
 		{
