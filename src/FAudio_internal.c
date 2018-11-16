@@ -297,12 +297,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		/* End-of-buffer behavior */
 		if (endRead < decoding)
 		{
-#ifdef HAVE_FFMPEG
-			if (voice->src.ffmpeg != NULL)
-			{
-				FAudio_FFMPEG_reset(voice);
-			}
-#endif /* HAVE_FFMPEG */
 			if (buffer->LoopCount > 0)
 			{
 				voice->src.curBufferOffset = buffer->LoopBegin;
@@ -321,6 +315,12 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			}
 			else
 			{
+#ifdef HAVE_FFMPEG
+				if (voice->src.ffmpeg != NULL)
+				{
+					FAudio_FFMPEG_reset(voice);
+				}
+#endif /* HAVE_FFMPEG */
 				/* For EOS we can stop storing fraction offsets */
 				if (buffer->Flags & FAUDIO_END_OF_STREAM)
 				{
