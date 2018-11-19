@@ -253,3 +253,5 @@ uint32_t FAPOFXCreateEQ(
 	*pEffect = &result->base.base;
 	return 0;
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

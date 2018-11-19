@@ -168,3 +168,5 @@ uint32_t FACT3DApply(
 	);
 	return 0;
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

@@ -827,3 +827,5 @@ FAUDIOAPI void FAudio_close(FAudioIOStream *io);
 #endif /* __cplusplus */
 
 #endif /* FAUDIO_H */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */
