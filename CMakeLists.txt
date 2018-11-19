@@ -8,6 +8,9 @@ option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_CPP "Build cpp/ folder (COM for Win32, Wine for Unix)" OFF)
 option(XNASONG "Build with XNA_Song.c" ON)
 
+# set custom module path for findFFmpeg
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
 # Platform Flags
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.7)
@@ -43,10 +46,14 @@ target_include_directories(FAudio INTERFACE src)
 
 # FFmpeg Support
 if(FFMPEG)
-	# TODO: Add libavcodec/libavutil as dependencies
 	# add source file to FAudio target
 	target_sources(FAudio PRIVATE src/FAudio_ffmpeg.c)
 	target_compile_definitions(FAudio PRIVATE HAVE_FFMPEG=1)
+
+	# find and link add FFMPEG
+	find_package(FFmpeg REQUIRED)
+	target_include_directories(FAudio PUBLIC ${FFMPEG_INCLUDE_DIR})
+	target_link_libraries(FAudio PUBLIC ${FFMPEG_LIBRARIES})
 endif(FFMPEG)
 
 # XNA_Song Support
