@@ -289,6 +289,9 @@ struct FAudio
 	/* Debug Information */
 	FAudioDebugConfiguration debug;
 #endif
+
+	/* Platform opaque pointer */
+	void *platform;
 };
 
 struct FAudioVoice
