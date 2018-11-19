@@ -16,9 +16,6 @@ elseif(FORCE32)
 	set(CMAKE_CXX_FLAGS "-m32")
 endif()
 
-# SDL2 Dependency
-find_package(SDL2)
-
 # Source lists
 add_library(FAudio SHARED
 	src/F3DAudio.c
