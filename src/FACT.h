@@ -803,3 +803,5 @@ FACTAPI uint32_t FACTCue_SetOutputVoiceMatrix(
 #endif /* __cplusplus */
 
 #endif /* FACT_H */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

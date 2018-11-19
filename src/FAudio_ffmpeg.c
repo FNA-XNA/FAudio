@@ -366,3 +366,5 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 extern int this_tu_is_empty;
 
 #endif /* HAVE_FFMPEG */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

@@ -264,3 +264,5 @@ FAUDIOAPI void XNA_GetSongVisualizationData(
 ) {
 	/* TODO: Visualization FAPO that reads in Song samples, FFT analysis */
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */
