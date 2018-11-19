@@ -19,8 +19,8 @@ endif()
 # SDL2 Dependency
 find_package(SDL2)
 
-# Base FAudio Sources
-set(FAUDIO_SRC
+# Source lists
+add_library(FAudio SHARED
 	src/F3DAudio.c
 	src/FAudio.c
 	src/FAudio_internal.c
@@ -38,25 +38,106 @@ set(FAUDIO_SRC
 	src/FAPOFX_echo.c
 	src/FAudio_platform_sdl2.c
 )
+# include directory for other targets to consume
+target_include_directories(FAudio INTERFACE src)
 
 # FFmpeg Support
 if(FFMPEG)
 	# TODO: Add libavcodec/libavutil as dependencies
-	add_definitions(-DHAVE_FFMPEG=1)
-	list(APPEND FAUDIO_SRC src/FAudio_ffmpeg.c)
+	# add source file to FAudio target
+	target_sources(FAudio PRIVATE src/FAudio_ffmpeg.c)
+	target_compile_definitions(FAudio PRIVATE HAVE_FFMPEG=1)
 endif(FFMPEG)
 
 # XNA_Song Support
 if(XNASONG)
-	list(APPEND FAUDIO_SRC src/XNA_Song.c)
+	# add source file to FAudio target
+	target_sources(FAudio PRIVATE src/XNA_Song.c)
 endif(XNASONG)
 
-# FAudio Shared Library
-add_library(FAudio SHARED ${FAUDIO_SRC})
-include_directories(FAudio ${SDL2_INCLUDE_DIRS})
-target_link_libraries(FAudio ${SDL2_LIBRARY})
+# link SDL2 library
+find_package(SDL2 CONFIG REQUIRED)
+if (TARGET SDL2::SDL2)
+	message(STATUS "using TARGET SDL2::SDL2")
+	target_link_libraries(FAudio PUBLIC SDL2::SDL2)
+elseif (TARGET SDL2)
+	message(STATUS "using TARGET SDL2")
+	target_link_libraries(FAudio PUBLIC SDL2)
+else()
+	message(STATUS "no TARGET SDL2::SDL2, or SDL2, using variables")
+	target_include_directories(FAudio PUBLIC ${SDL2_INCLUDE_DIRS})
+	target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})
+endif()
 
-# TODO: utils/
+if(BUILD_UTILS)
+	# add common ui library used by util targets
+	add_library(uicommon STATIC
+		utils/uicommon/FAudioUI_main.cpp
+		utils/uicommon/FAudioUI_ui.cpp
+		utils/uicommon/glfuncs.h
+		utils/uicommon/glmacros.h
+		utils/uicommon/imconfig.h
+		utils/uicommon/imgui.cpp
+		utils/uicommon/imgui_demo.cpp
+		utils/uicommon/imgui_draw.cpp
+		utils/uicommon/imgui.h
+		utils/uicommon/imgui_internal.h
+		utils/uicommon/stb_rect_pack.h
+		utils/uicommon/stb_textedit.h
+		utils/uicommon/stb_truetype.h
+		)
+	target_link_libraries(uicommon PUBLIC FAudio)
+
+	# add wavs library for other libraries to use
+	add_library(wavs STATIC utils/wavcommon/wavs.cpp)
+	target_compile_definitions(wavs PUBLIC
+		"RESOURCE_PATH=${CMAKE_SOURCE_DIR/utils/wavcommon/resources}")
+
+	# add tools
+	add_executable(testparse utils/testparse/testparse.c)
+	target_link_libraries(testparse PRIVATE uicommon)
+
+	add_executable(facttool utils/facttool/facttool.cpp)
+	target_link_libraries(facttool PRIVATE uicommon)
+
+	# add testreverb tool using wavs lib
+	add_executable(testreverb
+		utils/testreverb/audio.cpp
+		utils/testreverb/audio_faudio.cpp
+		utils/testreverb/audio.h
+		utils/testreverb/audio_xaudio.cpp
+		utils/testreverb/testreverb.cpp
+		)
+	target_link_libraries(testreverb PRIVATE uicommon wavs)
+
+	# add testxma tool using wavs lib
+	add_executable(testvolumemeter
+		utils/testvolumemeter/audio.cpp
+		utils/testvolumemeter/audio_faudio.cpp
+		utils/testvolumemeter/audio.h
+		utils/testvolumemeter/testvolumemeter.cpp
+		)
+	target_link_libraries(testvolumemeter PRIVATE uicommon wavs)
+
+	# add testxma tool using just FAudio
+	add_executable(testxwma
+		utils/testxwma/testxwma.cpp
+		)
+	target_link_libraries(testxwma PRIVATE FAudio)
+
+	# add testfilter tool
+	add_executable(testfilter
+		utils/testfilter/audio.cpp
+		utils/testfilter/audio_faudio.cpp
+		utils/testfilter/audio.h
+		utils/testfilter/audio_player.h
+		utils/testfilter/audio_xaudio.cpp
+		utils/testfilter/oscillator.cpp
+		utils/testfilter/oscillator.h
+		utils/testfilter/testfilter.cpp
+		)
+	target_link_libraries(testfilter PRIVATE uicommon)
+endif()
 
 # TODO: cpp/ COM Wrapper if MinGW
 
