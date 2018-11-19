@@ -1839,6 +1839,13 @@ void FAudioSourceVoice_GetState(
 		} while (entry != NULL);
 	}
 
+	LOG_INFO(
+		voice->audio,
+		"-> {pCurrentBufferContext: %p, BuffersQueued: %u, SamplesPlayed: %"FAudio_PRIu64"}\n",
+		pVoiceState->pCurrentBufferContext, pVoiceState->BuffersQueued,
+		pVoiceState->SamplesPlayed
+	);
+
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 }
 
