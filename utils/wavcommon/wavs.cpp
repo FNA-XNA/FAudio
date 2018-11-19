@@ -1,10 +1,12 @@
 #define DR_WAV_IMPLEMENTATION
 #include "wavs.h"
 
+#ifndef RESOURCE_PATH
 #ifdef _MSC_VER
 #define RESOURCE_PATH "../../utils/wavcommon/resources"
 #else
 #define RESOURCE_PATH "utils/wavcommon/resources"
+#endif
 #endif
 
 const char *audio_sample_filenames[] =
