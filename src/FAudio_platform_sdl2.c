@@ -110,7 +110,10 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 void FAudio_PlatformAddRef()
 {
 	/* SDL tracks ref counts for each subsystem */
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
+	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		SDL_Log("SDL_INIT_AUDIO failed: %s\n", SDL_GetError());
+	}
 	FAudio_INTERNAL_InitSIMDFunctions(
 		SDL_HasSSE2(),
 		SDL_HasNEON()
@@ -213,7 +216,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 			);
 			FAudio_PlatformDestroyMutex(device->engineLock);
 			audio->pFree(device);
-			SDL_Log("%s\n", SDL_GetError());
+			SDL_Log("OpenAudioDevice failed: %s\n", SDL_GetError());
 			FAudio_assert(0 && "Failed to open audio device!");
 			return;
 		}
