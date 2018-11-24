@@ -1,99 +1,121 @@
-# - Try to find ffmpeg libraries (libavcodec, libavformat and libavutil)
+# Copyright (c) 2014 Matt Coffin <mcoffin13@gmail.com>
+#
+# This software is provided 'as-is', without any express or implied
+# warranty. In no event will the authors be held liable for any damages
+# arising from the use of this software.
+#
+# Permission is granted to anyone to use this software for any purpose,
+# including commercial applications, and to alter it and redistribute it
+# freely, subject to the following restrictions:
+#
+# 1. The origin of this software must not be misrepresented; you must not
+#    claim that you wrote the original software. If you use this software
+#    in a product, an acknowledgment in the product documentation would be
+#    appreciated but is not required.
+# 2. Altered source versions must be plainly marked as such, and must not be
+#    misrepresented as being the original software.
+# 3. This notice may not be removed or altered from any source distribution.
+
+# - Try to find FFmpeg
 # Once done this will define
-#
-# FFMPEG_FOUND - system has ffmpeg or libav
-# FFMPEG_INCLUDE_DIR - the ffmpeg include directory
-# FFMPEG_LIBRARIES - Link these to use ffmpeg
-# FFMPEG_LIBAVCODEC
-# FFMPEG_LIBAVFORMAT
-# FFMPEG_LIBAVUTIL
-#
-# Copyright (c) 2008 Andreas Schneider <mail@cynapses.org>
-# Modified for other libraries by Lasse Kärkkäinen <tronic>
-# Modified for Hedgewars by Stepik777
-# Modified for FFmpeg-example Tuukka Pasanen 2018
-#
-# Redistribution and use is allowed according to the terms of the New
-# BSD license.
-#
+#   FFmpeg_FOUND
+#   FFmpeg_INCLUDE_DIRS
+#   FFmpeg_LIBRARIES
+#   FFmpeg_INCLUDE_FILES
+# Author: Matt Coffin <mcoffin13@gmail.com>
+
+# 2018-11-29: NeroBurner: add FFmpeg_INCLUDE_DIRS and FFmpeg_LIBRARY_DIRS as hints for all targets
+# 2018-12-03: NeroBurner: use FFmpeg_INCLUDE_DIR to resolve name collision, ignore root path if set
 
 include(FindPackageHandleStandardArgs)
 
-    find_package_handle_standard_args(FFMPEG
-        FOUND_VAR FFMPEG_FOUND
-        REQUIRED_VARS
-            FFMPEG_LIBRARY
-            FFMPEG_INCLUDE_DIR
-        VERSION_VAR FFMPEG_VERSION
-    )
+if (NOT FFmpeg_FIND_COMPONENTS)
+	set(FFmpeg_FIND_COMPONENTS avcodec avdevice avfilter avformat avutil swresample swscale)
+endif(NOT FFmpeg_FIND_COMPONENTS)
 
-if(FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
-  # in cache already
-  set(FFMPEG_FOUND TRUE)
+# Generate component include files and requirements
+foreach(comp ${FFmpeg_FIND_COMPONENTS})
+	if(FFmpeg_FIND_REQUIRED_${comp})
+		list(APPEND required "FFmpeg_${comp}_FOUND")
+	endif()
+endforeach(comp)
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(_lib_suffix 64)
 else()
-  # use pkg-config to get the directories and then use these values
-  # in the FIND_PATH() and FIND_LIBRARY() calls
-  find_package(PkgConfig)
-  if(PKG_CONFIG_FOUND)
-    pkg_check_modules(_FFMPEG_AVCODEC libavcodec)
-    pkg_check_modules(_FFMPEG_AVFORMAT libavformat)
-    pkg_check_modules(_FFMPEG_AVUTIL libavutil)
-  endif()
-
-  find_path(FFMPEG_AVCODEC_INCLUDE_DIR
-    NAMES libavcodec/avcodec.h
-    PATHS ${_FFMPEG_AVCODEC_INCLUDE_DIRS}
-      /usr/include
-      /usr/local/include
-      /opt/local/include
-      /sw/include
-    PATH_SUFFIXES ffmpeg libav)
-
-  find_library(FFMPEG_LIBAVCODEC
-    NAMES avcodec
-    PATHS ${_FFMPEG_AVCODEC_LIBRARY_DIRS}
-      /usr/lib
-      /usr/local/lib
-      /opt/local/lib
-      /sw/lib)
-
-  find_library(FFMPEG_LIBAVFORMAT
-    NAMES avformat
-    PATHS ${_FFMPEG_AVFORMAT_LIBRARY_DIRS}
-      /usr/lib
-      /usr/local/lib
-      /opt/local/lib
-      /sw/lib)
-
-  find_library(FFMPEG_LIBAVUTIL
-    NAMES avutil
-    PATHS ${_FFMPEG_AVUTIL_LIBRARY_DIRS}
-      /usr/lib
-      /usr/local/lib
-      /opt/local/lib
-      /sw/lib)
-
-  if(FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT)
-    set(FFMPEG_FOUND TRUE)
-  endif()
-
-  if(FFMPEG_FOUND)
-    set(FFMPEG_INCLUDE_DIR ${FFMPEG_AVCODEC_INCLUDE_DIR})
-    set(FFMPEG_LIBRARIES
-      ${FFMPEG_LIBAVCODEC}
-      ${FFMPEG_LIBAVFORMAT}
-      ${FFMPEG_LIBAVUTIL})
-  endif()
-
-  if(FFMPEG_FOUND)
-    if(NOT FFMPEG_FIND_QUIETLY)
-      message(STATUS
-      "Found FFMPEG or Libav: ${FFMPEG_LIBRARIES}, ${FFMPEG_INCLUDE_DIR}")
-    endif()
-  else()
-    if(FFMPEG_FIND_REQUIRED)
-      message(FATAL_ERROR
-      "Could not find libavcodec or libavformat or libavutil")
-    endif()
-  endif()
+	set(_lib_suffix 32)
 endif()
+
+set(FFMPEG_PATH_ARCH FFmpegPath${_lib_suffix})
+# Find libraries
+find_package(PkgConfig QUIET)
+foreach(comp ${FFmpeg_FIND_COMPONENTS})
+	if(PKG_CONFIG_FOUND)
+		pkg_check_modules(_${comp} QUIET lib${comp})
+	endif()
+	if(NOT "${FFmpeg_INCLUDE_DIR}")
+		# search just provided directory
+		find_path(FFmpeg_${comp}_INCLUDE_DIR
+			"lib${comp}/${comp}.h"
+			PATHS
+			    ${FFmpeg_INCLUDE_DIR}
+			PATH_SUFFIXES ffmpeg libav
+			NO_CMAKE_FIND_ROOT_PATH
+			NO_DEFAULT_PATH)
+		find_library(FFmpeg_${comp}_LIBRARY
+			NAMES ${comp} ${comp}-ffmpeg ${_${comp}_LIBRARIES}
+			HINTS
+			    ${FFmpeg_LIBRARY_DIRS}
+				${_${comp}_LIBRARY_DIRS}
+				"${FFmpeg_${comp}_INCLUDE_DIR}/../lib"
+				"${FFmpeg_${comp}_INCLUDE_DIR}/../lib${_lib_suffix}"
+				"${FFmpeg_${comp}_INCLUDE_DIR}/../libs${_lib_suffix}"
+				"${FFmpeg_${comp}_INCLUDE_DIR}/lib"
+				"${FFmpeg_${comp}_INCLUDE_DIR}/lib${_lib_suffix}"
+			PATH_SUFFIXES ${comp} lib${comp}
+			DOC "FFmpeg ${comp} library"
+			NO_CMAKE_FIND_ROOT_PATH
+			NO_DEFAULT_PATH)
+	endif()
+
+	# find path with generic include paths
+	find_path(FFmpeg_${comp}_INCLUDE_DIR
+		NAMES "lib${comp}/${comp}.h"
+		HINTS
+			${FFmpeg_INCLUDE_DIR}
+			${_${comp}_INCLUDE_DIRS}
+			ENV FFmpegPath
+			ENV ${FFMPEG_PATH_ARCH}
+		PATHS
+			/usr/include /usr/local/include /opt/local/include /sw/include
+		PATH_SUFFIXES ffmpeg libav
+		DOC "FFmpeg include directory")
+	find_library(FFmpeg_${comp}_LIBRARY
+		NAMES ${comp} ${comp}-ffmpeg ${_${comp}_LIBRARIES}
+		HINTS
+			${FFmpeg_LIBRARY_DIRS}
+			${_${comp}_LIBRARY_DIRS}
+			"${FFmpeg_${comp}_INCLUDE_DIR}/../lib"
+			"${FFmpeg_${comp}_INCLUDE_DIR}/../lib${_lib_suffix}"
+			"${FFmpeg_${comp}_INCLUDE_DIR}/../libs${_lib_suffix}"
+			"${FFmpeg_${comp}_INCLUDE_DIR}/lib"
+			"${FFmpeg_${comp}_INCLUDE_DIR}/lib${_lib_suffix}"
+		PATHS
+			/usr/lib /usr/local/lib /opt/local/lib /sw/lib
+		PATH_SUFFIXES ${comp} lib${comp}
+		DOC "FFmpeg ${comp} library")
+	find_package_handle_standard_args(FFmpeg_${comp}
+		FOUND_VAR FFmpeg_${comp}_FOUND
+		REQUIRED_VARS FFmpeg_${comp}_LIBRARY FFmpeg_${comp}_INCLUDE_DIR)
+	if(${FFmpeg_${comp}_FOUND})
+		list(APPEND FFmpeg_INCLUDE_DIRS ${FFmpeg_${comp}_INCLUDE_DIR})
+		list(APPEND FFmpeg_LIBRARIES ${FFmpeg_${comp}_LIBRARY})
+	endif()
+endforeach(comp)
+
+# Run checks via find_package_handle_standard_args
+find_package_handle_standard_args(FFmpeg
+	FOUND_VAR FFmpeg_FOUND
+	REQUIRED_VARS ${required} FFmpeg_INCLUDE_DIRS FFmpeg_LIBRARIES)
+# remove duplicate include dir entries
+list(REMOVE_DUPLICATES FFmpeg_INCLUDE_DIRS)
