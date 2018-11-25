@@ -8,6 +8,16 @@ option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_CPP "Build cpp/ folder (COM for Win32, Wine for Unix)" OFF)
 option(XNASONG "Build with XNA_Song.c" ON)
 
+# set build type to Release if none is specified
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	message(STATUS "Setting build type to 'Release' as none was specified.")
+	set(CMAKE_BUILD_TYPE "Release" CACHE
+		STRING "Choose the type of build." FORCE)
+	# Set the possible values of build type for cmake-gui
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+		"Debug" "Release" "RelWithDebInfo")
+endif()
+
 # set custom module path for findFFmpeg
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
@@ -21,6 +31,21 @@ endif()
 
 # Source lists
 add_library(FAudio SHARED
+	# public header
+	include/FAPOFX.h
+	include/FACT.h
+	include/FAPOBase.h
+	include/FAudio.h
+	include/FACT3D.h
+	include/F3DAudio.h
+	include/FAPO.h
+	include/FAudioFX.h
+	# internal header
+	src/FACT_internal.h
+	src/FAudio_internal.h
+	src/stb.h
+	src/stb_vorbis.h
+	# source files
 	src/F3DAudio.c
 	src/FAudio.c
 	src/FAudio_internal.c
@@ -39,7 +64,9 @@ add_library(FAudio SHARED
 	src/FAudio_platform_sdl2.c
 )
 # include directory for other targets to consume
-target_include_directories(FAudio INTERFACE src)
+target_include_directories(FAudio PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 # FFmpeg Support
 if(FFMPEG)
@@ -146,3 +173,34 @@ endif()
 # TODO: cpp/ COM Wrapper if MinGW
 
 # TODO: cpp/ Wine DLL if Linux
+
+
+# install FAudio target and generate cmake-config file
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+	cmake/config.cmake.in
+	${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}-config.cmake
+	INSTALL_DESTINATION lib/cmake/${PROJECT_NAME})
+
+install(
+	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}-config.cmake
+	DESTINATION lib/cmake/${PROJECT_NAME})
+
+# install public header file
+install(
+	DIRECTORY include/
+	DESTINATION include)
+
+install(
+	TARGETS ${PROJECT_NAME}
+	EXPORT ${PROJECT_NAME}-targets
+	INCLUDES DESTINATION include
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib/static)
+
+install(
+	EXPORT ${PROJECT_NAME}-targets
+	NAMESPACE ${PROJECT_NAME}::
+	DESTINATION lib/cmake/${PROJECT_NAME})
