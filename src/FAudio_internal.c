@@ -1356,7 +1356,7 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	int32_t midOffset;
 
 	/* PCM block cache */
-	int16_t blockCache[512]; /* Max block size */
+	int16_t blockCache[1012]; /* Max block size */
 
 	/* Block size */
 	uint32_t bsize = (voice->src.format->nBlockAlign - 6) * 2;
@@ -1404,7 +1404,7 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	int32_t midOffset;
 
 	/* PCM block cache */
-	int16_t blockCache[1024]; /* Max block size */
+	int16_t blockCache[2024]; /* Max block size */
 
 	/* Align, block size */
 	uint32_t bsize = ((voice->src.format->nBlockAlign / 2) - 6) * 2;
