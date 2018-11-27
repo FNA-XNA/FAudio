@@ -1582,11 +1582,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		adpcmMask = ((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2;
-		adpcmMask -= 1;
-		playBegin &= ~adpcmMask;
-		playLength &= ~adpcmMask;
-		loopBegin &= ~adpcmMask;
-		loopLength &= ~adpcmMask;
+		playBegin -= playBegin % adpcmMask;
+		playLength -= playLength % adpcmMask;
+		loopBegin -= loopBegin % adpcmMask;
+		loopLength -= loopLength % adpcmMask;
 
 		/* This is basically a const_cast... */
 		adpcmByteCount = (uint32_t*) &pBuffer->AudioBytes;
