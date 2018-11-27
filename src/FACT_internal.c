@@ -58,7 +58,7 @@ void FACT_INTERNAL_GetNextWave(
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
 	float max, next;
-	uint16_t i;
+	int32_t i;
 
 	/* Track Variation */
 	if (evt->wave.isComplex)
