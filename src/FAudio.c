@@ -589,7 +589,7 @@ void FAudio_GetPerformanceData(
 	LinkedList *list;
 	FAudioSourceVoice *source;
 
-	memset(pPerfData, 0, sizeof(*pPerfData));
+	FAudio_zero(pPerfData, sizeof(FAudioPerformanceData));
 
 	FAudio_PlatformLockMutex(audio->sourceLock);
 	list = audio->sources;
