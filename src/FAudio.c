@@ -1264,6 +1264,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	{
 		pDestinationVoice = voice->audio->master;
 	}
+	FAudio_assert(pDestinationVoice != NULL);
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)
