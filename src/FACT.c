@@ -1438,6 +1438,7 @@ uint32_t FACTWaveBank_Prepare(
 
 	/* TODO: Convert dwPlayOffset to a byte offset */
 	FAudio_assert(dwPlayOffset == 0);
+#if 0
 	if (dwFlags & FACT_FLAG_UNITS_MS)
 	{
 		dwPlayOffset = (uint32_t) (
@@ -1447,6 +1448,7 @@ uint32_t FACTWaveBank_Prepare(
 			) * (float) dwPlayOffset
 		);
 	}
+#endif
 
 	/* Create the voice */
 	send.Flags = 0;
