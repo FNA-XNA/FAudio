@@ -1908,10 +1908,6 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		FAudio_assert((ptr - start) == dspParameterOffset);
 		for (i = 0; i < pEngine->dspPresetCount; i += 1)
 		{
-			memsize = (
-				sizeof(FACTDSPParameter) *
-				pEngine->dspPresets[i].parameterCount
-			);
 			for (j = 0; j < pEngine->dspPresets[i].parameterCount; j += 1)
 			{
 				pEngine->dspPresets[i].parameters[j].type = read_u8(&ptr);
