@@ -75,6 +75,7 @@
 
 #define FAudio_assert assert
 #define FAudio_LogV(x, va) vfprintf(stderr, x, va)
+#define FAudio_getenv getenv
 #else
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
@@ -120,6 +121,7 @@
 
 #define FAudio_assert SDL_assert
 #define FAudio_LogV(x, va) SDL_LogMessageV(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, x, va)
+#define FAudio_getenv SDL_getenv
 #endif
 
 /* Easy Macros */
@@ -607,3 +609,5 @@ uint32_t FAudio_timems(void);
 	(float) (fxd >> FIXED_PRECISION) + /* Integer part */ \
 	((fxd & FIXED_FRACTION_MASK) * (1.0f / FIXED_ONE)) /* Fraction part */ \
 )
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

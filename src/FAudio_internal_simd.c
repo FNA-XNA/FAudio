@@ -1588,3 +1588,5 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 	FAudio_assert(0 && "Need converter functions!");
 #endif
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

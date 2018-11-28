@@ -34,7 +34,7 @@ void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...)
 {
 	char out[1024];
 	va_list va;
-	const char *e = getenv("FAUDIO_DEBUG");
+	const char *e = FAudio_getenv("FAUDIO_DEBUG");
 	static const char *colon_space = ": ";
 	if ((!e || !*e || *e == '0') && g_debugConfig.TraceMask == 0)
 	{
@@ -612,7 +612,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			/* FIXME: ADPCM BlockAlign? */
 			voice->src.callback->OnVoiceProcessingPassStart(
 				voice->src.callback,
-				toDecode * voice->src.format->nBlockAlign
+				(uint32_t) toDecode * voice->src.format->nBlockAlign
 			);
 		}
 
@@ -636,7 +636,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		/* FIXME: ADPCM BlockAlign? */
 		voice->src.callback->OnVoiceProcessingPassStart(
 			voice->src.callback,
-			FAudio_INTERNAL_GetBytesRequested(voice, toDecode)
+			FAudio_INTERNAL_GetBytesRequested(voice, (uint32_t) toDecode)
 		);
 	}
 
@@ -686,7 +686,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			&voice->src.resampleOffset,
 			voice->src.resampleStep,
 			toResample,
-			voice->src.format->nChannels
+			(uint8_t) voice->src.format->nChannels
 		);
 	}
 
@@ -1356,7 +1356,7 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	int32_t midOffset;
 
 	/* PCM block cache */
-	int16_t blockCache[512]; /* Max block size */
+	int16_t blockCache[1012]; /* Max block size */
 
 	/* Block size */
 	uint32_t bsize = (voice->src.format->nBlockAlign - 6) * 2;
@@ -1404,7 +1404,7 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	int32_t midOffset;
 
 	/* PCM block cache */
-	int16_t blockCache[1024]; /* Max block size */
+	int16_t blockCache[2024]; /* Max block size */
 
 	/* Align, block size */
 	uint32_t bsize = ((voice->src.format->nBlockAlign / 2) - 6) * 2;
@@ -1437,3 +1437,5 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		midOffset = 0;
 	}
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

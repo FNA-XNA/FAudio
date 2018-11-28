@@ -589,7 +589,7 @@ void FAudio_GetPerformanceData(
 	LinkedList *list;
 	FAudioSourceVoice *source;
 
-	memset(pPerfData, 0, sizeof(*pPerfData));
+	FAudio_zero(pPerfData, sizeof(FAudioPerformanceData));
 
 	FAudio_PlatformLockMutex(audio->sourceLock);
 	list = audio->sources;
@@ -1264,6 +1264,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	{
 		pDestinationVoice = voice->audio->master;
 	}
+	FAudio_assert(pDestinationVoice != NULL);
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
 		if (pDestinationVoice == voice->sends.pSends[i].pOutputVoice)
@@ -1581,11 +1582,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
 		adpcmMask = ((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2;
-		adpcmMask -= 1;
-		playBegin &= ~adpcmMask;
-		playLength &= ~adpcmMask;
-		loopBegin &= ~adpcmMask;
-		loopLength &= ~adpcmMask;
+		playBegin -= playBegin % adpcmMask;
+		playLength -= playLength % adpcmMask;
+		loopBegin -= loopBegin % adpcmMask;
+		loopLength -= loopLength % adpcmMask;
 
 		/* This is basically a const_cast... */
 		adpcmByteCount = (uint32_t*) &pBuffer->AudioBytes;
@@ -1855,3 +1855,5 @@ FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
 	*pChannelMask = voice->audio->mixFormat->dwChannelMask;
 	return 0;
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

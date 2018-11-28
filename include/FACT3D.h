@@ -119,3 +119,5 @@ FACTAPI uint32_t FACT3DApply(
 #endif /* __cplusplus */
 
 #endif /* FACT3D_H */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

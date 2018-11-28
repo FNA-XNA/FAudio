@@ -157,3 +157,5 @@ FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
 #endif /* __cplusplus */
 
 #endif /* FAPOFX_H */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */
