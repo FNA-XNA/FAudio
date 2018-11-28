@@ -1293,5 +1293,5 @@ int main(int argc, char **argv)
     fprintf(stdout, "Finished with %u successful tests and %u failed tests.\n",
             success_count, failure_count);
 
-    return 0;
+    return failure_count > 0;
 }
