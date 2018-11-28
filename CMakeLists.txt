@@ -6,6 +6,7 @@ option(FORCE32 "Force 32-bit on 64-bit (ignored on macOS)" OFF)
 option(FFMPEG "Enable FFmpeg support (WMA, XMA)" OFF)
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_CPP "Build cpp/ folder (COM for Win32, Wine for Unix)" OFF)
+option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" ON)
 option(XNASONG "Build with XNA_Song.c" ON)
 
 # set build type to Release if none is specified
@@ -174,6 +175,12 @@ endif()
 
 # TODO: cpp/ Wine DLL if Linux
 
+if(BUILD_TESTS)
+	add_executable(faudio_tests
+		tests/xaudio2.c
+		)
+	target_link_libraries(faudio_tests PRIVATE FAudio)
+endif()
 
 # install FAudio target and generate cmake-config file
 include(CMakePackageConfigHelpers)
