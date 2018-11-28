@@ -42,7 +42,12 @@ ifeq ($(FAUDIO_RELEASE),1)
 else
 	CFLAGS += -g -Wall
 endif
-LDFLAGS += `sdl2-config --libs`
+
+ifdef PKG_CONFIG_PATH
+	PKG_CONFIG_PATH ?= 
+endif
+
+LDFLAGS += `pkg-config sdl2 --libs`
 
 # Source lists
 FAUDIOSRC = \
@@ -102,7 +107,7 @@ all: $(FAUDIOOBJ)
 	$(CC) $(CFLAGS) -shared -o $(FAUDIOLIB) $(FAUDIOOBJ) $(LDFLAGS)
 
 $(FAUDIO_OUT)/%.o: src/%.c
-	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
+	$(CC) $(CFLAGS) -c -o $@ $< `pkg-config sdl2 --cflags`
 
 clean:
 	rm -f $(FAUDIOOBJ) $(FAUDIOLIB) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX) testxwma$(UTIL_SUFFIX)
@@ -135,36 +140,36 @@ testparse:
 	$(CC) -g -Wall -pedantic -o testparse$(UTIL_SUFFIX) \
 		utils/testparse/testparse.c \
 		src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc `pkg-config sdl2 --cflags --libs`
 
 facttool:
 	$(CXX) -g -Wall $(FFMPEG_CFLAGS) -o facttool$(UTIL_SUFFIX) \
 		utils/facttool/facttool.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
+		-Isrc `pkg-config sdl2 --cflags --libs` $(FFMPEG_LDFLAGS)
 
 testreverb:
 	$(CXX) -g -Wall -o testreverb$(UTIL_SUFFIX) \
 		utils/testreverb/*.cpp \
 		utils/wavcommon/wavs.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc `pkg-config sdl2 --cflags --libs`
 
 testvolumemeter:
 	$(CXX) -g -Wall -o testvolumemeter$(UTIL_SUFFIX) \
 		utils/testvolumemeter/*.cpp \
 		utils/wavcommon/wavs.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc `pkg-config sdl2 --cflags --libs`
 
 testxwma:
 	$(CXX) -g -Wall $(FFMPEG_CFLAGS) -o testxwma$(UTIL_SUFFIX) \
 		utils/testxwma/*.cpp \
 		src/F*.c \
-		-Isrc `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
+		-Isrc `pkg-config sdl2 --cflags --libs` $(FFMPEG_LDFLAGS)
 
 testfilter:
 	$(CXX) -g -Wall -o testfilter$(UTIL_SUFFIX) \
 		utils/testfilter/*.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc `pkg-config sdl2 --cflags --libs`
