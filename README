@@ -19,7 +19,12 @@ FAudio depends solely on SDL2. FAudio never explicitly uses the C runtime.
 
 Building FAudio
 ---------------
-For *nix platforms, just type `make` in the root directory!
+For *nix platforms, use cmake.
+
+    $ mkdir build/
+    $ cd build/
+    $ cmake ../
+    $ make
 
 For Windows, see the 'visualc/' directory.
 
