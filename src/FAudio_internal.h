@@ -122,8 +122,8 @@
 #define FAudio_qsort SDL_qsort
 
 #define FAudio_assert SDL_assert
-#define FAudio_snprintf snprintf
-#define FAudio_vsnprintf vsnprintf
+#define FAudio_snprintf SDL_snprintf
+#define FAudio_vsnprintf SDL_vsnprintf
 #define FAudio_Log(msg) SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "%s\n", msg);
 #define FAudio_getenv SDL_getenv
 #define FAudio_PRIu64 SDL_PRIu64
