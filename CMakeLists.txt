@@ -6,7 +6,7 @@ option(FORCE32 "Force 32-bit on 64-bit (ignored on macOS)" OFF)
 option(FFMPEG "Enable FFmpeg support (WMA, XMA)" OFF)
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_CPP "Build cpp/ folder (COM for Win32, Wine for Unix)" OFF)
-option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" ON)
+option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 option(XNASONG "Build with XNA_Song.c" ON)
 
 # set build type to Release if none is specified
@@ -25,6 +25,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 # Platform Flags
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.7)
+elseif(WIN32)
+	set(CMAKE_SHARED_LIBRARY_PREFIX "")
 elseif(FORCE32)
 	set(CMAKE_C_FLAGS "-m32")
 	set(CMAKE_CXX_FLAGS "-m32")
@@ -80,6 +82,11 @@ if(FFMPEG)
 	target_include_directories(FAudio PUBLIC ${FFMPEG_INCLUDE_DIR})
 	target_link_libraries(FAudio PUBLIC ${FFMPEG_LIBRARIES})
 endif(FFMPEG)
+
+# MinGW builds should statically link libgcc
+if(MINGW)
+	target_link_libraries(FAudio PRIVATE -static-libgcc)
+endif()
 
 # XNA_Song Support
 if(XNASONG)
