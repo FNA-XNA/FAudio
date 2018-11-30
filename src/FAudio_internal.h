@@ -50,7 +50,6 @@
 #define FAudio_strlen(ptr) strlen(ptr)
 #define FAudio_strcmp(str1, str2) strcmp(str1, str2)
 #define FAudio_strlcpy(ptr1, ptr2, size) strlcpy(ptr1, ptr2, size)
-#define FAudio_strlcat(ptr1, ptr2, size) strlcat(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) pow(x, y)
 #define FAudio_log(x) log(x)
@@ -99,7 +98,6 @@
 #define FAudio_strlen(ptr) SDL_strlen(ptr)
 #define FAudio_strcmp(str1, str2) SDL_strcmp(str1, str2)
 #define FAudio_strlcpy(ptr1, ptr2, size) SDL_strlcpy(ptr1, ptr2, size)
-#define FAudio_strlcat(ptr1, ptr2, size) SDL_strlcat(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) SDL_pow(x, y)
 #define FAudio_log(x) SDL_log(x)
