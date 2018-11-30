@@ -158,6 +158,11 @@ uint32_t FAudio_Initialize(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
+#ifndef FAUDIO_RELEASE
+	FAudioDebugConfiguration debugInit = {0};
+	FAudio_SetDebugConfiguration(audio, &debugInit, NULL);
+#endif /* FAUDIO_RELEASE */
+
 	FAudio_assert(Flags == 0);
 	FAudio_assert(XAudio2Processor == FAUDIO_DEFAULT_PROCESSOR);
 
@@ -635,11 +640,39 @@ void FAudio_SetDebugConfiguration(
 		sizeof(FAudioDebugConfiguration)
 	);
 
+	env = FAudio_getenv("FAUDIO_LOG_EVERYTHING");
+	if (env != NULL && *env == '1')
+	{
+		audio->debug.TraceMask = (
+			FAUDIO_LOG_ERRORS |
+			FAUDIO_LOG_WARNINGS |
+			FAUDIO_LOG_INFO |
+			FAUDIO_LOG_DETAIL |
+			FAUDIO_LOG_API_CALLS |
+			FAUDIO_LOG_FUNC_CALLS |
+			FAUDIO_LOG_TIMING |
+			FAUDIO_LOG_LOCKS |
+			FAUDIO_LOG_MEMORY |
+			FAUDIO_LOG_STREAMING
+		);
+		audio->debug.LogThreadID = 1;
+		audio->debug.LogFileline = 1;
+		audio->debug.LogFunctionName = 1;
+		audio->debug.LogTiming = 1;
+	}
+
 	#define CHECK_ENV(type) \
 		env = FAudio_getenv("FAUDIO_LOG_" #type); \
-		if (env != NULL && *env == '1') \
+		if (env != NULL) \
 		{ \
-			audio->debug.TraceMask |= FAUDIO_LOG_##type; \
+			if (*env == '1') \
+			{ \
+				audio->debug.TraceMask |= FAUDIO_LOG_##type; \
+			} \
+			else \
+			{ \
+				audio->debug.TraceMask &= ~FAUDIO_LOG_##type; \
+			} \
 		}
 	CHECK_ENV(ERRORS)
 	CHECK_ENV(WARNINGS)
@@ -654,9 +687,9 @@ void FAudio_SetDebugConfiguration(
 	#undef CHECK_ENV
 	#define CHECK_ENV(envvar, boolvar) \
 		env = FAudio_getenv("FAUDIO_LOG_" #envvar); \
-		if (env != NULL && *env == '1') \
+		if (env != NULL) \
 		{ \
-			audio->debug.Log##boolvar = 1; \
+			audio->debug.Log##boolvar = (*env == '1'); \
 		}
 	CHECK_ENV(THREADID, ThreadID)
 	CHECK_ENV(FILELINE, Fileline)
