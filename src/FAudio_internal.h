@@ -408,21 +408,21 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 
 #if FAUDIO_RELEASE
 
-#define LOG_ERROR(fmt, ...)
-#define LOG_WARNING(fmt, ...)
-#define LOG_INFO(fmt, ...)
-#define LOG_DETAIL(fmt, ...)
-#define LOG_API_ENTER(fmt, ...)
-#define LOG_API_EXIT(fmt, ...)
-#define LOG_FUNC_ENTER(fmt, ...)
-#define LOG_FUNC_EXIT(fmt, ...)
+#define LOG_ERROR(engine, fmt, ...)
+#define LOG_WARNING(engine, fmt, ...)
+#define LOG_INFO(engine, fmt, ...)
+#define LOG_DETAIL(engine, fmt, ...)
+#define LOG_API_ENTER(engine)
+#define LOG_API_EXIT(engine)
+#define LOG_FUNC_ENTER(engine)
+#define LOG_FUNC_EXIT(engine)
 /* TODO: LOG_TIMING */
-#define LOG_MUTEX_LOCK(fmt, ...)
-#define LOG_MUTEX_UNLOCK(fmt, ...)
+#define LOG_MUTEX_LOCK(engine, mutex)
+#define LOG_MUTEX_UNLOCK(engine, mutex)
 /* TODO: LOG_MEMORY */
 /* TODO: LOG_STREAMING */
 
-#define LOG_FORMAT(engine, fmt)
+#define LOG_FORMAT(engine, waveFormat)
 
 #else
 
@@ -471,13 +471,13 @@ void FAudio_INTERNAL_debug_fmt(
 #define LOG_WARNING(engine, fmt, ...) PRINT_DEBUG(engine, WARNINGS, "WARNING", fmt, __VA_ARGS__)
 #define LOG_INFO(engine, fmt, ...) PRINT_DEBUG(engine, INFO, "INFO", fmt, __VA_ARGS__)
 #define LOG_DETAIL(engine, fmt, ...) PRINT_DEBUG(engine, DETAIL, "DETAIL", fmt, __VA_ARGS__)
-#define LOG_API_ENTER(engine, fmt, ...) PRINT_DEBUG(engine, API_CALLS, "API Enter", fmt, __VA_ARGS__)
-#define LOG_API_EXIT(engine, fmt, ...) PRINT_DEBUG(engine, API_CALLS, "API Exit", fmt, __VA_ARGS__)
-#define LOG_FUNC_ENTER(engine, fmt, ...) PRINT_DEBUG(engine, FUNC_CALLS, "FUNC Enter", fmt, __VA_ARGS__)
-#define LOG_FUNC_EXIT(engine, fmt, ...) PRINT_DEBUG(engine, FUNC_CALLS, "FUNC Exit", fmt, __VA_ARGS__)
+#define LOG_API_ENTER(engine) PRINT_DEBUG(engine, API_CALLS, "API Enter", "%s", __func__)
+#define LOG_API_EXIT(engine) PRINT_DEBUG(engine, API_CALLS, "API Exit", "%s", __func__)
+#define LOG_FUNC_ENTER(engine) PRINT_DEBUG(engine, FUNC_CALLS, "FUNC Enter", "%s", __func__)
+#define LOG_FUNC_EXIT(engine) PRINT_DEBUG(engine, FUNC_CALLS, "FUNC Exit", "%s", __func__)
 /* TODO: LOG_TIMING */
-#define LOG_MUTEX_LOCK(engine, fmt, ...) PRINT_DEBUG(engine, LOCKS, "Mutex Lock", fmt, __VA_ARGS__)
-#define LOG_MUTEX_UNLOCK(engine, fmt, ...) PRINT_DEBUG(engine, LOCKS, "Mutex Unlock", fmt, __VA_ARGS__)
+#define LOG_MUTEX_LOCK(engine, mutex) PRINT_DEBUG(engine, LOCKS, "Mutex Lock", "%p", mutex)
+#define LOG_MUTEX_UNLOCK(engine, mutex) PRINT_DEBUG(engine, LOCKS, "Mutex Unlock", "%p", mutex)
 /* TODO: LOG_MEMORY */
 /* TODO: LOG_STREAMING */
 
