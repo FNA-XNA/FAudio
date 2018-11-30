@@ -208,7 +208,7 @@ uint32_t FAudio_CreateSourceVoice(
 ) {
 	uint32_t i;
 
-	FAudio_debug_fmt("Source format", pSourceFormat);
+	LOG_FORMAT(audio, pSourceFormat);
 
 	*ppSourceVoice = (FAudioSourceVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
@@ -375,7 +375,7 @@ uint32_t FAudio_CreateSourceVoice(
 		(*ppSourceVoice)->src.decodeSamples * (*ppSourceVoice)->src.format->nChannels
 	);
 
-	FAudio_debug("-> %p\n", *ppSourceVoice);
+	LOG_INFO(audio, "-> %p\n", *ppSourceVoice);
 
 	/* Add to list, finally. */
 	LinkedList_PrependEntry(
@@ -626,7 +626,44 @@ void FAudio_SetDebugConfiguration(
 	FAudioDebugConfiguration *pDebugConfiguration,
 	void* pReserved
 ) {
-	g_debugConfig = *pDebugConfiguration;
+#ifndef FAUDIO_RELEASE
+	char *env;
+
+	FAudio_memcpy(
+		&audio->debug,
+		pDebugConfiguration,
+		sizeof(FAudioDebugConfiguration)
+	);
+
+	#define CHECK_ENV(type) \
+		env = FAudio_getenv("FAUDIO_LOG_" #type); \
+		if (env != NULL && *env == '1') \
+		{ \
+			audio->debug.TraceMask |= FAUDIO_LOG_##type; \
+		}
+	CHECK_ENV(ERRORS)
+	CHECK_ENV(WARNINGS)
+	CHECK_ENV(INFO)
+	CHECK_ENV(DETAIL)
+	CHECK_ENV(API_CALLS)
+	CHECK_ENV(FUNC_CALLS)
+	CHECK_ENV(TIMING)
+	CHECK_ENV(LOCKS)
+	CHECK_ENV(MEMORY)
+	CHECK_ENV(STREAMING)
+	#undef CHECK_ENV
+	#define CHECK_ENV(envvar, boolvar) \
+		env = FAudio_getenv("FAUDIO_LOG_" #envvar); \
+		if (env != NULL && *env == '1') \
+		{ \
+			audio->debug.Log##boolvar = 1; \
+		}
+	CHECK_ENV(THREADID, ThreadID)
+	CHECK_ENV(FILELINE, Fileline)
+	CHECK_ENV(FUNCTIONNAME, FunctionName)
+	CHECK_ENV(TIMING, Timing)
+	#undef CHECK_ENV
+#endif /* FAUDIO_RELEASE */
 }
 
 /* FAudioVoice Interface */
@@ -1511,10 +1548,19 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
 
-	FAudio_debug(	"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}\n",
-			voice, pBuffer->Flags, pBuffer->AudioBytes, pBuffer->pAudioData,
-			pBuffer->PlayBegin, pBuffer->PlayLength,
-			pBuffer->LoopBegin, pBuffer->LoopLength, pBuffer->LoopCount	);
+	LOG_INFO(
+		voice->audio,
+		"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}\n",
+		voice,
+		pBuffer->Flags,
+		pBuffer->AudioBytes,
+		pBuffer->pAudioData,
+		pBuffer->PlayBegin,
+		pBuffer->PlayLength,
+		pBuffer->LoopBegin,
+		pBuffer->LoopLength,
+		pBuffer->LoopCount
+	);
 
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 #ifdef HAVE_FFMPEG
@@ -1647,7 +1693,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		 */
 		FAudio_assert(list != entry);
 	}
-	FAudio_debug("%p: appended buffer %p\n", voice, &entry->buffer);
+	LOG_INFO(
+		voice->audio,
+		"%p: appended buffer %p\n",
+		voice,
+		&entry->buffer
+	);
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	return 0;
 }

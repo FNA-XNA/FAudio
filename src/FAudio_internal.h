@@ -34,6 +34,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #define FAudio_malloc malloc
 #define FAudio_realloc realloc
@@ -74,8 +75,11 @@
 #define FAudio_qsort qsort
 
 #define FAudio_assert assert
-#define FAudio_LogV(x, va) vfprintf(stderr, x, va)
+#define FAudio_snprintf snprintf
+#define FAudio_vsnprintf vsnprintf
+#define FAudio_Log(msg) fprintf(stderr, "%s\n", msg);
 #define FAudio_getenv getenv
+#define FAudio_PRIu64 PRIu64
 #else
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
@@ -120,8 +124,11 @@
 #define FAudio_qsort SDL_qsort
 
 #define FAudio_assert SDL_assert
-#define FAudio_LogV(x, va) SDL_LogMessageV(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, x, va)
+#define FAudio_snprintf snprintf
+#define FAudio_vsnprintf vsnprintf
+#define FAudio_Log(msg) SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "%s\n", msg);
 #define FAudio_getenv SDL_getenv
+#define FAudio_PRIu64 SDL_PRIu64
 #endif
 
 /* Easy Macros */
@@ -243,8 +250,6 @@ typedef void* FAudioPlatformFixedRateSRC;
 
 typedef float FAudioFilterState[4];
 
-extern FAudioDebugConfiguration g_debugConfig;
-
 /* Public FAudio Types */
 
 struct FAudio
@@ -276,8 +281,14 @@ struct FAudio
 	FAudioFreeFunc pFree;
 	FAudioReallocFunc pRealloc;
 
+	/* EngineProcedureEXT */
 	void *clientEngineUser;
 	FAudioEngineProcedureEXT pClientEngineProc;
+
+#ifndef FAUDIO_RELEASE
+	/* Debug Information */
+	FAudioDebugConfiguration debug;
+#endif
 };
 
 struct FAudioVoice
@@ -393,24 +404,98 @@ void FAudio_INTERNAL_AllocEffectChain(
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
 
+/* Debug */
+
 #if FAUDIO_RELEASE
 
-#define FAudio_debug(fmt, ...)
-#define FAudio_debug_fmt(prefix, fmt)
+#define LOG_ERROR(fmt, ...)
+#define LOG_WARNING(fmt, ...)
+#define LOG_INFO(fmt, ...)
+#define LOG_DETAIL(fmt, ...)
+#define LOG_API_ENTER(fmt, ...)
+#define LOG_API_EXIT(fmt, ...)
+#define LOG_FUNC_ENTER(fmt, ...)
+#define LOG_FUNC_EXIT(fmt, ...)
+/* TODO: LOG_TIMING */
+#define LOG_MUTEX_LOCK(fmt, ...)
+#define LOG_MUTEX_UNLOCK(fmt, ...)
+/* TODO: LOG_MEMORY */
+/* TODO: LOG_STREAMING */
+
+#define LOG_FORMAT(engine, fmt)
 
 #else
 
 #if defined(_MSC_VER)
 /* VC doesn't support __attribute__ at all, and there's no replacement for format. */
-void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...);
+void FAudio_INTERNAL_debug(
+	FAudio *audio,
+	const char *file,
+	uint32_t line,
+	const char *func,
+	const char *fmt,
+	...
+);
 #else
-void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...) __attribute__((format(printf,2,3)));
+void FAudio_INTERNAL_debug(
+	FAudio *audio,
+	const char *file,
+	uint32_t line,
+	const char *func,
+	const char *fmt,
+	...
+) __attribute__((format(printf,5,6)));
 #endif
-void FAudio_INTERNAL_debug_fmt(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt);
+void FAudio_INTERNAL_debug_fmt(
+	FAudio *audio,
+	const char *file,
+	uint32_t line,
+	const char *func,
+	const FAudioWaveFormatEx *fmt
+);
 
-#define FAudio_debug(fmt, ...) FAudio_INTERNAL_debug(__func__, fmt, __VA_ARGS__)
-#define FAudio_debug_fmt(prefix, fmt) FAudio_INTERNAL_debug_fmt(__func__, prefix, fmt)
-#endif
+#define PRINT_DEBUG(engine, cond, type, fmt, ...) \
+	if (engine->debug.TraceMask & FAUDIO_LOG_##cond) \
+	{ \
+		FAudio_INTERNAL_debug( \
+			engine, \
+			__FILE__, \
+			__LINE__, \
+			__func__, \
+			type ": " fmt, \
+			__VA_ARGS__ \
+		); \
+	}
+
+#define LOG_ERROR(engine, fmt, ...) PRINT_DEBUG(engine, ERRORS, "ERROR", fmt, __VA_ARGS__)
+#define LOG_WARNING(engine, fmt, ...) PRINT_DEBUG(engine, WARNINGS, "WARNING", fmt, __VA_ARGS__)
+#define LOG_INFO(engine, fmt, ...) PRINT_DEBUG(engine, INFO, "INFO", fmt, __VA_ARGS__)
+#define LOG_DETAIL(engine, fmt, ...) PRINT_DEBUG(engine, DETAIL, "DETAIL", fmt, __VA_ARGS__)
+#define LOG_API_ENTER(engine, fmt, ...) PRINT_DEBUG(engine, API_CALLS, "API Enter", fmt, __VA_ARGS__)
+#define LOG_API_EXIT(engine, fmt, ...) PRINT_DEBUG(engine, API_CALLS, "API Exit", fmt, __VA_ARGS__)
+#define LOG_FUNC_ENTER(engine, fmt, ...) PRINT_DEBUG(engine, FUNC_CALLS, "FUNC Enter", fmt, __VA_ARGS__)
+#define LOG_FUNC_EXIT(engine, fmt, ...) PRINT_DEBUG(engine, FUNC_CALLS, "FUNC Exit", fmt, __VA_ARGS__)
+/* TODO: LOG_TIMING */
+#define LOG_MUTEX_LOCK(engine, fmt, ...) PRINT_DEBUG(engine, LOCKS, "Mutex Lock", fmt, __VA_ARGS__)
+#define LOG_MUTEX_UNLOCK(engine, fmt, ...) PRINT_DEBUG(engine, LOCKS, "Mutex Unlock", fmt, __VA_ARGS__)
+/* TODO: LOG_MEMORY */
+/* TODO: LOG_STREAMING */
+
+#define LOG_FORMAT(engine, waveFormat) \
+	if (engine->debug.TraceMask & FAUDIO_LOG_INFO) \
+	{ \
+		FAudio_INTERNAL_debug_fmt( \
+			engine, \
+			__FILE__, \
+			__LINE__, \
+			__func__, \
+			waveFormat \
+		); \
+	}
+
+#endif /* FAUDIO_RELEASE */
+
+/* FAPOFX Creators */
 
 #define CREATE_FAPOFX_FUNC(effect) \
 	extern uint32_t FAPOFXCreate##effect( \
@@ -545,6 +630,7 @@ FAudioThread FAudio_PlatformCreateThread(
 );
 void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval);
 void FAudio_PlatformThreadPriority(FAudioThreadPriority priority);
+uint64_t FAudio_PlatformGetThreadID();
 FAudioMutex FAudio_PlatformCreateMutex(void);
 void FAudio_PlatformDestroyMutex(FAudioMutex mutex);
 void FAudio_PlatformLockMutex(FAudioMutex mutex);

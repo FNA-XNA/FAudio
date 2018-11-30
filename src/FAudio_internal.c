@@ -26,27 +26,71 @@
 
 #include "FAudio_internal.h"
 
-#define LOGPFX "FAUDIO "
-
-FAudioDebugConfiguration g_debugConfig = {0};
-
-void FAudio_INTERNAL_debug(const char *func, const char *fmt, ...)
-{
-	char out[1024];
+#ifndef FAUDIO_RELEASE
+void FAudio_INTERNAL_debug(
+	FAudio *audio,
+	const char *file,
+	uint32_t line,
+	const char *func,
+	const char *fmt,
+	...
+) {
+	char output[1024];
+	char *out = output;
 	va_list va;
-	const char *e = FAudio_getenv("FAUDIO_DEBUG");
-	static const char *colon_space = ": ";
-	if ((!e || !*e || *e == '0') && g_debugConfig.TraceMask == 0)
+	out[0] = '\0';
+
+	/* Logging extras */
+	if (audio->debug.LogThreadID)
 	{
-		return;
+		out += FAudio_snprintf(
+			out,
+			out - output,
+			FAudio_PRIu64 " ",
+			FAudio_PlatformGetThreadID()
+		);
 	}
-	FAudio_strlcpy(out, LOGPFX, sizeof(out) - 1);
-	FAudio_strlcat(out, func, sizeof(out) - 1);
-	FAudio_strlcat(out, colon_space, sizeof(out) - 1);
-	FAudio_strlcat(out, fmt, sizeof(out) - 1);
+	if (audio->debug.LogFileline)
+	{
+		out += FAudio_snprintf(
+			out,
+			out - output,
+			"%s:%u ",
+			file,
+			line
+		);
+	}
+	if (audio->debug.LogFunctionName)
+	{
+		out += FAudio_snprintf(
+			out,
+			out - output,
+			"%s ",
+			func
+		);
+	}
+	if (audio->debug.LogTiming)
+	{
+		out += FAudio_snprintf(
+			out,
+			out - output,
+			"%dms ",
+			FAudio_timems()
+		);
+	}
+
+	/* The actual message... */
 	va_start(va, fmt);
-	FAudio_LogV(out, va);
+	FAudio_vsnprintf(
+		out,
+		out - output,
+		fmt,
+		va
+	);
 	va_end(va);
+
+	/* Print, finally. */
+	FAudio_Log(output);
 }
 
 static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)
@@ -84,12 +128,36 @@ static const char *get_subformat_string(const FAudioWaveFormatEx *fmt)
 	return "UNKNOWN!";
 }
 
-void FAudio_INTERNAL_debug_fmt(const char *func, const char *prefix, const FAudioWaveFormatEx *fmt)
-{
-	FAudio_INTERNAL_debug(	func, "%s {wFormatTag: 0x%x %s, nChannels: %u, nSamplesPerSec: %u, wBitsPerSample: %u, SubFormat: %s}\n",
-				prefix, fmt->wFormatTag, get_wformattag_string(fmt), fmt->nChannels, fmt->nSamplesPerSec,
-				fmt->wBitsPerSample, get_subformat_string(fmt)	);
+void FAudio_INTERNAL_debug_fmt(
+	FAudio *audio,
+	const char *file,
+	uint32_t line,
+	const char *func,
+	const FAudioWaveFormatEx *fmt
+) {
+	FAudio_INTERNAL_debug(
+		audio,
+		file,
+		line,
+		func,
+		(
+			"{"
+			"wFormatTag: 0x%x %s, "
+			"nChannels: %u, "
+			"nSamplesPerSec: %u, "
+			"wBitsPerSample: %u, "
+			"SubFormat: %s"
+			"}\n"
+		),
+		fmt->wFormatTag,
+		get_wformattag_string(fmt),
+		fmt->nChannels,
+		fmt->nSamplesPerSec,
+		fmt->wBitsPerSample,
+		get_subformat_string(fmt)
+	);
 }
+#endif /* FAUDIO_RELEASE */
 
 void LinkedList_AddEntry(
 	LinkedList **start,
@@ -287,9 +355,15 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			endRead
 		);
 
-		FAudio_debug(	"Voice %p, buffer %p, decoded %u samples from [%u,%u)\n",
-				voice, buffer, endRead, voice->src.curBufferOffset,
-				voice->src.curBufferOffset + endRead	);
+		LOG_INFO(
+			voice->audio,
+			"Voice %p, buffer %p, decoded %u samples from [%u,%u)\n",
+			voice,
+			buffer,
+			endRead,
+			voice->src.curBufferOffset,
+			voice->src.curBufferOffset + endRead
+		);
 
 		voice->src.curBufferOffset += endRead;
 		voice->src.totalSamples += endRead;
@@ -328,7 +402,12 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					voice->src.totalSamples = 0;
 				}
 
-				FAudio_debug("Voice %p, finished with buffer %p\n", voice, buffer);
+				LOG_INFO(
+					voice->audio,
+					"Voice %p, finished with buffer %p\n",
+					voice,
+					buffer
+				);
 
 				/* Change active buffer, delete finished buffer */
 				toDelete = voice->src.bufferList;
