@@ -45,8 +45,8 @@ void FAudio_INTERNAL_debug(
 	{
 		out += FAudio_snprintf(
 			out,
-			out - output,
-			FAudio_PRIu64 " ",
+			sizeof(output) - (out - output),
+			"0x%" FAudio_PRIx64 " ",
 			FAudio_PlatformGetThreadID()
 		);
 	}
@@ -54,7 +54,7 @@ void FAudio_INTERNAL_debug(
 	{
 		out += FAudio_snprintf(
 			out,
-			out - output,
+			sizeof(output) - (out - output),
 			"%s:%u ",
 			file,
 			line
@@ -64,7 +64,7 @@ void FAudio_INTERNAL_debug(
 	{
 		out += FAudio_snprintf(
 			out,
-			out - output,
+			sizeof(output) - (out - output),
 			"%s ",
 			func
 		);
@@ -73,7 +73,7 @@ void FAudio_INTERNAL_debug(
 	{
 		out += FAudio_snprintf(
 			out,
-			out - output,
+			sizeof(output) - (out - output),
 			"%dms ",
 			FAudio_timems()
 		);
@@ -83,7 +83,7 @@ void FAudio_INTERNAL_debug(
 	va_start(va, fmt);
 	FAudio_vsnprintf(
 		out,
-		out - output,
+		sizeof(output) - (out - output),
 		fmt,
 		va
 	);

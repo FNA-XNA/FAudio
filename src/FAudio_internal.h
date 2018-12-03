@@ -79,6 +79,7 @@
 #define FAudio_Log(msg) fprintf(stderr, "%s\n", msg);
 #define FAudio_getenv getenv
 #define FAudio_PRIu64 PRIu64
+#define FAudio_PRIx64 PRIx64
 #else
 #include <SDL_stdinc.h>
 #include <SDL_assert.h>
@@ -127,6 +128,7 @@
 #define FAudio_Log(msg) SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "%s\n", msg);
 #define FAudio_getenv SDL_getenv
 #define FAudio_PRIu64 SDL_PRIu64
+#define FAudio_PRIx64 SDL_PRIx64
 #endif
 
 /* Easy Macros */
