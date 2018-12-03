@@ -656,7 +656,6 @@ void FAudio_SetDebugConfiguration(
 			FAUDIO_LOG_STREAMING
 		);
 		audio->debug.LogThreadID = 1;
-		audio->debug.LogFileline = 1;
 		audio->debug.LogFunctionName = 1;
 		audio->debug.LogTiming = 1;
 	}
