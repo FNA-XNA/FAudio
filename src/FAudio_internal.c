@@ -147,7 +147,7 @@ void FAudio_INTERNAL_debug_fmt(
 			"nSamplesPerSec: %u, "
 			"wBitsPerSample: %u, "
 			"SubFormat: %s"
-			"}\n"
+			"}"
 		),
 		fmt->wFormatTag,
 		get_wformattag_string(fmt),
@@ -357,7 +357,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 		LOG_INFO(
 			voice->audio,
-			"Voice %p, buffer %p, decoded %u samples from [%u,%u)\n",
+			"Voice %p, buffer %p, decoded %u samples from [%u,%u)",
 			voice,
 			buffer,
 			endRead,
@@ -404,7 +404,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 				LOG_INFO(
 					voice->audio,
-					"Voice %p, finished with buffer %p\n",
+					"Voice %p, finished with buffer %p",
 					voice,
 					buffer
 				);

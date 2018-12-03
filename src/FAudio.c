@@ -380,7 +380,7 @@ uint32_t FAudio_CreateSourceVoice(
 		(*ppSourceVoice)->src.decodeSamples * (*ppSourceVoice)->src.format->nChannels
 	);
 
-	LOG_INFO(audio, "-> %p\n", *ppSourceVoice);
+	LOG_INFO(audio, "-> %p", *ppSourceVoice);
 
 	/* Add to list, finally. */
 	LinkedList_PrependEntry(
@@ -1582,7 +1582,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 
 	LOG_INFO(
 		voice->audio,
-		"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}\n",
+		"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}",
 		voice,
 		pBuffer->Flags,
 		pBuffer->AudioBytes,
@@ -1727,7 +1727,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 	LOG_INFO(
 		voice->audio,
-		"%p: appended buffer %p\n",
+		"%p: appended buffer %p",
 		voice,
 		&entry->buffer
 	);
@@ -1840,7 +1840,7 @@ void FAudioSourceVoice_GetState(
 
 	LOG_INFO(
 		voice->audio,
-		"-> {pCurrentBufferContext: %p, BuffersQueued: %u, SamplesPlayed: %"FAudio_PRIu64"}\n",
+		"-> {pCurrentBufferContext: %p, BuffersQueued: %u, SamplesPlayed: %"FAudio_PRIu64"}",
 		pVoiceState->pCurrentBufferContext, pVoiceState->BuffersQueued,
 		pVoiceState->SamplesPlayed
 	);
