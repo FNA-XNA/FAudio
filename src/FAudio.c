@@ -114,13 +114,16 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 
 uint32_t FAudio_AddRef(FAudio *audio)
 {
+	LOG_API_ENTER(audio)
 	audio->refcount += 1;
+	LOG_API_EXIT(audio)
 	return audio->refcount;
 }
 
 uint32_t FAudio_Release(FAudio *audio)
 {
 	uint32_t refcount;
+	LOG_API_ENTER(audio)
 	audio->refcount -= 1;
 	refcount = audio->refcount;
 	if (audio->refcount == 0)
@@ -135,12 +138,18 @@ uint32_t FAudio_Release(FAudio *audio)
 		audio->pFree(audio);
 		FAudio_PlatformRelease();
 	}
+	else
+	{
+		LOG_API_EXIT(audio)
+	}
 	return refcount;
 }
 
 uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount)
 {
+	LOG_API_ENTER(audio)
 	*pCount = FAudio_PlatformGetDeviceCount();
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -149,7 +158,9 @@ uint32_t FAudio_GetDeviceDetails(
 	uint32_t Index,
 	FAudioDeviceDetails *pDeviceDetails
 ) {
+	LOG_API_ENTER(audio)
 	FAudio_PlatformGetDeviceDetails(Index, pDeviceDetails);
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -158,6 +169,7 @@ uint32_t FAudio_Initialize(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 ) {
+	LOG_API_ENTER(audio)
 #ifndef FAUDIO_RELEASE
 	FAudioDebugConfiguration debugInit = {0};
 	FAudio_SetDebugConfiguration(audio, &debugInit, NULL);
@@ -173,6 +185,7 @@ uint32_t FAudio_Initialize(
 	audio->resampleSamples = 1;
 
 	FAudio_StartEngine(audio);
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -180,12 +193,14 @@ uint32_t FAudio_RegisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 ) {
+	LOG_API_ENTER(audio)
 	LinkedList_AddEntry(
 		&audio->callbacks,
 		pCallback,
 		audio->callbackLock,
 		audio->pMalloc
 	);
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -193,12 +208,14 @@ void FAudio_UnregisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 ) {
+	LOG_API_ENTER(audio)
 	LinkedList_RemoveEntry(
 		&audio->callbacks,
 		pCallback,
 		audio->callbackLock,
 		audio->pFree
 	);
+	LOG_API_EXIT(audio)
 }
 
 uint32_t FAudio_CreateSourceVoice(
@@ -213,6 +230,7 @@ uint32_t FAudio_CreateSourceVoice(
 ) {
 	uint32_t i;
 
+	LOG_API_ENTER(audio)
 	LOG_FORMAT(audio, pSourceFormat);
 
 	*ppSourceVoice = (FAudioSourceVoice*) audio->pMalloc(sizeof(FAudioVoice));
@@ -390,6 +408,8 @@ uint32_t FAudio_CreateSourceVoice(
 		audio->pMalloc
 	);
 	FAudio_AddRef(audio);
+
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -404,6 +424,8 @@ uint32_t FAudio_CreateSubmixVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	uint32_t i;
+
+	LOG_API_ENTER(audio)
 
 	*ppSubmixVoice = (FAudioSubmixVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
@@ -472,6 +494,8 @@ uint32_t FAudio_CreateSubmixVoice(
 		audio->pMalloc
 	);
 	FAudio_AddRef(audio);
+
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -485,6 +509,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	const FAudioEffectChain *pEffectChain
 ) {
 	FAudioDeviceDetails details;
+
+	LOG_API_ENTER(audio)
 
 	/* For now we only support one allocated master voice at a time */
 	FAudio_assert(audio->master == NULL);
@@ -517,6 +543,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	audio->master = *ppMasteringVoice;
 	FAudio_AddRef(audio);
 	FAudio_PlatformInit(audio, DeviceIndex);
+
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -530,12 +558,15 @@ uint32_t FAudio_CreateMasteringVoice8(
 	const FAudioEffectChain *pEffectChain,
 	FAudioStreamCategory StreamCategory
 ) {
+	uint32_t DeviceIndex, retval;
+
+	LOG_API_ENTER(audio)
+
 	/* Eventually, we'll want the old CreateMastering to call the new one.
 	 * That will depend on us being able to use DeviceID though.
 	 * For now, use our little ID hack to turn szDeviceId into DeviceIndex.
 	 * -flibit
 	 */
-	uint32_t DeviceIndex;
 	if (szDeviceId == NULL || szDeviceId[0] == 0)
 	{
 		DeviceIndex = 0;
@@ -550,7 +581,7 @@ uint32_t FAudio_CreateMasteringVoice8(
 	}
 
 	/* Note that StreamCategory is ignored! */
-	return FAudio_CreateMasteringVoice(
+	retval = FAudio_CreateMasteringVoice(
 		audio,
 		ppMasteringVoice,
 		InputChannels,
@@ -559,6 +590,9 @@ uint32_t FAudio_CreateMasteringVoice8(
 		DeviceIndex,
 		pEffectChain
 	);
+
+	LOG_API_EXIT(audio)
+	return retval;
 }
 
 void FAudio_SetEngineProcedureEXT(
@@ -566,24 +600,32 @@ void FAudio_SetEngineProcedureEXT(
 	FAudioEngineProcedureEXT clientEngineProc,
 	void *user
 ) {
+	LOG_API_ENTER(audio)
 	audio->pClientEngineProc = clientEngineProc;
 	audio->clientEngineUser = user;
+	LOG_API_EXIT(audio)
 }
 
 uint32_t FAudio_StartEngine(FAudio *audio)
 {
+	LOG_API_ENTER(audio)
 	audio->active = 1;
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
 void FAudio_StopEngine(FAudio *audio)
 {
+	LOG_API_ENTER(audio)
 	audio->active = 0;
+	LOG_API_EXIT(audio)
 }
 
 uint32_t FAudio_CommitChanges(FAudio *audio)
 {
+	LOG_API_ENTER(audio)
 	FAudio_assert(0 && "Batching is not supported!");
+	LOG_API_EXIT(audio)
 	return 0;
 }
 
@@ -593,6 +635,8 @@ void FAudio_GetPerformanceData(
 ) {
 	LinkedList *list;
 	FAudioSourceVoice *source;
+
+	LOG_API_ENTER(audio)
 
 	FAudio_zero(pPerfData, sizeof(FAudioPerformanceData));
 
@@ -624,6 +668,8 @@ void FAudio_GetPerformanceData(
 		/* estimate, should use real latency from platform */
 		pPerfData->CurrentLatencyInSamples = 2 * audio->updateSize;
 	}
+
+	LOG_API_EXIT(audio)
 }
 
 void FAudio_SetDebugConfiguration(
@@ -633,6 +679,8 @@ void FAudio_SetDebugConfiguration(
 ) {
 #ifndef FAUDIO_RELEASE
 	char *env;
+
+	LOG_API_ENTER(audio)
 
 	FAudio_memcpy(
 		&audio->debug,
@@ -695,6 +743,8 @@ void FAudio_SetDebugConfiguration(
 	CHECK_ENV(FUNCTIONNAME, FunctionName)
 	CHECK_ENV(TIMING, Timing)
 	#undef CHECK_ENV
+
+	LOG_API_EXIT(audio)
 #endif /* FAUDIO_RELEASE */
 }
 
@@ -704,6 +754,8 @@ void FAudioVoice_GetVoiceDetails(
 	FAudioVoice *voice,
 	FAudioVoiceDetails *pVoiceDetails
 ) {
+	LOG_API_ENTER(voice->audio)
+
 	pVoiceDetails->CreationFlags = voice->flags;
 	pVoiceDetails->ActiveFlags = voice->flags;
 	if (voice->type == FAUDIO_VOICE_SOURCE)
@@ -725,6 +777,8 @@ void FAudioVoice_GetVoiceDetails(
 	{
 		FAudio_assert(0 && "Unknown voice type!");
 	}
+
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioVoice_SetOutputVoices(
@@ -737,6 +791,9 @@ uint32_t FAudioVoice_SetOutputVoices(
 	uint32_t newResampleSamples;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
+
+	LOG_API_ENTER(voice->audio)
+
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 
 	FAudio_PlatformLockMutex(voice->sendLock);
@@ -789,6 +846,8 @@ uint32_t FAudioVoice_SetOutputVoices(
 		voice->sendFilterState = NULL;
 		FAudio_zero(&voice->sends, sizeof(FAudioVoiceSends));
 		FAudio_PlatformUnlockMutex(voice->sendLock);
+
+		LOG_API_EXIT(voice->audio)
 		return 0;
 	}
 
@@ -931,6 +990,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	}
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -946,6 +1006,8 @@ uint32_t FAudioVoice_SetEffectChain(
 	FAudioWaveFormatExtensible srcFmt, dstFmt;
 	FAPOLockForProcessBufferParameters srcLockParams, dstLockParams;
 
+	LOG_API_ENTER(voice->audio)
+
 	FAudioVoice_GetVoiceDetails(voice, &voiceDetails);
 
 	/* SetEffectChain must not change the number of output channels once the voice has been created */
@@ -954,7 +1016,13 @@ uint32_t FAudioVoice_SetEffectChain(
 		/* cannot remove an effect chain that changes the number of channels */
 		if (voice->outputChannels != voiceDetails.InputChannels)
 		{
+			LOG_ERROR(
+				voice->audio,
+				"%s",
+				"Cannot remove effect chain that changes the number of channels"
+			)
 			FAudio_assert(0 && "Cannot remove effect chain that changes the number of channels");
+			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
 		}
 	}
@@ -966,7 +1034,13 @@ uint32_t FAudioVoice_SetEffectChain(
 		/* new effect chain must have same number of output channels */
 		if (voice->outputChannels != pEffectChain->pEffectDescriptors[lst].OutputChannels)
 		{
+			LOG_ERROR(
+				voice->audio,
+				"%s",
+				"New effect chain must have same number of output channels as the old chain"
+			)
 			FAudio_assert(0 && "New effect chain must have same number of output channels as the old chain");
+			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
 		}
 	}
@@ -1010,8 +1084,14 @@ uint32_t FAudioVoice_SetEffectChain(
 
 			if (fapo->LockForProcess(fapo, 1, &srcLockParams, 1, &dstLockParams))
 			{
-				FAudio_assert(0 && "Effect: output format not supported");
+				LOG_ERROR(
+					voice->audio,
+					"%s",
+					"Effect output format not supported"
+				)
+				FAudio_assert(0 && "Effect output format not supported");
 				FAudio_PlatformUnlockMutex(voice->effectLock);
+				LOG_API_EXIT(voice->audio)
 				return FAUDIO_E_UNSUPPORTED_FORMAT;
 			}
 		}
@@ -1047,6 +1127,7 @@ uint32_t FAudioVoice_SetEffectChain(
 	}
 
 	FAudio_PlatformUnlockMutex(voice->effectLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1055,11 +1136,13 @@ uint32_t FAudioVoice_EnableEffect(
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	FAudio_PlatformLockMutex(voice->effectLock);
 	voice->effects.desc[EffectIndex].InitialState = 1;
 	FAudio_PlatformUnlockMutex(voice->effectLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1068,11 +1151,13 @@ uint32_t FAudioVoice_DisableEffect(
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	FAudio_PlatformLockMutex(voice->effectLock);
 	voice->effects.desc[EffectIndex].InitialState = 0;
 	FAudio_PlatformUnlockMutex(voice->effectLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1081,9 +1166,11 @@ void FAudioVoice_GetEffectState(
 	uint32_t EffectIndex,
 	int32_t *pEnabled
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_PlatformLockMutex(voice->effectLock);
 	*pEnabled = voice->effects.desc[EffectIndex].InitialState;
 	FAudio_PlatformUnlockMutex(voice->effectLock);
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioVoice_SetEffectParameters(
@@ -1093,6 +1180,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t ParametersByteSize,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	if (voice->effects.parameters[EffectIndex] == NULL)
@@ -1118,6 +1206,7 @@ uint32_t FAudioVoice_SetEffectParameters(
 	);
 	voice->effects.parameterUpdates[EffectIndex] = 1;
 	FAudio_PlatformUnlockMutex(voice->effectLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1128,10 +1217,12 @@ uint32_t FAudioVoice_GetEffectParameters(
 	uint32_t ParametersByteSize
 ) {
 	FAPO *fapo;
+	LOG_API_ENTER(voice->audio)
 	FAudio_PlatformLockMutex(voice->effectLock);
 	fapo = voice->effects.desc[EffectIndex].pEffect;
 	fapo->GetParameters(fapo, pParameters, ParametersByteSize);
 	FAudio_PlatformUnlockMutex(voice->effectLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1140,6 +1231,7 @@ uint32_t FAudioVoice_SetFilterParameters(
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	/* MSDN: "This method is usable only on source and submix voices and
@@ -1147,11 +1239,13 @@ uint32_t FAudioVoice_SetFilterParameters(
 	 */
 	if (voice->type == FAUDIO_VOICE_MASTER)
 	{
+		LOG_API_EXIT(voice->audio)
 		return 0;
 	}
 
 	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
 	{
+		LOG_API_EXIT(voice->audio)
 		return 0;
 	}
 
@@ -1163,6 +1257,7 @@ uint32_t FAudioVoice_SetFilterParameters(
 	);
 	FAudio_PlatformUnlockMutex(voice->filterLock);
 
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1170,6 +1265,7 @@ void FAudioVoice_GetFilterParameters(
 	FAudioVoice *voice,
 	FAudioFilterParameters *pParameters
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_PlatformLockMutex(voice->filterLock);
 	FAudio_memcpy(
 		pParameters,
@@ -1177,6 +1273,7 @@ void FAudioVoice_GetFilterParameters(
 		sizeof(FAudioFilterParameters)
 	);
 	FAudio_PlatformUnlockMutex(voice->filterLock);
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioVoice_SetOutputFilterParameters(
@@ -1186,10 +1283,12 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	uint32_t OperationSet
 ) {
 	uint32_t i;
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
 	{
+		LOG_API_EXIT(voice->audio)
 		return 0;
 	}
 
@@ -1217,6 +1316,7 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	);
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1227,8 +1327,10 @@ void FAudioVoice_GetOutputFilterParameters(
 ) {
 	uint32_t i;
 
+	LOG_API_ENTER(voice->audio)
 	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
 	{
+		LOG_API_EXIT(voice->audio)
 		return;
 	}
 
@@ -1256,6 +1358,7 @@ void FAudioVoice_GetOutputFilterParameters(
 	);
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioVoice_SetVolume(
@@ -1263,6 +1366,7 @@ uint32_t FAudioVoice_SetVolume(
 	float Volume,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	voice->volume = FAudio_clamp(
@@ -1270,6 +1374,7 @@ uint32_t FAudioVoice_SetVolume(
 		-FAUDIO_MAX_VOLUME_LEVEL,
 		FAUDIO_MAX_VOLUME_LEVEL
 	);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1277,7 +1382,9 @@ void FAudioVoice_GetVolume(
 	FAudioVoice *voice,
 	float *pVolume
 ) {
+	LOG_API_ENTER(voice->audio)
 	*pVolume = voice->volume;
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioVoice_SetChannelVolumes(
@@ -1286,16 +1393,19 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	const float *pVolumes,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	if (!pVolumes)
 	{
+		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
 	}
 
 	if (voice->audio->version > 7 && Channels != voice->outputChannels)
 	{
+		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
 	}
 
@@ -1306,6 +1416,7 @@ uint32_t FAudioVoice_SetChannelVolumes(
 		sizeof(float) * Channels
 	);
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1314,6 +1425,7 @@ void FAudioVoice_GetChannelVolumes(
 	uint32_t Channels,
 	float *pVolumes
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_PlatformLockMutex(voice->volumeLock);
 	FAudio_memcpy(
 		pVolumes,
@@ -1321,6 +1433,7 @@ void FAudioVoice_GetChannelVolumes(
 		sizeof(float) * Channels
 	);
 	FAudio_PlatformUnlockMutex(voice->volumeLock);
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioVoice_SetOutputMatrix(
@@ -1332,6 +1445,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	uint32_t OperationSet
 ) {
 	uint32_t i;
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
 	FAudio_PlatformLockMutex(voice->sendLock);
@@ -1371,6 +1485,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	);
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1383,6 +1498,7 @@ void FAudioVoice_GetOutputMatrix(
 ) {
 	uint32_t i;
 
+	LOG_API_ENTER(voice->audio)
 	FAudio_PlatformLockMutex(voice->sendLock);
 
 	/* Find the send index */
@@ -1421,11 +1537,13 @@ void FAudioVoice_GetOutputMatrix(
 	);
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
+	LOG_API_EXIT(voice->audio)
 }
 
 void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 {
 	uint32_t i;
+	LOG_API_ENTER(voice->audio)
 
 	/* TODO: Check for dependencies and fail if still in use */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
@@ -1533,6 +1651,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		FAudio_PlatformDestroyMutex(voice->volumeLock);
 	}
 
+	LOG_API_EXIT(voice->audio)
 	FAudio_Release(voice->audio);
 	voice->audio->pFree(voice);
 }
@@ -1544,11 +1663,13 @@ uint32_t FAudioSourceVoice_Start(
 	uint32_t Flags,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_assert(Flags == 0);
 	voice->src.active = 1;
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1557,6 +1678,7 @@ uint32_t FAudioSourceVoice_Stop(
 	uint32_t Flags,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
@@ -1568,6 +1690,7 @@ uint32_t FAudioSourceVoice_Stop(
 	{
 		voice->src.active = 0;
 	}
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1580,6 +1703,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	uint32_t playBegin, playLength, loopBegin, loopLength;
 	FAudioBufferEntry *entry, *list;
 
+	LOG_API_ENTER(voice->audio)
 	LOG_INFO(
 		voice->audio,
 		"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}",
@@ -1609,6 +1733,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* "LoopBegin/LoopLength must be zero if LoopCount is 0" */
 	if (pBuffer->LoopCount == 0 && (loopBegin > 0 || loopLength > 0))
 	{
+		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
 	}
 
@@ -1644,6 +1769,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
 		if (loopBegin >= (playBegin + playLength))
 		{
+			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
 		}
 
@@ -1660,6 +1786,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 			(loopBegin + loopLength) <= playBegin ||
 			(loopBegin + loopLength) > (playBegin + playLength))	)
 		{
+			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
 		}
 	}
@@ -1732,6 +1859,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		&entry->buffer
 	);
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1739,6 +1867,8 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudioSourceVoice *voice
 ) {
 	FAudioBufferEntry *entry, *next;
+
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
@@ -1773,12 +1903,14 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	}
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
 uint32_t FAudioSourceVoice_Discontinuity(
 	FAudioSourceVoice *voice
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	/* As far as I know this doesn't matter for us...?
@@ -1786,6 +1918,7 @@ uint32_t FAudioSourceVoice_Discontinuity(
 	 * but like... can't we just not send samples with no buffers?
 	 * -flibit
 	 */
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1793,6 +1926,7 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	FAudioSourceVoice *voice,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
@@ -1804,6 +1938,7 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	}
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1813,6 +1948,8 @@ void FAudioSourceVoice_GetState(
 	uint32_t flags
 ) {
 	FAudioBufferEntry *entry;
+
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
@@ -1846,6 +1983,7 @@ void FAudioSourceVoice_GetState(
 	);
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioSourceVoice_SetFrequencyRatio(
@@ -1853,11 +1991,13 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 	float Ratio,
 	uint32_t OperationSet
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	if (voice->flags & FAUDIO_VOICE_NOPITCH)
 	{
+		LOG_API_EXIT(voice->audio)
 		return 0;
 	}
 
@@ -1866,6 +2006,7 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 		FAUDIO_MIN_FREQ_RATIO,
 		voice->src.maxFreqRatio
 	);
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1873,9 +2014,11 @@ void FAudioSourceVoice_GetFrequencyRatio(
 	FAudioSourceVoice *voice,
 	float *pRatio
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	*pRatio = voice->src.freqRatio;
+	LOG_API_EXIT(voice->audio)
 }
 
 uint32_t FAudioSourceVoice_SetSourceSampleRate(
@@ -1884,8 +2027,9 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 ) {
 	uint32_t outSampleRate;
 	uint32_t newDecodeSamples, newResampleSamples;
-	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
+	LOG_API_ENTER(voice->audio)
+	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 	FAudio_assert(	NewSourceSampleRate >= FAUDIO_MIN_SAMPLE_RATE &&
 			NewSourceSampleRate <= FAUDIO_MAX_SAMPLE_RATE	);
 
@@ -1894,6 +2038,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 		voice->src.bufferList != NULL	)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
 	}
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
@@ -1918,6 +2063,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	if (voice->sends.SendCount == 0)
 	{
 		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_API_EXIT(voice->audio)
 		return 0;
 	}
 	outSampleRate = voice->sends.pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
@@ -1937,6 +2083,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 		newResampleSamples * voice->src.format->nChannels
 	);
 	voice->src.resampleSamples = newResampleSamples;
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
@@ -1946,11 +2093,13 @@ FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
 	FAudioMasteringVoice *voice,
 	uint32_t *pChannelMask
 ) {
+	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_MASTER);
 	FAudio_assert(voice->audio->mixFormat != NULL);
 	FAudio_assert(pChannelMask != NULL);
 
 	*pChannelMask = voice->audio->mixFormat->dwChannelMask;
+	LOG_API_EXIT(voice->audio)
 	return 0;
 }
 
