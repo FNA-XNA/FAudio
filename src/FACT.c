@@ -2135,7 +2135,20 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	}
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
-	if (pCue->state & (FACT_STATE_STOPPED | FACT_STATE_STOPPING))
+	/* If we're already stopped, there's nothing to do... */
+	if (pCue->state & FACT_STATE_STOPPED)
+	{
+		FAudio_PlatformUnlockMutex(
+			pCue->parentBank->parentEngine->apiLock
+		);
+		return 0;
+	}
+
+	/* If we're stopping and we haven't asked for IMMEDIATE, we're already
+	 * doing what the application is asking us to do...
+	 */
+	if (	(pCue->state & FACT_STATE_STOPPING) &&
+		!(dwFlags & FACT_FLAG_STOP_IMMEDIATE)	)
 	{
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
