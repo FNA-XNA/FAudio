@@ -891,10 +891,13 @@ uint32_t FAudioVoice_SetOutputVoices(
 		voice->sendCoefficients[i] = (float*) voice->audio->pMalloc(
 			sizeof(float) * voice->outputChannels * outChannels
 		);
-		FAudio_INTERNAL_SetDefaultMatrix(
+
+		FAudio_assert(voice->outputChannels > 0 && voice->outputChannels < 9);
+		FAudio_assert(outChannels > 0 && outChannels < 9);
+		FAudio_memcpy(
 			voice->sendCoefficients[i],
-			voice->outputChannels,
-			outChannels
+			FAUDIO_INTERNAL_MATRIX_DEFAULTS[voice->outputChannels - 1][outChannels - 1],
+			voice->outputChannels * outChannels * sizeof(float)
 		);
 
 		if (voice->outputChannels == 1)

@@ -56,8 +56,10 @@ typedef struct FAudioFFmpeg
 
 void FAudio_FFMPEG_reset(FAudioSourceVoice *voice)
 {
+	LOG_FUNC_ENTER(voice->audio)
 	voice->src.ffmpeg->encOffset = 0;
 	voice->src.ffmpeg->decOffset = 0;
+	LOG_FUNC_EXIT(voice->audio)
 }
 
 uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
@@ -66,20 +68,33 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	AVFrame *av_frame;
 	AVCodec *codec;
 
+	LOG_FUNC_ENTER(pSourceVoice->audio)
 	pSourceVoice->src.decode = FAudio_INTERNAL_DecodeFFMPEG;
 
 	/* initialize ffmpeg state */
 	codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
 	if (!codec)
 	{
+		LOG_ERROR(
+			pSourceVoice->audio,
+			"%s",
+			"WMAv2 codec not supported!"
+		);
 		FAudio_assert(0 && "WMAv2 codec not supported!");
+		LOG_FUNC_EXIT(pSourceVoice->audio)
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
 	av_ctx = avcodec_alloc_context3(codec);
 	if (!av_ctx)
 	{
+		LOG_ERROR(
+			pSourceVoice->audio,
+			"%s",
+			"WMAv2 codec not supported!"
+		);
 		FAudio_assert(0 && "WMAv2 codec not supported!");
+		LOG_FUNC_EXIT(pSourceVoice->audio)
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
@@ -114,6 +129,8 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	{
 		av_free(av_ctx->extradata);
 		av_free(av_ctx);
+		LOG_ERROR(pSourceVoice->audio, "%s", "avcodec_open2 failed!")
+		LOG_FUNC_EXIT(pSourceVoice->audio)
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
@@ -123,6 +140,8 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 		avcodec_close(av_ctx);
 		av_free(av_ctx->extradata);
 		av_free(av_ctx);
+		LOG_ERROR(pSourceVoice->audio, "%s", "avcodec_open2 failed!")
+		LOG_FUNC_EXIT(pSourceVoice->audio)
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
 
@@ -136,12 +155,15 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 
 	pSourceVoice->src.ffmpeg->av_ctx = av_ctx;
 	pSourceVoice->src.ffmpeg->av_frame = av_frame;
+	LOG_FUNC_EXIT(pSourceVoice->audio)
 	return 0;
 }
 
 void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
 {
 	FAudioFFmpeg *ffmpeg = voice->src.ffmpeg;
+
+	LOG_FUNC_ENTER(voice->audio)
 
 	avcodec_close(ffmpeg->av_ctx);
 	av_free(ffmpeg->av_ctx->extradata);
@@ -151,10 +173,13 @@ void FAudio_FFMPEG_free(FAudioSourceVoice *voice)
 	voice->audio->pFree(ffmpeg->paddingBuffer);
 	voice->audio->pFree(ffmpeg);
 	voice->src.ffmpeg = NULL;
+
+	LOG_FUNC_EXIT(voice->audio)
 }
 
 void FAudio_INTERNAL_ResizeConvertCache(FAudioVoice *voice, uint32_t samples)
 {
+	LOG_FUNC_ENTER(voice->audio)
 	if (samples > voice->src.ffmpeg->convertCapacity)
 	{
 		voice->src.ffmpeg->convertCapacity = samples;
@@ -163,6 +188,7 @@ void FAudio_INTERNAL_ResizeConvertCache(FAudioVoice *voice, uint32_t samples)
 			sizeof(float) * voice->src.ffmpeg->convertCapacity
 		);
 	}
+	LOG_FUNC_EXIT(voice->audio)
 }
 
 void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
@@ -171,6 +197,8 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 	AVPacket avpkt = {0};
 	int averr;
 	uint32_t total_samples;
+
+	LOG_FUNC_ENTER(voice->audio)
 
 	avpkt.size = voice->src.format->nBlockAlign;
 	avpkt.data = (unsigned char *) buffer->pAudioData + ffmpeg->encOffset;
@@ -226,7 +254,13 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 
 		if (averr)
 		{
+			LOG_ERROR(
+				voice->audio,
+				"avcodec_receive_frame failed: %d",
+				averr
+			)
 			FAudio_assert(0 && "avcodec_receive_frame failed" && averr);
+			LOG_FUNC_EXIT(voice->audio)
 			return;
 		}
 		else
@@ -261,6 +295,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 
 	ffmpeg->convertSamples = total_samples;
 	ffmpeg->convertOffset = 0;
+	LOG_FUNC_EXIT(voice->audio)
 }
 
 void FAudio_INTERNAL_DecodeFFMPEG(
@@ -274,6 +309,8 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	uint32_t outSampleSize = voice->src.format->nChannels * sizeof(float);
 	uint32_t done = 0, available, todo, cumulative;
 	uint32_t reseek = 0;
+
+	LOG_FUNC_ENTER(voice->audio)
 
 	/* check if we need to reposition in the stream */
 	if (voice->src.curBufferOffset < ffmpeg->decOffset)
@@ -359,6 +396,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 	}
 
 	ffmpeg->decOffset += samples;
+	LOG_FUNC_EXIT(voice->audio)
 }
 
 #else

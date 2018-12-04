@@ -393,16 +393,12 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples);
-void FAudio_INTERNAL_SetDefaultMatrix(
-	float *matrix,
-	uint32_t srcChannels,
-	uint32_t dstChannels
-);
 void FAudio_INTERNAL_AllocEffectChain(
 	FAudioVoice *voice,
 	const FAudioEffectChain *pEffectChain
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
+extern const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64];
 
 /* Debug */
 
