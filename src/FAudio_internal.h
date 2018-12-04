@@ -413,6 +413,8 @@ extern const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64];
 #define LOG_FUNC_ENTER(engine)
 #define LOG_FUNC_EXIT(engine)
 /* TODO: LOG_TIMING */
+#define LOG_MUTEX_CREATE(engine, mutex)
+#define LOG_MUTEX_DESTROY(engine, mutex)
 #define LOG_MUTEX_LOCK(engine, mutex)
 #define LOG_MUTEX_UNLOCK(engine, mutex)
 /* TODO: LOG_MEMORY */
