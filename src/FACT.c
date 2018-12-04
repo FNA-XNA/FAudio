@@ -2176,7 +2176,6 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 			FACT_STATE_PAUSED
 		);
 
-		/* FIXME: Lock audio mixer before freeing this! */
 		if (pCue->simpleWave != NULL)
 		{
 			FACTWave_Destroy(pCue->simpleWave);
