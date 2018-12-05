@@ -613,6 +613,8 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			{
 				dstParams.pBuffer = buffer;
 			}
+
+			memset(dstParams.pBuffer, 0, voice->effects.desc[i].OutputChannels * samples * sizeof(float));
 		}
 
 		if (voice->effects.parameterUpdates[i])
