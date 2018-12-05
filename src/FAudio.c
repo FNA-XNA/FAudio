@@ -753,7 +753,7 @@ void FAudio_SetDebugConfiguration(
 	CHECK_ENV(STREAMING)
 	#undef CHECK_ENV
 	#define CHECK_ENV(envvar, boolvar) \
-		env = FAudio_getenv("FAUDIO_LOG_" #envvar); \
+		env = FAudio_getenv("FAUDIO_LOG_LOG" #envvar); \
 		if (env != NULL) \
 		{ \
 			audio->debug.Log##boolvar = (*env == '1'); \
