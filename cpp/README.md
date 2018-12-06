@@ -24,15 +24,23 @@ Because cross-compiling is fun.
 - install the SDL2 development libraries for mingw (download: [here](http://libsdl.org/download-2.0.php))
 
 #### Building
-The project includes two shell scripts to set up your environment for cross-compilation: either for 32-bit or 64-bit Windows DLLs.
+Use your cross compilation cmake toolchain to configure the build. Use `i686-w64-mingw32-cmake` to build 32-bit and `x86_64-w64-mingw32-cmake` to build 64-bit libraries.
+```
+x86_64-w64-mingw32-cmake -H. -B_build_mingw -DCMAKE_INSTALL_PREFIX="${PWD}/_install_mingw" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON
+```
 
-- `source` either `scripts/cross_compile_32` or `scripts/cross_compile_64`
-- (optional) check if `sdl2-config --libs` prints the correct directory
-    - if not: update the cross-compilation scripts
-- cross-compile FAudio: `make clean all` in the root directory of FAudio
-- cross-compile the C++/COM wrapper: change to the `cpp` subdirectory and run `make`
+- Optionally enable FFmpeg support at cmake configure-time by adding `-DFFMPEG=ON`
+- `-DBUILD_CPP=ON` enables compilation of the C++/COM wrapper
+- `-DINSTALL_MINGW_DEPENDENCIES` adds runtime dynamic libraries like `SDL2.dll` and `winpthread-1.dll` to the install target
 
-The results are stored in either the `build_win32` or `build_win64` subdirectory.
+After the configuration is done the following command starts the cross-compilation of both FAudio and C++/COM wrapper:
+```
+cmake --build _build_mingw --target install -- -j
+```
+
+- `-- -j` passes the `-j` flag to the `make` command to speed up compilation
+- the results are installed to the `_install_mingw` subdirectory
+
 
 ## Using the wrapper
 
