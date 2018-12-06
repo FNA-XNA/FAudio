@@ -1275,18 +1275,18 @@ int main(int argc, char **argv)
 
     if(hr == S_OK){
         xaudio27 = FALSE;
-        has_devices = test_DeviceDetails(xa27);
+        has_devices = test_DeviceDetails(xa);
         if(has_devices){
-            test_simple_streaming((IXAudio2*)xa27);
-            test_buffer_callbacks((IXAudio2*)xa27);
-            test_looping((IXAudio2*)xa27);
-            test_submix((IXAudio2*)xa27);
-            test_flush((IXAudio2*)xa27);
-            test_setchannelvolumes((IXAudio2*)xa27);
+            test_simple_streaming(xa);
+            test_buffer_callbacks(xa);
+            test_looping(xa);
+            test_submix(xa);
+            test_flush(xa);
+            test_setchannelvolumes(xa);
         }else
             fprintf(stdout, "No audio devices available\n");
 
-        IXAudio27_Release(xa27);
+        IXAudio2_Release(xa);
     }else
         fprintf(stdout, "XAudio2.8 not available, tests skipped\n");
 
