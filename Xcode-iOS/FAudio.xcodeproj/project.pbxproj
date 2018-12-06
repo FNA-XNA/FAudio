@@ -68,16 +68,16 @@
 		7B1CDD452190C0A200175C7B /* libFAudio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libFAudio.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B6908262190EC41003C0941 /* XNA_Song.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = XNA_Song.c; path = ../src/XNA_Song.c; sourceTree = "<group>"; };
 		7B7E140D2190E0CB00616654 /* libFAudio-tv.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libFAudio-tv.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		7BD20D552190C8C20020B14B /* FACT3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FACT3D.h; path = ../src/FACT3D.h; sourceTree = "<group>"; };
-		7BD20D562190C8C20020B14B /* FAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudio.h; path = ../src/FAudio.h; sourceTree = "<group>"; };
-		7BD20D572190C8C20020B14B /* FAPOFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPOFX.h; path = ../src/FAPOFX.h; sourceTree = "<group>"; };
+		7BA5611F21B9C7D800AB0E8C /* F3DAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = F3DAudio.h; path = ../include/F3DAudio.h; sourceTree = "<group>"; };
+		7BA5612021B9C7D800AB0E8C /* FAPO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPO.h; path = ../include/FAPO.h; sourceTree = "<group>"; };
+		7BA5612121B9C7D800AB0E8C /* FAudioFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudioFX.h; path = ../include/FAudioFX.h; sourceTree = "<group>"; };
+		7BA5612221B9C7D800AB0E8C /* FACT.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FACT.h; path = ../include/FACT.h; sourceTree = "<group>"; };
+		7BA5612321B9C7D800AB0E8C /* FAPOFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPOFX.h; path = ../include/FAPOFX.h; sourceTree = "<group>"; };
+		7BA5612421B9C7D800AB0E8C /* FACT3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FACT3D.h; path = ../include/FACT3D.h; sourceTree = "<group>"; };
+		7BA5612521B9C7D900AB0E8C /* FAPOBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPOBase.h; path = ../include/FAPOBase.h; sourceTree = "<group>"; };
+		7BA5612621B9C7D900AB0E8C /* FAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudio.h; path = ../include/FAudio.h; sourceTree = "<group>"; };
 		7BD20D582190C8C30020B14B /* FACT_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FACT_internal.h; path = ../src/FACT_internal.h; sourceTree = "<group>"; };
-		7BD20D592190C8C30020B14B /* FACT.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FACT.h; path = ../src/FACT.h; sourceTree = "<group>"; };
-		7BD20D5A2190C8C30020B14B /* FAPO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPO.h; path = ../src/FAPO.h; sourceTree = "<group>"; };
 		7BD20D5B2190C8C30020B14B /* FAudio_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudio_internal.h; path = ../src/FAudio_internal.h; sourceTree = "<group>"; };
-		7BD20D5C2190C8C30020B14B /* FAPOBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPOBase.h; path = ../src/FAPOBase.h; sourceTree = "<group>"; };
-		7BD20D5D2190C8C30020B14B /* F3DAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = F3DAudio.h; path = ../src/F3DAudio.h; sourceTree = "<group>"; };
-		7BD20D5E2190C8C30020B14B /* FAudioFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudioFX.h; path = ../src/FAudioFX.h; sourceTree = "<group>"; };
 		7BD20D5F2190C8E50020B14B /* FAudioFX_volumemeter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FAudioFX_volumemeter.c; path = ../src/FAudioFX_volumemeter.c; sourceTree = "<group>"; };
 		7BD20D602190C8E50020B14B /* FACT_internal.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FACT_internal.c; path = ../src/FACT_internal.c; sourceTree = "<group>"; };
 		7BD20D612190C8E50020B14B /* F3DAudio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = F3DAudio.c; path = ../src/F3DAudio.c; sourceTree = "<group>"; };
@@ -159,16 +159,16 @@
 		7B1CDDA72190C52900175C7B /* Public Headers */ = {
 			isa = PBXGroup;
 			children = (
-				7BD20D5D2190C8C30020B14B /* F3DAudio.h */,
+				7BA5611F21B9C7D800AB0E8C /* F3DAudio.h */,
+				7BA5612221B9C7D800AB0E8C /* FACT.h */,
+				7BA5612421B9C7D800AB0E8C /* FACT3D.h */,
+				7BA5612021B9C7D800AB0E8C /* FAPO.h */,
+				7BA5612521B9C7D900AB0E8C /* FAPOBase.h */,
+				7BA5612321B9C7D800AB0E8C /* FAPOFX.h */,
+				7BA5612621B9C7D900AB0E8C /* FAudio.h */,
+				7BA5612121B9C7D800AB0E8C /* FAudioFX.h */,
 				7BD20D582190C8C30020B14B /* FACT_internal.h */,
-				7BD20D592190C8C30020B14B /* FACT.h */,
-				7BD20D552190C8C20020B14B /* FACT3D.h */,
-				7BD20D5A2190C8C30020B14B /* FAPO.h */,
-				7BD20D5C2190C8C30020B14B /* FAPOBase.h */,
-				7BD20D572190C8C20020B14B /* FAPOFX.h */,
 				7BD20D5B2190C8C30020B14B /* FAudio_internal.h */,
-				7BD20D562190C8C20020B14B /* FAudio.h */,
-				7BD20D5E2190C8C30020B14B /* FAudioFX.h */,
 			);
 			name = "Public Headers";
 			sourceTree = "<group>";
@@ -419,7 +419,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -432,7 +431,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
