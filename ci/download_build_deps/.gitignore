@@ -1,0 +1,4 @@
+_build
+sdl2_win32_vc
+ffmpeg_win64
+ffmpeg_win64_bin
