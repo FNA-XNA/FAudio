@@ -78,10 +78,8 @@ add_library(FAudio SHARED
 	src/FAudio_platform_sdl2.c
 )
 
-# FAudio definitions
-if(CMAKE_BUILD_TYPE MATCHES Release)
-	target_compile_definitions(FAudio PRIVATE FAUDIO_RELEASE=1)
-endif()
+# add FAUDIO_RELEASE definition only to release builds
+target_compile_definitions(FAudio PRIVATE $<$<CONFIG:Release>:FAUDIO_RELEASE=1>)
 
 # FAudio folders as includes, for other targets to consume
 target_include_directories(FAudio PUBLIC
