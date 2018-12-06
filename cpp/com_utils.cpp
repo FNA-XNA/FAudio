@@ -203,23 +203,19 @@ extern "C" HRESULT unregister_faudio_dll(void *, REFIID);
 
 extern "C" HRESULT __stdcall DllRegisterServer(void)
 {
-#ifndef __WINE__
 	/* Please note: if you want to test the XAudio2Fx wrappers with MS XAudio2 (e.g. by not registering the IXAudio2 interface below),
 	   you also need to change XAPOBase.cpp to make everything work */
 	register_faudio_dll(DllHandle, *CLSID_XAudio2[XAUDIO2_VERSION]);
 	register_faudio_dll(DllHandle, *CLSID_AudioReverb[XAUDIO2_VERSION]);
 	register_faudio_dll(DllHandle, *CLSID_AudioVolumeMeter[XAUDIO2_VERSION]);
-#endif
 	return S_OK;
 }
 
 extern "C" HRESULT __stdcall DllUnregisterServer(void)
 {
-#ifndef __WINE__
 	unregister_faudio_dll(DllHandle, *CLSID_XAudio2[XAUDIO2_VERSION]);
 	unregister_faudio_dll(DllHandle, *CLSID_AudioReverb[XAUDIO2_VERSION]);
 	unregister_faudio_dll(DllHandle, *CLSID_AudioVolumeMeter[XAUDIO2_VERSION]);
-#endif
 	return S_OK;
 }
 
