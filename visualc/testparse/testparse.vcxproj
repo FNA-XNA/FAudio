@@ -41,7 +41,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\..\SDL2\include\;..\..\src\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\SDL2\include\;..\..\src\;..\..\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -56,7 +56,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\..\SDL2\include\;..\..\src\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\SDL2\include\;..\..\src\;..\..\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

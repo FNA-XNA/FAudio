@@ -102,7 +102,7 @@ all: $(FAUDIOOBJ)
 	$(CC) $(CFLAGS) -shared -o $(FAUDIOLIB) $(FAUDIOOBJ) $(LDFLAGS)
 
 $(FAUDIO_OUT)/%.o: src/%.c
-	$(CC) $(CFLAGS) -c -o $@ $< `sdl2-config --cflags`
+	$(CC) $(CFLAGS) -c -o $@ $< -Iinclude `sdl2-config --cflags`
 
 clean:
 	rm -f $(FAUDIOOBJ) $(FAUDIOLIB) testparse$(UTIL_SUFFIX) facttool$(UTIL_SUFFIX) testreverb$(UTIL_SUFFIX) testvolumemeter$(UTIL_SUFFIX) testfilter$(UTIL_SUFFIX) testxwma$(UTIL_SUFFIX)
@@ -111,14 +111,14 @@ clean:
 
 install: all
 	$(INSTALL) $(FAUDIOLIB) $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
-	$(INSTALL) src/FAudio.h $(INSTALL_PREFIX)/include/FAudio.h
-	$(INSTALL) src/FAudioFX.h $(INSTALL_PREFIX)/include/FAudioFX.h
-	$(INSTALL) src/F3DAudio.h $(INSTALL_PREFIX)/include/F3DAudio.h
-	$(INSTALL) src/FAPOFX.h $(INSTALL_PREFIX)/include/FAPOFX.h
-	$(INSTALL) src/FAPO.h $(INSTALL_PREFIX)/include/FAPO.h
-	$(INSTALL) src/FAPOBase.h $(INSTALL_PREFIX)/include/FAPOBase.h
-	$(INSTALL) src/FACT.h $(INSTALL_PREFIX)/include/FACT.h
-	$(INSTALL) src/FACT3D.h $(INSTALL_PREFIX)/include/FACT3D.h
+	$(INSTALL) include/FAudio.h $(INSTALL_PREFIX)/include/FAudio.h
+	$(INSTALL) include/FAudioFX.h $(INSTALL_PREFIX)/include/FAudioFX.h
+	$(INSTALL) include/F3DAudio.h $(INSTALL_PREFIX)/include/F3DAudio.h
+	$(INSTALL) include/FAPOFX.h $(INSTALL_PREFIX)/include/FAPOFX.h
+	$(INSTALL) include/FAPO.h $(INSTALL_PREFIX)/include/FAPO.h
+	$(INSTALL) include/FAPOBase.h $(INSTALL_PREFIX)/include/FAPOBase.h
+	$(INSTALL) include/FACT.h $(INSTALL_PREFIX)/include/FACT.h
+	$(INSTALL) include/FACT3D.h $(INSTALL_PREFIX)/include/FACT3D.h
 
 uninstall:
 	rm -f $(INSTALL_PREFIX)/lib/$(TARGET_PREFIX)FAudio.$(TARGET_SUFFIX)
@@ -135,36 +135,36 @@ testparse:
 	$(CC) -g -Wall -pedantic -o testparse$(UTIL_SUFFIX) \
 		utils/testparse/testparse.c \
 		src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc -Iinclude `sdl2-config --cflags --libs`
 
 facttool:
 	$(CXX) -g -Wall $(FFMPEG_CFLAGS) -o facttool$(UTIL_SUFFIX) \
 		utils/facttool/facttool.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
+		-Isrc -Iinclude`sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
 
 testreverb:
 	$(CXX) -g -Wall -o testreverb$(UTIL_SUFFIX) \
 		utils/testreverb/*.cpp \
 		utils/wavcommon/wavs.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc -Iinclude `sdl2-config --cflags --libs`
 
 testvolumemeter:
 	$(CXX) -g -Wall -o testvolumemeter$(UTIL_SUFFIX) \
 		utils/testvolumemeter/*.cpp \
 		utils/wavcommon/wavs.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc -Iinclude `sdl2-config --cflags --libs`
 
 testxwma:
 	$(CXX) -g -Wall $(FFMPEG_CFLAGS) -o testxwma$(UTIL_SUFFIX) \
 		utils/testxwma/*.cpp \
 		src/F*.c \
-		-Isrc `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
+		-Isrc -Iinclude `sdl2-config --cflags --libs` $(FFMPEG_LDFLAGS)
 
 testfilter:
 	$(CXX) -g -Wall -o testfilter$(UTIL_SUFFIX) \
 		utils/testfilter/*.cpp \
 		utils/uicommon/*.cpp src/F*.c \
-		-Isrc `sdl2-config --cflags --libs`
+		-Isrc -Iinclude `sdl2-config --cflags --libs`

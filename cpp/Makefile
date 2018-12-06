@@ -1,4 +1,4 @@
-CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600
+CXXFLAGS += -I../src -I../include -DFAUDIOCPP_EXPORTS -D_WIN32_WINNT=0x0600
 LDFLAGS += -Wl,--enable-stdcall-fixup -static-libgcc -static-libstdc++ -L.. -lFAudio -lole32
 
 DLLTOOL ?= dlltool

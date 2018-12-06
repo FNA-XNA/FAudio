@@ -7,7 +7,7 @@ else
 endif
 
 
-CXXFLAGS += -I../src -DFAUDIOCPP_EXPORTS -D__WINE__ $(MACHINE) -fPIC
+CXXFLAGS += -I../src -I../include -DFAUDIOCPP_EXPORTS -D__WINE__ $(MACHINE) -fPIC
 
 ifeq ($(ARCH), 32)
 	CXXFLAGS += "-D__stdcall=__attribute__((__stdcall__)) __attribute__((__force_align_arg_pointer__))"
