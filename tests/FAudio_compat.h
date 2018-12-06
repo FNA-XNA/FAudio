@@ -58,6 +58,7 @@ typedef FAudio IXAudio2;
 #define IXAudio2_CreateSubmixVoice FAudio_CreateSubmixVoice
 #define IXAudio2_GetPerformanceData FAudio_GetPerformanceData
 #define IXAudio2_RegisterForCallbacks FAudio_RegisterForCallbacks
+#define IXAudio2_Release FAudio_Release
 #define IXAudio2_StartEngine FAudio_StartEngine
 #define IXAudio2_StopEngine FAudio_StopEngine
 #define IXAudio2_UnregisterForCallbacks FAudio_UnregisterForCallbacks
