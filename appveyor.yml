@@ -1,0 +1,40 @@
+# global environment variables
+environment:
+  global:
+    # output test results for failing tests
+    CTEST_OUTPUT_ON_FAILURE: 1
+
+  # test matrix
+  matrix:
+
+    - TOOLCHAIN: "mingw"
+      GENERATOR: "MinGW Makefiles"
+      MINGW_PATH: "C:\\mingw-w64\\x86_64-7.2.0-posix-seh-rt_v5-rev1\\mingw64\\bin"
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+    - TOOLCHAIN: "vs-15-2017-win64"
+      GENERATOR: "Visual Studio 15 2017 Win64"
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+install:
+  # Remove entry with sh.exe from PATH to fix error with MinGW toolchain
+  # (For MinGW make to work correctly sh.exe must NOT be in your path)
+  # * http://stackoverflow.com/a/3870338/2288008
+  - cmd: set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
+
+  # set MINGW path
+  - cmd: IF DEFINED MINGW_PATH set PATH=%MINGW_PATH%;%PATH%
+
+  # Visual Studio 15 2017: Mimic behavior of older versions
+  - cmd: set VS150COMNTOOLS=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools
+
+build_script:
+  # download sdl2 from website
+  - cmd: cmake -Hci/download_build_deps -B_build_sdl2
+  - cmd: cmake --build _build_sdl2
+  # configure, build and install FAudio in Release mode
+  - cmd: cmake -H. -B_build_%TOOLCHAIN%_Release -G "%GENERATOR%" -DCMAKE_TOOLCHAIN_FILE="%cd%\ci\toolchains\%TOOLCHAIN%.cmake" -DSDL2_DIR=ci/download_build_deps/sdl2_win32_vc/lib/x64 -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=ci/download_build_deps/ffmpeg_win64/include
+  - cmd: cmake --build _build_%TOOLCHAIN%_Release --config Release --target install
+  # add git back to PATH for `diff` command in case of error
+  - cmd: set PATH=C:\Program Files\Git\usr\bin;%PATH%
+
