@@ -1604,12 +1604,23 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	/* TODO: Check for dependencies and fail if still in use */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
+		FAudioBufferEntry *entry, *next;
+
 		LinkedList_RemoveEntry(
 			&voice->audio->sources,
 			voice,
 			voice->audio->sourceLock,
 			voice->audio->pFree
 		);
+
+		entry = voice->src.bufferList;
+		while (entry != NULL)
+		{
+			next = entry->next;
+			voice->audio->pFree(entry);
+			entry = next;
+		}
+
 		voice->audio->pFree(voice->src.format);
 		LOG_MUTEX_DESTROY(voice->audio, voice->src.bufferLock)
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
