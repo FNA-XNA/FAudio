@@ -1149,14 +1149,6 @@ uint32_t FAudioVoice_SetEffectChain(
 					voice->effects.inPlaceProcessing[i]
 				);
 
-				/* Fails if in-place processing is mandatory and
-				 * the chain forces us to do otherwise...
-				 */
-				FAudio_assert(
-					!(pProps->Flags & FAPO_FLAG_INPLACE_REQUIRED) ||
-					voice->effects.inPlaceProcessing[i]
-				);
-
 				voice->audio->pFree(pProps);
 			}
 		}
