@@ -102,10 +102,10 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 	*ppFAudio = (FAudio*) customMalloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
 	(*ppFAudio)->version = version;
-#ifndef FAUDIO_RELEASE
+#ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
 	FAudioDebugConfiguration debugInit = {0};
 	FAudio_SetDebugConfiguration(*ppFAudio, &debugInit, NULL);
-#endif /* FAUDIO_RELEASE */
+#endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 	(*ppFAudio)->sourceLock = FAudio_PlatformCreateMutex();
 	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->sourceLock)
 	(*ppFAudio)->submixLock = FAudio_PlatformCreateMutex();
@@ -697,7 +697,7 @@ void FAudio_SetDebugConfiguration(
 	FAudioDebugConfiguration *pDebugConfiguration,
 	void* pReserved
 ) {
-#ifndef FAUDIO_RELEASE
+#ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
 	char *env;
 
 	LOG_API_ENTER(audio)
@@ -765,7 +765,7 @@ void FAudio_SetDebugConfiguration(
 	#undef CHECK_ENV
 
 	LOG_API_EXIT(audio)
-#endif /* FAUDIO_RELEASE */
+#endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 }
 
 /* FAudioVoice Interface */

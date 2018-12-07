@@ -26,7 +26,7 @@
 
 #include "FAudio_internal.h"
 
-#ifndef FAUDIO_RELEASE
+#ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
 void FAudio_INTERNAL_debug(
 	FAudio *audio,
 	const char *file,
@@ -157,7 +157,7 @@ void FAudio_INTERNAL_debug_fmt(
 		get_subformat_string(fmt)
 	);
 }
-#endif /* FAUDIO_RELEASE */
+#endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 
 void LinkedList_AddEntry(
 	LinkedList **start,

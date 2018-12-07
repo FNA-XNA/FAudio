@@ -289,10 +289,10 @@ struct FAudio
 	void *clientEngineUser;
 	FAudioEngineProcedureEXT pClientEngineProc;
 
-#ifndef FAUDIO_RELEASE
+#ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
 	/* Debug Information */
 	FAudioDebugConfiguration debug;
-#endif
+#endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 
 	/* Platform opaque pointer */
 	void *platform;
@@ -409,7 +409,7 @@ extern const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64];
 
 /* Debug */
 
-#if FAUDIO_RELEASE
+#ifdef FAUDIO_DISABLE_DEBUGCONFIGURATION
 
 #define LOG_ERROR(engine, fmt, ...)
 #define LOG_WARNING(engine, fmt, ...)
@@ -500,7 +500,7 @@ void FAudio_INTERNAL_debug_fmt(
 		); \
 	}
 
-#endif /* FAUDIO_RELEASE */
+#endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 
 /* FAPOFX Creators */
 

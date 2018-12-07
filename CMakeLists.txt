@@ -10,6 +10,7 @@ option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the hos
 option(BUILD_CPP "Build cpp/ folder (COM wrapper for XAudio2)" OFF)
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
+option(FORCE_ENABLE_DEBUGCONFIGURATION "Enable DebugConfiguration in all build types" OFF)
 if(MINGW)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
@@ -79,8 +80,10 @@ add_library(FAudio SHARED
 	src/FAudio_platform_sdl2.c
 )
 
-# add FAUDIO_RELEASE definition only to release builds
-target_compile_definitions(FAudio PRIVATE $<$<CONFIG:Release>:FAUDIO_RELEASE=1>)
+# Only disable DebugConfiguration in release builds
+if(NOT FORCE_ENABLE_DEBUGCONFIGURATION)
+	target_compile_definitions(FAudio PRIVATE $<$<CONFIG:Release>:FAUDIO_DISABLE_DEBUGCONFIGURATION>)
+endif()
 
 # FAudio_assert Customization
 if(LOG_ASSERTIONS)
