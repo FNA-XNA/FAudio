@@ -1149,8 +1149,6 @@ uint32_t FAudioVoice_SetEffectChain(
 					voice->effects.inPlaceProcessing[i]
 				);
 
-				voice->audio->pFree(pProps);
-
 				/* Fails if in-place processing is mandatory and
 				 * the chain forces us to do otherwise...
 				 */
@@ -1158,6 +1156,8 @@ uint32_t FAudioVoice_SetEffectChain(
 					!(pProps->Flags & FAPO_FLAG_INPLACE_REQUIRED) ||
 					voice->effects.inPlaceProcessing[i]
 				);
+
+				voice->audio->pFree(pProps);
 			}
 		}
 		voice->outputChannels = channelCount;
