@@ -122,10 +122,14 @@
 
 #define FAudio_qsort SDL_qsort
 
+#ifdef FAUDIO_LOG_ASSERTIONS
+#define FAudio_assert(condition) if (condition) { SDL_Log("%s\n", #condition); }
+#else
 #define FAudio_assert SDL_assert
+#endif
 #define FAudio_snprintf SDL_snprintf
 #define FAudio_vsnprintf SDL_vsnprintf
-#define FAudio_Log(msg) SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "%s\n", msg);
+#define FAudio_Log(msg) SDL_Log("%s\n", msg);
 #define FAudio_getenv SDL_getenv
 #define FAudio_PRIu64 SDL_PRIu64
 #define FAudio_PRIx64 SDL_PRIx64

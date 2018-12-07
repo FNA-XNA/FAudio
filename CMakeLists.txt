@@ -9,6 +9,7 @@ option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 option(BUILD_CPP "Build cpp/ folder (COM wrapper for XAudio2)" OFF)
 option(XNASONG "Build with XNA_Song.c" ON)
+option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
 if(MINGW)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
@@ -80,6 +81,11 @@ add_library(FAudio SHARED
 
 # add FAUDIO_RELEASE definition only to release builds
 target_compile_definitions(FAudio PRIVATE $<$<CONFIG:Release>:FAUDIO_RELEASE=1>)
+
+# FAudio_assert Customization
+if(LOG_ASSERTIONS)
+	target_compile_definitions(FAudio PUBLIC FAUDIO_LOG_ASSERTIONS)
+endif()
 
 # FAudio folders as includes, for other targets to consume
 target_include_directories(FAudio PUBLIC
