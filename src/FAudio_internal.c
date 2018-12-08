@@ -267,8 +267,9 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 	FAudioSourceVoice *voice,
 	uint32_t decoding
 ) {
-	uint32_t end;
+	uint32_t end, result;
 	FAudioBuffer *buffer;
+	FAudioWaveFormatExtensible *fmt;
 	FAudioBufferEntry *list = voice->src.bufferList;
 
 	LOG_FUNC_ENTER(voice->audio)
@@ -308,8 +309,22 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 		list = list->next;
 	}
 
+	/* Convert samples to bytes, factoring block alignment */
+	if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
+	{
+		fmt = (FAudioWaveFormatExtensible*) voice->src.format;
+		result = (
+			(decoding / fmt->Samples.wSamplesPerBlock) +
+			((decoding % fmt->Samples.wSamplesPerBlock) > 0)
+		) * voice->src.format->nBlockAlign;
+	}
+	else
+	{
+		result = decoding * voice->src.format->nBlockAlign;
+	}
+
 	LOG_FUNC_EXIT(voice->audio)
-	return decoding * voice->src.format->nBlockAlign;
+	return result;
 }
 
 static void FAudio_INTERNAL_DecodeBuffers(
@@ -704,44 +719,30 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
-	/* Nothing to do? */
-	if (voice->src.bufferList == NULL)
+	/* First voice callback */
+	if (	voice->src.callback != NULL &&
+		voice->src.callback->OnVoiceProcessingPassStart != NULL	)
 	{
-		/* Last call for buffer data! */
-		if (	voice->src.callback != NULL &&
-			voice->src.callback->OnVoiceProcessingPassStart != NULL	)
-		{
-			/* FIXME: ADPCM BlockAlign? */
-			voice->src.callback->OnVoiceProcessingPassStart(
-				voice->src.callback,
-				(uint32_t) toDecode * voice->src.format->nBlockAlign
-			);
-		}
-
-		/* Still nothing? Fine, whatever. */
-		if (voice->src.bufferList == NULL)
-		{
-			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
-			if (	voice->src.callback != NULL &&
-				voice->src.callback->OnVoiceProcessingPassEnd != NULL)
-			{
-				voice->src.callback->OnVoiceProcessingPassEnd(
-					voice->src.callback
-				);
-			}
-			LOG_FUNC_EXIT(voice->audio)
-			return;
-		}
-	}
-	else if (	voice->src.callback != NULL &&
-			voice->src.callback->OnVoiceProcessingPassStart != NULL	)
-	{
-		/* FIXME: ADPCM BlockAlign? */
 		voice->src.callback->OnVoiceProcessingPassStart(
 			voice->src.callback,
 			FAudio_INTERNAL_GetBytesRequested(voice, (uint32_t) toDecode)
 		);
+	}
+
+	/* Nothing to do? */
+	if (voice->src.bufferList == NULL)
+	{
+		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+		if (	voice->src.callback != NULL &&
+			voice->src.callback->OnVoiceProcessingPassEnd != NULL)
+		{
+			voice->src.callback->OnVoiceProcessingPassEnd(
+				voice->src.callback
+			);
+		}
+		LOG_FUNC_EXIT(voice->audio)
+		return;
 	}
 
 	/* Decode... */
