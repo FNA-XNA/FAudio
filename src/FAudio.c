@@ -662,10 +662,10 @@ void FAudio_GetPerformanceData(
 	while (list != NULL)
 	{
 		source = (FAudioSourceVoice*) list->entry;
-		pPerfData->TotalSourceVoiceCount++;
+		pPerfData->TotalSourceVoiceCount += 1;
 		if (source->src.active)
 		{
-			pPerfData->ActiveSourceVoiceCount++;
+			pPerfData->ActiveSourceVoiceCount += 1;
 		}
 		list = list->next;
 	}
@@ -677,13 +677,13 @@ void FAudio_GetPerformanceData(
 	list = audio->submixes;
 	while (list != NULL)
 	{
-		pPerfData->ActiveSubmixVoiceCount++;
+		pPerfData->ActiveSubmixVoiceCount += 1;
 		list = list->next;
 	}
 	FAudio_PlatformUnlockMutex(audio->submixLock);
 	LOG_MUTEX_UNLOCK(audio, audio->submixLock)
 
-	if(audio->master)
+	if (audio->master != NULL)
 	{
 		/* estimate, should use real latency from platform */
 		pPerfData->CurrentLatencyInSamples = 2 * audio->updateSize;
