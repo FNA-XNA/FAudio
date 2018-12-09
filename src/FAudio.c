@@ -1994,14 +1994,22 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 uint32_t FAudioSourceVoice_Discontinuity(
 	FAudioSourceVoice *voice
 ) {
+	FAudioBufferEntry *buf;
+
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
-	/* As far as I know this doesn't matter for us...?
-	 * This exists so the engine doesn't try to spit out random memory,
-	 * but like... can't we just not send samples with no buffers?
-	 * -flibit
-	 */
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
+	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+
+	if (voice->src.bufferList != NULL)
+	{
+		for (buf = voice->src.bufferList; buf->next != NULL; buf = buf->next);
+		buf->buffer.Flags |= FAUDIO_END_OF_STREAM;
+	}
+
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
 	LOG_API_EXIT(voice->audio)
 	return 0;
 }
