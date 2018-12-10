@@ -222,6 +222,20 @@ if(BUILD_UTILS)
 	target_link_libraries(testvolumemeter PRIVATE uicommon wavs)
 endif()
 
+# define install directories
+# on mingw-w64 cross compilation $CMAKE_INSTALL_LIBDIR is set to an absolute
+# path. Work around that by hard coding the directories on windows
+if(WIN32)
+	set(FAudio_INSTALL_INCLUDEDIR include)
+	set(FAudio_INSTALL_BINDIR bin)
+	set(FAudio_INSTALL_LIBDIR lib)
+else()
+	include(GNUInstallDirs)
+	set(FAudio_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+	set(FAudio_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
+	set(FAudio_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
+endif()
+
 # cpp/ Folder
 if(BUILD_CPP)
 	# XAPOBase, used by XAudio2 and XAPOFX
@@ -344,13 +358,13 @@ if(BUILD_CPP)
 
 	# Add libraries to install target
 	install(TARGETS ${FAudio_CPP_libs}
-		RUNTIME DESTINATION bin
-		LIBRARY DESTINATION lib
-		ARCHIVE DESTINATION lib/static
+		RUNTIME DESTINATION ${FAudio_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${FAudio_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${FAudio_INSTALL_LIBDIR}
 	)
 	# Add Wine install script to install target
 	install(PROGRAMS cpp/scripts/wine_setup_native
-		DESTINATION bin
+		DESTINATION ${FAudio_INSTALL_BINDIR}
 	)
 	# Install runtime dependencies
 	if(INSTALL_MINGW_DEPENDENCIES)
@@ -369,16 +383,16 @@ endif()
 # Public Headers...
 install(
 	DIRECTORY include/
-	DESTINATION include
+	DESTINATION ${FAudio_INSTALL_INCLUDEDIR}
 )
 # Libraries...
 install(
 	TARGETS ${PROJECT_NAME}
 	EXPORT ${PROJECT_NAME}-targets
-	INCLUDES DESTINATION include
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib/static
+	INCLUDES DESTINATION ${FAudio_INSTALL_INCLUDEDIR}
+	RUNTIME DESTINATION ${FAudio_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${FAudio_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${FAudio_INSTALL_LIBDIR}
 )
 
 # Generate cmake-config file, install CMake files
@@ -386,14 +400,14 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(
 	cmake/config.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}-config.cmake
-	INSTALL_DESTINATION lib/cmake/${PROJECT_NAME}
+	INSTALL_DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 install(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}-config.cmake
-	DESTINATION lib/cmake/${PROJECT_NAME}
+	DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 install(
 	EXPORT ${PROJECT_NAME}-targets
 	NAMESPACE ${PROJECT_NAME}::
-	DESTINATION lib/cmake/${PROJECT_NAME}
+	DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
