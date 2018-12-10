@@ -13,7 +13,7 @@ endif()
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
 option(FORCE_ENABLE_DEBUGCONFIGURATION "Enable DebugConfiguration in all build types" OFF)
-if(MINGW)
+if(WIN32)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
 
