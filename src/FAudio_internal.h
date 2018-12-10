@@ -123,7 +123,15 @@
 #define FAudio_qsort SDL_qsort
 
 #ifdef FAUDIO_LOG_ASSERTIONS
-#define FAudio_assert(condition) if (!(condition)) { SDL_Log("%s\n", #condition); }
+#define FAudio_assert(condition) \
+	{ \
+		static uint8_t logged = 0; \
+		if (!(condition) && !logged) \
+		{ \
+			SDL_Log("Assertion failed: %s\n", #condition); \
+			logged = 1; \
+		} \
+	}
 #else
 #define FAudio_assert SDL_assert
 #endif
