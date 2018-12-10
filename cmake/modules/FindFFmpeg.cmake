@@ -26,6 +26,7 @@
 
 # 2018-11-29: NeroBurner: add FFmpeg_INCLUDE_DIRS and FFmpeg_LIBRARY_DIRS as hints for all targets
 # 2018-12-03: NeroBurner: use FFmpeg_INCLUDE_DIR to resolve name collision, ignore root path if set
+# 2018-12-10: NeroBurner: fix detection whether FFmpeg_INCLUDE_DIR is set
 
 include(FindPackageHandleStandardArgs)
 
@@ -53,7 +54,8 @@ foreach(comp ${FFmpeg_FIND_COMPONENTS})
 	if(PKG_CONFIG_FOUND)
 		pkg_check_modules(_${comp} QUIET lib${comp})
 	endif()
-	if(NOT "${FFmpeg_INCLUDE_DIR}")
+	string(COMPARE NOTEQUAL "${FFmpeg_INCLUDE_DIR}" "" ffmpeg_include_dir_set)
+	if(ffmpeg_include_dir_set)
 		# search just provided directory
 		find_path(FFmpeg_${comp}_INCLUDE_DIR
 			"lib${comp}/${comp}.h"
@@ -61,20 +63,24 @@ foreach(comp ${FFmpeg_FIND_COMPONENTS})
 			    ${FFmpeg_INCLUDE_DIR}
 			PATH_SUFFIXES ffmpeg libav
 			NO_CMAKE_FIND_ROOT_PATH
+			NO_CMAKE_ENVIRONMENT_PATH
+			NO_SYSTEM_ENVIRONMENT_PATH
 			NO_DEFAULT_PATH)
 		find_library(FFmpeg_${comp}_LIBRARY
 			NAMES ${comp} ${comp}-ffmpeg ${_${comp}_LIBRARIES}
-			HINTS
-			    ${FFmpeg_LIBRARY_DIRS}
-				${_${comp}_LIBRARY_DIRS}
-				"${FFmpeg_${comp}_INCLUDE_DIR}/../lib"
+			PATHS
+			    "${FFmpeg_${comp}_INCLUDE_DIR}/../lib"
 				"${FFmpeg_${comp}_INCLUDE_DIR}/../lib${_lib_suffix}"
 				"${FFmpeg_${comp}_INCLUDE_DIR}/../libs${_lib_suffix}"
 				"${FFmpeg_${comp}_INCLUDE_DIR}/lib"
 				"${FFmpeg_${comp}_INCLUDE_DIR}/lib${_lib_suffix}"
+				${FFmpeg_LIBRARY_DIRS}
+				${_${comp}_LIBRARY_DIRS}
 			PATH_SUFFIXES ${comp} lib${comp}
 			DOC "FFmpeg ${comp} library"
 			NO_CMAKE_FIND_ROOT_PATH
+			NO_CMAKE_ENVIRONMENT_PATH
+			NO_SYSTEM_ENVIRONMENT_PATH
 			NO_DEFAULT_PATH)
 	endif()
 
