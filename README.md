@@ -1,4 +1,7 @@
 # FAudio
+[![Build Status](https://img.shields.io/travis/FNA-XNA/FAudio/master.svg?label=Travis)](https://travis-ci.org/FNA-XNA/FAudio/builds)
+[![Grunt status](https://img.shields.io/appveyor/ci/FNA-XNA/FAudio/master.svg?label=Appveyor)](https://ci.appveyor.com/project/FNA-XNA/FAudio/history)
+
 This is FAudio, an XAudio reimplementation that focuses solely on developing
 fully accurate DirectX Audio runtime libraries for the FNA project, including
 XAudio2, X3DAudio, XAPO, and XACT3.
