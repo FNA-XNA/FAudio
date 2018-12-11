@@ -42,7 +42,7 @@ function(install_shared_libs)
 		endif()
 
 		# got an absolute path for a library
-		string(REGEX MATCH "\.(dll.a$)" is_static "${lib}")
+		string(REGEX MATCH "\.(dll.a$|lib$)" is_static "${lib}")
 		if(is_static)
 			# lib is a dynamic wrapper ending in .dll.a, search for the linked
 			# dll in the ../bin directory
@@ -52,6 +52,7 @@ function(install_shared_libs)
 			get_filename_component(linker_search_dir ${linker_search_dir} DIRECTORY)
 			file(GLOB dyn_lib
 				"${linker_search_dir}/bin/${dynlib_simple}*.dll"
+				"${linker_search_dir}/lib/${dynlib_simple}*.dll"
 				LIST_DIRECTORIES false)
 			if(dyn_lib)
 				# found the dynamic library
