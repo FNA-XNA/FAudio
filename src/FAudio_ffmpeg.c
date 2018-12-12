@@ -402,7 +402,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 			decodeCache + (done * voice->src.format->nChannels),
 			(samples - done) * voice->src.format->nChannels * sizeof(float)
 		);
-	);
+	}
 
 	ffmpeg->decOffset += samples;
 	LOG_FUNC_EXIT(voice->audio)
