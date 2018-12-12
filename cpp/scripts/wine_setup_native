@@ -10,8 +10,11 @@ if [ ! -f $WINEPREFIX/system.reg ]; then
 	exit 1
 fi
 
-winedump xaudio2_0.dll | grep 32BIT_MACHINE >> /dev/null 2>&1
+# assume the dlls are in the same folder as the executed script
+dll_path=$(realpath "$(dirname "$0")")
 
+# get architecture
+winedump "${dll_path}/xaudio2_0.dll" | grep 32BIT_MACHINE >> /dev/null 2>&1
 if [ $? -eq 0 ]; then
 	wine_exe=wine
 else
@@ -23,8 +26,6 @@ if [ $? -ne 0 ]; then
 	echo "Failed to get winepath for c:\windows\system32 (64-bit vs 32-bit mismatch?)"
 	exit 1;
 fi
-
-dll_path=$(pwd)
 
 function install_dll {
 	name=$1
