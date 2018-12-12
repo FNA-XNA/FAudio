@@ -395,6 +395,15 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		ffmpeg->convertOffset += todo * voice->src.format->nChannels;
 	}
 
+	/* FIXME: This block should not be here! */
+	if (done < samples)
+	{
+		FAudio_zero(
+			decodeCache + (done * voice->src.format->nChannels),
+			(samples - done) * voice->src.format->nChannels * sizeof(float)
+		);
+	);
+
 	ffmpeg->decOffset += samples;
 	LOG_FUNC_EXIT(voice->audio)
 }
