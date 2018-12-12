@@ -293,7 +293,7 @@ void FAudio_INTERNAL_FillConvertCache(FAudioVoice *voice, FAudioBuffer *buffer)
 		);
 	}
 
-	ffmpeg->convertSamples = total_samples;
+	ffmpeg->convertSamples = ffmpeg->av_frame->nb_samples;
 	ffmpeg->convertOffset = 0;
 	LOG_FUNC_EXIT(voice->audio)
 }
@@ -320,9 +320,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		 * we simply rewind by a couple samples. Pretty safe if it doesn't
 		 * cross back into the previous decoded block.
 		 */
-		uint32_t delta = (
-			ffmpeg->decOffset - voice->src.curBufferOffset
-			) * voice->src.format->nChannels;
+		uint32_t delta = ffmpeg->decOffset - voice->src.curBufferOffset;
 
 		if (ffmpeg->convertOffset >= delta)
 		{
@@ -378,7 +376,7 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 			FAudio_INTERNAL_FillConvertCache(voice, buffer);
 		}
 
-		available = (ffmpeg->convertSamples - ffmpeg->convertOffset) / voice->src.format->nChannels;
+		available = ffmpeg->convertSamples - ffmpeg->convertOffset;
 		if (available <= 0)
 		{
 			break;
@@ -387,12 +385,12 @@ void FAudio_INTERNAL_DecodeFFMPEG(
 		todo = FAudio_min(available, samples - done);
 		FAudio_memcpy(
 			decodeCache + (done * voice->src.format->nChannels),
-			ffmpeg->convertCache + ffmpeg->convertOffset,
+			ffmpeg->convertCache + (ffmpeg->convertOffset * voice->src.format->nChannels),
 			todo * voice->src.format->nChannels * sizeof(float)
 		);
 
 		done += todo;
-		ffmpeg->convertOffset += todo * voice->src.format->nChannels;
+		ffmpeg->convertOffset += todo;
 	}
 
 	/* FIXME: This block should not be here! */
