@@ -317,9 +317,24 @@ uint32_t FAudio_CreateSourceVoice(
 
 		if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)) == 0)
 		{
-			(*ppSourceVoice)->src.decode = (fmtex->Format.wBitsPerSample == 16) ?
-				FAudio_INTERNAL_DecodePCM16 :
-				FAudio_INTERNAL_DecodePCM8;
+			#define DECODER(bit) \
+				if (fmtex->Format.wBitsPerSample == bit) \
+				{ \
+					(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM##bit; \
+				}
+			DECODER(16)
+			else DECODER(8)
+			else DECODER(24)
+			else
+			{
+				LOG_ERROR(
+					audio,
+					"Unrecognized wBitsPerSample: %d",
+					fmtex->Format.wBitsPerSample
+				)
+				FAudio_assert(0 && "Unrecognized wBitsPerSample!");
+			}
+			#undef DECODER
 		}
 		else if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)) == 0)
 		{
