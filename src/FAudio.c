@@ -352,6 +352,7 @@ uint32_t FAudio_CreateSourceVoice(
 			}
 #else
 			FAudio_assert(0 && "xWMA is not supported!");
+			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
 #endif /* HAVE_FFMPEG */
 		}
 		else

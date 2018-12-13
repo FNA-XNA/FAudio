@@ -1608,4 +1608,18 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
+/* Fallback WMA decoder, get ready for spam! */
+
+void FAudio_INTERNAL_DecodeWMAERROR(
+	FAudioVoice *voice,
+	FAudioBuffer *buffer,
+	float *decodeCache,
+	uint32_t samples
+) {
+	LOG_FUNC_ENTER(voice->audio)
+	LOG_ERROR(voice->audio, "%s", "WMA IS NOT SUPPORTED IN THIS BUILD!")
+	FAudio_zero(decodeCache, samples * voice->src.format->nChannels * sizeof(float));
+	LOG_FUNC_EXIT(voice->audio)
+}
+
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */
