@@ -62,25 +62,35 @@ void FAudio_FFMPEG_reset(FAudioSourceVoice *voice)
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 {
 	AVCodecContext *av_ctx;
 	AVFrame *av_frame;
-	AVCodec *codec;
+	AVCodec *codec = NULL;
+	const char *typestring = "Unknown";
 
 	LOG_FUNC_ENTER(pSourceVoice->audio)
 	pSourceVoice->src.decode = FAudio_INTERNAL_DecodeFFMPEG;
 
 	/* initialize ffmpeg state */
-	codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
+	if (type == FAUDIO_FORMAT_WMAUDIO2)
+	{
+		typestring = "WMAv2";
+		codec = avcodec_find_decoder(AV_CODEC_ID_WMAV2);
+	}
+	else if (type == FAUDIO_FORMAT_WMAUDIO3)
+	{
+		typestring = "WMAv3";
+		codec = avcodec_find_decoder(AV_CODEC_ID_WMAPRO);
+	}
 	if (!codec)
 	{
 		LOG_ERROR(
 			pSourceVoice->audio,
-			"%s",
-			"WMAv2 codec not supported!"
+			"%s codec not supported!",
+			typestring
 		);
-		FAudio_assert(0 && "WMAv2 codec not supported!");
+		FAudio_assert(0 && "FFmpeg codec not supported!");
 		LOG_FUNC_EXIT(pSourceVoice->audio)
 		return FAUDIO_E_UNSUPPORTED_FORMAT;
 	}
@@ -103,22 +113,35 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice)
 	av_ctx->sample_rate = pSourceVoice->src.format->nSamplesPerSec;
 	av_ctx->block_align = pSourceVoice->src.format->nBlockAlign;
 	av_ctx->bits_per_coded_sample = pSourceVoice->src.format->wBitsPerSample;
-	av_ctx->extradata_size = pSourceVoice->src.format->cbSize;
 	av_ctx->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 
-	/* pSourceVoice->src.format is actually pointing to a WAVEFORMATEXTENSIBLE struct, not just a WAVEFORMATEX struct.
-	   That means there's always at least 22 bytes following the struct, I assume the WMA data is behind that.
-	   Need to verify but haven't come across any samples data with cbSize > 22 -@JohanSmet! */
-	if (pSourceVoice->src.format->cbSize > 22)
+	/* pSourceVoice->src.format is actually pointing to a
+	 * WAVEFORMATEXTENSIBLE struct, not just a WAVEFORMATEX struct.
+	 * That means there's always at least 22 bytes following the struct, I
+	 * assume the WMA data is behind that.
+	 * Need to verify but haven't come across any samples data with cbSize > 22
+	 * -@JohanSmet!
+	 */
+	FAudio_assert(pSourceVoice->src.format->cbSize <= 22);
+	if (type == FAUDIO_FORMAT_WMAUDIO3)
 	{
-		av_ctx->extradata = (uint8_t *) av_malloc(pSourceVoice->src.format->cbSize + AV_INPUT_BUFFER_PADDING_SIZE - 22);
-		FAudio_memcpy(av_ctx->extradata, (&pSourceVoice->src.format->cbSize) + 23, pSourceVoice->src.format->cbSize - 22);
+		av_ctx->extradata_size = pSourceVoice->src.format->cbSize;
+		av_ctx->extradata = (uint8_t *) av_malloc(
+			pSourceVoice->src.format->cbSize +
+			AV_INPUT_BUFFER_PADDING_SIZE
+		);
+		FAudio_memcpy(
+			av_ctx->extradata,
+			&((FAudioWaveFormatExtensible*) pSourceVoice->src.format)->Samples,
+			pSourceVoice->src.format->cbSize
+		);
 	}
 	else
 	{
 		/* xWMA doesn't provide the extradata info that FFmpeg needs to
-		 * decode WMA data, so we create some fake extradata. This is taken
-		 * from <ffmpeg/libavformat/xwma.c>. */
+		 * decode WMA data, so we create some fake extradata. This is
+		 * taken from <ffmpeg/libavformat/xwma.c>.
+		 */
 		av_ctx->extradata_size = 6;
 		av_ctx->extradata = (uint8_t *) av_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);

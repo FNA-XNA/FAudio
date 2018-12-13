@@ -609,7 +609,7 @@ DECODE_FUNC(WMAERROR)
 /* FFmpeg */
 
 #ifdef HAVE_FFMPEG
-uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice);
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type);
 void FAudio_FFMPEG_free(FAudioSourceVoice *voice);
 void FAudio_FFMPEG_reset(FAudioSourceVoice *voice);
 #endif /* HAVE_FFMPEG */

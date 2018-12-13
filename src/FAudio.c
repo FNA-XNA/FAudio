@@ -47,6 +47,7 @@ MAKE_SUBFORMAT_GUID(PCM, 1);
 MAKE_SUBFORMAT_GUID(ADPCM, 2);
 MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
 MAKE_SUBFORMAT_GUID(WMAUDIO2, FAUDIO_FORMAT_WMAUDIO2);
+MAKE_SUBFORMAT_GUID(WMAUDIO3, FAUDIO_FORMAT_WMAUDIO3);
 #undef MAKE_SUBFORMAT_GUID
 
 /* FAudio Interface */
@@ -315,7 +316,13 @@ uint32_t FAudio_CreateSourceVoice(
 	{
 		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*)(*ppSourceVoice)->src.format;
 
-		if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)) == 0)
+		#define COMPARE_GUID(type) \
+			(FAudio_memcmp( \
+				&fmtex->SubFormat, \
+				&DATAFORMAT_SUBTYPE_##type, \
+				sizeof(FAudioGUID) \
+			) == 0)
+		if (COMPARE_GUID(PCM))
 		{
 			#define DECODER(bit) \
 				if (fmtex->Format.wBitsPerSample == bit) \
@@ -336,14 +343,15 @@ uint32_t FAudio_CreateSourceVoice(
 			}
 			#undef DECODER
 		}
-		else if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID)) == 0)
+		else if (COMPARE_GUID(IEEE_FLOAT))
 		{
 			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
 		}
-		else if (FAudio_memcmp(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_WMAUDIO2, sizeof(FAudioGUID)) == 0)
+		else if (	COMPARE_GUID(WMAUDIO2) ||
+				COMPARE_GUID(WMAUDIO3)	)
 		{
 #ifdef HAVE_FFMPEG
-			i = FAudio_FFMPEG_init(*ppSourceVoice);
+			i = FAudio_FFMPEG_init(*ppSourceVoice, fmtex->SubFormat.Data1);
 			if (i != 0)
 			{
 				audio->pFree((*ppSourceVoice)->src.format);
@@ -359,6 +367,7 @@ uint32_t FAudio_CreateSourceVoice(
 		{
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
 		}
+		#undef COMPARE_GUID
 	}
 	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
