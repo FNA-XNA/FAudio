@@ -146,6 +146,7 @@ void FAudio_INTERNAL_debug_fmt(
 			"nChannels: %u, "
 			"nSamplesPerSec: %u, "
 			"wBitsPerSample: %u, "
+			"nBlockAlign: %u, "
 			"SubFormat: %s"
 			"}"
 		),
@@ -154,6 +155,7 @@ void FAudio_INTERNAL_debug_fmt(
 		fmt->nChannels,
 		fmt->nSamplesPerSec,
 		fmt->wBitsPerSample,
+		fmt->nBlockAlign,
 		get_subformat_string(fmt)
 	);
 }
@@ -1333,9 +1335,24 @@ void FAudio_INTERNAL_DecodePCM24(
 	float *decodeCache,
 	uint32_t samples
 ) {
+	uint32_t i, j;
+	const uint8_t *buf;
 	LOG_FUNC_ENTER(voice->audio)
-	/* TODO: 24-bit to float32...? */
-	FAudio_zero(decodeCache, samples * voice->src.format->nChannels * sizeof(float));
+
+	/* FIXME: Uh... is this something that can be SIMD-ified? */
+	buf = buffer->pAudioData + (
+		voice->src.curBufferOffset * voice->src.format->nBlockAlign
+	);
+	for (i = 0; i < samples; i += 1, buf += voice->src.format->nBlockAlign)
+	for (j = 0; j < voice->src.format->nChannels; j += 1)
+	{
+		*decodeCache++ = ((int32_t) (
+			((uint32_t) buf[(j * 3) + 2] << 24) |
+			((uint32_t) buf[(j * 3) + 1] << 16) |
+			((uint32_t) buf[(j * 3) + 0] << 8)
+		) >> 8) / 8388607.0f;
+	}
+
 	LOG_FUNC_EXIT(voice->audio)
 }
 
