@@ -1469,7 +1469,6 @@ uint32_t FACTWaveBank_Prepare(
 		FAudio_assert(entry->Format.wBitsPerSample != 0);
 
 		format.wfx.wFormatTag = FAUDIO_FORMAT_XMAUDIO2;
-		/* This should be the same for WMAUDIO2, but it isn't... */
 		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
 		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
 		format.wfx.wBitsPerSample = 16;
