@@ -490,7 +490,11 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
-		pNotificationDescription->pSoundBank->notifyOnDestroy = 1;
+		/* TODO: When NULL, this callback is for ALL SoundBanks! */
+		if (pNotificationDescription->pSoundBank != NULL)
+		{
+			pNotificationDescription->pSoundBank->notifyOnDestroy = 1;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
 	{
