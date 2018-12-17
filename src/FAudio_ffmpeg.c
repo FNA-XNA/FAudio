@@ -62,7 +62,7 @@ void FAudio_FFMPEG_reset(FAudioSourceVoice *voice)
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t type)
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 {
 	AVCodecContext *av_ctx;
 	AVFrame *av_frame;

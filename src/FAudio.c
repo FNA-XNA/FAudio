@@ -353,22 +353,9 @@ uint32_t FAudio_CreateSourceVoice(
 		{
 			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
 		}
-		else if (COMPARE_GUID(XMAUDIO2))
-		{
-#ifdef HAVE_FFMPEG
-			i = FAudio_FFMPEG_init(*ppSourceVoice, FAUDIO_FORMAT_XMAUDIO2);
-			if (i != 0)
-			{
-				audio->pFree((*ppSourceVoice)->src.format);
-				audio->pFree(*ppSourceVoice);
-				return i;
-			}
-#else
-			FAudio_assert(0 && "XMA2 is not supported!");
-#endif /* HAVE_FFMPEG */
-		}
 		else if (	COMPARE_GUID(WMAUDIO2) ||
-				COMPARE_GUID(WMAUDIO3)	)
+				COMPARE_GUID(WMAUDIO3) ||
+				COMPARE_GUID(XMAUDIO2)	)
 		{
 #ifdef HAVE_FFMPEG
 			i = FAudio_FFMPEG_init(*ppSourceVoice, fmtex->SubFormat.Data1);
