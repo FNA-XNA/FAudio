@@ -62,7 +62,7 @@ void FAudio_FFMPEG_reset(FAudioSourceVoice *voice)
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
+uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint16_t type)
 {
 	AVCodecContext *av_ctx;
 	AVFrame *av_frame;
@@ -82,6 +82,11 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	{
 		typestring = "WMAv3";
 		codec = avcodec_find_decoder(AV_CODEC_ID_WMAPRO);
+	}
+	else if (type == FAUDIO_FORMAT_XMAUDIO2)
+	{
+		typestring = "XMA2";
+		codec = avcodec_find_decoder(AV_CODEC_ID_XMA2);
 	}
 	if (!codec)
 	{
@@ -136,7 +141,7 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 			pSourceVoice->src.format->cbSize
 		);
 	}
-	else
+	else if (type == FAUDIO_FORMAT_WMAUDIO2)
 	{
 		/* xWMA doesn't provide the extradata info that FFmpeg needs to
 		 * decode WMA data, so we create some fake extradata. This is
@@ -146,6 +151,18 @@ uint32_t FAudio_FFMPEG_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		av_ctx->extradata = (uint8_t *) av_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
 		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
 		av_ctx->extradata[4] = 31;
+	}
+	else if (type == FAUDIO_FORMAT_XMAUDIO2)
+	{
+		/* FFmpeg expects XMA2WAVEFORMATEX or XMA2WAVEFORMAT.
+		 * For more info, check <ffmpeg/libavcodec/wmaprodec.c>. */
+		av_ctx->extradata_size = 34;
+		av_ctx->extradata = (uint8_t *) av_malloc(AV_INPUT_BUFFER_PADDING_SIZE);
+		FAudio_zero(av_ctx->extradata, AV_INPUT_BUFFER_PADDING_SIZE);
+		av_ctx->extradata[1] = 1;
+		av_ctx->extradata[5] = pSourceVoice->src.format->nChannels == 2 ? 3 : 0;
+		av_ctx->extradata[31] = 4;
+		av_ctx->extradata[33] = 1;
 	}
 
 	if (avcodec_open2(av_ctx, codec, NULL) < 0)

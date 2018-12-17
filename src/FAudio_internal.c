@@ -103,6 +103,7 @@ static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)
 	FMT_STRING(PCM)
 	FMT_STRING(MSADPCM)
 	FMT_STRING(IEEE_FLOAT)
+	FMT_STRING(XMAUDIO2)
 	FMT_STRING(WMAUDIO2)
 	FMT_STRING(EXTENSIBLE)
 #undef FMT_STRING

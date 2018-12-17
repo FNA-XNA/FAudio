@@ -1469,6 +1469,17 @@ uint32_t FACTWaveBank_Prepare(
 		format.wfx.nAvgBytesPerSec = format.wfx.nBlockAlign * format.wfx.nSamplesPerSec;
 		format.wfx.cbSize = 0;
 	}
+	else if (entry->Format.wFormatTag == 0x1)
+	{
+		/* XMA2 is quite similar to WMA Pro. */
+		FAudio_assert(entry->Format.wBitsPerSample != 0);
+
+		format.wfx.wFormatTag = FAUDIO_FORMAT_XMAUDIO2;
+		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
+		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
+		format.wfx.wBitsPerSample = 16;
+		format.wfx.cbSize = 0;
+	}
 	else if (entry->Format.wFormatTag == 0x2)
 	{
 		format.wfx.wFormatTag = FAUDIO_FORMAT_MSADPCM;
@@ -1493,7 +1504,7 @@ uint32_t FACTWaveBank_Prepare(
 		format.wfx.wBitsPerSample = 16;
 		format.wfx.cbSize = 0;
 	}
-	else /* Includes 0x1 - XMA */
+	else
 	{
 		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
 	}
@@ -1579,7 +1590,8 @@ uint32_t FACTWaveBank_Prepare(
 			buffer.LoopCount = nLoopCount;
 		}
 		buffer.pContext = NULL;
-		if (format.wfx.wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
+		if (	format.wfx.wFormatTag == FAUDIO_FORMAT_WMAUDIO2 ||
+			format.wfx.wFormatTag == FAUDIO_FORMAT_XMAUDIO2	)
 		{
 			bufferWMA.pDecodedPacketCumulativeBytes =
 				pWaveBank->seekTables[nWaveIndex].entries;
