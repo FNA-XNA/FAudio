@@ -1376,7 +1376,19 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 			break;
 		}
 	}
-	FAudio_assert(i < voice->sends.SendCount);
+	if (i >= voice->sends.SendCount)
+	{
+		LOG_ERROR(
+			voice->audio,
+			"Destination not attached to source: %p %p",
+			voice,
+			pDestinationVoice
+		);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
+		return FAUDIO_E_INVALID_CALL;
+	}
 
 	/* Set the filter parameters, finally. */
 	FAudio_memcpy(
@@ -1420,7 +1432,19 @@ void FAudioVoice_GetOutputFilterParameters(
 			break;
 		}
 	}
-	FAudio_assert(i < voice->sends.SendCount);
+	if (i >= voice->sends.SendCount)
+	{
+		LOG_ERROR(
+			voice->audio,
+			"Destination not attached to source: %p %p",
+			voice,
+			pDestinationVoice
+		);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
+		return;
+	}
 
 	/* Set the filter parameters, finally. */
 	FAudio_memcpy(
@@ -1541,7 +1565,19 @@ uint32_t FAudioVoice_SetOutputMatrix(
 			break;
 		}
 	}
-	FAudio_assert(i < voice->sends.SendCount);
+	if (i >= voice->sends.SendCount)
+	{
+		LOG_ERROR(
+			voice->audio,
+			"Destination not attached to source: %p %p",
+			voice,
+			pDestinationVoice
+		);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
+		return FAUDIO_E_INVALID_CALL;
+	}
 
 	/* Verify the Source/Destination channel count */
 	FAudio_assert(SourceChannels == voice->outputChannels);
@@ -1589,7 +1625,19 @@ void FAudioVoice_GetOutputMatrix(
 			break;
 		}
 	}
-	FAudio_assert(i < voice->sends.SendCount);
+	if (i >= voice->sends.SendCount)
+	{
+		LOG_ERROR(
+			voice->audio,
+			"Destination not attached to source: %p %p",
+			voice,
+			pDestinationVoice
+		);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
+		return;
+	}
 
 	/* Verify the Source/Destination channel count */
 	if (voice->type == FAUDIO_VOICE_SOURCE)
