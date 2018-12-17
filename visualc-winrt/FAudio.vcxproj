@@ -30,16 +30,16 @@
     <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\F3DAudio.h" />
-    <ClInclude Include="..\src\FAudio.h" />
-    <ClInclude Include="..\src\FAudioFX.h" />
+    <ClInclude Include="..\include\F3DAudio.h" />
+    <ClInclude Include="..\include\FAudio.h" />
+    <ClInclude Include="..\include\FAudioFX.h" />
+    <ClInclude Include="..\include\FACT.h" />
+    <ClInclude Include="..\include\FACT3D.h" />
+    <ClInclude Include="..\include\FAPO.h" />
+    <ClInclude Include="..\include\FAPOBase.h" />
+    <ClInclude Include="..\include\FAPOFX.h" />
     <ClInclude Include="..\src\FAudio_internal.h" />
-    <ClInclude Include="..\src\FACT.h" />
-    <ClInclude Include="..\src\FACT3D.h" />
     <ClInclude Include="..\src\FACT_internal.h" />
-    <ClInclude Include="..\src\FAPO.h" />
-    <ClInclude Include="..\src\FAPOBase.h" />
-    <ClInclude Include="..\src\FAPOFX.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{208f0a10-10fe-4c43-990f-3569169b1083}</ProjectGuid>
@@ -81,13 +81,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
-    <IncludePath>..\..\SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\SDL2\VisualC-WinRT\UWP_VS2015\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
-    <IncludePath>..\..\SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\SDL2\VisualC-WinRT\UWP_VS2015\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -107,7 +107,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>false</CompileAsWinRT>
-      <PreprocessorDefinitions>_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDLL;_CRT_SECURE_NO_WARNINGS;FAUDIO_DISABLE_DEBUGCONFIGURATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

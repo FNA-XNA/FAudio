@@ -6,13 +6,7 @@ https://www.ffmpeg.org/legal.html
 
 Building with FFmpeg support on *nix platforms
 ----------------------------------------------
-# to enable FFMPEG support
-export FAUDIO_FFMPEG=1         
-
-# to build against specific FFmpeg binaries (if not set `pkg-config` will be used)
-export FAUDIO_FFMPEG_PREFIX=/path/to/ffmpeg/binaries
-
-make
+Enable FFmpeg support at cmake configure-time with `-DFFMPEG=ON`.
 
 Building with FFmpeg support on Windows
 ---------------------------------------

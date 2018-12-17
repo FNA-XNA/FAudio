@@ -32,18 +32,10 @@
 
 typedef struct FAudioPlatformDevice
 {
-	const char *name;
 	uint32_t bufferSize;
 	SDL_AudioDeviceID device;
 	FAudioWaveFormatExtensible format;
-	LinkedList *engineList;
-	FAudioMutex engineLock;
 } FAudioPlatformDevice;
-
-/* Globals */
-
-LinkedList *devlist = NULL;
-FAudioMutex devlock = NULL;
 
 /* WaveFormatExtensible Helpers */
 
@@ -87,21 +79,15 @@ static inline void WriteWaveFormatExtensible(
 
 void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
-	FAudioPlatformDevice *device = (FAudioPlatformDevice*) userdata;
-	LinkedList *audio;
+	FAudio *audio = (FAudio*) userdata;
 
 	FAudio_zero(stream, len);
-	audio = device->engineList;
-	while (audio != NULL)
+	if (audio->active)
 	{
-		if (((FAudio*) audio->entry)->active)
-		{
-			FAudio_INTERNAL_UpdateEngine(
-				(FAudio*) audio->entry,
-				(float*) stream
-			);
-		}
-		audio = audio->next;
+		FAudio_INTERNAL_UpdateEngine(
+			audio,
+			(float*) stream
+		);
 	}
 }
 
@@ -110,15 +96,14 @@ void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 void FAudio_PlatformAddRef()
 {
 	/* SDL tracks ref counts for each subsystem */
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
+	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		SDL_Log("SDL_INIT_AUDIO failed: %s\n", SDL_GetError());
+	}
 	FAudio_INTERNAL_InitSIMDFunctions(
 		SDL_HasSSE2(),
 		SDL_HasNEON()
 	);
-	if (devlock == NULL)
-	{
-		devlock = FAudio_PlatformCreateMutex();
-	}
 }
 
 void FAudio_PlatformRelease()
@@ -129,180 +114,70 @@ void FAudio_PlatformRelease()
 
 void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 {
-	LinkedList *deviceList;
 	FAudioPlatformDevice *device;
 	SDL_AudioSpec want, have;
-	const char *name;
 
-	/* Use the device that the engine tells us to use, then check to see if
-	 * another instance has opened the device.
-	 */
-	if (deviceIndex == 0)
+	/* Allocate a new device container*/
+	device = (FAudioPlatformDevice*) audio->pMalloc(
+		sizeof(FAudioPlatformDevice)
+	);
+
+	/* Build the device format */
+	want.freq = audio->master->master.inputSampleRate;
+	want.format = AUDIO_F32;
+	want.channels = audio->master->master.inputChannels;
+	want.silence = 0;
+	want.samples = 1024;
+	want.callback = FAudio_INTERNAL_MixCallback;
+	want.userdata = audio;
+
+	/* Open the device, finally. */
+	device->device = SDL_OpenAudioDevice(
+		deviceIndex > 0 ? SDL_GetAudioDeviceName(deviceIndex - 1, 0) : NULL,
+		0,
+		&want,
+		&have,
+#if SDL_VERSION_ATLEAST(2, 0, 9)
+		SDL_AUDIO_ALLOW_SAMPLES_CHANGE
+#else
+#warning Please update to SDL 2.0.9 ASAP!
+		0
+#endif
+	);
+	if (device->device == 0)
 	{
-		name = NULL;
-		deviceList = devlist;
-		while (deviceList != NULL)
-		{
-			if (((FAudioPlatformDevice*) deviceList->entry)->name == NULL)
-			{
-				break;
-			}
-			deviceList = deviceList->next;
-		}
-	}
-	else
-	{
-		name = SDL_GetAudioDeviceName(deviceIndex - 1, 0);
-		deviceList = devlist;
-		while (deviceList != NULL)
-		{
-			if (FAudio_strcmp(((FAudioPlatformDevice*) deviceList->entry)->name, name) == 0)
-			{
-				break;
-			}
-			deviceList = deviceList->next;
-		}
+		audio->pFree(device);
+		SDL_Log("OpenAudioDevice failed: %s\n", SDL_GetError());
+		FAudio_assert(0 && "Failed to open audio device!");
+		return;
 	}
 
-	/* Create a new device if the requested one is not in use yet */
-	if (deviceList == NULL)
-	{
-		/* Allocate a new device container*/
-		device = (FAudioPlatformDevice*) audio->pMalloc(
-			sizeof(FAudioPlatformDevice)
-		);
-		device->name = name;
-		device->engineList = NULL;
-		device->engineLock = FAudio_PlatformCreateMutex();
-		LinkedList_AddEntry(
-			&device->engineList,
-			audio,
-			device->engineLock,
-			audio->pMalloc
-		);
+	/* Write up the format */
+	WriteWaveFormatExtensible(&device->format, have.channels, have.freq);
+	device->bufferSize = have.samples;
 
-		/* Build the device format */
-		want.freq = audio->master->master.inputSampleRate;
-		want.format = AUDIO_F32;
-		want.channels = audio->master->master.inputChannels;
-		want.silence = 0;
-		want.samples = 1024;
-		want.callback = FAudio_INTERNAL_MixCallback;
-		want.userdata = device;
+	/* Give the output format to the engine */
+	audio->updateSize = device->bufferSize;
+	audio->mixFormat = &device->format;
 
-		/* Open the device, finally. */
-		device->device = SDL_OpenAudioDevice(
-			device->name,
-			0,
-			&want,
-			&have,
-			SDL_AUDIO_ALLOW_SAMPLES_CHANGE
-		);
-		if (device->device == 0)
-		{
-			LinkedList_RemoveEntry(
-				&device->engineList,
-				audio,
-				device->engineLock,
-				audio->pFree
-			);
-			FAudio_PlatformDestroyMutex(device->engineLock);
-			audio->pFree(device);
-			SDL_Log("%s\n", SDL_GetError());
-			FAudio_assert(0 && "Failed to open audio device!");
-			return;
-		}
+	/* Also give some info to the master voice */
+	audio->master->master.inputChannels = have.channels;
+	audio->master->master.inputSampleRate = have.freq;
 
-		/* Write up the format */
-		WriteWaveFormatExtensible(&device->format, have.channels, have.freq);
-		device->bufferSize = have.samples;
+	/* Start the thread! */
+	SDL_PauseAudioDevice(device->device, 0);
 
-		/* Give the output format to the engine */
-		audio->updateSize = device->bufferSize;
-		audio->mixFormat = &device->format;
-
-		/* Also give some info to the master voice */
-		audio->master->master.inputChannels = have.channels;
-		audio->master->master.inputSampleRate = have.freq;
-
-		/* Add to the device list */
-		LinkedList_AddEntry(&devlist, device, devlock, audio->pMalloc);
-
-		/* Start the thread! */
-		SDL_PauseAudioDevice(device->device, 0);
-	}
-	else /* Just add us to the existing device */
-	{
-		device = (FAudioPlatformDevice*) deviceList->entry;
-
-		/* But give us the output format first! */
-		audio->updateSize = device->bufferSize;
-		audio->mixFormat = &device->format;
-
-		/* Someone else was here first, you get their format! */
-		audio->master->master.inputChannels =
-			device->format.Format.nChannels;
-		audio->master->master.inputSampleRate =
-			device->format.Format.nSamplesPerSec;
-
-		LinkedList_AddEntry(
-			&device->engineList,
-			audio,
-			device->engineLock,
-			audio->pMalloc
-		);
-	}
+	audio->platform = device;
 }
 
 void FAudio_PlatformQuit(FAudio *audio)
 {
-	FAudioPlatformDevice *device;
-	LinkedList *dev, *entry;
-	uint8_t found = 0;
-
-	dev = devlist;
-	while (dev != NULL)
-	{
-		device = (FAudioPlatformDevice*) dev->entry;
-		entry = device->engineList;
-		while (entry != NULL)
-		{
-			if (entry->entry == audio)
-			{
-				found = 1;
-				break;
-			}
-			entry = entry->next;
-		}
-
-		if (found)
-		{
-			LinkedList_RemoveEntry(
-				&device->engineList,
-				audio,
-				device->engineLock,
-				audio->pFree
-			);
-
-			if (device->engineList == NULL)
-			{
-				SDL_CloseAudioDevice(
-					device->device
-				);
-				LinkedList_RemoveEntry(
-					&devlist,
-					device,
-					devlock,
-					audio->pFree
-				);
-				FAudio_PlatformDestroyMutex(device->engineLock);
-				audio->pFree(device);
-			}
-
-			return;
-		}
-		dev = dev->next;
-	}
+	FAudioPlatformDevice *device = audio->platform;
+	SDL_CloseAudioDevice(
+		device->device
+	);
+	audio->pFree(device);
+	audio->platform = NULL;
 }
 
 uint32_t FAudio_PlatformGetDeviceCount()
@@ -414,6 +289,11 @@ void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval)
 void FAudio_PlatformThreadPriority(FAudioThreadPriority priority)
 {
 	SDL_SetThreadPriority((SDL_ThreadPriority) priority);
+}
+
+uint64_t FAudio_PlatformGetThreadID()
+{
+	return (uint64_t) SDL_ThreadID();
 }
 
 FAudioMutex FAudio_PlatformCreateMutex()
@@ -679,3 +559,5 @@ void FAudio_UTF8_To_UTF16(const char *src, uint16_t *dst, size_t len)
 
     *dst = 0;
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

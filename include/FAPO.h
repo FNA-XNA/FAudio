@@ -188,3 +188,5 @@ struct FAPO
 #endif /* __cplusplus */
 
 #endif /* FAPO_H */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

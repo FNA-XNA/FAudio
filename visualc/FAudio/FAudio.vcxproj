@@ -37,11 +37,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>..\..\..\SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\..\SDL2\include;..\..\include;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\..\SDL2\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>..\..\..\SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\..\SDL2\include;..\..\include;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\..\SDL2\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -58,6 +58,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>FAUDIO_DISABLE_DEBUGCONFIGURATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
@@ -88,16 +89,16 @@
     <ClCompile Include="..\..\src\FAudio_platform_sdl2.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\F3DAudio.h" />
-    <ClInclude Include="..\..\src\FAudio.h" />
-    <ClInclude Include="..\..\src\FAudioFX.h" />
+    <ClInclude Include="..\..\include\F3DAudio.h" />
+    <ClInclude Include="..\..\include\FAudio.h" />
+    <ClInclude Include="..\..\include\FAudioFX.h" />
+    <ClInclude Include="..\..\include\FACT.h" />
+    <ClInclude Include="..\..\include\FACT3D.h" />
+    <ClInclude Include="..\..\include\FAPO.h" />
+    <ClInclude Include="..\..\include\FAPOBase.h" />
+    <ClInclude Include="..\..\include\FAPOFX.h" />
     <ClInclude Include="..\..\src\FAudio_internal.h" />
-    <ClInclude Include="..\..\src\FACT.h" />
-    <ClInclude Include="..\..\src\FACT3D.h" />
     <ClInclude Include="..\..\src\FACT_internal.h" />
-    <ClInclude Include="..\..\src\FAPO.h" />
-    <ClInclude Include="..\..\src\FAPOBase.h" />
-    <ClInclude Include="..\..\src\FAPOFX.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

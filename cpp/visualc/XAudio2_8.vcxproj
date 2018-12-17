@@ -70,7 +70,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\src;..\..\..\SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\src;..\..\include;..\..\..\SDL2\include;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\..\SDL2\lib\x86;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <IntDir>$(Configuration)\$(ProjectName)\</IntDir>
@@ -78,7 +78,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>..\..\src;..\..\..\SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\src;..\..\include;..\..\..\SDL2\include;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\..\SDL2\lib\x86;$(LibraryPath)</LibraryPath>
     <IntDir>$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>

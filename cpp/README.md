@@ -3,7 +3,6 @@ Use FAudio as a substitute for XAudio2 without changing or recompiling the host 
 Works on:
 - Windows
 - Wine on Linux as a native (= Windows binary) DLL
-- Wine on Linux as a builtin (= Linux binary) DLL
 
 ## Building
 
@@ -25,32 +24,23 @@ Because cross-compiling is fun.
 - install the SDL2 development libraries for mingw (download: [here](http://libsdl.org/download-2.0.php))
 
 #### Building
-The project includes two shell scripts to set up your environment for cross-compilation: either for 32-bit or 64-bit Windows DLLs.
+Use your cross compilation cmake toolchain to configure the build. Use `i686-w64-mingw32-cmake` to build 32-bit and `x86_64-w64-mingw32-cmake` to build 64-bit libraries.
+```
+x86_64-w64-mingw32-cmake -H. -B_build_mingw -DCMAKE_INSTALL_PREFIX="${PWD}/_install_mingw" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON
+```
 
-- `source` either `scripts/cross_compile_32` or `scripts/cross_compile_64`
-- (optional) check if `sdl2-config --libs` prints the correct directory
-    - if not: update the cross-compilation scripts
-- cross-compile FAudio: `make clean all` in the root directory of FAudio
-- cross-compile the C++/COM wrapper: change to the `cpp` subdirectory and run `make`
+- Optionally enable FFmpeg support at cmake configure-time by adding `-DFFMPEG=ON`
+- `-DBUILD_CPP=ON` enables compilation of the C++/COM wrapper
+- `-DINSTALL_MINGW_DEPENDENCIES` adds runtime dynamic libraries like `SDL2.dll` and `winpthread-1.dll` to the install target
 
-The results are stored in either the `build_win32` or `build_win64` subdirectory.
+After the configuration is done the following command starts the cross-compilation of both FAudio and C++/COM wrapper:
+```
+cmake --build _build_mingw --target install -- -j
+```
 
-### Building builtin Wine DLLs
-The C++/COM wrapper has a separate Makefile for building Wine linux shared libraries. It's assumed that you're running a 64-bit Linux system.
+- `-- -j` passes the `-j` flag to the `make` command to speed up compilation
+- the results are installed to the `_install_mingw` subdirectory
 
-#### Building 64-bit shared libraries
-- will be used by 64-bit Windows applications
-- check if the `WINEDIR` variable in `Makefile.wine` points to the Wine directory on your system.
-- build FACT as usual (`make`)
-- build the C++/COM wrapper: `make -f Makefile.wine`
-
-#### Building 32-bit shared libraries
-- will be used by 32-bit Windows applications
-- check if the `WINEDIR` variable in `Makefile.wine` points to the Wine directory on your system.
-- Note: your sytem has to be setup to build 32-bit binaries (e.g. multilib). You'll also need a 32-bit SDL2 with working sound drivers.
-- make sure the 32-bit `sdl-config` is first on your `PATH` so it's pickup up by the build process
-- build 32-bit FACT: `CFLAGS=-m32 make clean all`
-- build 32-bit C++/COM wrapper: `ARCH=32 make -f Makefile.wine clean all`
 
 ## Using the wrapper
 
@@ -72,11 +62,6 @@ X3DAudio is not a COM-interface, even in these earlier versions of XAudio2, use 
 A Wine prefix is a directory that contains a Wine configuration, registry, and native Windows DLLs for compatibility. It's trivial to replace the XAudio2 DLLs in a prefix with the FAudio wrapper DLLs and still use another prefix with the original DLLs.
 
 The `wine_setup_native` script (in the `cpp/scripts` subdirectory) does just this. Run it from a directory containing the wrapper DLLs (32 or 64 bit) and it will create symbolic links in the Wine prefix and modify the Wine registry to make sure Wine only uses the native DLLs.
-
-### Wine - builtin DLLs
-The native DLLs use Wine's sound layers, replacing the builtin DLLs lets you bypass these. The WINEDLLPATH environment variable can be used to add DLL search directories to Wine but unfortunately these do not override the standard directories. In order to use the wrapper DLLs the standard Wine shared libraries (e.g in /opt/wine-staging/lib(64)/wine) have to be removed / renamed first. Also Wine has to be configured to use the builtin DLLs before the native DLLs for xaudio (see `winecfg`).
-
-Please note: the version 2.8+ wrapper builtin DLLs do not implement device enumeration. The Windows device id's are pretty meaningless when passed to a linux SDL implementation.
 
 ### How can I check if the wrapper DLLs are actually being used?
 - Build the wrapper DLLs with tracing enabled (at the top of `xaudio2.cpp`)

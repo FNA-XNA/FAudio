@@ -81,7 +81,7 @@ void FACT_INTERNAL_GetNextWave(
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
 	float max, next;
-	uint16_t i;
+	int32_t i;
 
 	/* Track Variation */
 	if (evt->wave.isComplex)
@@ -1935,10 +1935,6 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		FAudio_assert((ptr - start) == dspParameterOffset);
 		for (i = 0; i < pEngine->dspPresetCount; i += 1)
 		{
-			memsize = (
-				sizeof(FACTDSPParameter) *
-				pEngine->dspPresets[i].parameterCount
-			);
 			for (j = 0; j < pEngine->dspPresets[i].parameterCount; j += 1)
 			{
 				pEngine->dspPresets[i].parameters[j].type = read_u8(&ptr, se);
@@ -2990,3 +2986,5 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	*ppWaveBank = wb;
 	return 0;
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

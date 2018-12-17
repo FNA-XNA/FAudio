@@ -309,7 +309,16 @@ static void test_simple_streaming(IXAudio2 *xa)
     XAUDIO2_VOICE_STATE state;
     XAUDIO2_EFFECT_DESCRIPTOR effect;
     XAUDIO2_EFFECT_CHAIN chain;
+    XAUDIO2_PERFORMANCE_DATA perfdata;
     DWORD chmask;
+
+    memset(&perfdata, 0, sizeof(perfdata));
+    XA2CALL_V(GetPerformanceData, &perfdata);
+    ok(perfdata.ActiveSourceVoiceCount == 0, "Got wrong ActiveSourceVoiceCount: %u\n",
+            perfdata.ActiveSourceVoiceCount);
+    ok(perfdata.TotalSourceVoiceCount == 0, "Got wrong TotalSourceVoiceCount: %u\n",
+            perfdata.TotalSourceVoiceCount);
+    ok(perfdata.CurrentLatencyInSamples == 0, "Expected zero latency before mastering voice creation, got %u\n", perfdata.CurrentLatencyInSamples);
 
     memset(&ecb_state, 0, sizeof(ecb_state));
     memset(&src1_state, 0, sizeof(src1_state));
@@ -460,6 +469,14 @@ static void test_simple_streaming(IXAudio2 *xa)
     }
 
     ok(state.SamplesPlayed == 22050, "Got wrong samples played\n");
+
+    memset(&perfdata, 0, sizeof(perfdata));
+    XA2CALL_V(GetPerformanceData, &perfdata);
+    ok(perfdata.ActiveSourceVoiceCount == 2, "Got wrong ActiveSourceVoiceCount: %u\n",
+            perfdata.ActiveSourceVoiceCount);
+    ok(perfdata.TotalSourceVoiceCount == 2, "Got wrong TotalSourceVoiceCount: %u\n",
+            perfdata.TotalSourceVoiceCount);
+    ok(perfdata.CurrentLatencyInSamples > 0, "Got zero latency?\n");
 
     FAtest_free((void*)buf.pAudioData);
     FAtest_free((void*)buf2.pAudioData);
@@ -1258,23 +1275,23 @@ int main(int argc, char **argv)
 
     if(hr == S_OK){
         xaudio27 = FALSE;
-        has_devices = test_DeviceDetails(xa27);
+        has_devices = test_DeviceDetails(xa);
         if(has_devices){
-            test_simple_streaming((IXAudio2*)xa27);
-            test_buffer_callbacks((IXAudio2*)xa27);
-            test_looping((IXAudio2*)xa27);
-            test_submix((IXAudio2*)xa27);
-            test_flush((IXAudio2*)xa27);
-            test_setchannelvolumes((IXAudio2*)xa27);
+            test_simple_streaming(xa);
+            test_buffer_callbacks(xa);
+            test_looping(xa);
+            test_submix(xa);
+            test_flush(xa);
+            test_setchannelvolumes(xa);
         }else
             fprintf(stdout, "No audio devices available\n");
 
-        IXAudio27_Release(xa27);
+        IXAudio2_Release(xa);
     }else
         fprintf(stdout, "XAudio2.8 not available, tests skipped\n");
 
     fprintf(stdout, "Finished with %u successful tests and %u failed tests.\n",
             success_count, failure_count);
 
-    return 0;
+    return failure_count > 0;
 }

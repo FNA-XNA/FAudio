@@ -402,6 +402,7 @@ typedef struct FAudioDebugConfiguration
 #define FAUDIO_FORMAT_MSADPCM		2
 #define FAUDIO_FORMAT_IEEE_FLOAT	3
 #define FAUDIO_FORMAT_WMAUDIO2		0x0161
+#define FAUDIO_FORMAT_WMAUDIO3		0x0162
 #define FAUDIO_FORMAT_XMAUDIO2		0x0166
 #define FAUDIO_FORMAT_EXTENSIBLE	0xFFFE
 
@@ -775,6 +776,19 @@ FAUDIOAPI uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 	FAudioReallocFunc customRealloc
 );
 
+/* FAudio Engine Procedure API
+ * See "extensions/EngineProcedureEXT.txt" for more information.
+ */
+typedef void (FAUDIOCALL *FAudioEngineCallEXT)(FAudio *audio, float *output);
+typedef void (FAUDIOCALL *FAudioEngineProcedureEXT)(FAudioEngineCallEXT defaultEngineProc, FAudio *audio, float *output, void *user);
+
+FAUDIOAPI void FAudio_SetEngineProcedureEXT(
+	FAudio *audio,
+	FAudioEngineProcedureEXT clientEngineProc,
+	void *user
+);
+
+
 /* FAudio I/O API */
 
 #define FAUDIO_SEEK_SET 0
@@ -815,3 +829,5 @@ FAUDIOAPI void FAudio_close(FAudioIOStream *io);
 #endif /* __cplusplus */
 
 #endif /* FAUDIO_H */
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */

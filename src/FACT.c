@@ -1064,6 +1064,7 @@ uint32_t FACTSoundBank_Stop(
 uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 {
 	uint16_t i, j, k;
+	FAudioMutex mutex;
 	FACTNotification note;
 	if (pSoundBank == NULL)
 	{
@@ -1177,8 +1178,9 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		pSoundBank->parentEngine->notificationCallback(&note);
 	}
 
-	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
+	mutex = pSoundBank->parentEngine->apiLock;
 	pSoundBank->parentEngine->pFree(pSoundBank);
+	FAudio_PlatformUnlockMutex(mutex);
 	return 0;
 }
 
@@ -1227,6 +1229,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 {
 	uint32_t i;
 	FACTWave *wave;
+	FAudioMutex mutex;
 	FACTNotification note;
 	if (pWaveBank == NULL)
 	{
@@ -1288,8 +1291,9 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
 	FAudio_PlatformDestroyMutex(pWaveBank->ioLock);
 
-	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
+	mutex = pWaveBank->parentEngine->apiLock;
 	pWaveBank->parentEngine->pFree(pWaveBank);
+	FAudio_PlatformUnlockMutex(mutex);
 	return 0;
 }
 
@@ -1438,6 +1442,7 @@ uint32_t FACTWaveBank_Prepare(
 
 	/* TODO: Convert dwPlayOffset to a byte offset */
 	FAudio_assert(dwPlayOffset == 0);
+#if 0
 	if (dwFlags & FACT_FLAG_UNITS_MS)
 	{
 		dwPlayOffset = (uint32_t) (
@@ -1447,6 +1452,7 @@ uint32_t FACTWaveBank_Prepare(
 			) * (float) dwPlayOffset
 		);
 	}
+#endif
 
 	/* Create the voice */
 	send.Flags = 0;
@@ -1676,6 +1682,7 @@ uint32_t FACTWaveBank_Stop(
 
 uint32_t FACTWave_Destroy(FACTWave *pWave)
 {
+	FAudioMutex mutex;
 	FACTNotification note;
 	if (pWave == NULL)
 	{
@@ -1695,6 +1702,10 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	);
 
 	FAudioVoice_DestroyVoice(pWave->voice);
+	if (pWave->streamCache != NULL)
+	{
+		pWave->parentBank->parentEngine->pFree(pWave->streamCache);
+	}
 	if (pWave->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
@@ -1702,12 +1713,9 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 		pWave->parentBank->parentEngine->notificationCallback(&note);
 	}
 
-	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	if (pWave->streamCache != NULL)
-	{
-		pWave->parentBank->parentEngine->pFree(pWave->streamCache);
-	}
+	mutex = pWave->parentBank->parentEngine->apiLock;
 	pWave->parentBank->parentEngine->pFree(pWave);
+	FAudio_PlatformUnlockMutex(mutex);
 	return 0;
 }
 
@@ -1928,6 +1936,7 @@ uint32_t FACTWave_GetProperties(
 uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
 	FACTCue *cue, *prev;
+	FAudioMutex mutex;
 	FACTNotification note;
 	if (pCue == NULL)
 	{
@@ -1972,8 +1981,9 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 		pCue->parentBank->parentEngine->notificationCallback(&note);
 	}
 
-	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
+	mutex = pCue->parentBank->parentEngine->apiLock;
 	pCue->parentBank->parentEngine->pFree(pCue);
+	FAudio_PlatformUnlockMutex(mutex);
 	return 0;
 }
 
@@ -2137,7 +2147,20 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	}
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
-	if (pCue->state & (FACT_STATE_STOPPED | FACT_STATE_STOPPING))
+	/* If we're already stopped, there's nothing to do... */
+	if (pCue->state & FACT_STATE_STOPPED)
+	{
+		FAudio_PlatformUnlockMutex(
+			pCue->parentBank->parentEngine->apiLock
+		);
+		return 0;
+	}
+
+	/* If we're stopping and we haven't asked for IMMEDIATE, we're already
+	 * doing what the application is asking us to do...
+	 */
+	if (	(pCue->state & FACT_STATE_STOPPING) &&
+		!(dwFlags & FACT_FLAG_STOP_IMMEDIATE)	)
 	{
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
@@ -2165,7 +2188,6 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 			FACT_STATE_PAUSED
 		);
 
-		/* FIXME: Lock audio mixer before freeing this! */
 		if (pCue->simpleWave != NULL)
 		{
 			FACTWave_Destroy(pCue->simpleWave);
@@ -2536,3 +2558,5 @@ uint32_t FACTCue_SetOutputVoiceMatrix(
 	/* TODO */
 	return 0;
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */
