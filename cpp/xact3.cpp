@@ -1,8 +1,5 @@
 #include "xact3.h"
 
-//#define TRACING_ENABLE
-#include "trace.h"
-
 #include <assert.h>
 
 extern "C" int32_t FACTCALL ReadFile(
@@ -30,22 +27,18 @@ public:
 	}
 	COM_METHOD(HRESULT) Play()
 	{
-		TRACE_FUNC();
 		return FACTCue_Play(cue);
 	}
 	COM_METHOD(HRESULT) Stop(uint32_t dwFlags)
 	{
-		TRACE_FUNC();
 		return FACTCue_Stop(cue, dwFlags);
 	};
 	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
 	{
-		TRACE_FUNC();
 		return FACTCue_GetState(cue, pdwState);
 	}
 	COM_METHOD(HRESULT) Destroy()
 	{
-		TRACE_FUNC();
 		return FACTCue_Destroy(cue);
 	}
 	COM_METHOD(HRESULT) SetMatrixCoefficients(
@@ -53,7 +46,6 @@ public:
 		uint32_t uDstChannelCount,
 		float *pMatrixCoefficients
 	) {
-		TRACE_FUNC();
 		return FACTCue_SetMatrixCoefficients(
 			cue,
 			uSrcChannelCount,
@@ -63,35 +55,29 @@ public:
 	}
 	COM_METHOD(uint16_t) GetVariableIndex(const char *szFriendlyName)
 	{
-		TRACE_FUNC();
 		return FACTCue_GetVariableIndex(cue, szFriendlyName);
 	}
 	COM_METHOD(HRESULT) SetVariable(uint16_t nIndex, float nValue)
 	{
-		TRACE_FUNC();
 		return FACTCue_SetVariable(cue, nIndex, nValue);
 	}
 	COM_METHOD(HRESULT) GetVariable(uint16_t nIndex, float *nValue)
 	{
-		TRACE_FUNC();
 		return FACTCue_GetVariable(cue, nIndex, nValue);
 	}
 	COM_METHOD(HRESULT) Pause(int32_t fPause)
 	{
-		TRACE_FUNC();
 		return FACTCue_Pause(cue, fPause);
 	}
 	COM_METHOD(HRESULT) GetProperties(
 		XACT_CUE_INSTANCE_PROPERTIES **ppProperties
 	) {
-		TRACE_FUNC();
 		return FACTCue_GetProperties(cue, ppProperties);
 	}
 #if XACT3_VERSION >= 5
 	COM_METHOD(HRESULT) SetOutputVoices(
 		const XAUDIO2_VOICE_SENDS *pSendList /* Optional! */
 	) {
-		TRACE_FUNC();
 		/* TODO: SetOutputVoices */
 		return 0;
 	}
@@ -101,7 +87,6 @@ public:
 		uint32_t DestinationChannels,
 		const float *pLevelMatrix /* SourceChannels * DestinationChannels */
 	) {
-		TRACE_FUNC();
 		/* TODO: SetOutputVoiceMatrix */
 		return 0;
 	}
@@ -121,37 +106,30 @@ public:
 	}
 	COM_METHOD(HRESULT) Destroy()
 	{
-		TRACE_FUNC();
 		return FACTWave_Destroy(wave);
 	}
 	COM_METHOD(HRESULT) Play()
 	{
-		TRACE_FUNC();
 		return FACTWave_Play(wave);
 	}
 	COM_METHOD(HRESULT) Stop(uint32_t dwFlags)
 	{
-		TRACE_FUNC();
 		return FACTWave_Stop(wave, dwFlags);
 	}
 	COM_METHOD(HRESULT) Pause(int32_t fPause)
 	{
-		TRACE_FUNC();
 		return FACTWave_Pause(wave, fPause);
 	}
 	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
 	{
-		TRACE_FUNC();
 		return FACTWave_GetState(wave, pdwState);
 	}
 	COM_METHOD(HRESULT) SetPitch(int16_t pitch)
 	{
-		TRACE_FUNC();
 		return FACTWave_SetPitch(wave, pitch);
 	}
 	COM_METHOD(HRESULT) SetVolume(float volume)
 	{
-		TRACE_FUNC();
 		return FACTWave_SetVolume(wave, volume);
 	}
 	COM_METHOD(HRESULT) SetMatrixCoefficients(
@@ -159,7 +137,6 @@ public:
 		uint32_t uDstChannelCount,
 		float *pMatrixCoefficients
 	) {
-		TRACE_FUNC();
 		return FACTWave_SetMatrixCoefficients(
 			wave,
 			uSrcChannelCount,
@@ -170,7 +147,6 @@ public:
 	COM_METHOD(HRESULT) GetProperties(
 		XACT_WAVE_INSTANCE_PROPERTIES *pProperties
 	) {
-		TRACE_FUNC();
 		return FACTWave_GetProperties(wave, pProperties);
 	}
 
@@ -188,19 +164,16 @@ public:
 	}
 	COM_METHOD(uint16_t) GetCueIndex(const char *szFriendlyName)
 	{
-		TRACE_FUNC();
 		return FACTSoundBank_GetCueIndex(soundBank, szFriendlyName);
 	}
 	COM_METHOD(HRESULT) GetNumCues(uint16_t *pnNumCues)
 	{
-		TRACE_FUNC();
 		return FACTSoundBank_GetNumCues(soundBank, pnNumCues);
 	}
 	COM_METHOD(HRESULT) GetCueProperties(
 		uint16_t nCueIndex,
 		XACT_CUE_PROPERTIES *pProperties
 	) {
-		TRACE_FUNC();
 		return FACTSoundBank_GetCueProperties(
 			soundBank,
 			nCueIndex,
@@ -213,7 +186,6 @@ public:
 		int32_t timeOffset,
 		IXACT3Cue** ppCue
 	) {
-		TRACE_FUNC();
 		FACTCue *cue;
 		HRESULT retval = FACTSoundBank_Prepare(
 			soundBank,
@@ -231,7 +203,6 @@ public:
 		int32_t timeOffset,
 		IXACT3Cue** ppCue /* Optional! */
 	) {
-		TRACE_FUNC();
 		if (ppCue == NULL)
 		{
 			return FACTSoundBank_Play(
@@ -280,24 +251,20 @@ public:
 	}
 	COM_METHOD(HRESULT) Destroy()
 	{
-		TRACE_FUNC();
 		return FACTWaveBank_Destroy(waveBank);
 	}
 	COM_METHOD(HRESULT) GetNumWaves(uint16_t *pnNumWaves)
 	{
-		TRACE_FUNC();
 		return FACTWaveBank_GetNumWaves(waveBank, pnNumWaves);
 	}
 	COM_METHOD(uint16_t) GetWaveIndex(const char *szFriendlyName)
 	{
-		TRACE_FUNC();
 		return FACTWaveBank_GetWaveIndex(waveBank, szFriendlyName);
 	}
 	COM_METHOD(HRESULT) GetWaveProperties(
 		uint16_t nWaveIndex,
 		XACT_WAVE_PROPERTIES *pWaveProperties
 	) {
-		TRACE_FUNC();
 		return FACTWaveBank_GetWaveProperties(
 			waveBank,
 			nWaveIndex,
@@ -311,7 +278,6 @@ public:
 		uint8_t nLoopCount,
 		IXACT3Wave **ppWave
 	) {
-		TRACE_FUNC();
 		FACTWave *wave;
 		HRESULT retval = FACTWaveBank_Prepare(
 			waveBank,
@@ -331,7 +297,6 @@ public:
 		uint8_t nLoopCount,
 		IXACT3Wave **ppWave
 	) {
-		TRACE_FUNC();
 		if (ppWave == NULL)
 		{
 			return FACTWaveBank_Play(
@@ -359,12 +324,10 @@ public:
 		uint16_t nWaveIndex,
 		uint32_t dwFlags
 	) {
-		TRACE_FUNC();
 		return FACTWaveBank_Stop(waveBank, nWaveIndex, dwFlags);
 	}
 	COM_METHOD(HRESULT) GetState(uint32_t *pdwState)
 	{
-		TRACE_FUNC();
 		return FACTWaveBank_GetState(waveBank, pdwState);
 	}
 
@@ -401,8 +364,6 @@ public:
 	}
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppvInterface)
 	{
-		TRACE_FUNC();
-
 		if (guid_equals(riid, IID_IXACT3Engine))
 		{
 			*ppvInterface = static_cast<IXACT3Engine *>(this);
@@ -423,12 +384,10 @@ public:
 	}
 	COM_METHOD(ULONG) AddRef()
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_AddRef(engine);
 	}
 	COM_METHOD(ULONG) Release()
 	{
-		TRACE_FUNC();
 		ULONG refcount = FACTAudioEngine_Release(engine);
 		if (refcount == 0)
 		{
@@ -439,7 +398,6 @@ public:
 	COM_METHOD(HRESULT) GetRendererCount(
 		uint16_t *pnRendererCount
 	) {
-		TRACE_FUNC();
 		return FACTAudioEngine_GetRendererCount(
 			engine,
 			pnRendererCount
@@ -449,7 +407,6 @@ public:
 		uint16_t nRendererIndex,
 		XACT_RENDERER_DETAILS *pRendererDetails
 	) {
-		TRACE_FUNC();
 		return FACTAudioEngine_GetRendererDetails(
 			engine,
 			nRendererIndex,
@@ -459,7 +416,6 @@ public:
 	COM_METHOD(HRESULT) GetFinalMixFormat(
 		WAVEFORMATEXTENSIBLE *pFinalMixFormat
 	) {
-		TRACE_FUNC();
 		return FACTAudioEngine_GetFinalMixFormat(
 			engine,
 			pFinalMixFormat
@@ -468,7 +424,6 @@ public:
 	COM_METHOD(HRESULT) Initialize(
 		const XACT_RUNTIME_PARAMETERS *pParams
 	) {
-		TRACE_FUNC();
 		XACT_RUNTIME_PARAMETERS params;
 
 		/* TODO: Unwrap FAudio/FAudioMasteringVoice */
@@ -494,12 +449,10 @@ public:
 	}
 	COM_METHOD(HRESULT) ShutDown()
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_ShutDown(engine);
 	}
 	COM_METHOD(HRESULT) DoWork()
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_DoWork(engine);
 	}
 	COM_METHOD(HRESULT) CreateSoundBank(
@@ -509,7 +462,6 @@ public:
 		uint32_t dwAllocAttributes,
 		IXACT3SoundBank **ppSoundBank
 	) {
-		TRACE_FUNC();
 		FACTSoundBank *soundBank;
 		HRESULT retval = FACTAudioEngine_CreateSoundBank(
 			engine,
@@ -529,7 +481,6 @@ public:
 		uint32_t dwAllocAttributes,
 		IXACT3WaveBank **ppWaveBank
 	) {
-		TRACE_FUNC();
 		FACTWaveBank *waveBank;
 		HRESULT retval = FACTAudioEngine_CreateInMemoryWaveBank(
 			engine,
@@ -546,7 +497,6 @@ public:
 		const XACT_STREAMING_PARAMETERS *pParms,
 		IXACT3WaveBank **ppWaveBank
 	) {
-		TRACE_FUNC();
 		FACTWaveBank *waveBank;
 		HRESULT retval = FACTAudioEngine_CreateStreamingWaveBank(
 			engine,
@@ -565,7 +515,6 @@ public:
 		uint8_t nLoopCount,
 		IXACT3Wave **ppWave
 	) {
-		TRACE_FUNC();
 		/* TODO: See FACT.c */
 		return 0;
 	}
@@ -578,7 +527,6 @@ public:
 		uint8_t nLoopCount,
 		IXACT3Wave **ppWave
 	) {
-		TRACE_FUNC();
 		/* TODO: See FACT.c */
 		return 0;
 	}
@@ -593,15 +541,12 @@ public:
 		uint8_t nLoopCount,
 		IXACT3Wave **ppWave
 	) {
-		TRACE_FUNC();
 		/* TODO: See FACT.c */
 		return 0;
 	}
 	COM_METHOD(HRESULT) RegisterNotification(
 		const XACT_NOTIFICATION_DESCRIPTION *pNotificationDescription
 	) {
-		TRACE_FUNC();
-
 		/* We have to unwrap the FACT object first! */
 		FACTNotificationDescription desc;
 		desc.type = pNotificationDescription->type;
@@ -632,8 +577,6 @@ public:
 	COM_METHOD(HRESULT) UnRegisterNotification(
 		const XACT_NOTIFICATION_DESCRIPTION *pNotificationDescription
 	) {
-		TRACE_FUNC();
-
 		/* We have to unwrap the FACT object first! */
 		FACTNotificationDescription desc;
 		desc.type = pNotificationDescription->type;
@@ -663,28 +606,23 @@ public:
 	}
 	COM_METHOD(uint16_t) GetCategory(const char *szFriendlyName)
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_GetCategory(engine, szFriendlyName);
 	}
 	COM_METHOD(HRESULT) Stop(uint16_t nCategory, uint32_t dwFlags)
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_Stop(engine, nCategory, dwFlags);
 	}
 	COM_METHOD(HRESULT) SetVolume(uint16_t nCategory, float volume)
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_SetVolume(engine, nCategory, volume);
 	}
 	COM_METHOD(HRESULT) Pause(uint16_t nCategory, int32_t fPause)
 	{
-		TRACE_FUNC();
 		return FACTAudioEngine_Pause(engine, nCategory, fPause);
 	}
 	COM_METHOD(uint16_t) GetGlobalVariableIndex(
 		const char *szFriendlyName
 	) {
-		TRACE_FUNC();
 		return FACTAudioEngine_GetGlobalVariableIndex(
 			engine,
 			szFriendlyName
@@ -694,7 +632,6 @@ public:
 		uint16_t nIndex,
 		float nValue
 	) {
-		TRACE_FUNC();
 		return FACTAudioEngine_SetGlobalVariable(
 			engine,
 			nIndex,
@@ -705,7 +642,6 @@ public:
 		uint16_t nIndex,
 		float *pnValue
 	) {
-		TRACE_FUNC();
 		return FACTAudioEngine_GetGlobalVariable(
 			engine,
 			nIndex,

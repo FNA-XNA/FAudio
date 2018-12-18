@@ -3,9 +3,6 @@
 
 #include <FAPOBase.h>
 
-//#define TRACING_ENABLE
-#include "trace.h"
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // IXAudio2VoiceCallback
@@ -158,7 +155,6 @@ static FAudioVoiceSends *unwrap_voice_sends(const XAUDIO2_VOICE_SENDS *x_sends)
 	{
 		return NULL;
 	}
-	TRACE_MSG("SendCount = %d", x_sends->SendCount);
 
 	FAudioVoiceSends *f_sends = new FAudioVoiceSends;
 	f_sends->SendCount = x_sends->SendCount;
@@ -201,14 +197,12 @@ struct FAPOCppBase
 
 static int32_t FAPOCALL AddRef(void *fapo)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->AddRef();
 }
 
 static int32_t FAPOCALL Release(void *fapo)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->Release();
 }
@@ -217,7 +211,6 @@ static uint32_t FAPOCALL GetRegistrationProperties(
 	void *fapo, 
 	FAPORegistrationProperties **ppRegistrationProperties)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->GetRegistrationProperties(ppRegistrationProperties);
 }
@@ -228,7 +221,6 @@ static uint32_t FAPOCALL IsInputFormatSupported(
 	const FAudioWaveFormatEx *pRequestedInputFormat,
 	FAudioWaveFormatEx **ppSupportedInputFormat
 ) {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->IsInputFormatSupported(
 		pOutputFormat, 
@@ -242,7 +234,6 @@ static uint32_t FAPOCALL IsOutputFormatSupported(
 	const FAudioWaveFormatEx *pRequestedOutputFormat,
 	FAudioWaveFormatEx **ppSupportedOutputFormat
 ) {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->IsOutputFormatSupported(
 		pInputFormat, 
@@ -252,14 +243,12 @@ static uint32_t FAPOCALL IsOutputFormatSupported(
 
 static uint32_t FAPOCALL Initialize(void *fapo, const void *pData, uint32_t DataByteSize)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->Initialize(pData, DataByteSize);
 }
 
 static void FAPOCALL Reset(void *fapo)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	xapo->Reset();
 }
@@ -271,7 +260,6 @@ static uint32_t FAPOCALL LockForProcess(
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 ) {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->LockForProcess(
 		InputLockedParameterCount,
@@ -282,7 +270,6 @@ static uint32_t FAPOCALL LockForProcess(
 
 static void FAPOCALL UnlockForProcess(void *fapo)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	xapo->UnlockForProcess();
 }
@@ -295,7 +282,6 @@ static void FAPOCALL Process(
 	FAPOProcessBufferParameters *pOutputProcessParameters,
 	int32_t IsEnabled
 ) {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	xapo->Process(
 		InputProcessParameterCount,
@@ -307,14 +293,12 @@ static void FAPOCALL Process(
 
 static uint32_t FAPOCALL CalcInputFrames(void *fapo, uint32_t OutputFrameCount)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->CalcInputFrames(OutputFrameCount);
 }
 
 static uint32_t FAPOCALL CalcOutputFrames(void *fapo, uint32_t InputFrameCount)
 {
-	TRACE_FUNC();
 	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
 	return xapo->CalcOutputFrames(InputFrameCount);
 }
@@ -324,21 +308,18 @@ static void FAPOCALL SetParameters(
 	const void *pParameters, 
 	uint32_t ParameterByteSize
 ) {
-	TRACE_FUNC();
 	IXAPOParameters *xapo_params = reinterpret_cast<FAPOCppBase *>(fapoParameters)->xapo_params;
 	return xapo_params->SetParameters(pParameters, ParameterByteSize); 
 }
 
 static void FAPOCALL GetParameters(void *fapoParameters, void *pParameters, uint32_t ParameterByteSize)
 {
-	TRACE_FUNC();
 	IXAPOParameters *xapo_params = reinterpret_cast<FAPOCppBase *>(fapoParameters)->xapo_params;
 	return xapo_params->GetParameters(pParameters, ParameterByteSize);
 }
 
 static void FAPOCALL Destructor(void *fapo)
 {
-	TRACE_FUNC();
 	delete reinterpret_cast<FAPOCppBase *>(fapo);
 }
 
@@ -349,14 +330,10 @@ static FAPO *wrap_xapo_effect(IUnknown *xapo)
 		return NULL;
 	}
 
-	TRACE_FUNC();
-
 	// FIXME: assumes that all effects are derived from CXAPOParametersBase
 	FAPOCppBase *f_effect = new FAPOCppBase;
 	xapo->QueryInterface(IID_IXAPO, (void **)&f_effect->xapo);
 	xapo->QueryInterface(IID_IXAPOParameters, (void **)&f_effect->xapo_params);
-
-	TRACE_MSG("IXAPO: %x; IXAPOParameters: %x", f_effect->xapo, f_effect->xapo_params);
 
 	f_effect->fapo.base.AddRef = AddRef;
 	f_effect->fapo.base.Release = Release;
@@ -384,8 +361,6 @@ static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain)
 	{
 		return NULL;
 	}
-
-	TRACE_MSG("EffectCount = %d", x_chain->EffectCount);
 
 	FAudioEffectChain *f_chain = new FAudioEffectChain;
 	f_chain->EffectCount = x_chain->EffectCount;
@@ -429,11 +404,6 @@ public:
 		const XAUDIO2_VOICE_SENDS *pSendList,
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain)
 	{
-		TRACE_MSG("Format=%d; nChannels=%d; nSamplesPerSec=%d",
-			pSourceFormat->wFormatTag,
-			pSourceFormat->nChannels,
-			pSourceFormat->nSamplesPerSec);
-		TRACE_MSG("Sends = %d", pSendList ? pSendList->SendCount : -1);
 		voice_callback = wrap_voice_callback(pCallback);
 		voice_sends = unwrap_voice_sends(pSendList);
 		effect_chain = wrap_effect_chain(pEffectChain);
@@ -451,7 +421,6 @@ public:
 	// IXAudio2Voice
 	COM_METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS *pVoiceDetails)
 	{
-		TRACE_FUNC();
 #if XAUDIO2_VERSION > 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, (FAudioVoiceDetails*) pVoiceDetails);
 #else
@@ -465,7 +434,6 @@ public:
 
 	COM_METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS *pSendList)
 	{
-		TRACE_FUNC();
 		free_voice_sends(voice_sends);
 		voice_sends = unwrap_voice_sends(pSendList);
 		return FAudioVoice_SetOutputVoices(faudio_voice, voice_sends);
@@ -473,7 +441,6 @@ public:
 
 	COM_METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN *pEffectChain)
 	{
-		TRACE_FUNC();
 		free_effect_chain(effect_chain);
 		effect_chain = wrap_effect_chain(pEffectChain);
 		return FAudioVoice_SetEffectChain(faudio_voice, effect_chain);
@@ -481,19 +448,16 @@ public:
 
 	COM_METHOD(HRESULT) EnableEffect(UINT32 EffectIndex, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	COM_METHOD(HRESULT) DisableEffect(UINT32 EffectIndex, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	COM_METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL *pEnabled)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, pEnabled);
 	}
 
@@ -503,7 +467,6 @@ public:
 		UINT32 ParametersByteSize,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetEffectParameters(
 			faudio_voice, 
 			EffectIndex, 
@@ -517,7 +480,6 @@ public:
 		void *pParameters, 
 		UINT32 ParametersByteSize)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_GetEffectParameters(
 			faudio_voice,
 			EffectIndex, 
@@ -529,13 +491,11 @@ public:
 		const XAUDIO2_FILTER_PARAMETERS *pParameters,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_SetFilterParameters(faudio_voice, pParameters, OperationSet);
 	}
 
 	COM_METHOD(void) GetFilterParameters(XAUDIO2_FILTER_PARAMETERS *pParameters)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetFilterParameters(faudio_voice, pParameters);
 	}
 
@@ -545,7 +505,6 @@ public:
 		const XAUDIO2_FILTER_PARAMETERS *pParameters,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetOutputFilterParameters(
 			faudio_voice,
 			((XAudio2SourceVoiceImpl *)pDestinationVoice)->faudio_voice,
@@ -557,7 +516,6 @@ public:
 		IXAudio2Voice *pDestinationVoice,
 		XAUDIO2_FILTER_PARAMETERS *pParameters
 	) {
-		TRACE_FUNC();
 		FAudioVoice_GetOutputFilterParameters(
 			faudio_voice, 
 			((XAudio2SourceVoiceImpl *)pDestinationVoice)->faudio_voice, 
@@ -567,13 +525,11 @@ public:
 
 	COM_METHOD(HRESULT) SetVolume(float Volume, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_SetVolume(faudio_voice, Volume, OperationSet);
 	}
 
 	COM_METHOD(void) GetVolume(float *pVolume)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetVolume(faudio_voice, pVolume);
 	}
 
@@ -582,13 +538,11 @@ public:
 		const float *pVolumes,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetChannelVolumes(faudio_voice, Channels, pVolumes, OperationSet);
 	}
 
 	COM_METHOD(void) GetChannelVolumes(UINT32 Channels, float *pVolumes)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetChannelVolumes(faudio_voice, Channels, pVolumes);
 	}
 
@@ -599,12 +553,6 @@ public:
 		const float *pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_MSG(
-			"this = %x; pDestinationVoice = %x; SourceChannels = %d; DestinationChannels = %d",
-			this,
-			pDestinationVoice,
-			SourceChannels,
-			DestinationChannels);
 		FAudioVoice *dest = (pDestinationVoice) ? pDestinationVoice->faudio_voice : NULL;
 		return FAudioVoice_SetOutputMatrix(
 			faudio_voice, dest, SourceChannels, DestinationChannels, pLevelMatrix, OperationSet);
@@ -620,7 +568,6 @@ public:
 		UINT32 DestinationChannels,
 		float *pLevelMatrix
 	) {
-		TRACE_FUNC();
 		FAudioVoice_GetOutputMatrix(
 			faudio_voice,
 			pDestinationVoice->faudio_voice,
@@ -634,7 +581,6 @@ public:
 
 	COM_METHOD(void) DestroyVoice()
 	{
-		TRACE_FUNC();
 		FAudioVoice_DestroyVoice(faudio_voice);
 		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
 		if (voice_callback)
@@ -649,13 +595,11 @@ public:
 	// IXAudio2SourceVoice
 	COM_METHOD(HRESULT) Start(UINT32 Flags = 0, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_Start(faudio_voice, Flags, OperationSet);
 	}
 
 	COM_METHOD(HRESULT) Stop(UINT32 Flags = 0, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_Stop(faudio_voice, Flags, OperationSet);
 	}
 
@@ -663,25 +607,21 @@ public:
 		const XAUDIO2_BUFFER *pBuffer, 
 		const XAUDIO2_BUFFER_WMA *pBufferWMA = NULL)
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_SubmitSourceBuffer(faudio_voice, pBuffer, pBufferWMA);
 	}
 
 	COM_METHOD(HRESULT) FlushSourceBuffers()
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_FlushSourceBuffers(faudio_voice);
 	}
 
 	COM_METHOD(HRESULT) Discontinuity()
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_Discontinuity(faudio_voice);
 	}
 
 	COM_METHOD(HRESULT) ExitLoop(UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_ExitLoop(faudio_voice, OperationSet);
 	}
 
@@ -691,7 +631,6 @@ public:
 	COM_METHOD(void) GetState(XAUDIO2_VOICE_STATE *pVoiceState, UINT32 Flags = 0)
 #endif
 	{
-		TRACE_FUNC();
 #if (XAUDIO2_VERSION <= 7)
 		FAudioSourceVoice_GetState(faudio_voice, pVoiceState, 0);
 #else
@@ -701,20 +640,17 @@ public:
 
 	COM_METHOD(HRESULT) SetFrequencyRatio(float Ratio, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_SetFrequencyRatio(faudio_voice, Ratio, OperationSet);
 	}
 
 	COM_METHOD(void) GetFrequencyRatio(float *pRatio)
 	{
-		TRACE_FUNC();
 		FAudioSourceVoice_GetFrequencyRatio(faudio_voice, pRatio);
 	}
 
 #if XAUDIO2_VERSION >= 4
 	COM_METHOD(HRESULT) SetSourceSampleRate(UINT32 NewSourceSampleRate)
 	{
-		TRACE_FUNC();
 		return FAudioSourceVoice_SetSourceSampleRate(faudio_voice, NewSourceSampleRate);
 	}
 #endif // XAUDIO2_VERSION >= 4
@@ -742,13 +678,6 @@ public:
 		const XAUDIO2_VOICE_SENDS *pSendList,
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain
 	) {
-		TRACE_MSG( "InputChannels = %d; InputSampleRate = %d; Flags = %d; ProcessingState = %d; "
-			"EffectChain = %x",
-			InputChannels,
-			InputSampleRate,
-			Flags,
-			ProcessingStage,
-			pEffectChain);
 		voice_sends = unwrap_voice_sends(pSendList);
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateSubmixVoice(
@@ -765,7 +694,6 @@ public:
 	// IXAudio2Voice
 	COM_METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS *pVoiceDetails)
 	{
-		TRACE_FUNC();
 #if XAUDIO2_VERSION > 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, (FAudioVoiceDetails*) pVoiceDetails);
 #else
@@ -779,7 +707,6 @@ public:
 
 	COM_METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS *pSendList)
 	{
-		TRACE_FUNC();
 		free_voice_sends(voice_sends);
 		voice_sends = unwrap_voice_sends(pSendList);
 		return FAudioVoice_SetOutputVoices(faudio_voice, voice_sends);
@@ -787,7 +714,6 @@ public:
 
 	COM_METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN *pEffectChain)
 	{
-		TRACE_FUNC();
 		free_effect_chain(effect_chain);
 		effect_chain = wrap_effect_chain(pEffectChain);
 		return FAudioVoice_SetEffectChain(faudio_voice, effect_chain);
@@ -795,19 +721,16 @@ public:
 
 	COM_METHOD(HRESULT) EnableEffect(UINT32 EffectIndex, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	COM_METHOD(HRESULT) DisableEffect(UINT32 EffectIndex, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	COM_METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL *pEnabled)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, pEnabled);
 	}
 
@@ -817,7 +740,6 @@ public:
 		UINT32 ParametersByteSize,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetEffectParameters(
 			faudio_voice, 
 			EffectIndex, 
@@ -831,7 +753,6 @@ public:
 		void *pParameters, 
 		UINT32 ParametersByteSize
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_GetEffectParameters(
 			faudio_voice, 
 			EffectIndex, 
@@ -843,13 +764,11 @@ public:
 		const XAUDIO2_FILTER_PARAMETERS *pParameters,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetFilterParameters(faudio_voice, pParameters, OperationSet);
 	}
 
 	COM_METHOD(void) GetFilterParameters(XAUDIO2_FILTER_PARAMETERS *pParameters)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetFilterParameters(faudio_voice, pParameters);
 	}
 
@@ -859,7 +778,6 @@ public:
 		const XAUDIO2_FILTER_PARAMETERS *pParameters,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetOutputFilterParameters(
 			faudio_voice,
 			((XAudio2SubmixVoiceImpl *)pDestinationVoice)->faudio_voice,
@@ -871,7 +789,6 @@ public:
 		IXAudio2Voice *pDestinationVoice,
 		XAUDIO2_FILTER_PARAMETERS *pParameters
 	) {
-		TRACE_FUNC();
 		FAudioVoice_GetOutputFilterParameters(
 			faudio_voice, ((XAudio2SubmixVoiceImpl *)pDestinationVoice)->faudio_voice, pParameters);
 	}
@@ -879,13 +796,11 @@ public:
 
 	COM_METHOD(HRESULT) SetVolume(float Volume, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_SetVolume(faudio_voice, Volume, OperationSet);
 	}
 
 	COM_METHOD(void) GetVolume(float *pVolume)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetVolume(faudio_voice, pVolume);
 	}
 
@@ -894,13 +809,11 @@ public:
 		const float *pVolumes,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetChannelVolumes(faudio_voice, Channels, pVolumes, OperationSet);
 	}
 
 	COM_METHOD(void) GetChannelVolumes(UINT32 Channels, float *pVolumes)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetChannelVolumes(faudio_voice, Channels, pVolumes);
 	}
 
@@ -911,7 +824,6 @@ public:
 		const float *pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		FAudioVoice *dest = (pDestinationVoice) ? pDestinationVoice->faudio_voice : NULL;
 		return FAudioVoice_SetOutputMatrix(
 			faudio_voice, 
@@ -932,7 +844,6 @@ public:
 		UINT32 DestinationChannels,
 		float *pLevelMatrix
 	) {
-		TRACE_FUNC();
 		FAudioVoice_GetOutputMatrix(
 			faudio_voice,
 			pDestinationVoice->faudio_voice,
@@ -946,7 +857,6 @@ public:
 
 	COM_METHOD(void) DestroyVoice()
 	{
-		TRACE_FUNC();
 		FAudioVoice_DestroyVoice(faudio_voice);
 		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
 		free_voice_sends(voice_sends);
@@ -980,12 +890,6 @@ public:
 		UINT32 DeviceIndex,
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain
 	) {
-		TRACE_MSG(
-			"InputChannels = %d; InputSampleRate = %d; Flags = %d; EffectChain = %x",
-			InputChannels,
-			InputSampleRate,
-			Flags,
-			pEffectChain);
 		voice_sends = NULL;
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(
@@ -1007,8 +911,6 @@ public:
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain,
 		int StreamCategory
 	) {
-		TRACE_FUNC();
-
 		uint32_t device_index = 0;
 
 		if (szDeviceId != NULL)
@@ -1031,7 +933,6 @@ public:
 	// IXAudio2Voice
 	COM_METHOD(void) GetVoiceDetails(XAUDIO2_VOICE_DETAILS *pVoiceDetails)
 	{
-		TRACE_FUNC();
 #if XAUDIO2_VERSION > 7
 		FAudioVoice_GetVoiceDetails(faudio_voice, (FAudioVoiceDetails*) pVoiceDetails);
 #else
@@ -1045,7 +946,6 @@ public:
 
 	COM_METHOD(HRESULT) SetOutputVoices(const XAUDIO2_VOICE_SENDS *pSendList)
 	{
-		TRACE_FUNC();
 		free_voice_sends(voice_sends);
 		voice_sends = unwrap_voice_sends(pSendList);
 		return FAudioVoice_SetOutputVoices(faudio_voice, voice_sends);
@@ -1053,7 +953,6 @@ public:
 
 	COM_METHOD(HRESULT) SetEffectChain(const XAUDIO2_EFFECT_CHAIN *pEffectChain)
 	{
-		TRACE_FUNC();
 		free_effect_chain(effect_chain);
 		effect_chain = wrap_effect_chain(pEffectChain);
 		return FAudioVoice_SetEffectChain(faudio_voice, effect_chain);
@@ -1061,19 +960,16 @@ public:
 
 	COM_METHOD(HRESULT) EnableEffect(UINT32 EffectIndex, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_EnableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	COM_METHOD(HRESULT) DisableEffect(UINT32 EffectIndex, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_DisableEffect(faudio_voice, EffectIndex, OperationSet);
 	}
 
 	COM_METHOD(void) GetEffectState(UINT32 EffectIndex, BOOL *pEnabled)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetEffectState(faudio_voice, EffectIndex, pEnabled);
 	}
 
@@ -1083,7 +979,6 @@ public:
 		UINT32 ParametersByteSize,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetEffectParameters(
 			faudio_voice, 
 			EffectIndex, 
@@ -1097,7 +992,6 @@ public:
 		void *pParameters, 
 		UINT32 ParametersByteSize
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_GetEffectParameters(
 			faudio_voice, 
 			EffectIndex, 
@@ -1109,13 +1003,11 @@ public:
 		const XAUDIO2_FILTER_PARAMETERS *pParameters,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetFilterParameters(faudio_voice, pParameters, OperationSet);
 	}
 
 	COM_METHOD(void) GetFilterParameters(XAUDIO2_FILTER_PARAMETERS *pParameters)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetFilterParameters(faudio_voice, pParameters);
 	}
 
@@ -1125,7 +1017,6 @@ public:
 		const XAUDIO2_FILTER_PARAMETERS *pParameters,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetOutputFilterParameters(
 			faudio_voice,
 			((XAudio2MasteringVoiceImpl *)pDestinationVoice)->faudio_voice,
@@ -1137,7 +1028,6 @@ public:
 		IXAudio2Voice *pDestinationVoice,
 		XAUDIO2_FILTER_PARAMETERS *pParameters
 	) {
-		TRACE_FUNC();
 		FAudioVoice_GetOutputFilterParameters(
 			faudio_voice,
 			((XAudio2MasteringVoiceImpl *)pDestinationVoice)->faudio_voice,
@@ -1147,13 +1037,11 @@ public:
 
 	COM_METHOD(HRESULT) SetVolume(float Volume, UINT32 OperationSet = FAUDIO_COMMIT_NOW)
 	{
-		TRACE_FUNC();
 		return FAudioVoice_SetVolume(faudio_voice, Volume, OperationSet);
 	}
 
 	COM_METHOD(void) GetVolume(float *pVolume)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetVolume(faudio_voice, pVolume);
 	}
 
@@ -1162,13 +1050,11 @@ public:
 		const float *pVolumes,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		return FAudioVoice_SetChannelVolumes(faudio_voice, Channels, pVolumes, OperationSet);
 	}
 
 	COM_METHOD(void) GetChannelVolumes(UINT32 Channels, float *pVolumes)
 	{
-		TRACE_FUNC();
 		FAudioVoice_GetChannelVolumes(faudio_voice, Channels, pVolumes);
 	}
 
@@ -1179,7 +1065,6 @@ public:
 		const float *pLevelMatrix,
 		UINT32 OperationSet = FAUDIO_COMMIT_NOW
 	) {
-		TRACE_FUNC();
 		FAudioVoice *dest = (pDestinationVoice) ? pDestinationVoice->faudio_voice : NULL;
 		return FAudioVoice_SetOutputMatrix(
 			faudio_voice,
@@ -1200,7 +1085,6 @@ public:
 		UINT32 DestinationChannels,
 		float *pLevelMatrix
 	) {
-		TRACE_FUNC();
 		FAudioVoice_GetOutputMatrix(
 			faudio_voice,
 			pDestinationVoice->faudio_voice,
@@ -1214,7 +1098,6 @@ public:
 
 	COM_METHOD(void) DestroyVoice()
 	{
-		TRACE_FUNC();
 		FAudioVoice_DestroyVoice(faudio_voice);
 		// FIXME: in theory FAudioVoice_DestroyVoice can fail but how would we ever now ? -JS
 		free_voice_sends(voice_sends);
@@ -1285,8 +1168,6 @@ public:
 
 	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppvInterface)
 	{
-		TRACE_FUNC();
-
 		if (guid_equals(riid, IID_IXAudio2))
 		{
 			*ppvInterface = static_cast<IXAudio2 *>(this);
@@ -1308,13 +1189,11 @@ public:
 
 	COM_METHOD(ULONG) AddRef()
 	{
-		TRACE_FUNC();
 		return FAudio_AddRef(faudio);
 	}
 
 	COM_METHOD(ULONG) Release()
 	{
-		TRACE_FUNC();
 		ULONG refcount = FAudio_Release(faudio);
 		if (refcount == 0)
 		{
@@ -1326,13 +1205,11 @@ public:
 #if (XAUDIO2_VERSION <= 7)
 	COM_METHOD(HRESULT) GetDeviceCount(UINT32 *pCount)
 	{
-		TRACE_FUNC();
 		return FAudio_GetDeviceCount(faudio, pCount);
 	}
 
 	COM_METHOD(HRESULT) GetDeviceDetails(UINT32 Index, XAUDIO2_DEVICE_DETAILS *pDeviceDetails)
 	{
-		TRACE_FUNC();
 		return FAudio_GetDeviceDetails(faudio, Index, pDeviceDetails);
 	}
 
@@ -1340,14 +1217,12 @@ public:
 		UINT32 Flags = 0, 
 		XAUDIO2_PROCESSOR XAudio2Processor = FAUDIO_DEFAULT_PROCESSOR
 	) {
-		TRACE_FUNC();
 		return FAudio_Initialize(faudio, Flags, XAudio2Processor);
 	}
 #endif // XAUDIO2_VERSION <= 7
 
 	COM_METHOD(HRESULT) RegisterForCallbacks(IXAudio2EngineCallback *pCallback)
 	{
-		TRACE_FUNC();
 		FAudioCppEngineCallback *cb = wrap_engine_callback(pCallback);
 		cb->next = callback_list.next;
 		callback_list.next = cb;
@@ -1357,7 +1232,6 @@ public:
 
 	COM_METHOD(void) UnregisterForCallbacks(IXAudio2EngineCallback *pCallback)
 	{
-		TRACE_FUNC();
 		FAudioCppEngineCallback *cb = find_and_remove_engine_callback(&callback_list, pCallback);
 
 		if (cb == NULL)
@@ -1378,7 +1252,6 @@ public:
 		const XAUDIO2_VOICE_SENDS *pSendList = NULL,
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain = NULL
 	) {
-		TRACE_FUNC();
 		*ppSourceVoice = new XAudio2SourceVoiceImpl(
 			faudio, pSourceFormat, Flags, MaxFrequencyRatio, pCallback, pSendList, pEffectChain);
 		return S_OK;
@@ -1393,7 +1266,6 @@ public:
 		const XAUDIO2_VOICE_SENDS *pSendList = NULL,
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain = NULL
 	) {
-		TRACE_FUNC();
 		*ppSubmixVoice = new XAudio2SubmixVoiceImpl(
 			faudio,
 			InputChannels,
@@ -1414,7 +1286,6 @@ public:
 		UINT32 DeviceIndex = 0,
 		const XAUDIO2_EFFECT_CHAIN *pEffectChain = NULL
 	) {
-		TRACE_MSG("InputChannels = %d InputSampleRate = %d", InputChannels, InputSampleRate);
 		*ppMasteringVoice = new XAudio2MasteringVoiceImpl(
 			faudio, InputChannels, InputSampleRate, Flags, DeviceIndex, pEffectChain);
 		return S_OK;
@@ -1443,25 +1314,21 @@ public:
 
 	COM_METHOD(HRESULT) StartEngine()
 	{
-		TRACE_FUNC();
 		return FAudio_StartEngine(faudio);
 	}
 
 	COM_METHOD(void) StopEngine()
 	{
-		TRACE_FUNC();
 		FAudio_StopEngine(faudio);
 	}
 
 	COM_METHOD(HRESULT) CommitChanges(UINT32 OperationSet)
 	{
-		TRACE_FUNC();
 		return FAudio_CommitChanges(faudio);
 	}
 
 	COM_METHOD(void) GetPerformanceData(XAUDIO2_PERFORMANCE_DATA *pPerfData)
 	{
-		TRACE_FUNC();
 #if XAUDIO2_VERSION >= 3
 		FAudio_GetPerformanceData(faudio, pPerfData);
 #else
@@ -1489,7 +1356,6 @@ public:
 		XAUDIO2_DEBUG_CONFIGURATION *pDebugConfiguration,
 		void *pReserved = NULL
 	) {
-		TRACE_FUNC();
 		FAudio_SetDebugConfiguration(
 			faudio, 
 			pDebugConfiguration, 

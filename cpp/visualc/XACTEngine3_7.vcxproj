@@ -18,7 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\com_utils.h" />
-    <ClInclude Include="..\trace.h" />
     <ClInclude Include="..\xact3.h" />
   </ItemGroup>
   <ItemGroup>

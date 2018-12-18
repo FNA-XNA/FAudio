@@ -19,7 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\com_utils.h" />
-    <ClInclude Include="..\trace.h" />
     <ClInclude Include="..\XAPO.h" />
     <ClInclude Include="..\xaudio2.h" />
     <ClInclude Include="..\XAudio2fx.h" />
