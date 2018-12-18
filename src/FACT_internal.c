@@ -1625,6 +1625,7 @@ threadstart:
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 {
 	FAudioBuffer buffer;
+	FAudioBufferWMA bufferWMA;
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
 	FACTWaveBankEntry *entry;
 	FACTOverlapped ovlp;
@@ -1695,33 +1696,36 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		c->wave->streamOffset = entry->PlayRegion.dwOffset;
 	}
 
-	/* Assign length based on buffer read size */
-	if (entry->Format.wFormatTag == 0)
-	{
-		buffer.PlayLength = (
-			buffer.AudioBytes /
-			entry->Format.nChannels /
-			(entry->Format.wBitsPerSample + 1)
-		);
-	}
-	else if (entry->Format.wFormatTag == FAUDIO_FORMAT_MSADPCM)
-	{
-		buffer.PlayLength = (
-			buffer.AudioBytes /
-			align *
-			(((align / entry->Format.nChannels) - 6) * 2)
-		);
-	}
-
 	/* Unused properties */
 	buffer.PlayBegin = 0;
+	buffer.PlayLength = 0;
 	buffer.LoopBegin = 0;
 	buffer.LoopLength = 0;
 	buffer.LoopCount = 0;
 	buffer.pContext = NULL;
 
 	/* Submit, finally. */
-	FAudioSourceVoice_SubmitSourceBuffer(c->wave->voice, &buffer, NULL);
+	if (	entry->Format.wFormatTag == 0x1 ||
+		entry->Format.wFormatTag == 0x3	)
+	{
+		bufferWMA.pDecodedPacketCumulativeBytes =
+			c->wave->parentBank->seekTables[c->wave->index].entries;
+		bufferWMA.PacketCount =
+			c->wave->parentBank->seekTables[c->wave->index].entryCount;
+		FAudioSourceVoice_SubmitSourceBuffer(
+			c->wave->voice,
+			&buffer,
+			&bufferWMA
+		);
+	}
+	else
+	{
+		FAudioSourceVoice_SubmitSourceBuffer(
+			c->wave->voice,
+			&buffer,
+			NULL
+		);
+	}
 }
 
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)

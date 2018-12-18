@@ -1567,8 +1567,8 @@ uint32_t FACTWaveBank_Prepare(
 		}
 		else
 		{
-			/* TODO: WMA streaming support */
-			FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
+			/* Screw it, load the whole thing */
+			(*ppWave)->streamSize = entry->PlayRegion.dwLength;
 		}
 		(*ppWave)->streamCache = (uint8_t*) pWaveBank->parentEngine->pMalloc(
 			(*ppWave)->streamSize
