@@ -1911,6 +1911,18 @@ uint32_t FACTWave_SetMatrixCoefficients(
 		}
 		uSrcChannelCount = 2;
 	}
+	else if (uSrcChannelCount == 2 && pWave->srcChannels == 1)
+	{
+		mtxDst = pMatrixCoefficients;
+		mtxSrc = pMatrixCoefficients;
+		for (i = 0; i < uDstChannelCount; i += 1)
+		{
+			*mtxDst = (mtxSrc[0] + mtxSrc[1]) / 2.0f;
+			mtxDst += 1;
+			mtxSrc += 2;
+		}
+		uSrcChannelCount = 1;
+	}
 
 	FAudioVoice_SetOutputMatrix(
 		pWave->voice,
