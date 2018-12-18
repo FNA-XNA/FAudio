@@ -817,6 +817,7 @@ typedef struct FAudioIOStream
 	FAudio_readfunc read;
 	FAudio_seekfunc seek;
 	FAudio_closefunc close;
+	void *lock;
 } FAudioIOStream;
 
 FAUDIOAPI FAudioIOStream* FAudio_fopen(const char *path);

@@ -169,8 +169,18 @@ uint32_t FACTAudioEngine_Initialize(
 		return parseRet;
 	}
 
-	/* Assign the notification callback */
+	/* Assign the callbacks */
 	pEngine->notificationCallback = pParams->fnNotificationCallback;
+	pEngine->pReadFile = pParams->fileIOCallbacks.readFileCallback;
+	pEngine->pGetOverlappedResult = pParams->fileIOCallbacks.getOverlappedResultCallback;
+	if (pEngine->pReadFile == NULL)
+	{
+		pEngine->pReadFile = FACT_INTERNAL_DefaultReadFile;
+	}
+	if (pEngine->pGetOverlappedResult == NULL)
+	{
+		pEngine->pGetOverlappedResult = FACT_INTERNAL_DefaultGetOverlappedResult;
+	}
 
 	/* Init the FAudio subsystem */
 	pEngine->audio = pParams->pXAudio2;
@@ -405,6 +415,9 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 		pEngine,
 		FAudio_memopen((void*) pvBuffer, dwSize),
 		0,
+		FACT_INTERNAL_DefaultReadFile,
+		FACT_INTERNAL_DefaultGetOverlappedResult,
+		0,
 		ppWaveBank
 	);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
@@ -417,12 +430,13 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	FACTWaveBank **ppWaveBank
 ) {
 	uint32_t retval;
-	FAudioIOStream *io = (FAudioIOStream*) pParms->file;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
-	io->seek(io->data, pParms->offset, FAUDIO_SEEK_SET);
 	retval = FACT_INTERNAL_ParseWaveBank(
 		pEngine,
-		io,
+		pParms->file,
+		pParms->offset,
+		pEngine->pReadFile,
+		pEngine->pGetOverlappedResult,
 		1,
 		ppWaveBank
 	);
@@ -1293,7 +1307,6 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		pWaveBank->parentEngine->notificationCallback(&note);
 	}
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
-	FAudio_PlatformDestroyMutex(pWaveBank->ioLock);
 
 	mutex = pWaveBank->parentEngine->apiLock;
 	pWaveBank->parentEngine->pFree(pWaveBank);

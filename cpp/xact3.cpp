@@ -5,6 +5,20 @@
 
 #include <assert.h>
 
+extern "C" int32_t FACTCALL ReadFile(
+	void* hFile,
+	void* lpBuffer,
+	uint32_t nNumberOfBytesToRead,
+	uint32_t *lpNumberOfBytesRead,
+	FACTOverlapped *lpOverlapped
+);
+extern "C" int32_t FACTCALL GetOverlappedResult(
+	void* hFile,
+	FACTOverlapped *lpOverlapped,
+	uint32_t *lpNumberOfBytesTransferred,
+	int32_t bWait
+);
+
 /* IXACT3Cue Implementation */
 
 class XACT3CueImpl : public IXACT3Cue
@@ -359,15 +373,6 @@ public:
 
 /* IXACT3Engine Implementation */
 
-extern size_t FAUDIOCALL wrap_io_read(
-	void *data,
-	void *dst,
-	size_t size,
-	size_t count
-);
-extern int64_t FAUDIOCALL wrap_io_seek(void *data, int64_t offset, int whence);
-extern int FAUDIOCALL wrap_io_close(void *data);
-
 void* CDECL XACT3_INTERNAL_Malloc(size_t size)
 {
 	return CoTaskMemAlloc(size);
@@ -464,12 +469,28 @@ public:
 		const XACT_RUNTIME_PARAMETERS *pParams
 	) {
 		TRACE_FUNC();
+		XACT_RUNTIME_PARAMETERS params;
 
 		/* TODO: Unwrap FAudio/FAudioMasteringVoice */
 		assert(pParams->pXAudio2 == NULL);
 		assert(pParams->pMasteringVoice == NULL);
 
-		return FACTAudioEngine_Initialize(engine, pParams);
+		/* Copy so we can modify the parameters a bit... */
+		params = *pParams;
+		params.pXAudio2 = NULL;
+		params.pMasteringVoice = NULL;
+
+		/* Force Win32 I/O, do NOT use the default! */
+		if (pParams->fileIOCallbacks.readFileCallback != NULL)
+		{
+			params.fileIOCallbacks.readFileCallback = ReadFile;
+		}
+		if (pParams->fileIOCallbacks.getOverlappedResultCallback != NULL)
+		{
+			params.fileIOCallbacks.getOverlappedResultCallback = GetOverlappedResult;
+		}
+
+		return FACTAudioEngine_Initialize(engine, &params);
 	}
 	COM_METHOD(HRESULT) ShutDown()
 	{
@@ -526,25 +547,10 @@ public:
 		IXACT3WaveBank **ppWaveBank
 	) {
 		TRACE_FUNC();
-
-		/* We have to wrap the file around an IOStream first! */
-		XACT_STREAMING_PARAMETERS fakeParms;
-		FAudioIOStream *fake = (FAudioIOStream*) CoTaskMemAlloc(
-			sizeof(FAudioIOStream)
-		);
-		fake->data = pParms->file;
-		fake->read = wrap_io_read;
-		fake->seek = wrap_io_seek;
-		fake->close = wrap_io_close;
-		fakeParms.file = fake;
-		fakeParms.flags = pParms->flags;
-		fakeParms.offset = pParms->offset;
-		fakeParms.packetSize = pParms->packetSize;
-
 		FACTWaveBank *waveBank;
 		HRESULT retval = FACTAudioEngine_CreateStreamingWaveBank(
 			engine,
-			&fakeParms,
+			pParms,
 			&waveBank
 		);
 		*ppWaveBank = new XACT3WaveBankImpl(waveBank);

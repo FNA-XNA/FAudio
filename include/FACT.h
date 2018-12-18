@@ -83,6 +83,7 @@ typedef int32_t (FACTCALL * FACTReadFileCallback)(
 typedef int32_t (FACTCALL * FACTGetOverlappedResultCallback)(
 	void *hFile,
 	FACTOverlapped *lpOverlapped,
+	uint32_t *lpNumberOfBytesTransferred,
 	int32_t bWait
 );
 

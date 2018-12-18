@@ -798,6 +798,7 @@ public static class FAudio
 	public delegate int FACTGetOverlappedResultCallback(
 		IntPtr hFile,
 		IntPtr lpOverlapped, /* FACTOverlapped* */
+		out uint lpNumberOfBytesTransferred,
 		int bWait
 	);
 
@@ -2068,6 +2069,7 @@ public static class FAudio
 		public IntPtr read; /* FAudio_readfunc */
 		public IntPtr seek; /* FAudio_seekfunc */
 		public IntPtr close; /* FAudio_closefunc */
+		public IntPtr ioLock; /* lock, lolC# */
 	}
 
 	/* Functions */

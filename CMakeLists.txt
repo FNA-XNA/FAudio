@@ -322,7 +322,6 @@ if(BUILD_CPP)
 			cpp/com_utils_xact.cpp
 			cpp/xact3.cpp
 			cpp/win_registry.cpp
-			cpp/win_iostream.cpp
 		)
 		target_compile_definitions(${faudio_cpp_target} PRIVATE
 			"XACT3_VERSION=${lib_version}"

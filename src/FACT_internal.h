@@ -372,6 +372,8 @@ struct FACTAudioEngine
 {
 	uint32_t refcount;
 	FACTNotificationCallback notificationCallback;
+	FACTReadFileCallback pReadFile;
+	FACTGetOverlappedResultCallback pGetOverlappedResult;
 
 	uint16_t categoryCount;
 	uint16_t variableCount;
@@ -458,8 +460,7 @@ struct FACTWaveBank
 
 	/* I/O information */
 	uint16_t streaming;
-	FAudioIOStream *io;
-	FAudioMutex ioLock;
+	void* io;
 };
 
 struct FACTWave
@@ -560,7 +561,25 @@ int32_t FACT_INTERNAL_APIThread(void* enginePtr);
 void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext);
 void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback);
 
+/* FAudioIOStream functions */
+
+int32_t FACTCALL FACT_INTERNAL_DefaultReadFile(
+	void *hFile,
+	void *buffer,
+	uint32_t nNumberOfBytesToRead,
+	uint32_t *lpNumberOfBytesRead,
+	FACTOverlapped *lpOverlapped
+);
+
+int32_t FACTCALL FACT_INTERNAL_DefaultGetOverlappedResult(
+	void *hFile,
+	FACTOverlapped *lpOverlapped,
+	uint32_t *lpNumberOfBytesTransferred,
+	int32_t bWait
+);
+
 /* Parsing functions */
+
 uint32_t FACT_INTERNAL_ParseAudioEngine(
 	FACTAudioEngine *pEngine,
 	const FACTRuntimeParameters *pParams
@@ -573,7 +592,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 );
 uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTAudioEngine *pEngine,
-	FAudioIOStream *io,
+	void* io,
+	uint32_t offset,
+	FACTReadFileCallback pRead,
+	FACTGetOverlappedResultCallback pOverlap,
 	uint16_t isStreaming,
 	FACTWaveBank **ppWaveBank
 );

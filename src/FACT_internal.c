@@ -1627,7 +1627,8 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	FAudioBuffer buffer;
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
 	FACTWaveBankEntry *entry;
-	uint32_t end, left;
+	FACTOverlapped ovlp;
+	uint32_t end, left, read;
 	uint16_t align;
 
 	entry = &c->wave->parentBank->entries[c->wave->index];
@@ -1663,19 +1664,23 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	}
 
 	/* Read! */
-	FAudio_PlatformLockMutex(c->wave->parentBank->ioLock);
-	c->wave->parentBank->io->seek(
-		c->wave->parentBank->io->data,
-		c->wave->streamOffset,
-		FAUDIO_SEEK_SET
-	);
-	c->wave->parentBank->io->read(
-		c->wave->parentBank->io->data,
+	ovlp.Internal = NULL;
+	ovlp.InternalHigh = NULL;
+	ovlp.Pointer = (void*) (size_t) c->wave->streamOffset;
+	ovlp.hEvent = NULL;
+	c->wave->parentBank->parentEngine->pReadFile(
+		c->wave->parentBank->io,
 		c->wave->streamCache,
 		buffer.AudioBytes,
+		NULL,
+		&ovlp
+	);
+	c->wave->parentBank->parentEngine->pGetOverlappedResult(
+		c->wave->parentBank->io,
+		&ovlp,
+		&read,
 		1
 	);
-	FAudio_PlatformUnlockMutex(c->wave->parentBank->ioLock);
 
 	/* Loop if applicable */
 	c->wave->streamOffset += buffer.AudioBytes;
@@ -1735,6 +1740,40 @@ void FACT_INTERNAL_OnStreamEnd(FAudioVoiceCallback *callback)
 		);
 		c->wave->parentCue->data->instanceCount -= 1;
 	}
+}
+
+/* FAudioIOStream functions */
+
+int32_t FACTCALL FACT_INTERNAL_DefaultReadFile(
+	void *hFile,
+	void *buffer,
+	uint32_t nNumberOfBytesToRead,
+	uint32_t *lpNumberOfBytesRead, /* Not referenced! */
+	FACTOverlapped *lpOverlapped
+) {
+	FAudioIOStream *io = (FAudioIOStream*) hFile;
+	lpOverlapped->Internal = (void*) 0x00000103; /* STATUS_PENDING */
+	FAudio_PlatformLockMutex((FAudioMutex) io->lock);
+	io->seek(io->data, (size_t) lpOverlapped->Pointer, FAUDIO_SEEK_SET);
+	lpOverlapped->InternalHigh = (void*) (size_t) (io->read(
+		io->data,
+		buffer,
+		nNumberOfBytesToRead,
+		1
+	) * nNumberOfBytesToRead);
+	FAudio_PlatformUnlockMutex((FAudioMutex) io->lock);
+	lpOverlapped->Internal = 0; /* STATUS_SUCCESS */
+	return 1;
+}
+
+int32_t FACTCALL FACT_INTERNAL_DefaultGetOverlappedResult(
+	void *hFile,
+	FACTOverlapped *lpOverlapped,
+	uint32_t *lpNumberOfBytesTransferred,
+	int32_t bWait
+) {
+	*lpNumberOfBytesTransferred = (uint32_t) (size_t) lpOverlapped->InternalHigh;
+	return 1;
 }
 
 /* Parsing functions */
@@ -2701,7 +2740,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
  */
 uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTAudioEngine *pEngine,
-	FAudioIOStream *io,
+	void* io,
+	uint32_t offset,
+	FACTReadFileCallback pRead,
+	FACTGetOverlappedResultCallback pOverlap,
 	uint16_t isStreaming,
 	FACTWaveBank **ppWaveBank
 ) {
@@ -2713,8 +2755,24 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTWaveBankData wbinfo;
 	uint32_t compactEntry;
 	int32_t seekTableOffset;
+	FACTOverlapped ovlp;
+	uint32_t read;
 
-	io->read(io->data, &header, sizeof(header), 1);
+	ovlp.Internal = NULL;
+	ovlp.InternalHigh = NULL;
+	ovlp.hEvent = NULL;
+
+	#define SEEKSET(loc) \
+		ovlp.Pointer = (void*) ((size_t) offset + loc);
+	#define SEEKCUR(loc) \
+		ovlp.Pointer = (void*) ((size_t) ovlp.Pointer + loc);
+	#define READ(dst, size) \
+		pRead(io, dst, size, NULL, &ovlp); \
+		pOverlap(io, &ovlp, &read, 1); \
+		SEEKCUR(read)
+
+	SEEKSET(0)
+	READ(&header, sizeof(header))
 	if (se = header.dwSignature == 0x57424E44)
 	{
 		DOSWAP_32(header.dwSignature);
@@ -2738,16 +2796,11 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->waveList = NULL;
 	wb->waveLock = FAudio_PlatformCreateMutex();
 	wb->io = io;
-	wb->ioLock = FAudio_PlatformCreateMutex();
 	wb->notifyOnDestroy = 0;
 
 	/* WaveBank Data */
-	io->seek(
-		io->data,
-		header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset,
-		FAUDIO_SEEK_SET
-	);
-	io->read(io->data, &wbinfo, sizeof(wbinfo), 1);
+	SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset)
+	READ(&wbinfo, sizeof(wbinfo))
 	if (se)
 	{
 		DOSWAP_32(wbinfo.dwFlags);
@@ -2775,21 +2828,12 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->streaming = isStreaming;
 
 	/* WaveBank Entry Metadata */
-	io->seek(
-		io->data,
-		header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYMETADATA].dwOffset,
-		FAUDIO_SEEK_SET
-	);
+	SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYMETADATA].dwOffset)
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_COMPACT)
 	{
 		for (i = 0; i < wbinfo.dwEntryCount - 1; i += 1)
 		{
-			io->read(
-				io->data,
-				&compactEntry,
-				sizeof(compactEntry),
-				1
-			);
+			READ(&compactEntry, sizeof(compactEntry))
 			if (se)
 			{
 				DOSWAP_32(compactEntry);
@@ -2803,11 +2847,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			);
 
 			/* TODO: Deviation table */
-			io->seek(
-				io->data,
-				wbinfo.dwEntryMetaDataElementSize,
-				FAUDIO_SEEK_CUR
-			);
+			SEEKCUR(wbinfo.dwEntryMetaDataElementSize)
 			wb->entries[i].PlayRegion.dwLength = (
 				(compactEntry & ((1 << 21) - 1)) *
 				wbinfo.dwAlignment
@@ -2817,12 +2857,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwOffset;
 		}
 
-		io->read(
-			io->data,
-			&compactEntry,
-			sizeof(compactEntry),
-			1
-		);
+		READ(&compactEntry, sizeof(compactEntry))
 		if (se)
 		{
 			DOSWAP_32(compactEntry);
@@ -2833,11 +2868,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		);
 
 		/* TODO: Deviation table */
-		io->seek(
-			io->data,
-			wbinfo.dwEntryMetaDataElementSize,
-			FAUDIO_SEEK_CUR
-		);
+		SEEKCUR(wbinfo.dwEntryMetaDataElementSize)
 		wb->entries[i].PlayRegion.dwLength = (
 			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwLength -
 			wb->entries[i].PlayRegion.dwOffset
@@ -2850,12 +2881,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	{
 		for (i = 0; i < wbinfo.dwEntryCount; i += 1)
 		{
-			io->read(
-				io->data,
-				&wb->entries[i],
-				wbinfo.dwEntryMetaDataElementSize,
-				1
-			);
+			READ(&wb->entries[i], wbinfo.dwEntryMetaDataElementSize)
 			if (se)
 			{
 				DOSWAP_32(wb->entries[i].dwFlagsAndDuration);
@@ -2891,20 +2917,11 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		for (i = 0; i < wbinfo.dwEntryCount; i += 1)
 		{
 			/* Get the table offset... */
-			io->seek(
-				io->data,
-				(
-					header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset +
-					i * sizeof(uint32_t)
-				),
-				FAUDIO_SEEK_SET
-			);
-			io->read(
-				io->data,
-				&seekTableOffset,
-				sizeof(int32_t),
-				1
-			);
+			SEEKSET(
+				header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset +
+				i * sizeof(uint32_t)
+			)
+			READ(&seekTableOffset, sizeof(int32_t))
 			if (se)
 			{
 				DOSWAP_32(seekTableOffset);
@@ -2919,23 +2936,14 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			}
 
 			/* Go to the table offset, after the offset table... */
-			io->seek(
-				io->data,
-				(
-					header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset +
-					(wbinfo.dwEntryCount * sizeof(uint32_t)) +
-					seekTableOffset
-				),
-				FAUDIO_SEEK_SET
-			);
+			SEEKSET(
+				header.Segments[FACT_WAVEBANK_SEGIDX_SEEKTABLES].dwOffset +
+				(wbinfo.dwEntryCount * sizeof(uint32_t)) +
+				seekTableOffset
+			)
 
 			/* Read the table, finally. */
-			io->read(
-				io->data,
-				&wb->seekTables[i].entryCount,
-				sizeof(uint32_t),
-				1
-			);
+			READ(&wb->seekTables[i].entryCount, sizeof(uint32_t))
 			if (se)
 			{
 				DOSWAP_32(wb->seekTables[i].entryCount);
@@ -2943,12 +2951,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			wb->seekTables[i].entries = (uint32_t*) pEngine->pMalloc(
 				wb->seekTables[i].entryCount * sizeof(uint32_t)
 			);
-			io->read(
-				io->data,
+			READ(
 				wb->seekTables[i].entries,
-				wb->seekTables[i].entryCount * sizeof(uint32_t),
-				1
-			);
+				wb->seekTables[i].entryCount * sizeof(uint32_t)
+			)
 			if (se)
 			{
 				for (j = 0; j < wb->seekTables[i].entryCount; j += 1)
@@ -2966,11 +2972,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	/* TODO: WaveBank Entry Names
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_ENTRYNAMES)
 	{
-		io->seek(
-			io->data,
-			header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYNAMES].dwOffset,
-			FAUDIO_SEEK_SET
-		);
+		SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYNAMES].dwOffset)
 	}
 	*/
 

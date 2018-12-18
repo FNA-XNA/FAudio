@@ -340,6 +340,7 @@ FAudioIOStream* FAudio_fopen(const char *path)
 	io->read = (FAudio_readfunc) rwops->read;
 	io->seek = (FAudio_seekfunc) rwops->seek;
 	io->close = (FAudio_closefunc) rwops->close;
+	io->lock = FAudio_PlatformCreateMutex();
 	return io;
 }
 
@@ -353,6 +354,7 @@ FAudioIOStream* FAudio_memopen(void *mem, int len)
 	io->read = (FAudio_readfunc) rwops->read;
 	io->seek = (FAudio_seekfunc) rwops->seek;
 	io->close = (FAudio_closefunc) rwops->close;
+	io->lock = FAudio_PlatformCreateMutex();
 	return io;
 }
 
@@ -366,6 +368,7 @@ uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 void FAudio_close(FAudioIOStream *io)
 {
 	io->close(io->data);
+	FAudio_PlatformDestroyMutex((FAudioMutex) io->lock);
 	FAudio_free(io);
 }
 
