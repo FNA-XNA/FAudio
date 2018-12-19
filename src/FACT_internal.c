@@ -1667,7 +1667,8 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	/* Read! */
 	ovlp.Internal = NULL;
 	ovlp.InternalHigh = NULL;
-	ovlp.Pointer = (void*) (size_t) c->wave->streamOffset;
+	ovlp.Offset = c->wave->streamOffset;
+	ovlp.OffsetHigh = 0; /* I sure hope so... */
 	ovlp.hEvent = NULL;
 	c->wave->parentBank->parentEngine->pReadFile(
 		c->wave->parentBank->io,
@@ -2764,12 +2765,13 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 
 	ovlp.Internal = NULL;
 	ovlp.InternalHigh = NULL;
+	ovlp.OffsetHigh = 0; /* I sure hope so... */
 	ovlp.hEvent = NULL;
 
 	#define SEEKSET(loc) \
-		ovlp.Pointer = (void*) ((size_t) offset + loc);
+		ovlp.Offset = offset + loc;
 	#define SEEKCUR(loc) \
-		ovlp.Pointer = (void*) ((size_t) ovlp.Pointer + loc);
+		ovlp.Offset += loc;
 	#define READ(dst, size) \
 		pRead(io, dst, size, NULL, &ovlp); \
 		pOverlap(io, &ovlp, &read, 1); \
