@@ -255,13 +255,41 @@ void FAudio_INTERNAL_InsertSubmixSorted(
 	else
 	{
 		latest = *start;
-		while (	latest->next != NULL &&
-			((FAudioSubmixVoice *) latest->next->entry)->mix.processingStage < toAdd->mix.processingStage	)
+
+		/* Special case if the new stage is lower than everyone else */
+		if (toAdd->mix.processingStage < ((FAudioSubmixVoice*) latest->entry)->mix.processingStage)
 		{
-			latest = latest->next;
+			newEntry->next = latest;
+			*start = newEntry;
 		}
-		newEntry->next = latest->next;
-		latest->next = newEntry;
+		else
+		{
+			/* If we got here, we know that the new stage is
+			 * _at least_ as high as the first submix in the list.
+			 *
+			 * Each loop iteration checks to see if the new stage
+			 * is smaller than `latest->next`, meaning it fits
+			 * between `latest` and `latest->next`.
+			 */
+			while (latest->next != NULL)
+			{
+				if (toAdd->mix.processingStage < ((FAudioSubmixVoice *) latest->next->entry)->mix.processingStage)
+				{
+					newEntry->next = latest->next;
+					latest->next = newEntry;
+					break;
+				}
+				latest = latest->next;
+			}
+			/* If newEntry didn't get a `next` value, that means
+			 * it didn't fall in between any stages and `latest`
+			 * is the last entry in the list. Add it to the end!
+			 */
+			if (newEntry->next == NULL)
+			{
+				latest->next = newEntry;
+			}
+		}
 	}
 	FAudio_PlatformUnlockMutex(lock);
 }
