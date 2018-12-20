@@ -225,9 +225,7 @@ typedef struct FAudioBufferEntry FAudioBufferEntry;
 struct FAudioBufferEntry
 {
 	FAudioBuffer buffer;
-#ifdef HAVE_FFMPEG
 	FAudioBufferWMA bufferWMA;
-#endif /* HAVE_FFMPEG */
 	FAudioBufferEntry *next;
 };
 
@@ -599,10 +597,9 @@ DECODE_FUNC(PCM24)
 DECODE_FUNC(PCM32F)
 DECODE_FUNC(MonoMSADPCM)
 DECODE_FUNC(StereoMSADPCM)
+DECODE_FUNC(WMAERROR)
 #ifdef HAVE_FFMPEG
 DECODE_FUNC(FFMPEG)
-#else
-DECODE_FUNC(WMAERROR)
 #endif /* HAVE_FFMPEG */
 #undef DECODE_FUNC
 

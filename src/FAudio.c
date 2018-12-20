@@ -358,12 +358,9 @@ uint32_t FAudio_CreateSourceVoice(
 				COMPARE_GUID(XMAUDIO2)	)
 		{
 #ifdef HAVE_FFMPEG
-			i = FAudio_FFMPEG_init(*ppSourceVoice, fmtex->SubFormat.Data1);
-			if (i != 0)
+			if (FAudio_FFMPEG_init(*ppSourceVoice, fmtex->SubFormat.Data1) != 0)
 			{
-				audio->pFree((*ppSourceVoice)->src.format);
-				audio->pFree(*ppSourceVoice);
-				return i;
+				(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
 			}
 #else
 			FAudio_assert(0 && "xWMA is not supported!");
@@ -1891,7 +1888,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 #ifdef HAVE_FFMPEG
 	FAudio_assert(	(voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
 			(voice->src.ffmpeg == NULL && pBufferWMA == NULL)	);
-#endif
+#endif /* HAVE_FFMPEG */
 
 	/* Start off with whatever they just sent us... */
 	playBegin = pBuffer->PlayBegin;
@@ -1983,12 +1980,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	entry->buffer.PlayLength = playLength;
 	entry->buffer.LoopBegin = loopBegin;
 	entry->buffer.LoopLength = loopLength;
-#ifdef HAVE_FFMPEG
 	if (pBufferWMA != NULL)
 	{
 		FAudio_memcpy(&entry->bufferWMA, pBufferWMA, sizeof(FAudioBufferWMA));
 	}
-#endif /* HAVE_FFMPEG */
 	entry->next = NULL;
 
 	if (	voice->audio->version <= 7 && (
