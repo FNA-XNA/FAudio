@@ -1114,32 +1114,35 @@ uint32_t FAudioVoice_SetEffectChain(
 	}
 	else
 	{
-		/* validate incoming effect chain before changing the current chain */
+		/* Validate incoming chain before changing the current chain */
+
+		/* These are always the same, so just write them now. */
+		srcLockParams.pFormat = &srcFmt.Format;
+		srcLockParams.MaxFrameCount = voice->audio->updateSize;
+		dstLockParams.pFormat = &dstFmt.Format;
+		dstLockParams.MaxFrameCount = voice->audio->updateSize;
+
+		/* The first source is the voice input data... */
+		srcFmt.Format.wBitsPerSample = 32;
+		srcFmt.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
+		srcFmt.Format.nChannels = voiceDetails.InputChannels;
+		srcFmt.Format.nSamplesPerSec = voiceDetails.InputSampleRate;
+		srcFmt.Format.nBlockAlign = srcFmt.Format.nChannels * (srcFmt.Format.wBitsPerSample / 8);
+		srcFmt.Format.nAvgBytesPerSec = srcFmt.Format.nSamplesPerSec * srcFmt.Format.nBlockAlign;
+		srcFmt.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+		srcFmt.Samples.wValidBitsPerSample = srcFmt.Format.wBitsPerSample;
+		srcFmt.dwChannelMask = 0;
+		FAudio_memcpy(&srcFmt.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+		FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
+
 		for (i = 0; i < pEffectChain->EffectCount; i += 1)
 		{
 			fapo = pEffectChain->pEffectDescriptors[i].pEffect;
 
-			srcFmt.Format.wBitsPerSample = 32;
-			srcFmt.Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
-			srcFmt.Format.nChannels = voiceDetails.InputChannels;
-			srcFmt.Format.nSamplesPerSec = voiceDetails.InputSampleRate;
-			srcFmt.Format.nBlockAlign = srcFmt.Format.nChannels * (srcFmt.Format.wBitsPerSample / 8);
-			srcFmt.Format.nAvgBytesPerSec = srcFmt.Format.nSamplesPerSec * srcFmt.Format.nBlockAlign;
-			srcFmt.Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
-			srcFmt.Samples.wValidBitsPerSample = srcFmt.Format.wBitsPerSample;
-			srcFmt.dwChannelMask = 0;
-			FAudio_memcpy(&srcFmt.SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
-
-			FAudio_memcpy(&dstFmt, &srcFmt, sizeof(srcFmt));
+			/* ... then we get this effect's format... */
 			dstFmt.Format.nChannels = pEffectChain->pEffectDescriptors[i].OutputChannels;
 			dstFmt.Format.nBlockAlign = dstFmt.Format.nChannels * (dstFmt.Format.wBitsPerSample / 8);
 			dstFmt.Format.nAvgBytesPerSec = dstFmt.Format.nSamplesPerSec * dstFmt.Format.nBlockAlign;
-
-			srcLockParams.pFormat = &srcFmt.Format;
-			srcLockParams.MaxFrameCount = voice->audio->updateSize;
-
-			dstLockParams.pFormat = &dstFmt.Format;
-			dstLockParams.MaxFrameCount = voice->audio->updateSize;
 
 			if (fapo->LockForProcess(fapo, 1, &srcLockParams, 1, &dstLockParams))
 			{
@@ -1154,6 +1157,12 @@ uint32_t FAudioVoice_SetEffectChain(
 				LOG_API_EXIT(voice->audio)
 				return FAUDIO_E_UNSUPPORTED_FORMAT;
 			}
+
+			/* Okay, now this effect is the source and the next
+			 * effect will be the destination. Repeat until no
+			 * effects left.
+			 */
+			FAudio_memcpy(&srcFmt, &dstFmt, sizeof(srcFmt));
 		}
 
 		FAudio_INTERNAL_FreeEffectChain(voice);
