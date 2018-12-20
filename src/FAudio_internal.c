@@ -622,8 +622,6 @@ static inline void FAudio_INTERNAL_FilterVoice(
 
 static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	FAudioVoice *voice,
-	uint32_t channels,
-	uint32_t sampleRate,
 	float *buffer,
 	uint32_t samples
 ) {
@@ -896,8 +894,6 @@ sendwork:
 	{
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
-			voice->src.format->nChannels,
-			voice->src.format->nSamplesPerSec,
 			voice->audio->resampleCache,
 			mixed
 		);
@@ -1017,8 +1013,6 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	{
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
-			voice->mix.inputChannels,
-			voice->mix.inputSampleRate,
 			voice->audio->resampleCache,
 			resampled
 		);
@@ -1161,8 +1155,6 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	{
 		float *effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			audio->master,
-			audio->master->master.inputChannels,
-			audio->master->master.inputSampleRate,
 			output,
 			audio->updateSize
 		);
