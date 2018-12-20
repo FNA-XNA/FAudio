@@ -623,7 +623,7 @@ static inline void FAudio_INTERNAL_FilterVoice(
 static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	FAudioVoice *voice,
 	float *buffer,
-	uint32_t samples
+	uint32_t *samples
 ) {
 	uint32_t i;
 	FAPO *fapo;
@@ -634,10 +634,10 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	/* Set up the buffer to be written into */
 	srcParams.pBuffer = buffer;
 	srcParams.BufferFlags = FAPO_BUFFER_SILENT;
-	srcParams.ValidFrameCount = samples;
-	for (i = 0; i < samples; i += 1)
+	srcParams.ValidFrameCount = *samples;
+	for (i = 0; i < srcParams.ValidFrameCount; i += 1)
 	{
-		if (buffer[i] > 0.0000001f) /* Arbitrary! */
+		if (buffer[i] != 0.0f) /* Arbitrary! */
 		{
 			srcParams.BufferFlags = FAPO_BUFFER_VALID;
 			break;
@@ -645,9 +645,9 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	}
 
 	/* Initialize output parameters to something sane */
-	dstParams.pBuffer = buffer;
+	dstParams.pBuffer = srcParams.pBuffer;
 	dstParams.BufferFlags = FAPO_BUFFER_VALID;
-	dstParams.ValidFrameCount = samples;
+	dstParams.ValidFrameCount = srcParams.ValidFrameCount;
 
 	/* Update parameters, process! */
 	for (i = 0; i < voice->effects.count; i += 1)
@@ -660,7 +660,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			{
 				FAudio_INTERNAL_ResizeEffectChainCache(
 					voice->audio,
-					voice->effects.desc[i].OutputChannels * samples
+					voice->effects.desc[i].OutputChannels * voice->audio->updateSize
 				);
 				dstParams.pBuffer = voice->audio->effectChainCache;
 			}
@@ -669,7 +669,10 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 				dstParams.pBuffer = buffer;
 			}
 
-			FAudio_zero(dstParams.pBuffer, voice->effects.desc[i].OutputChannels * samples * sizeof(float));
+			FAudio_zero(
+				dstParams.pBuffer,
+				voice->effects.desc[i].OutputChannels * voice->audio->updateSize * sizeof(float)
+			);
 		}
 
 		if (voice->effects.parameterUpdates[i])
@@ -693,6 +696,8 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 		FAudio_memcpy(&srcParams, &dstParams, sizeof(dstParams));
 	}
+
+	*samples = dstParams.ValidFrameCount;
 
 	LOG_FUNC_EXIT(voice->audio)
 	return (float*) dstParams.pBuffer;
@@ -895,7 +900,7 @@ sendwork:
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
 			voice->audio->resampleCache,
-			mixed
+			&mixed
 		);
 	}
 	FAudio_PlatformUnlockMutex(voice->effectLock);
@@ -1014,7 +1019,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
 			voice->audio->resampleCache,
-			resampled
+			&resampled
 		);
 	}
 	FAudio_PlatformUnlockMutex(voice->effectLock);
@@ -1138,12 +1143,11 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	LOG_MUTEX_UNLOCK(audio, audio->submixLock)
 
 	/* Apply master volume */
-	totalSamples = audio->updateSize * audio->master->master.inputChannels;
 	if (audio->master->volume != 1.0f)
 	{
 		FAudio_INTERNAL_Amplify(
 			output,
-			totalSamples,
+			audio->updateSize * audio->master->master.inputChannels,
 			audio->master->volume
 		);
 	}
@@ -1153,10 +1157,11 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	LOG_MUTEX_LOCK(audio, audio->master->effectLock)
 	if (audio->master->effects.count > 0)
 	{
+		totalSamples = audio->updateSize;
 		float *effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			audio->master,
 			output,
-			audio->updateSize
+			&totalSamples
 		);
 
 		if (effectOut != output)
@@ -1164,7 +1169,14 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 			FAudio_memcpy(
 				output,
 				effectOut,
-				audio->updateSize * audio->master->outputChannels * sizeof(float)
+				totalSamples * audio->master->outputChannels * sizeof(float)
+			);
+		}
+		if (totalSamples < audio->updateSize)
+		{
+			FAudio_zero(
+				output + (totalSamples * audio->master->outputChannels),
+				(audio->updateSize - totalSamples) * sizeof(float)
 			);
 		}
 	}
