@@ -635,10 +635,21 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 	/* Set up the buffer to be written into */
 	srcParams.pBuffer = buffer;
-	srcParams.BufferFlags = FAPO_BUFFER_VALID;
+	srcParams.BufferFlags = FAPO_BUFFER_SILENT;
 	srcParams.ValidFrameCount = samples;
+	for (i = 0; i < samples; i += 1)
+	{
+		if (buffer[i] > 0.0000001f) /* Arbitrary! */
+		{
+			srcParams.BufferFlags = FAPO_BUFFER_VALID;
+			break;
+		}
+	}
 
-	FAudio_memcpy(&dstParams, &srcParams, sizeof(srcParams));
+	/* Initialize output parameters to something sane */
+	dstParams.pBuffer = buffer;
+	dstParams.BufferFlags = FAPO_BUFFER_VALID;
+	dstParams.ValidFrameCount = samples;
 
 	/* Update parameters, process! */
 	for (i = 0; i < voice->effects.count; i += 1)
