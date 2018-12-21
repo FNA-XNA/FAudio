@@ -9,17 +9,26 @@ have specific thread requirements that the platform's audio library cannot
 satisfy. This extension allows clients to "wrap" the engine procedure with
 arbitrary code.
 
+Dependencies
+------------
+This extension does not interact with any non-standard XAudio features.
+
 New Types
 ---------
 typedef void (FAUDIOCALL *FAudioEngineCallEXT)(FAudio *audio, float *output);
 
-typedef void (FAUDIOCALL *FAudioEngineProcedureEXT)(FAudioEngineCall defaultEngineProc, FAudio *audio, float *output, void *user);
+typedef void (FAUDIOCALL *FAudioEngineProcedureEXT)(
+	FAudioEngineCallEXT defaultEngineProc,
+	FAudio *audio,
+	float *output,
+	void *user
+);
 
 New Procedures and Functions
 ----------------------------
 FAUDIOAPI void FAudio_SetEngineProcedureEXT(
 	FAudio *audio,
-	FAudioEngineProcedure clientEngineProc,
+	FAudioEngineProcedureEXT clientEngineProc,
 	void *user
 );
 
