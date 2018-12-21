@@ -45,7 +45,7 @@ provided Makefile. This requires mingw-w64 to build.
 
     $ cd tests/
     $ make faudio_tests.exe
-    # run faudio_texts.exe on a Windows box
+    # run faudio_tests.exe on a Windows box
 
 Found an issue?
 ---------------
