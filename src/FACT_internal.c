@@ -2779,7 +2779,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 
 	SEEKSET(0)
 	READ(&header, sizeof(header))
-	if (se = header.dwSignature == 0x57424E44)
+	se = header.dwSignature == 0x57424E44;
+	if (se)
 	{
 		DOSWAP_32(header.dwSignature);
 		DOSWAP_32(header.dwVersion);
