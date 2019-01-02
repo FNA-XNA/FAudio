@@ -418,6 +418,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			voice->src.curBufferOffset + endRead
 		);
 
+		decoded += endRead;
 		voice->src.curBufferOffset += endRead;
 		voice->src.totalSamples += endRead;
 
@@ -477,11 +478,11 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					/* FIXME: I keep going past the buffer so fuck it */
 					FAudio_zero(
 						voice->audio->decodeCache + (
-							(decoded + endRead) *
+							decoded *
 							voice->src.format->nChannels
 						),
 						sizeof(float) * (
-							(*toDecode - (decoded + endRead)) *
+							(*toDecode - decoded) *
 							voice->src.format->nChannels
 						)
 					);
@@ -524,9 +525,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				voice->audio->pFree(toDelete);
 			}
 		}
-
-		/* Finally. */
-		decoded += endRead;
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
