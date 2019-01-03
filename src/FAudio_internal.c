@@ -813,8 +813,12 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	toResample = toDecode << FIXED_PRECISION;
 	/* ... round back down based on current offset... */
 	toResample -= voice->src.curBufferOffsetDec;
+	/* ... but also ceil for any fraction value... */
+	toResample += FIXED_FRACTION_MASK;
 	/* ... undo step size, fixed to int. */
 	toResample /= voice->src.resampleStep;
+	/* Add the padding, for some reason this helps? */
+	toResample += EXTRA_DECODE_PADDING;
 	/* FIXME: I feel like this should be an assert but I suck */
 	toResample = FAudio_min(toResample, voice->src.resampleSamples);
 
