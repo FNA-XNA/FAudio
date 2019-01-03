@@ -851,6 +851,15 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
 		/* ... chop off any ints we got from the above increment */
 		voice->src.curBufferOffsetDec &= FIXED_FRACTION_MASK;
+
+		/* Dec >0? We need one frame from the past...
+		 * FIXME: We can't go back to a prev buffer though?
+		 */
+		if (	voice->src.curBufferOffsetDec > 0 &&
+			voice->src.curBufferOffset > 0	)
+		{
+			voice->src.curBufferOffset -= 1;
+		}
 	}
 	else
 	{
