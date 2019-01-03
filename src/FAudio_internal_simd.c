@@ -582,8 +582,6 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 		 */
 		cur_scalar &= FIXED_FRACTION_MASK;
 	}
-
-
 }
 
 void FAudio_INTERNAL_ResampleStereo_SSE2(
@@ -754,7 +752,6 @@ void FAudio_INTERNAL_ResampleStereo_SSE2(
 		 */
 		cur_scalar &= FIXED_FRACTION_MASK;
 	}
-
 }
 #endif /* HAVE_SSE2_INTRINSICS */
 
@@ -929,8 +926,6 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 		 */
 		cur_scalar &= FIXED_FRACTION_MASK;
 	}
-
-
 }
 
 void FAudio_INTERNAL_ResampleStereo_NEON(
@@ -1094,7 +1089,6 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 		 */
 		cur_scalar &= FIXED_FRACTION_MASK;
 	}
-
 }
 #endif /* HAVE_NEON_INTRINSICS */
 
