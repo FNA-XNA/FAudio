@@ -135,7 +135,7 @@ if(FFMPEG)
 endif(FFMPEG)
 
 # SDL2 Dependency
-find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2 CONFIG)
 if (TARGET SDL2::SDL2)
 	message(STATUS "using TARGET SDL2::SDL2")
 	target_link_libraries(FAudio PUBLIC SDL2::SDL2)
