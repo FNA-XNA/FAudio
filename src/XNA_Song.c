@@ -31,6 +31,9 @@
 #define malloc FAudio_malloc
 #define realloc FAudio_realloc
 #define free FAudio_free
+#ifdef memset /* Thanks, Apple! */
+#undef memset
+#endif
 #define memset FAudio_memset
 #ifdef memcpy /* Thanks, Apple! */
 #undef memcpy

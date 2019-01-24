@@ -209,6 +209,9 @@ CREDITS
  * -flibit
  */
 #ifndef FAUDIO_UNKNOWN_PLATFORM
+#ifdef memcpy /* Thanks Apple! */
+#undef memcpy
+#endif
 #define memcpy FAudio_memcpy
 #endif
 
