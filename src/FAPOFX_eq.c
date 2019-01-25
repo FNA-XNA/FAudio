@@ -174,7 +174,7 @@ uint32_t FAPOFXCreateEQ(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc,
 	uint8_t legacy
-){
+) {
 	const FAPOFXEQParameters fxdefault =
 	{
 		FAPOFXEQ_DEFAULT_FREQUENCY_CENTER_0,
