@@ -908,6 +908,17 @@ sendwork:
 	LOG_MUTEX_LOCK(voice->audio, voice->effectLock)
 	if (voice->effects.count > 0)
 	{
+		/* If we didn't get the full size of the update, we have to fill
+		 * it with silence so the effect can process a whole update
+		 */
+		if (mixed < voice->src.resampleSamples)
+		{
+			FAudio_zero(
+				voice->audio->resampleCache + (mixed * voice->src.format->nChannels),
+				(voice->src.resampleSamples - mixed) * voice->src.format->nChannels * sizeof(float)
+			);
+			mixed = voice->src.resampleSamples;
+		}
 		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
 			voice->audio->resampleCache,
