@@ -1114,9 +1114,22 @@ uint32_t FAudioVoice_SetEffectChain(
 
 		/* These are always the same, so just write them now. */
 		srcLockParams.pFormat = &srcFmt.Format;
-		srcLockParams.MaxFrameCount = voice->audio->updateSize;
 		dstLockParams.pFormat = &dstFmt.Format;
-		dstLockParams.MaxFrameCount = voice->audio->updateSize;
+		if (voice->type == FAUDIO_VOICE_SOURCE)
+		{
+			srcLockParams.MaxFrameCount = voice->src.resampleSamples;
+			dstLockParams.MaxFrameCount = voice->src.resampleSamples;
+		}
+		else if (voice->type == FAUDIO_VOICE_SUBMIX)
+		{
+			srcLockParams.MaxFrameCount = voice->mix.outputSamples;
+			dstLockParams.MaxFrameCount = voice->mix.outputSamples;
+		}
+		else if (voice->type == FAUDIO_VOICE_MASTER)
+		{
+			srcLockParams.MaxFrameCount = voice->audio->updateSize;
+			dstLockParams.MaxFrameCount = voice->audio->updateSize;
+		}
 
 		/* The first source is the voice input data... */
 		srcFmt.Format.wBitsPerSample = 32;
