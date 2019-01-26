@@ -664,6 +664,9 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			}
 			else
 			{
+				/* FIXME: What if this is smaller because
+				 * inputChannels < desc[i].OutputChannels?
+				 */
 				dstParams.pBuffer = buffer;
 			}
 

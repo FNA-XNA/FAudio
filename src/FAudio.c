@@ -835,6 +835,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 ) {
 	uint32_t i;
 	uint32_t outChannels;
+	uint32_t channelCount;
 	uint32_t outSampleRate;
 	uint32_t newResampleSamples;
 	FAudioVoiceSends defaultSends;
@@ -1017,9 +1018,21 @@ uint32_t FAudioVoice_SetOutputVoices(
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	);
+	if (voice->type == FAUDIO_VOICE_SOURCE)
+	{
+		channelCount = voice->src.format->nChannels;
+	}
+	else if (voice->type == FAUDIO_VOICE_SUBMIX)
+	{
+		channelCount = voice->mix.inputChannels;
+	}
+	else if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		channelCount = voice->master.inputChannels;
+	}
 	FAudio_INTERNAL_ResizeResampleCache(
 		voice->audio,
-		newResampleSamples * voice->outputChannels
+		newResampleSamples * channelCount
 	);
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
