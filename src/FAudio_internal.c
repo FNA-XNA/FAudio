@@ -1142,6 +1142,14 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	if (audio->master->master.effectCache != NULL)
 	{
 		audio->master->master.output = audio->master->master.effectCache;
+		FAudio_zero(
+			audio->master->master.effectCache,
+			(
+				sizeof(float) *
+				audio->updateSize *
+				audio->master->master.inputChannels
+			)
+		);
 	}
 	else
 	{

@@ -596,14 +596,6 @@ uint32_t FAudio_CreateMasteringVoice(
 			audio->updateSize *
 			(*ppMasteringVoice)->master.inputChannels
 		);
-		FAudio_zero(
-			(*ppMasteringVoice)->master.effectCache,
-			(
-				sizeof(float) *
-				audio->updateSize *
-				(*ppMasteringVoice)->master.inputChannels
-			)
-		);
 	}
 
 	LOG_API_EXIT(audio)
