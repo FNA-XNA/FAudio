@@ -658,7 +658,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 			{
 				FAudio_INTERNAL_ResizeEffectChainCache(
 					voice->audio,
-					voice->effects.desc[i].OutputChannels * voice->audio->updateSize
+					voice->effects.desc[i].OutputChannels * srcParams.ValidFrameCount
 				);
 				dstParams.pBuffer = voice->audio->effectChainCache;
 			}
@@ -669,7 +669,7 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 			FAudio_zero(
 				dstParams.pBuffer,
-				voice->effects.desc[i].OutputChannels * voice->audio->updateSize * sizeof(float)
+				voice->effects.desc[i].OutputChannels * srcParams.ValidFrameCount * sizeof(float)
 			);
 		}
 
