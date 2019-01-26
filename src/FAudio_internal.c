@@ -1136,8 +1136,17 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	FAudio_PlatformUnlockMutex(audio->callbackLock);
 	LOG_MUTEX_UNLOCK(audio, audio->callbackLock)
 
-	/* Writes to master will directly write to output */
-	audio->master->master.output = output;
+	/* Writes to master will directly write to output, but ONLY if there
+	 * isn't any channel-changing effect processing to do first.
+	 */
+	if (audio->master->master.effectCache != NULL)
+	{
+		audio->master->master.output = audio->master->master.effectCache;
+	}
+	else
+	{
+		audio->master->master.output = output;
+	}
 
 	/* Mix sources */
 	FAudio_PlatformLockMutex(audio->sourceLock);
@@ -1171,7 +1180,7 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	if (audio->master->volume != 1.0f)
 	{
 		FAudio_INTERNAL_Amplify(
-			output,
+			audio->master->master.output,
 			audio->updateSize * audio->master->master.inputChannels,
 			audio->master->volume
 		);
@@ -1185,7 +1194,7 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 		totalSamples = audio->updateSize;
 		float *effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			audio->master,
-			output,
+			audio->master->master.output,
 			&totalSamples
 		);
 

@@ -122,10 +122,16 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		sizeof(FAudioPlatformDevice)
 	);
 
-	/* Build the device format */
+	/* Build the device format.
+	 * The most unintuitive part of this is the use of outputChannels
+	 * instead of master.inputChannels. Bizarrely, the effect chain can
+	 * dictate the _actual_ output channel count, and when the channel count
+	 * mismatches, we have to add a staging buffer for effects to process on
+	 * before ultimately copying the final result to the device. ARGH.
+	 */
 	want.freq = audio->master->master.inputSampleRate;
 	want.format = AUDIO_F32;
-	want.channels = audio->master->master.inputChannels;
+	want.channels = audio->master->outputChannels;
 	want.silence = 0;
 	want.samples = 1024;
 	want.callback = FAudio_INTERNAL_MixCallback;
@@ -161,7 +167,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 	audio->mixFormat = &device->format;
 
 	/* Also give some info to the master voice */
-	audio->master->master.inputChannels = have.channels;
+	audio->master->outputChannels = have.channels;
 	audio->master->master.inputSampleRate = have.freq;
 
 	/* Start the thread! */

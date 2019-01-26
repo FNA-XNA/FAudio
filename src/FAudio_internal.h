@@ -388,6 +388,9 @@ struct FAudioVoice
 			/* Output stream, allocated by Platform */
 			float *output;
 
+			/* Needed when inputChannels != outputChannels */
+			float *effectCache;
+
 			/* Read-only */
 			uint32_t inputChannels;
 			uint32_t inputSampleRate;

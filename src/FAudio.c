@@ -588,6 +588,16 @@ uint32_t FAudio_CreateMasteringVoice(
 	FAudio_AddRef(audio);
 	FAudio_PlatformInit(audio, DeviceIndex);
 
+	/* Effect Chain Cache */
+	if ((*ppMasteringVoice)->master.inputChannels != (*ppMasteringVoice)->outputChannels)
+	{
+		(*ppMasteringVoice)->master.effectCache = (float*) audio->pMalloc(
+			sizeof(float) *
+			audio->updateSize *
+			(*ppMasteringVoice)->master.inputChannels
+		);
+	}
+
 	LOG_API_EXIT(audio)
 	return 0;
 }
