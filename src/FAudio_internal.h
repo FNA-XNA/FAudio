@@ -578,9 +578,11 @@ MIX_FUNC(Generic)
 MIX_FUNC(1in_1out)
 MIX_FUNC(1in_2out)
 MIX_FUNC(1in_6out)
+MIX_FUNC(1in_8out)
 MIX_FUNC(2in_1out)
 MIX_FUNC(2in_2out)
 MIX_FUNC(2in_6out)
+MIX_FUNC(2in_8out)
 #undef MIX_FUNC
 
 void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);

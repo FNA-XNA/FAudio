@@ -975,6 +975,10 @@ uint32_t FAudioVoice_SetOutputVoices(
 			{
 				voice->sendMix[i] = FAudio_INTERNAL_Mix_1in_6out_Scalar;
 			}
+			else if (outChannels == 8)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_1in_8out_Scalar;
+			}
 			else
 			{
 				voice->sendMix[i] = FAudio_INTERNAL_Mix_Generic_Scalar;
@@ -993,6 +997,10 @@ uint32_t FAudioVoice_SetOutputVoices(
 			else if (outChannels == 6)
 			{
 				voice->sendMix[i] = FAudio_INTERNAL_Mix_2in_6out_Scalar;
+			}
+			else if (outChannels == 8)
+			{
+				voice->sendMix[i] = FAudio_INTERNAL_Mix_2in_8out_Scalar;
 			}
 			else
 			{

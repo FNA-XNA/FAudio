@@ -1374,6 +1374,77 @@ void FAudio_INTERNAL_Mix_1in_6out_Scalar(
 	}
 }
 
+void FAudio_INTERNAL_Mix_1in_8out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict src,
+	float *restrict dst,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float totalVolume = baseVolume * channelVolume[0];
+	for (i = 0; i < toMix; i += 1, src += 1, dst += 8)
+	{
+		/* Base source data... */
+		const float sample = src[0] * totalVolume;
+
+		/* ... combined with the coefficients... */
+		dst[0] += sample * coefficients[0];
+		dst[1] += sample * coefficients[1];
+		dst[2] += sample * coefficients[2];
+		dst[3] += sample * coefficients[3];
+		dst[4] += sample * coefficients[4];
+		dst[5] += sample * coefficients[5];
+		dst[6] += sample * coefficients[6];
+		dst[7] += sample * coefficients[7];
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[1] = FAudio_clamp(
+			dst[1],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[2] = FAudio_clamp(
+			dst[2],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[3] = FAudio_clamp(
+			dst[3],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[4] = FAudio_clamp(
+			dst[4],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[5] = FAudio_clamp(
+			dst[5],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[6] = FAudio_clamp(
+			dst[6],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[7] = FAudio_clamp(
+			dst[7],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
 void FAudio_INTERNAL_Mix_2in_1out_Scalar(
 	uint32_t toMix,
 	uint32_t UNUSED1,
@@ -1520,6 +1591,103 @@ void FAudio_INTERNAL_Mix_2in_6out_Scalar(
 		);
 		dst[5] = FAudio_clamp(
 			dst[5],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+	}
+}
+
+void FAudio_INTERNAL_Mix_2in_8out_Scalar(
+	uint32_t toMix,
+	uint32_t UNUSED1,
+	uint32_t UNUSED2,
+	float baseVolume,
+	float *restrict src,
+	float *restrict dst,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i;
+	float totalVolumeL = baseVolume * channelVolume[0];
+	float totalVolumeR = baseVolume * channelVolume[1];
+	for (i = 0; i < toMix; i += 1, src += 2, dst += 8)
+	{
+		/* Base source data... */
+		const float left = src[0] * totalVolumeL;
+		const float right = src[1] * totalVolumeR;
+
+		/* ... combined with the coefficients... */
+		dst[0] += (
+			(left * coefficients[0]) +
+			(right * coefficients[1])
+		);
+		dst[1] += (
+			(left * coefficients[2]) +
+			(right * coefficients[3])
+		);
+		dst[2] += (
+			(left * coefficients[4]) +
+			(right * coefficients[5])
+		);
+		dst[3] += (
+			(left * coefficients[6]) +
+			(right * coefficients[7])
+		);
+		dst[4] += (
+			(left * coefficients[8]) +
+			(right * coefficients[9])
+		);
+		dst[5] += (
+			(left * coefficients[10]) +
+			(right * coefficients[11])
+		);
+		dst[6] += (
+			(left * coefficients[12]) +
+			(right * coefficients[13])
+		);
+		dst[7] += (
+			(left * coefficients[14]) +
+			(right * coefficients[15])
+		);
+
+		/* ... then clamped. */
+		dst[0] = FAudio_clamp(
+			dst[0],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[1] = FAudio_clamp(
+			dst[1],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[2] = FAudio_clamp(
+			dst[2],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[3] = FAudio_clamp(
+			dst[3],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[4] = FAudio_clamp(
+			dst[4],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[5] = FAudio_clamp(
+			dst[5],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[6] = FAudio_clamp(
+			dst[6],
+			-FAUDIO_MAX_VOLUME_LEVEL,
+			FAUDIO_MAX_VOLUME_LEVEL
+		);
+		dst[7] = FAudio_clamp(
+			dst[7],
 			-FAUDIO_MAX_VOLUME_LEVEL,
 			FAUDIO_MAX_VOLUME_LEVEL
 		);
