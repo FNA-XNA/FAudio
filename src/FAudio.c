@@ -1710,7 +1710,7 @@ void FAudioVoice_GetOutputMatrix(
 	}
 	else
 	{
-		FAudio_assert(DestinationChannels == voice->mix.inputChannels);
+		FAudio_assert(DestinationChannels == pDestinationVoice->mix.inputChannels);
 	}
 
 	/* Get the matrix values, finally */
