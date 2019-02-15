@@ -17,6 +17,13 @@ if(WIN32)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
 
+# C99 Requirement
+if(${CMAKE_VERSION} VERSION_LESS "3.1.3")
+	message("Your CMake version is too old, set -std=c99 yourself!")
+else()
+	set(CMAKE_C_STANDARD 99)
+endif()
+
 # Build Type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	# By default, we use Release
