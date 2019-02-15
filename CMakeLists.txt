@@ -1,6 +1,6 @@
 # CMake Project for FAudio
 # Written by @NeroBurner
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 2.8.12)
 project(FAudio)
 
 # Options
@@ -80,6 +80,9 @@ add_library(FAudio SHARED
 	src/FAudio_internal.c
 	src/FAudio_internal_simd.c
 	src/FAudio_platform_sdl2.c
+	# Optional source files
+	src/XNA_Song.c
+	src/FAudio_ffmpeg.c
 )
 
 # Only disable DebugConfiguration in release builds
@@ -104,15 +107,12 @@ if(MINGW)
 endif()
 
 # XNA_Song Support
-if(XNASONG)
-	target_sources(FAudio PRIVATE src/XNA_Song.c)
-endif(XNASONG)
+if(NOT XNASONG)
+	target_compile_definitions(FAudio PRIVATE DISABLE_XNASONG)
+endif()
 
 # FFmpeg Support
 if(FFMPEG)
-	# Add the extra file...
-	target_sources(FAudio PRIVATE src/FAudio_ffmpeg.c)
-
 	# Add the extra definition...
 	target_compile_definitions(FAudio PRIVATE HAVE_FFMPEG=1)
 

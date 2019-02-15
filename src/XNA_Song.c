@@ -24,6 +24,8 @@
  *
  */
 
+#ifndef DISABLE_XNASONG
+
 #include "FAudio_internal.h"
 
 /* stb_vorbis */
@@ -270,5 +272,7 @@ FAUDIOAPI void XNA_GetSongVisualizationData(
 ) {
 	/* TODO: Visualization FAPO that reads in Song samples, FFT analysis */
 }
+
+#endif /* DISABLE_XNASONG */
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */
