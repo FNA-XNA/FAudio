@@ -19,7 +19,7 @@ endif()
 
 # C99 Requirement
 if(${CMAKE_VERSION} VERSION_LESS "3.1.3")
-	message("Your CMake version is too old, set -std=c99 yourself!")
+	message(WARNING "Your CMake version is too old, set -std=c99 yourself!")
 else()
 	set(CMAKE_C_STANDARD 99)
 endif()
