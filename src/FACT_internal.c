@@ -81,6 +81,7 @@ void FACT_INTERNAL_GetNextWave(
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
 	float max, next;
+	uint8_t noTrackVariation = 1;
 	int32_t i;
 
 	/* Track Variation */
@@ -149,6 +150,11 @@ void FACT_INTERNAL_GetNextWave(
 			}
 		}
 
+		if (evt->wave.complex.variation & 0x00F0)
+		{
+			noTrackVariation = 0;
+		}
+
 		wbIndex = evt->wave.complex.wavebanks[evtInst->valuei];
 		wbTrack = evt->wave.complex.tracks[evtInst->valuei];
 	}
@@ -172,8 +178,8 @@ void FACT_INTERNAL_GetNextWave(
 
 	/* Generate the Wave */
 	if (	evtInst->loopCount == 255 &&
-		!(evt->wave.variationFlags & 0x0F00) &&
-		!(evt->wave.complex.variation & 0x00F0)	)
+		noTrackVariation &&
+		!(evt->wave.variationFlags & 0x0F00)	)
 	{
 		/* For infinite loops with no variation, let Wave do the work */
 		loopCount = 255;
