@@ -214,7 +214,11 @@ static void WINAPI VCB_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *iface)
 
 static void WINAPI VCB_OnStreamEnd(IXAudio2VoiceCallback *iface)
 {
-    ok(0, "Unexpected OnStreamEnd\n");
+    if(iface == &vcb1.IXAudio2VoiceCallback_iface){
+        ok(0, "Unexpected OnStreamEnd\n");
+    }else{
+        ok(!xaudio27 || pass_state == 3, "Callbacks called out of order: %u\n", pass_state);
+    }
 }
 
 static void WINAPI VCB_OnBufferStart(IXAudio2VoiceCallback *iface,
@@ -414,6 +418,7 @@ static void test_simple_streaming(IXAudio2 *xa)
     }
 
     memset(&buf2, 0, sizeof(buf2));
+    buf2.Flags = XAUDIO2_END_OF_STREAM;
     buf2.AudioBytes = 22050 * fmt.nBlockAlign;
     buf2.pAudioData = FAtest_malloc(buf2.AudioBytes);
     fill_buf((float*)buf2.pAudioData, &fmt, 220, 22050);
