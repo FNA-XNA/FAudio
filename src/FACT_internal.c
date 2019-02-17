@@ -1658,17 +1658,6 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		left
 	);
 
-	/* Last buffer in the stream? */
-	if (	buffer.AudioBytes < c->wave->streamSize &&
-		c->wave->loopCount == 0	)
-	{
-		buffer.Flags = FAUDIO_END_OF_STREAM;
-	}
-	else
-	{
-		buffer.Flags = 0;
-	}
-
 	/* Read! */
 	ovlp.Internal = NULL;
 	ovlp.InternalHigh = NULL;
@@ -1688,18 +1677,26 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		&read,
 		1
 	);
-
-	/* Loop if applicable */
 	c->wave->streamOffset += buffer.AudioBytes;
-	if (	c->wave->streamOffset >= end &&
-		c->wave->loopCount > 0	)
+
+	/* Last buffer in the stream? */
+	buffer.Flags = 0;
+	if (c->wave->streamOffset >= end)
 	{
-		if (c->wave->loopCount != 255)
+		/* Loop if applicable */
+		if (c->wave->loopCount > 0)
 		{
-			c->wave->loopCount -= 1;
+			if (c->wave->loopCount != 255)
+			{
+				c->wave->loopCount -= 1;
+			}
+			/* TODO: Loop start */
+			c->wave->streamOffset = entry->PlayRegion.dwOffset;
 		}
-		/* TODO: Loop start */
-		c->wave->streamOffset = entry->PlayRegion.dwOffset;
+		else
+		{
+			buffer.Flags = FAUDIO_END_OF_STREAM;
+		}
 	}
 
 	/* Unused properties */
