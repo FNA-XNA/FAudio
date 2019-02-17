@@ -171,7 +171,9 @@ void FACT_INTERNAL_GetNextWave(
 	FAudio_assert(wb != NULL);
 
 	/* Generate the Wave */
-	if (evtInst->loopCount == 255 && !(evt->wave.variationFlags & 0x0F00))
+	if (	evtInst->loopCount == 255 &&
+		!(evt->wave.variationFlags & 0x0F00) &&
+		!(evt->wave.complex.variation & 0x00F0)	)
 	{
 		/* For infinite loops with no variation, let Wave do the work */
 		loopCount = 255;
@@ -341,13 +343,10 @@ void FACT_INTERNAL_GetNextWave(
 	}
 
 	/* Try to change loop counter at the very end */
-	if (evtInst->loopCount == 255)
+	if (loopCount == 255)
 	{
 		/* For infinite loops with no variation, Wave does the work */
-		if (!(evt->wave.variationFlags & 0x0F00))
-		{
-			evtInst->loopCount = 0;
-		}
+		evtInst->loopCount = 0;
 	}
 	else if (evtInst->loopCount > 0)
 	{
