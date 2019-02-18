@@ -1579,7 +1579,10 @@ uint32_t FACTWaveBank_Prepare(
 		(*ppWave)->streamOffset = entry->PlayRegion.dwOffset;
 
 		/* TODO: Loop end, see FACT_INTERNAL_OnBufferEnd */
-		FAudio_assert(entry->LoopRegion.dwTotalSamples == entry->Duration);
+		FAudio_assert(
+			entry->LoopRegion.dwTotalSamples ==
+			(entry->Duration - entry->LoopRegion.dwStartSample)
+		);
 
 		/* Read and submit first buffer from the WaveBank */
 		FACT_INTERNAL_OnBufferEnd(&(*ppWave)->callback.callback, NULL);
