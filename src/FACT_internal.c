@@ -1690,8 +1690,27 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 			{
 				c->wave->loopCount -= 1;
 			}
-			/* TODO: Loop start */
 			c->wave->streamOffset = entry->PlayRegion.dwOffset;
+
+			/* Loop start */
+			if (entry->Format.wFormatTag == 0x0)
+			{
+				c->wave->streamOffset += (
+					entry->LoopRegion.dwStartSample *
+					entry->Format.nChannels *
+					(1 << entry->Format.wBitsPerSample)
+				);
+			}
+			else if (entry->Format.wFormatTag == 0x2)
+			{
+				c->wave->streamOffset += (
+					entry->LoopRegion.dwStartSample /
+					/* wSamplesPerBlock */
+					((entry->Format.wBlockAlign + 16) * 2) *
+					/* nBlockAlign */
+					((entry->Format.wBlockAlign + 22) * entry->Format.nChannels)
+				);
+			}
 		}
 		else
 		{

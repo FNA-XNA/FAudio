@@ -1568,14 +1568,17 @@ uint32_t FACTWaveBank_Prepare(
 		{
 			/* Screw it, load the whole thing */
 			(*ppWave)->streamSize = entry->PlayRegion.dwLength;
+
+			/* XACT does NOT support loop subregions for these formats */
+			FAudio_assert(entry->LoopRegion.dwStartSample == 0);
+			FAudio_assert(entry->LoopRegion.dwTotalSamples == entry->Duration);
 		}
 		(*ppWave)->streamCache = (uint8_t*) pWaveBank->parentEngine->pMalloc(
 			(*ppWave)->streamSize
 		);
 		(*ppWave)->streamOffset = entry->PlayRegion.dwOffset;
 
-		/* FIXME: Streaming doesn't support subregions right now >_< */
-		FAudio_assert(entry->LoopRegion.dwStartSample == 0);
+		/* TODO: Loop end, see FACT_INTERNAL_OnBufferEnd */
 		FAudio_assert(entry->LoopRegion.dwTotalSamples == entry->Duration);
 
 		/* Read and submit first buffer from the WaveBank */
