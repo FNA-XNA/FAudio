@@ -260,7 +260,7 @@ void stb_swap(void *p, void *q, size_t sz)
 //               Random Numbers via Meresenne Twister or LCG
 //
 
-STB_EXTERN unsigned int  stb_srandLCG(unsigned long seed);
+STB_EXTERN unsigned int  stb_srandLCG(unsigned int seed);
 STB_EXTERN unsigned int  stb_randLCG(void);
 
 STB_EXTERN void          stb_srand(unsigned int seed);
@@ -279,7 +279,7 @@ STB_EXTERN double        stb_frand(void);
 #ifdef STB_DEFINE
 static unsigned int  stb__rand_seed=0;
 
-unsigned int  stb_srandLCG(unsigned long seed)
+unsigned int  stb_srandLCG(unsigned int seed)
 {
    unsigned int  previous = stb__rand_seed;
    stb__rand_seed = seed;
