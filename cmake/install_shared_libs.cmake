@@ -42,7 +42,7 @@ function(install_shared_libs)
 		endif()
 
 		# got an absolute path for a library
-		string(REGEX MATCH "\.(dll.a$|lib$)" is_static "${lib}")
+		string(REGEX MATCH "\\.(dll.a$|lib$)" is_static "${lib}")
 		if(is_static)
 			# lib is a dynamic wrapper ending in .dll.a, search for the linked
 			# dll in the ../bin directory
@@ -59,7 +59,7 @@ function(install_shared_libs)
 				set(lib "${dyn_lib}")
 			endif()
 		endif()
-		string(REGEX MATCH "\.(so|dll$)" is_shared_lib "${lib}")
+		string(REGEX MATCH "\\.(so|dll$)" is_shared_lib "${lib}")
 		if(NOT is_shared_lib)
 			# don't install static libraries
 			message(STATUS "ignore static lib: ${lib}")
