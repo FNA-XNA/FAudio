@@ -1660,6 +1660,10 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 				((entry->Format.wBlockAlign + 22) * entry->Format.nChannels)
 			);
 		}
+		else
+		{
+			length = entry->PlayRegion.dwLength;
+		}
 	}
 	else
 	{
