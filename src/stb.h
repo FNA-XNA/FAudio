@@ -1,4 +1,4 @@
-/* stb.h - v2.31 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.32 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.32   stb_intcmprev, stb_uidict, fix random numbers on Linux
    2.31   stb_ucharcmp
    2.30   MinGW fix
    2.29   attempt to fix use of swprintf()
@@ -204,8 +205,6 @@ CREDITS
 
 /* In addition to trimming out all the stuff FAudio does not use, we are also
  * binding various stdlib functions stb.h uses to FAudio's stdlib.
- *
- * Also changed is the use of uint64_t instead of unsigned long.
  * -flibit
  */
 #ifndef FAUDIO_UNKNOWN_PLATFORM
@@ -261,95 +260,53 @@ void stb_swap(void *p, void *q, size_t sz)
 //               Random Numbers via Meresenne Twister or LCG
 //
 
-STB_EXTERN uint64_t stb_srandLCG(uint64_t seed);
-STB_EXTERN uint64_t stb_randLCG(void);
-STB_EXTERN double   stb_frandLCG(void);
+STB_EXTERN unsigned int  stb_srandLCG(unsigned long seed);
+STB_EXTERN unsigned int  stb_randLCG(void);
 
-STB_EXTERN void     stb_srand(uint64_t seed);
-STB_EXTERN uint64_t stb_rand(void);
-STB_EXTERN double   stb_frand(void);
-STB_EXTERN void     stb_shuffle(void *p, size_t n, size_t sz,
-                                        uint64_t seed);
-STB_EXTERN void stb_reverse(void *p, size_t n, size_t sz);
-
-STB_EXTERN uint64_t stb_randLCG_explicit(uint64_t seed);
+STB_EXTERN void          stb_srand(unsigned int seed);
+STB_EXTERN unsigned int  stb_rand(void);
+STB_EXTERN double        stb_frand(void);
 
 #define stb_rand_define(x,y)                                         \
                                                                      \
-   uint64_t x(void)                                                  \
+   unsigned int  x(void)                                             \
    {                                                                 \
-      static uint64_t stb__rand = y;                                 \
+      static unsigned int  stb__rand = y;                            \
       stb__rand = stb__rand * 2147001325 + 715136305; /* BCPL */     \
       return 0x31415926 ^ ((stb__rand >> 16) + (stb__rand << 16));   \
    }
 
 #ifdef STB_DEFINE
-uint64_t stb_randLCG_explicit(uint64_t seed)
-{
-   return seed * 2147001325 + 715136305;
-}
+static unsigned int  stb__rand_seed=0;
 
-static uint64_t stb__rand_seed=0;
-
-uint64_t stb_srandLCG(uint64_t seed)
+unsigned int  stb_srandLCG(unsigned long seed)
 {
-   uint64_t previous = stb__rand_seed;
+   unsigned int  previous = stb__rand_seed;
    stb__rand_seed = seed;
    return previous;
 }
 
-uint64_t stb_randLCG(void)
+unsigned int  stb_randLCG(void)
 {
    stb__rand_seed = stb__rand_seed * 2147001325 + 715136305; // BCPL generator
    // shuffle non-random bits to the middle, and xor to decorrelate with seed
    return 0x31415926 ^ ((stb__rand_seed >> 16) + (stb__rand_seed << 16));
 }
 
-double stb_frandLCG(void)
-{
-   return stb_randLCG() / ((double) (1 << 16) * (1 << 16));
-}
-
-void stb_shuffle(void *p, size_t n, size_t sz, uint64_t seed)
-{
-   char *a;
-   uint64_t old_seed;
-   int i;
-   if (seed)
-      old_seed = stb_srandLCG(seed);
-   a = (char *) p + (n-1) * sz;
-
-   for (i=n; i > 1; --i) {
-      int j = stb_randLCG() % i;
-      stb_swap(a, (char *) p + j * sz, sz);
-      a -= sz;
-   }
-   if (seed)
-      stb_srandLCG(old_seed);
-}
-
-void stb_reverse(void *p, size_t n, size_t sz)
-{
-   int i,j = n-1;
-   for (i=0; i < j; ++i,--j) {
-      stb_swap((char *) p + i * sz, (char *) p + j * sz, sz);
-   }
-}
-
 // public domain Mersenne Twister by Michael Brundage
 #define STB__MT_LEN       624
 
-int stb__mt_index = STB__MT_LEN*sizeof(uint64_t)+1;
-uint64_t stb__mt_buffer[STB__MT_LEN];
+int stb__mt_index = STB__MT_LEN*sizeof(int)+1;
+unsigned int stb__mt_buffer[STB__MT_LEN];
 
-void stb_srand(uint64_t seed)
+void stb_srand(unsigned int seed)
 {
    int i;
-   uint64_t old = stb_srandLCG(seed);
+   unsigned int old = stb_srandLCG(seed);
    for (i = 0; i < STB__MT_LEN; i++)
       stb__mt_buffer[i] = stb_randLCG();
    stb_srandLCG(old);
-   stb__mt_index = STB__MT_LEN*sizeof(uint64_t);
+   stb__mt_index = STB__MT_LEN*sizeof(unsigned int);
 }
 
 #define STB__MT_IA           397
@@ -360,15 +317,15 @@ void stb_srand(uint64_t seed)
 #define STB__TWIST(b,i,j)    ((b)[i] & STB__UPPER_MASK) | ((b)[j] & STB__LOWER_MASK)
 #define STB__MAGIC(s)        (((s)&1)*STB__MATRIX_A)
 
-uint64_t stb_rand()
+unsigned int stb_rand()
 {
-   uint64_t * b = stb__mt_buffer;
+   unsigned int  * b = stb__mt_buffer;
    int idx = stb__mt_index;
-   uint64_t s,r;
+   unsigned int  s,r;
    int i;
 	
-   if (idx >= STB__MT_LEN*sizeof(uint64_t)) {
-      if (idx > STB__MT_LEN*sizeof(uint64_t))
+   if (idx >= STB__MT_LEN*sizeof(unsigned int)) {
+      if (idx > STB__MT_LEN*sizeof(unsigned int))
          stb_srand(0);
       idx = 0;
       i = 0;
@@ -384,9 +341,9 @@ uint64_t stb_rand()
       s = STB__TWIST(b, STB__MT_LEN-1, 0);
       b[STB__MT_LEN-1] = b[STB__MT_IA-1] ^ (s >> 1) ^ STB__MAGIC(s);
    }
-   stb__mt_index = idx + sizeof(uint64_t);
+   stb__mt_index = idx + sizeof(unsigned int);
    
-   r = *(uint64_t *)((unsigned char *)b + idx);
+   r = *(unsigned int *)((unsigned char *)b + idx);
    
    r ^= (r >> 11);
    r ^= (r << 7) & 0x9D2C5680;
@@ -395,6 +352,12 @@ uint64_t stb_rand()
    
    return r;
 }
+
+double stb_frand(void)
+{
+   return stb_rand() / ((double) (1 << 16) * (1 << 16));
+}
+
 #endif
 
 #undef STB_EXTERN
