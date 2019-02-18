@@ -1553,8 +1553,7 @@ uint32_t FACTWaveBank_Prepare(
 		{
 			(*ppWave)->streamSize = (
 				format.wfx.nSamplesPerSec *
-				format.wfx.nChannels *
-				(format.wfx.wBitsPerSample / 8)
+				format.wfx.nBlockAlign
 			);
 		}
 		else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
