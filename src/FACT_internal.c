@@ -1634,15 +1634,41 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
 	FACTWaveBankEntry *entry;
 	FACTOverlapped ovlp;
-	uint32_t end, left, read;
+	uint32_t end, left, read, length;
 
 	entry = &c->wave->parentBank->entries[c->wave->index];
 
-	/* TODO: Loop regions */
-	end = entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength;
-	left = entry->PlayRegion.dwLength - (c->wave->streamOffset - entry->PlayRegion.dwOffset);
+	/* Calculate total bytes left in this wave iteration */
+	if (c->wave->loopCount > 0)
+	{
+		length = entry->LoopRegion.dwStartSample + entry->LoopRegion.dwTotalSamples;
+		if (entry->Format.wFormatTag == 0x0)
+		{
+			length = (
+				length *
+				entry->Format.nChannels *
+				(1 << entry->Format.wBitsPerSample)
+			);
+		}
+		else if (entry->Format.wFormatTag == 0x2)
+		{
+			length = (
+				length *
+				/* wSamplesPerBlock */
+				((entry->Format.wBlockAlign + 16) * 2) *
+				/* nBlockAlign */
+				((entry->Format.wBlockAlign + 22) * entry->Format.nChannels)
+			);
+		}
+	}
+	else
+	{
+		length = entry->PlayRegion.dwLength;
+	}
+	end = entry->PlayRegion.dwOffset + length;
+	left = length - (c->wave->streamOffset - entry->PlayRegion.dwOffset);
 
-	/* Don't bother if we're EOS or the Wave has stopped*/
+	/* Don't bother if we're EOS or the Wave has stopped */
 	if (	(c->wave->streamOffset >= end) ||
 		(c->wave->state & FACT_STATE_STOPPED)	)
 	{
