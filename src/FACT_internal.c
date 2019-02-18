@@ -1653,7 +1653,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 		else if (entry->Format.wFormatTag == 0x2)
 		{
 			length = (
-				length *
+				length /
 				/* wSamplesPerBlock */
 				((entry->Format.wBlockAlign + 16) * 2) *
 				/* nBlockAlign */
