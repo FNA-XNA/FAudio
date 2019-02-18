@@ -1635,10 +1635,8 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	FACTWaveBankEntry *entry;
 	FACTOverlapped ovlp;
 	uint32_t end, left, read;
-	uint16_t align;
 
 	entry = &c->wave->parentBank->entries[c->wave->index];
-	align = (entry->Format.wBlockAlign + 22) * entry->Format.nChannels;
 
 	/* TODO: Loop regions */
 	end = entry->PlayRegion.dwOffset + entry->PlayRegion.dwLength;
