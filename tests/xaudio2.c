@@ -185,7 +185,9 @@ static void WINAPI VCB_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *iface,
 
     /* Underrun allowance may vary, but 0.03 seconds buffered should be enough
      * to not require more bytes. */
-    if(state.SamplesPlayed < 22050 - 3 * 441){
+    if (state.BuffersQueued == 0){
+        ok(BytesRequired > 0, "No buffers queued, but no more bytes requested.\n");
+    }else if(state.SamplesPlayed < 22050 - 3 * 441){
         ok(BytesRequired == 0, "Plenty of data buffered, but more bytes requested. Buffered: %"PRIu64" samples, requested: %u bytes\n",
                 22050 - state.SamplesPlayed, BytesRequired);
     }else if(state.SamplesPlayed == 22050){
