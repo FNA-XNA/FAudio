@@ -794,6 +794,13 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Decode... */
 	FAudio_INTERNAL_DecodeBuffers(voice, &toDecode);
 
+	/* Subtract any padding samples from the total, if applicable */
+	if (	voice->src.curBufferOffsetDec > 0 &&
+		voice->src.totalSamples > 0	)
+	{
+		voice->src.totalSamples -= 1;
+	}
+
 	/* Okay, we're done messing with client data */
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
