@@ -1007,14 +1007,30 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Resample */
-	voice->mix.resample(
-		voice->mix.inputCache,
-		voice->audio->resampleCache,
-		&resampleOffset,
-		voice->mix.resampleStep,
-		voice->mix.outputSamples,
-		(uint8_t) voice->mix.inputChannels
-	);
+	if (voice->src.resampleStep == FIXED_ONE)
+	{
+		/* Actually, just copy directly... */
+		FAudio_memcpy(
+			voice->audio->resampleCache,
+			voice->mix.inputCache,
+			(size_t) (
+				voice->mix.outputSamples *
+				voice->mix.inputChannels *
+				sizeof(float)
+			)
+		);
+	}
+	else
+	{
+		voice->mix.resample(
+			voice->mix.inputCache,
+			voice->audio->resampleCache,
+			&resampleOffset,
+			voice->mix.resampleStep,
+			voice->mix.outputSamples,
+			(uint8_t) voice->mix.inputChannels
+		);
+	}
 	resampled = voice->mix.outputSamples * voice->mix.inputChannels;
 
 	/* Submix overall volume is applied _before_ effects/filters, blech! */
