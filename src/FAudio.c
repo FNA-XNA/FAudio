@@ -1060,17 +1060,23 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		voice->mix.outputSamples = newResampleSamples;
 
-		/* Init fixed-rate SRC if applicable */
-		if (voice->mix.resampler != NULL)
+		voice->mix.resampleStep = DOUBLE_TO_FIXED((
+			(double) voice->mix.inputSampleRate /
+			(double) outSampleRate
+		));
+
+		if (voice->mix.inputChannels == 1)
 		{
-			/* FIXME: This is lazy... */
-			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
+			voice->mix.resample = FAudio_INTERNAL_ResampleMono;
 		}
-		voice->mix.resampler = FAudio_PlatformInitFixedRateSRC(
-			voice->mix.inputChannels,
-			voice->mix.inputSampleRate,
-			outSampleRate
-		);
+		else if (voice->mix.inputChannels == 2)
+		{
+			voice->mix.resample = FAudio_INTERNAL_ResampleStereo;
+		}
+		else
+		{
+			voice->mix.resample = FAudio_INTERNAL_ResampleGeneric;
+		}
 	}
 
 	FAudio_PlatformUnlockMutex(voice->sendLock);
@@ -1772,10 +1778,6 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 
 		/* Delete submix data */
 		voice->audio->pFree(voice->mix.inputCache);
-		if (voice->mix.resampler != NULL)
-		{
-			FAudio_PlatformCloseFixedRateSRC(voice->mix.resampler);
-		}
 	}
 	else if (voice->type == FAUDIO_VOICE_MASTER)
 	{

@@ -993,6 +993,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	uint32_t oChan;
 	FAudioVoice *out;
 	uint32_t resampled;
+	uint64_t resampleOffset = 0;
 	float *effectOut;
 
 	LOG_FUNC_ENTER(voice->audio)
@@ -1005,14 +1006,16 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 		goto end;
 	}
 
-	/* Resample (if necessary) */
-	resampled = FAudio_PlatformResample(
-		voice->mix.resampler,
+	/* Resample */
+	voice->mix.resample(
 		voice->mix.inputCache,
-		voice->mix.inputSamples,
 		voice->audio->resampleCache,
-		voice->mix.outputSamples * voice->mix.inputChannels
+		&resampleOffset,
+		voice->mix.resampleStep,
+		voice->mix.outputSamples,
+		(uint8_t) voice->mix.inputChannels
 	);
+	resampled = voice->mix.outputSamples * voice->mix.inputChannels;
 
 	/* Submix overall volume is applied _before_ effects/filters, blech! */
 	if (voice->volume != 1.0f)

@@ -256,8 +256,6 @@ typedef void (FAUDIOCALL * FAudioMixCallback)(
 	float *restrict coefficients
 );
 
-typedef void* FAudioPlatformFixedRateSRC;
-
 typedef float FAudioFilterState[4];
 
 /* Public FAudio Types */
@@ -376,7 +374,8 @@ struct FAudioVoice
 			uint32_t inputSamples;
 			uint32_t outputSamples;
 			float *inputCache;
-			FAudioPlatformFixedRateSRC resampler;
+			uint64_t resampleStep;
+			FAudioResampleCallback resample;
 
 			/* Read-only */
 			uint32_t inputChannels;
@@ -627,20 +626,6 @@ uint32_t FAudio_PlatformGetDeviceCount(void);
 void FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
-);
-
-FAudioPlatformFixedRateSRC FAudio_PlatformInitFixedRateSRC(
-	uint32_t channels,
-	uint32_t inputRate,
-	uint32_t outputRate
-);
-void FAudio_PlatformCloseFixedRateSRC(FAudioPlatformFixedRateSRC resampler);
-uint32_t FAudio_PlatformResample(
-	FAudioPlatformFixedRateSRC resampler,
-	float *input,
-	uint32_t inLen,
-	float *output,
-	uint32_t outLen
 );
 
 /* Threading */
