@@ -718,7 +718,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	FAudioVoice *out;
 	uint32_t outputRate;
 	double stepd;
-	float *effectOut;
+	float *finalSamples;
 
 	LOG_FUNC_ENTER(voice->audio)
 
@@ -752,6 +752,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			voice->audio->resampleCache,
 			mixed * voice->src.format->nChannels * sizeof(float)
 		);
+		finalSamples = voice->audio->resampleCache;
 		goto sendwork;
 	}
 
@@ -835,12 +836,8 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* Resample... */
 	if (voice->src.resampleStep == FIXED_ONE)
 	{
-		/* Actually, just copy directly... */
-		FAudio_memcpy(
-			voice->audio->resampleCache,
-			voice->audio->decodeCache,
-			(size_t) toResample * voice->src.format->nChannels * sizeof(float)
-		);
+		/* Actually, just use the existing buffer... */
+		finalSamples = voice->audio->decodeCache;
 	}
 	else
 	{
@@ -852,6 +849,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			toResample,
 			(uint8_t) voice->src.format->nChannels
 		);
+		finalSamples = voice->audio->resampleCache;
 	}
 
 	/* Update buffer offsets */
@@ -904,7 +902,7 @@ sendwork:
 			voice->audio,
 			&voice->filter,
 			voice->filterState,
-			voice->audio->resampleCache,
+			finalSamples,
 			mixed,
 			voice->src.format->nChannels
 		);
@@ -913,7 +911,6 @@ sendwork:
 	}
 
 	/* Process effect chain */
-	effectOut = voice->audio->resampleCache;
 	FAudio_PlatformLockMutex(voice->effectLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->effectLock)
 	if (voice->effects.count > 0)
@@ -924,14 +921,14 @@ sendwork:
 		if (mixed < voice->src.resampleSamples)
 		{
 			FAudio_zero(
-				voice->audio->resampleCache + (mixed * voice->src.format->nChannels),
+				finalSamples + (mixed * voice->src.format->nChannels),
 				(voice->src.resampleSamples - mixed) * voice->src.format->nChannels * sizeof(float)
 			);
 			mixed = voice->src.resampleSamples;
 		}
-		effectOut = FAudio_INTERNAL_ProcessEffectChain(
+		finalSamples = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
-			voice->audio->resampleCache,
+			finalSamples,
 			&mixed
 		);
 	}
@@ -960,7 +957,7 @@ sendwork:
 			voice->outputChannels,
 			oChan,
 			voice->volume,
-			effectOut,
+			finalSamples,
 			stream,
 			voice->channelVolume,
 			voice->sendCoefficients[i]
@@ -994,7 +991,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	FAudioVoice *out;
 	uint32_t resampled;
 	uint64_t resampleOffset = 0;
-	float *effectOut;
+	float *finalSamples;
 
 	LOG_FUNC_ENTER(voice->audio)
 	FAudio_PlatformLockMutex(voice->sendLock);
@@ -1009,16 +1006,8 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	/* Resample */
 	if (voice->src.resampleStep == FIXED_ONE)
 	{
-		/* Actually, just copy directly... */
-		FAudio_memcpy(
-			voice->audio->resampleCache,
-			voice->mix.inputCache,
-			(size_t) (
-				voice->mix.outputSamples *
-				voice->mix.inputChannels *
-				sizeof(float)
-			)
-		);
+		/* Actually, just use the existing buffer... */
+		finalSamples = voice->mix.inputCache;
 	}
 	else
 	{
@@ -1030,6 +1019,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->mix.outputSamples,
 			(uint8_t) voice->mix.inputChannels
 		);
+		finalSamples = voice->audio->resampleCache;
 	}
 	resampled = voice->mix.outputSamples * voice->mix.inputChannels;
 
@@ -1037,7 +1027,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	if (voice->volume != 1.0f)
 	{
 		FAudio_INTERNAL_Amplify(
-			voice->audio->resampleCache,
+			finalSamples,
 			resampled,
 			voice->volume
 		);
@@ -1053,7 +1043,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->audio,
 			&voice->filter,
 			voice->filterState,
-			voice->audio->resampleCache,
+			finalSamples,
 			resampled,
 			voice->mix.inputChannels
 		);
@@ -1062,14 +1052,13 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Process effect chain */
-	effectOut = voice->audio->resampleCache;
 	FAudio_PlatformLockMutex(voice->effectLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->effectLock)
 	if (voice->effects.count > 0)
 	{
-		effectOut = FAudio_INTERNAL_ProcessEffectChain(
+		finalSamples = FAudio_INTERNAL_ProcessEffectChain(
 			voice,
-			voice->audio->resampleCache,
+			finalSamples,
 			&resampled
 		);
 	}
@@ -1098,7 +1087,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->outputChannels,
 			oChan,
 			1.0f,
-			effectOut,
+			finalSamples,
 			stream,
 			voice->channelVolume,
 			voice->sendCoefficients[i]
