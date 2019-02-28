@@ -879,7 +879,10 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		for (i = 0; i < voice->sends.SendCount; i += 1)
 		{
-			voice->audio->pFree(voice->sendFilterState[i]);
+			if (voice->sendFilterState[i] != NULL)
+			{
+				voice->audio->pFree(voice->sendFilterState[i]);
+			}
 		}
 		voice->audio->pFree(voice->sendFilterState);
 	}
@@ -930,15 +933,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 	voice->sendMix = (FAudioMixCallback*) voice->audio->pMalloc(
 		sizeof(FAudioMixCallback) * pSendList->SendCount
 	);
-	if (voice->flags & FAUDIO_VOICE_USEFILTER)
-	{
-		voice->sendFilter = (FAudioFilterParameters*) voice->audio->pMalloc(
-			sizeof(FAudioFilterParameters) * pSendList->SendCount
-		);
-		voice->sendFilterState = (FAudioFilterState**) voice->audio->pMalloc(
-			sizeof(FAudioFilterState*) * pSendList->SendCount
-		);
-	}
 	for (i = 0; i < pSendList->SendCount; i += 1)
 	{
 		if (pSendList->pSends[i].pOutputVoice->type == FAUDIO_VOICE_MASTER)
@@ -1012,8 +1006,27 @@ uint32_t FAudioVoice_SetOutputVoices(
 			voice->sendMix[i] = FAudio_INTERNAL_Mix_Generic_Scalar;
 		}
 
-		if (voice->flags & FAUDIO_VOICE_USEFILTER)
+		if (pSendList->pSends[i].Flags & FAUDIO_SEND_USEFILTER)
 		{
+			/* Allocate the whole send filter array if needed... */
+			if (voice->sendFilter == NULL)
+			{
+				voice->sendFilter = (FAudioFilterParameters*) voice->audio->pMalloc(
+					sizeof(FAudioFilterParameters) * pSendList->SendCount
+				);
+			}
+			if (voice->sendFilterState == NULL)
+			{
+				voice->sendFilterState = (FAudioFilterState**) voice->audio->pMalloc(
+					sizeof(FAudioFilterState*) * pSendList->SendCount
+				);
+				FAudio_zero(
+					voice->sendFilterState,
+					sizeof(FAudioFilterState*) * pSendList->SendCount
+				);
+			}
+
+			/* ... then fill in this send's filter data */
 			voice->sendFilter[i].Type = FAUDIO_DEFAULT_FILTER_TYPE;
 			voice->sendFilter[i].Frequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 			voice->sendFilter[i].OneOverQ = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
@@ -1395,6 +1408,22 @@ void FAudioVoice_GetFilterParameters(
 	FAudioFilterParameters *pParameters
 ) {
 	LOG_API_ENTER(voice->audio)
+
+	/* MSDN: "This method is usable only on source and submix voices and
+	 * has no effect on mastering voices."
+	 */
+	if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		LOG_API_EXIT(voice->audio)
+		return;
+	}
+
+	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
+	{
+		LOG_API_EXIT(voice->audio)
+		return;
+	}
+
 	FAudio_PlatformLockMutex(voice->filterLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->filterLock)
 	FAudio_memcpy(
@@ -1417,7 +1446,10 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
+	/* MSDN: "This method is usable only on source and submix voices and
+	 * has no effect on mastering voices."
+	 */
+	if (voice->type == FAUDIO_VOICE_MASTER)
 	{
 		LOG_API_EXIT(voice->audio)
 		return 0;
@@ -1452,6 +1484,14 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 		return FAUDIO_E_INVALID_CALL;
 	}
 
+	if (!(voice->sends.pSends[i].Flags & FAUDIO_SEND_USEFILTER))
+	{
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
+
 	/* Set the filter parameters, finally. */
 	FAudio_memcpy(
 		&voice->sendFilter[i],
@@ -1473,7 +1513,11 @@ void FAudioVoice_GetOutputFilterParameters(
 	uint32_t i;
 
 	LOG_API_ENTER(voice->audio)
-	if (!(voice->flags & FAUDIO_VOICE_USEFILTER))
+
+	/* MSDN: "This method is usable only on source and submix voices and
+	 * has no effect on mastering voices."
+	 */
+	if (voice->type == FAUDIO_VOICE_MASTER)
 	{
 		LOG_API_EXIT(voice->audio)
 		return;
@@ -1502,6 +1546,14 @@ void FAudioVoice_GetOutputFilterParameters(
 			voice,
 			pDestinationVoice
 		);
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
+		return;
+	}
+
+	if (!(voice->sends.pSends[i].Flags & FAUDIO_SEND_USEFILTER))
+	{
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 		LOG_API_EXIT(voice->audio)

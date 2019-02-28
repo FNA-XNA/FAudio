@@ -963,7 +963,7 @@ sendwork:
 			voice->sendCoefficients[i]
 		);
 
-		if (voice->flags & FAUDIO_VOICE_USEFILTER)
+		if (voice->sends.pSends[i].Flags & FAUDIO_SEND_USEFILTER)
 		{
 			FAudio_INTERNAL_FilterVoice(
 				voice->audio,
@@ -1093,7 +1093,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 			voice->sendCoefficients[i]
 		);
 
-		if (voice->flags & FAUDIO_VOICE_USEFILTER)
+		if (voice->sends.pSends[i].Flags & FAUDIO_SEND_USEFILTER)
 		{
 			FAudio_INTERNAL_FilterVoice(
 				voice->audio,
