@@ -351,7 +351,21 @@ uint32_t FAudio_CreateSourceVoice(
 		}
 		else if (COMPARE_GUID(IEEE_FLOAT))
 		{
-			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
+			/* FIXME: Weird behavior!
+			 * Prototype creates a source with the IEEE_FLOAT tag,
+			 * but it's actually PCM16. It seems to prioritize
+			 * wBitsPerSample over the format tag. Not sure if we
+			 * should fold this section into the section above...?
+			 * -flibit
+			 */
+			if (fmtex->Format.wBitsPerSample == 16)
+			{
+				(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM16;
+			}
+			else
+			{
+				(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
+			}
 		}
 		else if (	COMPARE_GUID(WMAUDIO2) ||
 				COMPARE_GUID(WMAUDIO3) ||
