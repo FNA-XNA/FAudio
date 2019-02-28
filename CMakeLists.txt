@@ -24,6 +24,12 @@ else()
 	set(CMAKE_C_STANDARD 99)
 endif()
 
+# Version
+SET(LIB_MAJOR_VERSION "0")
+SET(LIB_MINOR_VERSION "19")
+SET(LIB_REVISION "02")
+SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
+
 # Build Type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	# By default, we use Release
@@ -112,6 +118,12 @@ target_include_directories(FAudio PUBLIC
 if(MINGW)
 	target_link_libraries(FAudio PRIVATE -static-libgcc)
 endif()
+
+# Soname
+set_target_properties(FAudio PROPERTIES OUTPUT_NAME "FAudio"
+	VERSION ${LIB_VERSION}
+	SOVERSION ${LIB_MAJOR_VERSION}
+)
 
 # XNA_Song Support
 if(NOT XNASONG)
