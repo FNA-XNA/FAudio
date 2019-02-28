@@ -43,7 +43,13 @@ AudioVoice *xaudio_create_voice(AudioContext *p_context, float *p_buffer, size_t
 	waveFormat.cbSize = 0;
 
 	IXAudio2SourceVoice *voice;
-	HRESULT hr = p_context->xaudio2->CreateSourceVoice(&voice, &waveFormat, XAUDIO2_VOICE_USEFILTER, XAUDIO2_DEFAULT_FREQ_RATIO);
+	XAUDIO2_SEND_DESCRIPTOR send;
+	XAUDIO2_VOICE_SENDS sends;
+	sends.SendCount = 1;
+	sends.pSends = &send;
+	send.Flags = XAUDIO2_SEND_USEFILTER;
+	send.pOutputVoice = p_context->mastering_voice;
+	HRESULT hr = p_context->xaudio2->CreateSourceVoice(&voice, &waveFormat, XAUDIO2_VOICE_USEFILTER, XAUDIO2_DEFAULT_FREQ_RATIO, NULL, &sends);
 
 	if (FAILED(hr)) {
 		return NULL;

@@ -42,7 +42,13 @@ AudioVoice *faudio_create_voice(AudioContext *p_context, float *p_buffer, size_t
 	waveFormat.cbSize = 0;
 
 	FAudioSourceVoice *voice;
-	uint32_t hr = FAudio_CreateSourceVoice(p_context->faudio, &voice, &waveFormat, FAUDIO_VOICE_USEFILTER, FAUDIO_DEFAULT_FREQ_RATIO, NULL, NULL, NULL);
+	FAudioSendDescriptor send;
+	FAudioVoiceSends sends;
+	sends.SendCount = 1;
+	sends.pSends = &send;
+	send.Flags = FAUDIO_SEND_USEFILTER;
+	send.pOutputVoice = p_context->mastering_voice;
+	uint32_t hr = FAudio_CreateSourceVoice(p_context->faudio, &voice, &waveFormat, FAUDIO_VOICE_USEFILTER, FAUDIO_DEFAULT_FREQ_RATIO, NULL, &sends, NULL);
 
 	if (hr != 0) {
 		return NULL;
