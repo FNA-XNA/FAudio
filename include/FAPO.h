@@ -96,7 +96,10 @@ typedef struct FAPOProcessBufferParameters
 
 /* FAPO Interface */
 
+#ifndef FAPO_DECL
+#define FAPO_DECL
 typedef struct FAPO FAPO;
+#endif /* FAPO_DECL */
 
 typedef int32_t (FAPOCALL * AddRefFunc)(
 	void *fapo

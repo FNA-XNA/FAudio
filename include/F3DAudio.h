@@ -205,7 +205,12 @@ typedef struct F3DAUDIO_EMITTER
 	float DopplerScaler;
 } F3DAUDIO_EMITTER;
 
-typedef struct F3DAUDIO_DSP_SETTINGS
+#ifndef F3DAUDIO_DSP_SETTINGS_DECL
+#define F3DAUDIO_DSP_SETTINGS_DECL
+typedef struct F3DAUDIO_DSP_SETTINGS F3DAUDIO_DSP_SETTINGS;
+#endif /* F3DAUDIO_DSP_SETTINGS_DECL */
+
+struct F3DAUDIO_DSP_SETTINGS
 {
 	float *pMatrixCoefficients;
 	float *pDelayTimes;
@@ -219,7 +224,7 @@ typedef struct F3DAUDIO_DSP_SETTINGS
 	float EmitterToListenerDistance;
 	float EmitterVelocityComponent;
 	float ListenerVelocityComponent;
-} F3DAUDIO_DSP_SETTINGS;
+};
 
 #pragma pack(pop)
 

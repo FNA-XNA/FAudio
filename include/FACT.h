@@ -341,7 +341,7 @@ typedef struct FACTNotificationWave
 	FACTWave *pWave;
 } FACTNotificationWave;
 
-typedef struct FACTNotification
+struct FACTNotification
 {
 	uint8_t type;
 	int32_t timeStamp;
@@ -356,7 +356,7 @@ typedef struct FACTNotification
 		FACTNotificationGUI gui;
 		FACTNotificationWave wave;
 	};
-} FACTNotification;
+};
 
 #pragma pack(pop)
 
@@ -642,9 +642,10 @@ FACTAPI uint32_t FACTSoundBank_Play(
 	FACTCue** ppCue /* Optional! */
 );
 
-#ifndef F3DAUDIO_H
+#ifndef F3DAUDIO_DSP_SETTINGS_DECL
+#define F3DAUDIO_DSP_SETTINGS_DECL
 typedef struct F3DAUDIO_DSP_SETTINGS F3DAUDIO_DSP_SETTINGS;
-#endif
+#endif /* F3DAUDIO_DSP_SETTINGS_DECL */
 
 FACTAPI uint32_t FACTSoundBank_Play3D(
 	FACTSoundBank *pSoundBank,
