@@ -72,4 +72,9 @@
   <ItemGroup>
     <Compile Include="src\FAudio.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="FAudio-CS.dll.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
