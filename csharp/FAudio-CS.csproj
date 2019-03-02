@@ -70,7 +70,7 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Compile Include="src\FAudio.cs" />
+    <Compile Include="FAudio.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FAudio-CS.dll.config">
