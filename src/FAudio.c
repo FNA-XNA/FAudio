@@ -899,10 +899,12 @@ uint32_t FAudioVoice_SetOutputVoices(
 			}
 		}
 		voice->audio->pFree(voice->sendFilterState);
+		voice->sendFilterState = NULL;
 	}
 	if (voice->sends.pSends != NULL)
 	{
 		voice->audio->pFree(voice->sends.pSends);
+		voice->sends.pSends = NULL;
 	}
 
 	if (pSendList == NULL)
