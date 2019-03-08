@@ -888,6 +888,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	if (voice->sendFilter != NULL)
 	{
 		voice->audio->pFree(voice->sendFilter);
+		voice->sendFilter = NULL;
 	}
 	if (voice->sendFilterState != NULL)
 	{
@@ -904,7 +905,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 	if (voice->sends.pSends != NULL)
 	{
 		voice->audio->pFree(voice->sends.pSends);
-		voice->sends.pSends = NULL;
 	}
 
 	if (pSendList == NULL)
