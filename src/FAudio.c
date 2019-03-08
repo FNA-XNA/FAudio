@@ -1875,7 +1875,7 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		{
 			for (i = 0; i < voice->sends.SendCount; i += 1)
 			{
-				if (voice->audio->sendFilterState[i] != NULL)
+				if (voice->sendFilterState[i] != NULL)
 				{
 					voice->audio->pFree(voice->sendFilterState[i]);
 				}
