@@ -191,16 +191,22 @@ void FAudioFXVolumeMeter_GetParameters(
 	FAudio_assert(pParameters->ChannelCount == fapo->channels);
 
 	/* Copy what's current as of the last Process */
-	FAudio_memcpy(
-		pParameters->pPeakLevels,
-		levels->pPeakLevels,
-		fapo->channels * sizeof(float)
-	);
-	FAudio_memcpy(
-		pParameters->pRMSLevels,
-		levels->pRMSLevels,
-		fapo->channels * sizeof(float)
-	);
+	if (pParameters->pPeakLevels != NULL)
+	{
+		FAudio_memcpy(
+			pParameters->pPeakLevels,
+			levels->pPeakLevels,
+			fapo->channels * sizeof(float)
+		);
+	}
+	if (pParameters->pRMSLevels != NULL)
+	{
+		FAudio_memcpy(
+			pParameters->pRMSLevels,
+			levels->pRMSLevels,
+			fapo->channels * sizeof(float)
+		);
+	}
 }
 
 void FAudioFXVolumeMeter_Free(void* fapo)
