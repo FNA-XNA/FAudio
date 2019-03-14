@@ -39,7 +39,7 @@
 #endif
 #elif __MACOSX__
 #ifndef __SSE2__
-#error macOS doesn't have SSE2? Bad compiler? They actually moved to ARM?!
+#error macOS does not have SSE2? Bad compiler? They actually moved to ARM?!
 #endif
 #define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* Mac OS X/Intel guarantees SSE2. */
 #elif defined(__aarch64__) || defined(_M_ARM64)
