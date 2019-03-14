@@ -35,26 +35,24 @@
 #if defined(__x86_64__)
 #define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
 #ifndef __SSE2__ /* For some reason this is not always defined? -flibit */
-#  define __SSE2__
+#define __SSE2__
 #endif
 #elif __MACOSX__
+#ifndef __SSE2__
+#error macOS doesn't have SSE2? Bad compiler? They actually moved to ARM?!
+#endif
 #define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* Mac OS X/Intel guarantees SSE2. */
-#elif defined(__ARM_ARCH) && (__ARM_ARCH >= 8)
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* ARMv8+ promise NEON. */
-#elif defined(__APPLE__) && defined(__ARM_ARCH) && (__ARM_ARCH >= 7)
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* All Apple ARMv7 chips promise NEON support. */
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* AArch64 guarantees NEON. */
 #else
 #define NEED_SCALAR_CONVERTER_FALLBACKS 1
 #endif
 
-/* Some platforms fail to define __ARM_NEON__, others need it or arm_neon.h will fail. */
-#if (defined(__ARM_ARCH) || defined(_M_ARM))
-#  if !NEED_SCALAR_CONVERTER_FALLBACKS && !defined(__ARM_NEON__)
-#    define __ARM_NEON__ 1
-#  endif
+/* Our NEON paths require AArch64 */
+#if defined(__aarch64__) || defined(_M_ARM64)
+#ifndef __ARM_NEON__ /* Some platforms fail to define this... */
+#define __ARM_NEON__ 1
 #endif
-
-#ifdef __ARM_NEON__
 #include <arm_neon.h>
 #define HAVE_NEON_INTRINSICS 1
 #endif
