@@ -502,6 +502,20 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
 	(*ppSubmixVoice)->mix.processingStage = ProcessingStage;
 
+	/* Sample Storage */
+	(*ppSubmixVoice)->mix.inputSamples = (uint32_t) FAudio_ceil(
+		audio->updateSize *
+		(double) InputSampleRate /
+		(double) audio->master->master.inputSampleRate
+	) * InputChannels;
+	(*ppSubmixVoice)->mix.inputCache = (float*) audio->pMalloc(
+		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
+	);
+	FAudio_zero( /* Zero this now, for the first update */
+		(*ppSubmixVoice)->mix.inputCache,
+		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
+	);
+
 	/* Sends/Effects */
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
@@ -527,20 +541,6 @@ uint32_t FAudio_CreateSubmixVoice(
 			sizeof(FAudioFilterState) * InputChannels
 		);
 	}
-
-	/* Sample Storage */
-	(*ppSubmixVoice)->mix.inputSamples = (uint32_t) FAudio_ceil(
-		audio->updateSize *
-		(double) InputSampleRate /
-		(double) audio->master->master.inputSampleRate
-	) * InputChannels;
-	(*ppSubmixVoice)->mix.inputCache = (float*) audio->pMalloc(
-		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
-	);
-	FAudio_zero( /* Zero this now, for the first update */
-		(*ppSubmixVoice)->mix.inputCache,
-		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
-	);
 
 	/* Add to list, finally. */
 	FAudio_INTERNAL_InsertSubmixSorted(
@@ -862,6 +862,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	uint32_t channelCount;
 	uint32_t outSampleRate;
 	uint32_t newResampleSamples;
+	uint64_t resampleSanityCheck;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
 
@@ -1093,6 +1094,21 @@ uint32_t FAudioVoice_SetOutputVoices(
 			(double) voice->mix.inputSampleRate /
 			(double) outSampleRate
 		));
+
+		/* Because we used ceil earlier, there's a chance that
+		 * downsampling submixes will go past the number of samples
+		 * available. Sources can do this thanks to padding, but we
+		 * don't have that luxury for submixes, so unfortunately we
+		 * just have to undo the ceil and turn it into a floor.
+		 * -flibit
+		 */
+		resampleSanityCheck = (
+			voice->mix.resampleStep * voice->mix.outputSamples
+		) >> FIXED_PRECISION;
+		if (resampleSanityCheck > (voice->mix.inputSamples / voice->mix.inputChannels))
+		{
+			voice->mix.outputSamples -= 1;
+		}
 
 		if (voice->mix.inputChannels == 1)
 		{
