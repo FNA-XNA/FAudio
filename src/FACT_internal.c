@@ -1639,7 +1639,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	entry = &c->wave->parentBank->entries[c->wave->index];
 
 	/* Calculate total bytes left in this wave iteration */
-	if (c->wave->loopCount > 0)
+	if (c->wave->loopCount > 0 && entry->LoopRegion.dwTotalSamples > 0)
 	{
 		length = entry->LoopRegion.dwStartSample + entry->LoopRegion.dwTotalSamples;
 		if (entry->Format.wFormatTag == 0x0)
