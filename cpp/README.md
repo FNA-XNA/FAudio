@@ -35,13 +35,14 @@ i686-w64-mingw32-cmake -H. -B_build_mingw32 -DCMAKE_INSTALL_PREFIX="${PWD}/_faud
 Optional:
 
 - Optionally, you can enable FFmpeg support at cmake configure-time by adding `-DFFMPEG=ON`
-- When enabling FFMpeg support, if using a custom FFMpeg mingw build directory, you must also specify
-`-DFFmpeg_INCLUDE_DIR=` and  `-DFFmpeg_LIBRARIES=` with their respective paths.
+- When enabling FFMpeg support, you will want to download the latest official Windows Dev build for 64 or 32 bit, found here:  
+https://ffmpeg.zeranoe.com/builds/  
+- You will then want to extract it and specify the path to the include folder with `-DFFmpeg_INCLUDE_DIR=`
 
 Ex.
 ```
-x86_64-w64-mingw32-cmake -H. -B_build_mingw64 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw64" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=/mnt/Storage/Projects/Development/ffmpeg64-mingw/include -DFFmpeg_LIBRARIES=/mnt/Storage/Projects/Development/ffmpeg64-mingw/bin
-i686-w64-mingw32-cmake -H. -B_build_mingw32 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw32" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=/mnt/Storage/Projects/Development/ffmpeg32-mingw/include -DFFmpeg_LIBRARIES=/mnt/Storage/Projects/Development/ffmpeg32-mingw/bin
+x86_64-w64-mingw32-cmake -H. -B_build_mingw64 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw64" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=/ffmpeg-4.1.1-win64-dev/include/
+i686-w64-mingw32-cmake -H. -B_build_mingw32 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw32" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=/ffmpeg-4.1.1-win32-dev/include/
 ```
 
 
