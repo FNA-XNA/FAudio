@@ -30,7 +30,7 @@ function install_dll {
 	name=$1
 	
 	# update registry
-	log=$(wine reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v $name /d native /f 2>>/dev/null)
+	log=$(${wine_exe} reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v $name /d native /f 2>>/dev/null)
 
 	if [ $? -ne 0 ]; then
 		echo "Failed to update registry for $name"
