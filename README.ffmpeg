@@ -7,8 +7,15 @@ https://www.ffmpeg.org/legal.html
 Building with FFmpeg support on *nix platforms
 ----------------------------------------------
 Enable FFmpeg support at cmake configure-time with `-DFFMPEG=ON`.
-When enabling FFMpeg support, if using a custom FFMpeg mingw build directory, you must also specify 
-`-DFFmpeg_INCLUDE_DIR=` and `-DFFmpeg_LIBRARIES=` with their respective paths.
+When enabling FFMpeg support you must also specify 
+`-DFFmpeg_INCLUDE_DIR=`
+with the path to the system's ffmpeg include folder.
+
+Ex.  
+`-DFFmpeg_INCLUDE_DIR=/usr/include/`
+or
+`-DFFmpeg_INCLUDE_DIR=/usr/include/ffmpeg/`
+
 
 Building with FFmpeg support on Windows
 ---------------------------------------
