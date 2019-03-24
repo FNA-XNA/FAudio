@@ -144,7 +144,7 @@ if(FFMPEG)
 	)
 
 	# Include/Link FFmpeg...
-	target_include_directories(FAudio PRIVATE ${FFmpeg_INCLUDE_DIRS})
+	target_include_directories(FAudio PRIVATE ${FFmpeg_INCLUDE_DIR})
 	target_link_libraries(FAudio PRIVATE ${FFmpeg_LIBRARIES})
 
 	# Install FFmpeg for MinGW target
