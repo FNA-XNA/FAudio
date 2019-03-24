@@ -26,20 +26,33 @@ Because cross-compiling is fun.
 #### Building
 Use your cross compilation cmake toolchain to configure the build. Use `i686-w64-mingw32-cmake` to build 32-bit and `x86_64-w64-mingw32-cmake` to build 64-bit libraries.
 ```
-x86_64-w64-mingw32-cmake -H. -B_build_mingw -DCMAKE_INSTALL_PREFIX="${PWD}/_install_mingw" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON
+x86_64-w64-mingw32-cmake -H. -B_build_mingw64 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw64" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON
+i686-w64-mingw32-cmake -H. -B_build_mingw32 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw32" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON
 ```
-
-- Optionally enable FFmpeg support at cmake configure-time by adding `-DFFMPEG=ON`
 - `-DBUILD_CPP=ON` enables compilation of the C++/COM wrapper
 - `-DINSTALL_MINGW_DEPENDENCIES` adds runtime dynamic libraries like `SDL2.dll` and `winpthread-1.dll` to the install target
 
-After the configuration is done the following command starts the cross-compilation of both FAudio and C++/COM wrapper:
+Optional:
+
+- Optionally, you can enable FFmpeg support at cmake configure-time by adding `-DFFMPEG=ON`
+- When enabling FFMpeg support, if using a custom FFMpeg mingw build directory, you must also specify
+`-DFFmpeg_INCLUDE_DIR=` and  `-DFFmpeg_LIBRARIES=` with their respective paths.
+
+Ex.
 ```
-cmake --build _build_mingw --target install -- -j
+x86_64-w64-mingw32-cmake -H. -B_build_mingw64 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw64" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=/mnt/Storage/Projects/Development/ffmpeg64-mingw/include -DFFmpeg_LIBRARIES=/mnt/Storage/Projects/Development/ffmpeg64-mingw/bin
+i686-w64-mingw32-cmake -H. -B_build_mingw32 -DCMAKE_INSTALL_PREFIX="${PWD}/_faudio_mingw32" -DBUILD_CPP=ON -DINSTALL_MINGW_DEPENDENCIES=ON -DFFMPEG=ON -DFFmpeg_INCLUDE_DIR=/mnt/Storage/Projects/Development/ffmpeg32-mingw/include -DFFmpeg_LIBRARIES=/mnt/Storage/Projects/Development/ffmpeg32-mingw/bin
+```
+
+
+After the configuration is done the following command(s) starts the cross-compilation of both FAudio and C++/COM wrapper:
+```
+cmake --build _build_mingw64 --target install -- -j
+cmake --build _build_mingw32 --target install -- -j
 ```
 
 - `-- -j` passes the `-j` flag to the `make` command to speed up compilation
-- the results are installed to the `_install_mingw` subdirectory
+- the results are installed to the `_install_mingw64/32` subdirectories
 
 
 ## Using the wrapper
