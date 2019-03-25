@@ -1645,6 +1645,12 @@ uint32_t FAudioVoice_SetChannelVolumes(
 		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
 	}
+	
+	if (!voice->channelVolume)
+	{
+		LOG_API_EXIT(voice->audio)
+		return FAUDIO_E_INVALID_CALL;
+	}
 
 	if (voice->audio->version > 7 && Channels != voice->outputChannels)
 	{
