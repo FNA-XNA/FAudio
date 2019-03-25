@@ -868,7 +868,11 @@ uint32_t FAudioVoice_SetOutputVoices(
 
 	LOG_API_ENTER(voice->audio)
 
-	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
+	if (voice->type == FAUDIO_VOICE_MASTER)
+	{
+		LOG_API_EXIT(voice->audio)
+		return FAUDIO_E_INVALID_CALL;
+	}
 
 	FAudio_PlatformLockMutex(voice->sendLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
@@ -1637,10 +1641,15 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(voice->type != FAUDIO_VOICE_MASTER);
 	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
 
-	if (!pVolumes)
+	if (pVolumes == NULL)
+	{
+		LOG_API_EXIT(voice->audio)
+		return FAUDIO_E_INVALID_CALL;
+	}
+
+	if (voice->type == FAUDIO_VOICE_MASTER)
 	{
 		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
