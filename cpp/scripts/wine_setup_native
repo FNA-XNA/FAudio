@@ -88,6 +88,10 @@ if [ -f "$dll_path/iconv.dll" ];then
 	ln -sf "$dll_path/iconv.dll" "$wine_path/iconv.dll"
 fi
 
+if [ -f "$dll_path/libiconv-2.dll" ];then 
+	ln -sf "$dll_path/libiconv-2.dll" "$wine_path/libiconv-2.dll"
+fi
+
 if [ -f "$dll_path/avcodec-58.dll" ];then 
 	ln -sf "$dll_path/avcodec-58.dll" "$wine_path/avcodec-58.dll"
 fi
