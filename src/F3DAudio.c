@@ -947,6 +947,7 @@ static inline void ComputeEmitterChannelCoefficients(
 	float innerRadius,
 	F3DAUDIO_VECTOR channelPosition,
 	float attenuation,
+	float LFEattenuation,
 	uint32_t flags,
 	uint32_t currentChannel,
 	uint32_t numSrcChannels,
@@ -1124,7 +1125,7 @@ static inline void ComputeEmitterChannelCoefficients(
 	if (flags & F3DAUDIO_CALCULATE_REDIRECT_TO_LFE)
 	{
 		FAudio_assert(curConfig->LFSpeakerIdx != -1);
-		pMatrixCoefficients[curConfig->LFSpeakerIdx * numSrcChannels + currentChannel] += attenuation;
+		pMatrixCoefficients[curConfig->LFSpeakerIdx * numSrcChannels + currentChannel] += LFEattenuation / numSrcChannels;
 	}
 }
 
@@ -1288,6 +1289,7 @@ static inline void CalculateMatrix(
 				pEmitter->InnerRadius,
 				listenerToEmChannel,
 				attenuation,
+				LFEattenuation,
 				Flags,
 				0 /* currentChannel */,
 				1 /* numSrcChannels */,
@@ -1330,6 +1332,7 @@ static inline void CalculateMatrix(
 						pEmitter->InnerRadius,
 						listenerToEmChannel,
 						attenuation,
+						LFEattenuation,
 						Flags,
 						iEC,
 						pEmitter->ChannelCount,
