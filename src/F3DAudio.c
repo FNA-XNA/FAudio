@@ -1007,7 +1007,7 @@ static inline void ComputeEmitterChannelCoefficients(
 		for (iS = 0; iS < curConfig->numNonLFSpeakers; iS += 1)
 		{
 			const uint32_t curSpeakerIdx = curConfig->speakers[iS].matrixIdx;
-			if (skipCenter && iS == centerChannelIdx)
+			if (skipCenter && curSpeakerIdx == centerChannelIdx)
 			{
 				continue;
 			}
