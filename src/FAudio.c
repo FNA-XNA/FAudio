@@ -859,7 +859,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 ) {
 	uint32_t i;
 	uint32_t outChannels;
-	uint32_t channelCount;
+	uint32_t channelCount = 0;
 	uint32_t outSampleRate;
 	uint32_t newResampleSamples;
 	uint64_t resampleSanityCheck;
