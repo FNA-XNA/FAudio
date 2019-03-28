@@ -491,7 +491,7 @@ static void test_simple_streaming(IXAudio2 *xa)
     else
         IXAudio2SourceVoice_GetState(src, &state, 0);
     ok(state.SamplesPlayed == 22050, "Got wrong samples played after stop\n");
-    hr = IXAudio2SourceVoice_Start(src2, 0, XAUDIO2_COMMIT_NOW);
+    hr = IXAudio2SourceVoice_Start(src, 0, XAUDIO2_COMMIT_NOW);
     if(xaudio27)
         IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)src, &state);
     else
@@ -504,6 +504,12 @@ static void test_simple_streaming(IXAudio2 *xa)
     else
         IXAudio2SourceVoice_GetState(src, &state, 0);
     ok(state.SamplesPlayed == 22050, "Got wrong samples played after stop start and flush\n");
+    hr = IXAudio2SourceVoice_Start(src, 0, XAUDIO2_COMMIT_NOW);
+    if(xaudio27)
+        IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)src, &state);
+    else
+        IXAudio2SourceVoice_GetState(src, &state, 0);
+    ok(state.SamplesPlayed == 22050, "Got wrong samples played after stop start flush and start\n");
 
     FAtest_free((void*)buf.pAudioData);
     FAtest_free((void*)buf2.pAudioData);
