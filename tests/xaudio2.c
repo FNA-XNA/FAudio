@@ -1308,7 +1308,7 @@ int main(int argc, char **argv)
 
     if(hr == S_OK){
         xaudio27 = FALSE;
-        has_devices = test_DeviceDetails(xa);
+        has_devices = test_DeviceDetails((IXAudio27*)xa);
         if(has_devices){
             test_simple_streaming(xa);
             test_buffer_callbacks(xa);
