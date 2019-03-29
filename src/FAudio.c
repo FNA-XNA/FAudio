@@ -52,6 +52,18 @@ MAKE_SUBFORMAT_GUID(WMAUDIO3, FAUDIO_FORMAT_WMAUDIO3);
 MAKE_SUBFORMAT_GUID(WMAUDIO_LOSSLESS, FAUDIO_FORMAT_WMAUDIO_LOSSLESS);
 #undef MAKE_SUBFORMAT_GUID
 
+#ifdef FAUDIO_DUMP_VOICES
+static void FAudio_DUMPVOICE_Init(const FAudioSourceVoice *voice);
+static void FAudio_DUMPVOICE_Finalize(const FAudioSourceVoice *voice);
+static void FAudio_DUMPVOICE_WriteBuffer(
+	const FAudioSourceVoice *voice,
+	const FAudioBuffer *pBuffer,
+	const FAudioBufferWMA *pBufferWMA,
+	const uint32_t playBegin,
+	const uint32_t playLength
+);
+#endif /* FAUDIO_DUMP_VOICES */
+
 /* FAudio Version */
 
 uint32_t FAudioLinkedVersion(void)
@@ -509,6 +521,10 @@ uint32_t FAudio_CreateSourceVoice(
 		audio->pMalloc
 	);
 	FAudio_AddRef(audio);
+
+#ifdef FAUDIO_DUMP_VOICES
+	FAudio_DUMPVOICE_Init(*ppSourceVoice);
+#endif /* FAUDIO_DUMP_VOICES */
 
 	LOG_API_EXIT(audio)
 	return 0;
@@ -2049,6 +2065,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	{
 		FAudioBufferEntry *entry, *next;
 
+#ifdef FAUDIO_DUMP_VOICES
+		FAudio_DUMPVOICE_Finalize((FAudioSourceVoice*) voice);
+#endif /* FAUDIO_DUMP_VOICES */
+
 		FAudio_PlatformLockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 		while (voice == voice->audio->processingSource)
@@ -2392,6 +2412,14 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		entry->buffer.LoopCount = 0;
 	}
 
+#ifdef FAUDIO_DUMP_VOICES
+	/* dumping current buffer, append into "data" section */
+	if (pBuffer->pAudioData != NULL && playLength > 0)
+	{
+		FAudio_DUMPVOICE_WriteBuffer(voice, pBuffer, pBufferWMA, playBegin, playLength);
+	}
+#endif /* FAUDIO_DUMP_VOICES */
+
 	/* Submit! */
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
@@ -2706,5 +2734,290 @@ FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
 	LOG_API_EXIT(voice->audio)
 	return 0;
 }
+
+#ifdef FAUDIO_DUMP_VOICES
+
+static inline FAudioIOStreamOut *DumpVoices_fopen(
+	const FAudioSourceVoice *voice,
+	const FAudioWaveFormatEx *format,
+	const char *mode,
+	const char *ext
+) {
+	char loc[64];
+	uint16_t format_tag = format->wFormatTag;
+	uint16_t format_ex_tag = 0;
+	if (format->wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
+	{
+		/* get the GUID of the extended subformat */
+		const FAudioWaveFormatExtensible *format_ex =
+				(const FAudioWaveFormatExtensible*) format;
+		format_ex_tag = (uint16_t) (format_ex->SubFormat.Data1);
+	}
+	if (format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
+	{
+		format_tag = FAUDIO_FORMAT_EXTENSIBLE;
+		format_ex_tag = FAUDIO_FORMAT_WMAUDIO2;
+	}
+	FAudio_snprintf(
+		loc,
+		sizeof(loc),
+		"FA_fmt_0x%04X_0x%04X_0x%016lX%s.wav",
+		format_tag,
+		format_ex_tag,
+		(uint64_t) voice,
+		ext
+	);
+	FAudioIOStreamOut *fileOut = FAudio_fopen_out(loc, mode);
+	return fileOut;
+}
+
+static inline void DumpVoices_finalize_section(
+	const FAudioSourceVoice *voice,
+	const FAudioWaveFormatEx *format,
+	const char *section /* one of "data" or "dpds" */
+) {
+	/* data file only contains the real data bytes */
+	FAudioIOStreamOut *io_data = DumpVoices_fopen(voice, format, "rb", section);
+	if (!io_data)
+	{
+		return;
+	}
+	FAudio_PlatformLockMutex((FAudioMutex) io_data->lock);
+	size_t file_size_data = io_data->size(io_data->data);
+	if (file_size_data == 0)
+	{
+		/* nothing to do */
+		/* close data file */
+		FAudio_PlatformUnlockMutex((FAudioMutex) io_data->lock);
+		FAudio_close_out(io_data);
+		return;
+	}
+
+	/* we got some data: append data section to main file */
+	FAudioIOStreamOut *io = DumpVoices_fopen(voice, format, "ab", "");
+	if (!io)
+	{
+		/* close data file */
+		FAudio_PlatformUnlockMutex((FAudioMutex) io_data->lock);
+		FAudio_close_out(io_data);
+		return;
+	}
+
+	/* data sub-chunk - 8 bytes + data */
+	/* SubChunk2ID - 4 --> "data" or "dpds" */
+	io->write(io->data, section, 4, 1);
+	/* Subchunk2Size - 4 */
+	uint32_t chunk_size = (uint32_t)file_size_data;
+	io->write(io->data, &chunk_size, 4, 1);
+	/* data */
+	/* fill in data bytes */
+	uint8_t buffer[1024*1024];
+	size_t count;
+	while((count = io_data->read(io_data->data, (void*) buffer, 1, 1024*1024)) > 0)
+	{
+		io->write(io->data, (void*) buffer, 1, count);
+	}
+
+	/* close data file */
+	FAudio_PlatformUnlockMutex((FAudioMutex) io_data->lock);
+	FAudio_close_out(io_data);
+	/* close main file */
+	FAudio_PlatformUnlockMutex((FAudioMutex) io->lock);
+	FAudio_close_out(io);
+}
+
+static void FAudio_DUMPVOICE_Init(const FAudioSourceVoice *voice)
+{
+	const FAudioWaveFormatEx *format = voice->src.format;
+
+	FAudioIOStreamOut *io = DumpVoices_fopen(voice, format, "wb", "");
+	if (!io)
+	{
+		return;
+	}
+	FAudio_PlatformLockMutex((FAudioMutex) io->lock);
+	/* another GREAT ressource
+	 * https://wiki.multimedia.cx/index.php/Microsoft_xWMA
+	 */
+
+
+	/* wave file format taken from
+	 * http://soundfile.sapp.org/doc/WaveFormat
+	 * https://sites.google.com/site/musicgapi/technical-documents/wav-file-format
+	 * |52 49|46 46|52 4A|02 00|
+	 * |c1 sz|af|nc|sp rt|bt rt|
+	 * |ba|bs|da ta|c2 sz|
+
+	 * | R  I  F  F  |chunk size  |W  A  V  E  |f  m  t     |
+	 *                19026
+	 * | 52 49 46 46  52 4A 02 00  57 41 56 45  66 6D 74 20 | RIFFRJ..WAVEfmt
+
+	 * | subchnk size|fmt  |nChan |samplerate  |byte rate   |
+	 * | 50          | 2   |2     |11025       |11289       |
+	 * | 32 00 00 00  02 00 02 00  11 2B 00 00  19 2C 00 00 | 2........+...,..
+
+	 * |blkaln|bps   |efmt |XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX|
+	 * | 512  |4     |32   |500   |7    |256   |0    |512   |
+	 * | 512  |4     |32   |459252      |256         |
+	 * | 00 02|04 00  20 00 F4 01  07 00 00 01  00 00 00 02 | .... .ô.........
+
+	 * | XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX |
+	 * |
+	 * | 00 FF 00 00  00 00 C0 00  40 00 F0 00  00 00 CC 01 | .ÿ....À.@.ð...Ì.
+
+	 * | XXXXXXXXXXXXXXXXXX|d  a   t  a |chunk size  |XXXXX |
+	 * |                   |            |18944       |      |
+	 * | 30 FF 88 01  18 FF 64 61  74 61 00 4A  02 00 00 00 | 0ÿ...ÿdata.J....
+	 */
+
+
+	{ /* RIFF chunk descriptor - 12 byte */
+		/* ChunkID - 4 */
+		io->write(io->data, "RIFF", 4, 1);
+		/* ChunkSize - 4 */
+		uint32_t filesize = 0; /* the real file size is written in finalize step */
+		io->write(io->data, &filesize, 4, 1);
+		/* Format - 4 */
+		io->write(io->data, "WAVE", 4, 1);
+	}
+	{ /* fmt sub-chunk 24 */
+		/* Subchunk1ID - 4 */
+		io->write(io->data, "fmt ", 4, 1);
+		/* Subchunk1Size - 4 */
+		/* 18 byte for WAVEFORMATEX and cbSize for WAVEFORMATEXTENDED */
+		uint32_t chunk_data_size = 18 + (uint32_t) format->cbSize;
+		io->write(io->data, &chunk_data_size, 4, 1);
+		/* AudioFormat - 2 */
+		io->write(io->data, &format->wFormatTag, 2, 1);
+		/* NumChannels - 2 */
+		io->write(io->data, &format->nChannels, 2, 1);
+		/* SampleRate - 4 */
+		io->write(io->data, &format->nSamplesPerSec, 4, 1);
+		/* ByteRate - 4 */
+		/* SampleRate * NumChannels * BitsPerSample/8 */
+		io->write(io->data, &format->nAvgBytesPerSec, 4, 1);
+		/* BlockAlign - 2 */
+		/* NumChannels * BitsPerSample/8 */
+		io->write(io->data, &format->nBlockAlign, 2, 1);
+		/* BitsPerSample - 2 */
+		io->write(io->data, &format->wBitsPerSample, 2, 1);
+	}
+	/* in case of extensible audio format write the additional data to the file */
+	{
+		/* always write the cbSize */
+		io->write(io->data, &format->cbSize, 2, 1);
+
+		if (format->cbSize >= 22)
+		{
+			/* we have a WAVEFORMATEXTENSIBLE struct to write */
+			const FAudioWaveFormatExtensible *format_ex =
+					(const FAudioWaveFormatExtensible*) format;
+			io->write(io->data, &format_ex->Samples.wValidBitsPerSample, 2, 1);
+			io->write(io->data, &format_ex->dwChannelMask,   4, 1);
+			/* write FAudioGUID */
+			io->write(io->data, &format_ex->SubFormat.Data1, 4, 1);
+			io->write(io->data, &format_ex->SubFormat.Data2, 2, 1);
+			io->write(io->data, &format_ex->SubFormat.Data3, 2, 1);
+			io->write(io->data, &format_ex->SubFormat.Data4, 1, 8);
+		}
+		if (format->cbSize > 22)
+		{
+			/* fill up the remaining cbSize bytes with zeros */
+			uint8_t zero = 0;
+			for (uint16_t i=23; i<=format->cbSize; i++)
+			{
+				io->write(io->data, &zero, 1, 1);
+			}
+		}
+	}
+	{ /* dpds sub-chunk - optional - 8 bytes + bufferWMA uint32_t samples */
+		/* create file to hold the bufferWMA samples */
+		FAudioIOStreamOut *io_dpds = DumpVoices_fopen(voice, format, "wb", "dpds");
+		FAudio_close_out(io_dpds);
+		/* io_dpds file will be filled by SubmitBuffer */
+	}
+	{ /* data sub-chunk - 8 bytes + data */
+		/* create file to hold the data samples */
+		FAudioIOStreamOut *io_data = DumpVoices_fopen(voice, format, "wb", "data");
+		FAudio_close_out(io_data);
+		/* io_data file will be filled by SubmitBuffer */
+	}
+	FAudio_PlatformUnlockMutex((FAudioMutex) io->lock);
+	FAudio_close_out(io);
+}
+
+static void FAudio_DUMPVOICE_Finalize(const FAudioSourceVoice *voice)
+{
+	const FAudioWaveFormatEx *format = voice->src.format;
+
+	/* add dpds subchunk - optional */
+	DumpVoices_finalize_section(voice, format, "dpds");
+	/* add data subchunk */
+	DumpVoices_finalize_section(voice, format, "data");
+
+	/* open main file to update filesize */
+	FAudioIOStreamOut *io = DumpVoices_fopen(voice, format, "r+b", "");
+	if (!io)
+	{
+		return;
+	}
+	FAudio_PlatformLockMutex((FAudioMutex) io->lock);
+	size_t file_size = io->size(io->data);
+	if (file_size >= 44)
+	{
+		/* update filesize */
+		uint32_t chunk_size = (uint32_t)(file_size - 8);
+		io->seek(io->data, 4, FAUDIO_SEEK_SET);
+		io->write(io->data, &chunk_size, 4, 1);
+	}
+	FAudio_PlatformUnlockMutex((FAudioMutex) io->lock);
+	FAudio_close_out(io);
+}
+
+static void FAudio_DUMPVOICE_WriteBuffer(
+	const FAudioSourceVoice *voice,
+	const FAudioBuffer *pBuffer,
+	const FAudioBufferWMA *pBufferWMA,
+	const uint32_t playBegin,
+	const uint32_t playLength
+) {
+	FAudioIOStreamOut *io_data = DumpVoices_fopen(voice, voice->src.format, "ab", "data");
+	if (io_data == NULL)
+	{
+		return;
+	}
+
+	FAudio_PlatformLockMutex((FAudioMutex) io_data->lock);
+	if (pBufferWMA != NULL)
+	{
+		/* dump encoded buffer contents */
+		if (pBufferWMA->PacketCount > 0)
+		{
+			FAudioIOStreamOut *io_dpds = DumpVoices_fopen(voice, voice->src.format, "ab", "dpds");
+			if (io_dpds)
+			{
+				FAudio_PlatformLockMutex((FAudioMutex) io_dpds->lock);
+				/* write to dpds file */
+				io_dpds->write(io_dpds->data, pBufferWMA->pDecodedPacketCumulativeBytes, sizeof(uint32_t), pBufferWMA->PacketCount);
+				FAudio_PlatformUnlockMutex((FAudioMutex) io_dpds->lock);
+				FAudio_close_out(io_dpds);
+			}
+			/* write buffer contents to data file */
+			io_data->write(io_data->data, pBuffer->pAudioData, sizeof(uint8_t), pBuffer->AudioBytes);
+		}
+	}
+	else
+	{
+		/* dump unencoded buffer contents */
+		uint16_t bytesPerFrame = (voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8);
+		FAudio_assert(bytesPerFrame > 0);
+		const void *pAudioDataBegin = pBuffer->pAudioData + playBegin*bytesPerFrame;
+		io_data->write(io_data->data, pAudioDataBegin, bytesPerFrame, playLength);
+	}
+	FAudio_PlatformUnlockMutex((FAudioMutex) io_data->lock);
+	FAudio_close_out(io_data);
+}
+
+#endif /* FAUDIO_DUMP_VOICES */
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */
