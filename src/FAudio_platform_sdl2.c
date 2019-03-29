@@ -322,6 +322,31 @@ void FAudio_close(FAudioIOStream *io)
 	FAudio_free(io);
 }
 
+#ifdef FAUDIO_DUMP_VOICES
+FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
+{
+	FAudioIOStreamOut *io = (FAudioIOStreamOut*) SDL_malloc(
+		sizeof(FAudioIOStreamOut)
+	);
+	SDL_RWops *rwops = SDL_RWFromFile(path, mode);
+	io->data = rwops;
+	io->read = (FAudio_readfunc) rwops->read;
+	io->write = (FAudio_writefunc) rwops->write;
+	io->seek = (FAudio_seekfunc) rwops->seek;
+	io->size = (FAudio_sizefunc) rwops->size;
+	io->close = (FAudio_closefunc) rwops->close;
+	io->lock = FAudio_PlatformCreateMutex();
+	return io;
+}
+
+void FAudio_close_out(FAudioIOStreamOut *io)
+{
+	io->close(io->data);
+	FAudio_PlatformDestroyMutex((FAudioMutex) io->lock);
+	FAudio_free(io);
+}
+#endif /* FAUDIO_DUMP_VOICES */
+
 /* UTF8->UTF16 Conversion, taken from PhysicsFS */
 
 #define UNICODE_BOGUS_CHAR_VALUE 0xFFFFFFFF
