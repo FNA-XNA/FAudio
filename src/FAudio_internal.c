@@ -1123,7 +1123,6 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 {
 	uint32_t totalSamples;
 	LinkedList *list;
-	FAudioSourceVoice *source;
 	FAudioEngineCallback *callback;
 
 	LOG_FUNC_ENTER(audio)
@@ -1177,13 +1176,18 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	list = audio->sources;
 	while (list != NULL)
 	{
-		source = (FAudioSourceVoice*) list->entry;
-		if (source->src.active)
+		audio->processingSource = (FAudioSourceVoice*) list->entry;
+		FAudio_PlatformUnlockMutex(audio->sourceLock);
+		LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
+		if (audio->processingSource->src.active)
 		{
-			FAudio_INTERNAL_MixSource(source);
+			FAudio_INTERNAL_MixSource(audio->processingSource);
 		}
+		FAudio_PlatformLockMutex(audio->sourceLock);
+		LOG_MUTEX_LOCK(audio, audio->sourceLock)
 		list = list->next;
 	}
+	audio->processingSource = NULL;
 	FAudio_PlatformUnlockMutex(audio->sourceLock);
 	LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
 

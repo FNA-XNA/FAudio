@@ -1834,12 +1834,23 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	{
 		FAudioBufferEntry *entry, *next;
 
+		FAudio_PlatformLockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+		while (voice == voice->audio->processingSource)
+		{
+			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+			FAudio_PlatformLockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+		}
 		LinkedList_RemoveEntry(
 			&voice->audio->sources,
 			voice,
 			voice->audio->sourceLock,
 			voice->audio->pFree
 		);
+		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
 		entry = voice->src.bufferList;
 		while (entry != NULL)

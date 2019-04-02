@@ -275,6 +275,9 @@ struct FAudio
 	FAudioMutex callbackLock;
 	FAudioWaveFormatExtensible *mixFormat;
 
+	/* Used to prevent destroying an active voice */
+	FAudioSourceVoice *processingSource;
+
 	/* Temp storage for processing, interleaved PCM32F */
 	#define EXTRA_DECODE_PADDING 2
 	uint32_t decodeSamples;
