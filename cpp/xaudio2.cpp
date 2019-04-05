@@ -193,21 +193,27 @@ struct FAPOCppBase
 	FAPO fapo;
 	IXAPO *xapo;
 	IXAPOParameters *xapo_params;
+	LONG refcount;
 };
 
 static int32_t FAPOCALL AddRef(void *fapo)
 {
-	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
-	return xapo->AddRef();
+	FAPOCppBase *base = reinterpret_cast<FAPOCppBase *>(fapo);
+	return ++base->refcount;
 }
 
 static int32_t FAPOCALL Release(void *fapo)
 {
 	FAPOCppBase *base = reinterpret_cast<FAPOCppBase *>(fapo);
 	IXAPO *xapo = base->xapo;
-	ULONG ref = xapo->Release();
+	LONG ref = --base->refcount;
 	if (ref == 0)
 	{
+		xapo->Release();
+		if (base->xapo_params != NULL)
+		{
+			base->xapo_params->Release();
+		}
 		delete base;
 	}
 	return ref;
@@ -333,6 +339,7 @@ static FAPO *wrap_xapo_effect(IUnknown *xapo)
 
 	// FIXME: assumes that all effects are derived from CXAPOParametersBase
 	FAPOCppBase *f_effect = new FAPOCppBase;
+	f_effect->refcount = 1;
 	xapo->QueryInterface(IID_IXAPO, (void **)&f_effect->xapo);
 	xapo->QueryInterface(IID_IXAPOParameters, (void **)&f_effect->xapo_params);
 
