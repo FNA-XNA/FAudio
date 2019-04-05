@@ -193,7 +193,6 @@ struct FAPOCppBase
 	FAPO fapo;
 	IXAPO *xapo;
 	IXAPOParameters *xapo_params;
-	LONG refcount;
 };
 
 static int32_t FAPOCALL AddRef(void *fapo)
