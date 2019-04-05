@@ -190,7 +190,7 @@ static void free_voice_sends(FAudioVoiceSends *f_sends)
 
 struct FAPOCppBase
 {
-	FAPOBase fapo;
+	FAPO fapo;
 	IXAPO *xapo;
 	IXAPOParameters *xapo_params;
 };
@@ -335,24 +335,23 @@ static FAPO *wrap_xapo_effect(IUnknown *xapo)
 	xapo->QueryInterface(IID_IXAPO, (void **)&f_effect->xapo);
 	xapo->QueryInterface(IID_IXAPOParameters, (void **)&f_effect->xapo_params);
 
-	f_effect->fapo.base.AddRef = AddRef;
-	f_effect->fapo.base.Release = Release;
-	f_effect->fapo.base.GetRegistrationProperties = GetRegistrationProperties;
-	f_effect->fapo.base.IsInputFormatSupported = IsInputFormatSupported;
-	f_effect->fapo.base.IsOutputFormatSupported = IsOutputFormatSupported;
-	f_effect->fapo.base.Initialize = Initialize;
-	f_effect->fapo.base.Reset = Reset;
-	f_effect->fapo.base.LockForProcess = LockForProcess;
-	f_effect->fapo.base.UnlockForProcess = UnlockForProcess;
-	f_effect->fapo.base.Process = Process;
-	f_effect->fapo.base.CalcInputFrames = CalcInputFrames;
-	f_effect->fapo.base.CalcOutputFrames = CalcOutputFrames;
+	f_effect->fapo.AddRef = AddRef;
+	f_effect->fapo.Release = Release;
+	f_effect->fapo.GetRegistrationProperties = GetRegistrationProperties;
+	f_effect->fapo.IsInputFormatSupported = IsInputFormatSupported;
+	f_effect->fapo.IsOutputFormatSupported = IsOutputFormatSupported;
+	f_effect->fapo.Initialize = Initialize;
+	f_effect->fapo.Reset = Reset;
+	f_effect->fapo.LockForProcess = LockForProcess;
+	f_effect->fapo.UnlockForProcess = UnlockForProcess;
+	f_effect->fapo.Process = Process;
+	f_effect->fapo.CalcInputFrames = CalcInputFrames;
+	f_effect->fapo.CalcOutputFrames = CalcOutputFrames;
 
-	f_effect->fapo.base.GetParameters = GetParameters;
-	f_effect->fapo.base.SetParameters = SetParameters;
+	f_effect->fapo.GetParameters = GetParameters;
+	f_effect->fapo.SetParameters = SetParameters;
 
-	f_effect->fapo.Destructor = Destructor;
-	return &f_effect->fapo.base;
+	return &f_effect->fapo;
 }
 
 static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain)
