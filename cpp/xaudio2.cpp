@@ -193,6 +193,7 @@ struct FAPOCppBase
 	FAPO fapo;
 	IXAPO *xapo;
 	IXAPOParameters *xapo_params;
+	LONG refcount;
 };
 
 static int32_t FAPOCALL AddRef(void *fapo)
@@ -203,8 +204,14 @@ static int32_t FAPOCALL AddRef(void *fapo)
 
 static int32_t FAPOCALL Release(void *fapo)
 {
-	IXAPO *xapo = reinterpret_cast<FAPOCppBase *>(fapo)->xapo;
-	return xapo->Release();
+	FAPOCppBase *base = reinterpret_cast<FAPOCppBase *>(fapo);
+	IXAPO *xapo = base->xapo;
+	ULONG ref = xapo->Release();
+	if (ref == 0)
+	{
+		delete base;
+	}
+	return ref;
 }
 
 static uint32_t FAPOCALL GetRegistrationProperties(
@@ -318,11 +325,6 @@ static void FAPOCALL GetParameters(void *fapoParameters, void *pParameters, uint
 	return xapo_params->GetParameters(pParameters, ParameterByteSize);
 }
 
-static void FAPOCALL Destructor(void *fapo)
-{
-	delete reinterpret_cast<FAPOCppBase *>(fapo);
-}
-
 static FAPO *wrap_xapo_effect(IUnknown *xapo)
 {
 	if (xapo == NULL)
@@ -347,7 +349,6 @@ static FAPO *wrap_xapo_effect(IUnknown *xapo)
 	f_effect->fapo.Process = Process;
 	f_effect->fapo.CalcInputFrames = CalcInputFrames;
 	f_effect->fapo.CalcOutputFrames = CalcOutputFrames;
-
 	f_effect->fapo.GetParameters = GetParameters;
 	f_effect->fapo.SetParameters = SetParameters;
 
