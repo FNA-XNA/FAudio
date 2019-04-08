@@ -24,6 +24,46 @@
  *
  */
 
+/* This file has no documentation since the MSDN docs are still perfectly fine:
+ * https://docs.microsoft.com/en-us/windows/desktop/api/xapobase/
+ *
+ * Of course, the APIs aren't exactly the same since XAPO is super dependent on
+ * C++. Instead, we use a struct full of functions to mimic a vtable.
+ *
+ * To mimic the CXAPOParametersBase experience, initialize the object like this:
+ *
+ * extern FAPORegistrationProperties MyFAPOProperties;
+ * extern int32_t producer;
+ * typedef struct MyFAPOParams
+ * {
+ *	uint32_t something;
+ * };
+ * typedef struct MyFAPO
+ * {
+ *	FAPOBase base;
+ *	uint32_t somethingElse;
+ * };
+ * void MyFAPO_Free(void* fapo)
+ * {
+ *	MyFAPO *mine = (MyFAPO*) fapo;
+ *	mine->base.pFree(mine->base.m_pParameterBlocks);
+ *	mine->base.pFree(fapo);
+ * }
+ *
+ * MyFAPO result;
+ * uint8_t *params = (uint8_t*) malloc(sizeof(MyFAPOParams) * 3);
+ * CreateFAPOBase(
+ *	&result.base,
+ *	&MyFAPOProperties,
+ *	params,
+ *	sizeof(MyFAPOParams),
+ *	producer
+ * );
+ * result.base.base.Initialize = (InitializeFunc) MyFAPO_Initialize;
+ * result.base.base.Process = (ProcessFunc) MyFAPO_Process;
+ * result.base.Destructor = MyFAPO_Free;
+ */
+
 #ifndef FAPOBASE_H
 #define FAPOBASE_H
 

@@ -24,6 +24,10 @@
  *
  */
 
+/* This file has no documentation since you are expected to already know how
+ * XACT works if you are still using these APIs!
+ */
+
 #ifndef FACT_H
 #define FACT_H
 

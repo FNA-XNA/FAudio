@@ -24,6 +24,13 @@
  *
  */
 
+/* This file has no documentation since the MSDN docs are still perfectly fine:
+ * https://docs.microsoft.com/en-us/windows/desktop/api/xaudio2fx/
+ *
+ * Note, however, that FAudio's Reverb implementation does NOT support the new
+ * parameters for XAudio 2.9's 7.1 Reverb effect!
+ */
+
 #ifndef FAUDIOFX_H
 #define FAUDIOFX_H
 

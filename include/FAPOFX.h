@@ -24,6 +24,10 @@
  *
  */
 
+/* This file has no documentation since the MSDN docs are still perfectly fine:
+ * https://docs.microsoft.com/en-us/windows/desktop/api/xapofx/
+ */
+
 #ifndef FAPOFX_H
 #define FAPOFX_H
 

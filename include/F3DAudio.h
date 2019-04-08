@@ -24,6 +24,10 @@
  *
  */
 
+/* This file has no documentation since the MSDN docs are still perfectly fine:
+ * https://docs.microsoft.com/en-us/windows/desktop/api/x3daudio/
+ */
+
 #ifndef F3DAUDIO_H
 #define F3DAUDIO_H
 

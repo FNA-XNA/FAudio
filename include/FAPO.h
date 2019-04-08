@@ -24,6 +24,18 @@
  *
  */
 
+/* This file has no documentation since the MSDN docs are still perfectly fine:
+ * https://docs.microsoft.com/en-us/windows/desktop/api/xapo/
+ *
+ * Of course, the APIs aren't exactly the same since XAPO is super dependent on
+ * C++. Instead, we use a struct full of functions to mimic a vtable.
+ *
+ * The only serious difference is that our FAPO (yes, really) always has the
+ * Get/SetParameters function pointers, for simplicity. You can ignore these if
+ * your effect does not have parameters, as they will never get called unless
+ * it is explicitly requested by the application.
+ */
+
 #ifndef FAPO_H
 #define FAPO_H
 
