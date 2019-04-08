@@ -2275,7 +2275,7 @@ uint32_t FAudioSourceVoice_ExitLoop(
 void FAudioSourceVoice_GetState(
 	FAudioSourceVoice *voice,
 	FAudioVoiceState *pVoiceState,
-	uint32_t flags
+	uint32_t Flags
 ) {
 	FAudioBufferEntry *entry;
 
@@ -2285,7 +2285,7 @@ void FAudioSourceVoice_GetState(
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
-	if (!(flags & FAUDIO_VOICE_NOSAMPLESPLAYED))
+	if (!(Flags & FAUDIO_VOICE_NOSAMPLESPLAYED))
 	{
 		pVoiceState->SamplesPlayed = voice->src.totalSamples;
 	}

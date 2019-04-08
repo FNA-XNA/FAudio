@@ -105,6 +105,9 @@ typedef struct FAudioGUID
 	uint8_t Data4[8];
 } FAudioGUID;
 
+/* See MSDN:
+ * https://msdn.microsoft.com/en-us/library/windows/desktop/dd390970%28v=vs.85%29.aspx
+ */
 typedef struct FAudioWaveFormatEx
 {
 	uint16_t wFormatTag;
@@ -116,6 +119,9 @@ typedef struct FAudioWaveFormatEx
 	uint16_t cbSize;
 } FAudioWaveFormatEx;
 
+/* See MSDN:
+ * https://msdn.microsoft.com/en-us/library/windows/desktop/dd390971(v=vs.85).aspx
+ */
 typedef struct FAudioWaveFormatExtensible
 {
 	FAudioWaveFormatEx Format;
@@ -172,7 +178,7 @@ typedef struct FAudioVoiceDetails
 
 typedef struct FAudioSendDescriptor
 {
-	uint32_t Flags;
+	uint32_t Flags; /* 0 or FAUDIO_SEND_USEFILTER */
 	FAudioVoice *pOutputVoice;
 } FAudioSendDescriptor;
 
@@ -190,7 +196,7 @@ typedef struct FAPO FAPO;
 typedef struct FAudioEffectDescriptor
 {
 	FAPO *pEffect;
-	int32_t InitialState;
+	int32_t InitialState; /* 1 - Enabled, 0 - Disabled */
 	uint32_t OutputChannels;
 } FAudioEffectDescriptor;
 
@@ -203,20 +209,31 @@ typedef struct FAudioEffectChain
 typedef struct FAudioFilterParameters
 {
 	FAudioFilterType Type;
-	float Frequency;
-	float OneOverQ;
+	float Frequency;	/* [0, FAUDIO_MAX_FILTER_FREQUENCY] */
+	float OneOverQ;		/* [0, FAUDIO_MAX_FILTER_ONEOVERQ] */
 } FAudioFilterParameters;
 
 typedef struct FAudioBuffer
 {
+	/* Either 0 or FAUDIO_END_OF_STREAM */
 	uint32_t Flags;
+	/* Pointer to wave data, memory block size */
 	uint32_t AudioBytes;
 	const uint8_t *pAudioData;
+	/* Play region, in sample frames. */
 	uint32_t PlayBegin;
 	uint32_t PlayLength;
+	/* Loop region, in sample frames.
+	 * This can be used to loop a subregion of the wave instead of looping
+	 * the whole thing, i.e. if you have an intro/outro you can set these
+	 * to loop the middle sections instead. If you don't need this, set both
+	 * values to 0.
+	 */
 	uint32_t LoopBegin;
 	uint32_t LoopLength;
+	/* [0, FAUDIO_LOOP_INFINITE] */
 	uint32_t LoopCount;
+	/* This is sent to callbacks as pBufferContext */
 	void *pContext;
 } FAudioBuffer;
 
@@ -253,8 +270,10 @@ typedef struct FAudioPerformanceData
 
 typedef struct FAudioDebugConfiguration
 {
+	/* See FAUDIO_LOG_* */
 	uint32_t TraceMask;
 	uint32_t BreakMask;
+	/* 0 or 1 */
 	int32_t LogThreadID;
 	int32_t LogFileline;
 	int32_t LogFunctionName;
@@ -413,6 +432,14 @@ extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
 /* FAudio Interface */
 
+/* This should be your first FAudio call.
+ *
+ * ppFAudio:		Filled with the FAudio core context.
+ * Flags:		Can be 0 or FAUDIO_DEBUG_ENGINE.
+ * XAudio2Processor:	Set this to FAUDIO_DEFAULT_PROCESSOR.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioCreate(
 	FAudio **ppFAudio,
 	uint32_t Flags,
@@ -424,36 +451,95 @@ FAUDIOAPI uint32_t FAudioCreate(
 /* See "extensions/COMConstructEXT.txt" for more details */
 FAUDIOAPI uint32_t FAudioCOMConstructEXT(FAudio **ppFAudio, uint8_t version);
 
+/* Increments a reference counter. When counter is 0, audio is freed.
+ * Returns the reference count after incrementing.
+ */
 FAUDIOAPI uint32_t FAudio_AddRef(FAudio *audio);
 
+/* Decrements a reference counter. When counter is 0, audio is freed.
+ * Returns the reference count after decrementing.
+ */
 FAUDIOAPI uint32_t FAudio_Release(FAudio *audio);
 
-/* FIXME: QueryInterface? Or just ignore COM garbage... -flibit */
-
+/* Queries the number of sound devices available for use.
+ *
+ * pCount: Filled with the number of available sound devices.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_GetDeviceCount(FAudio *audio, uint32_t *pCount);
 
+/* Gets basic information about a sound device.
+ *
+ * Index:		Can be between 0 and the result of GetDeviceCount.
+ * pDeviceDetails:	Filled with the device information.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_GetDeviceDetails(
 	FAudio *audio,
 	uint32_t Index,
 	FAudioDeviceDetails *pDeviceDetails
 );
 
+/* You don't actually have to call this, unless you're using the COM APIs.
+ * See the FAudioCreate API for parameter information.
+ */
 FAUDIOAPI uint32_t FAudio_Initialize(
 	FAudio *audio,
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 );
 
+/* Register a new set of engine callbacks.
+ * There is no limit to the number of sets, but expect performance to degrade
+ * if you have a whole bunch of these. You most likely only need one.
+ *
+ * pCallback: The completely-initialized FAudioEngineCallback structure.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_RegisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 );
 
+/* Remove an active set of engine callbacks.
+ * This checks the pointer value, NOT the callback values!
+ *
+ * pCallback: An FAudioEngineCallback structure previously sent to Register.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI void FAudio_UnregisterForCallbacks(
 	FAudio *audio,
 	FAudioEngineCallback *pCallback
 );
 
+/* Creates a "source" voice, used to play back wavedata.
+ *
+ * ppSourceVoice:	Filled with the source voice pointer.
+ * pSourceFormat:	The input wavedata format, see the documentation for
+ *			FAudioWaveFormatEx.
+ * Flags:		Can be 0 or a mix of the following FAUDIO_VOICE_* flags:
+ *			NOPITCH/NOSRC:	Resampling is disabled. If you set this,
+ *					the source format sample rate MUST match
+ *					the output voices' input sample rates.
+ *					Also, SetFrequencyRatio will fail.
+ *			USEFILTER:	Enables the use of SetFilterParameters.
+ *			MUSIC:		Unsupported.
+ * MaxFrequencyRatio:	AKA your max pitch. This allows us to optimize the size
+ *			of the decode/resample cache sizes. For example, if you
+ *			only expect to raise pitch by a single octave, you can
+ *			set this value to 2.0f. 2.0f is the default value.
+ *			Bounds: [FAUDIO_MIN_FREQ_RATIO, FAUDIO_MAX_FREQ_RATIO].
+ * pCallback:		Voice callbacks, see FAudioVoiceCallback documentation.
+ * pSendList:		List of output voices. If NULL, defaults to master.
+ *			All output voices must have the same sample rate!
+ * pEffectChain:	List of FAPO effects. This value can be NULL.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_CreateSourceVoice(
 	FAudio *audio,
 	FAudioSourceVoice **ppSourceVoice,
@@ -465,6 +551,24 @@ FAUDIOAPI uint32_t FAudio_CreateSourceVoice(
 	const FAudioEffectChain *pEffectChain
 );
 
+/* Creates a "submix" voice, used to mix/process input voices.
+ * The typical use case for this is to perform CPU-intensive tasks on large
+ * groups of voices all at once. Examples include resampling and FAPO effects.
+ *
+ * ppSubmixVoice:	Filled with the submix voice pointer.
+ * InputChannels:	Input voices will convert to this channel count.
+ * InputSampleRate:	Input voices will convert to this sample rate.
+ * Flags:		Can be 0 or FAUDIO_VOICE_USEFILTER.
+ * ProcessingStage:	If you have multiple submixes that depend on a specific
+ *			order of processing, you can sort them by setting this
+ *			value to prioritize them. For example, submixes with
+ *			stage 0 will process first, then stage 1, 2, and so on.
+ * pSendList:		List of output voices. If NULL, defaults to master.
+ *			All output voices must have the same sample rate!
+ * pEffectChain:	List of FAPO effects. This value can be NULL.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_CreateSubmixVoice(
 	FAudio *audio,
 	FAudioSubmixVoice **ppSubmixVoice,
@@ -476,6 +580,18 @@ FAUDIOAPI uint32_t FAudio_CreateSubmixVoice(
 	const FAudioEffectChain *pEffectChain
 );
 
+/* This should be your second FAudio call, unless you care about which device
+ * you want to use. In that case, see GetDeviceDetails.
+ *
+ * ppMasteringVoice:	Filled with the mastering voice pointer.
+ * InputChannels:	Device channel count. Can be FAUDIO_DEFAULT_CHANNELS.
+ * InputSampleRate:	Device sample rate. Can be FAUDIO_DEFAULT_SAMPLERATE.
+ * Flags:		This value must be 0.
+ * DeviceIndex:		0 for the default device. See GetDeviceCount.
+ * pEffectChain:	List of FAPO effects. This value can be NULL.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
 	FAudio *audio,
 	FAudioMasteringVoice **ppMasteringVoice,
@@ -486,6 +602,9 @@ FAUDIOAPI uint32_t FAudio_CreateMasteringVoice(
 	const FAudioEffectChain *pEffectChain
 );
 
+/* This is the XAudio 2.8+ version of CreateMasteringVoice.
+ * Right now this doesn't do anything. Don't use this function.
+ */
 FAUDIOAPI uint32_t FAudio_CreateMasteringVoice8(
 	FAudio *audio,
 	FAudioMasteringVoice **ppMasteringVoice,
@@ -497,17 +616,38 @@ FAUDIOAPI uint32_t FAudio_CreateMasteringVoice8(
 	FAudioStreamCategory StreamCategory
 );
 
+/* Starts the engine, begins processing the audio graph.
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudio_StartEngine(FAudio *audio);
 
+/* Stops the engine and halts all processing.
+ * The audio device will continue to run, but will produce silence.
+ * The graph will be frozen until you call StartEngine, where it will then
+ * resume all processing exactly as it would have had this never been called.
+ */
 FAUDIOAPI void FAudio_StopEngine(FAudio *audio);
 
+/* This is where you'd push OperationSet changes if we actually supported them.
+ * Don't bother with this function, sorry!
+ */
 FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
 
+/* Requests various bits of performance information from the engine.
+ *
+ * pPerfData: Filled with the data. See FAudioPerformanceData for details.
+ */
 FAUDIOAPI void FAudio_GetPerformanceData(
 	FAudio *audio,
 	FAudioPerformanceData *pPerfData
 );
 
+/* When using a Debug binary, this lets you configure what information gets
+ * logged to output. Be careful, this can spit out a LOT of text.
+ *
+ * pDebugConfiguration:	See FAudioDebugConfiguration for details.
+ * pReserved:		Set this to NULL.
+ */
 FAUDIOAPI void FAudio_SetDebugConfiguration(
 	FAudio *audio,
 	FAudioDebugConfiguration *pDebugConfiguration,
@@ -516,39 +656,90 @@ FAUDIOAPI void FAudio_SetDebugConfiguration(
 
 /* FAudioVoice Interface */
 
+/* Requests basic information about a voice.
+ *
+ * pVoiceDetails: See FAudioVoiceDetails for details.
+ */
 FAUDIOAPI void FAudioVoice_GetVoiceDetails(
 	FAudioVoice *voice,
 	FAudioVoiceDetails *pVoiceDetails
 );
 
+/* Change the output voices for this voice.
+ * This function is invalid for mastering voices.
+ *
+ * pSendList:	List of output voices. If NULL, defaults to master.
+ *		All output voices must have the same sample rate!
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetOutputVoices(
 	FAudioVoice *voice,
 	const FAudioVoiceSends *pSendList
 );
 
+/* Change/Remove the effect chain for this voice.
+ *
+ * pEffectChain:	List of FAPO effects. This value can be NULL.
+ *			Note that the final channel counts for this chain MUST
+ *			match the input/output channel count that was
+ *			determined at voice creation time!
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetEffectChain(
 	FAudioVoice *voice,
 	const FAudioEffectChain *pEffectChain
 );
 
+/* Enables an effect in the effect chain.
+ *
+ * EffectIndex:		The index of the effect (based on the chain order).
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_EnableEffect(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 );
 
+/* Disables an effect in the effect chain.
+ *
+ * EffectIndex:		The index of the effect (based on the chain order).
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_DisableEffect(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
 	uint32_t OperationSet
 );
 
+/* Queries the enabled/disabled state of an effect in the effect chain.
+ *
+ * EffectIndex:	The index of the effect (based on the chain order).
+ * pEnabled:	Filled with either 1 (Enabled) or 0 (Disabled).
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI void FAudioVoice_GetEffectState(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
 	int32_t *pEnabled
 );
 
+/* Submits a block of memory to be sent to FAPO::SetParameters.
+ *
+ * EffectIndex:		The index of the effect (based on the chain order).
+ * pParameters:		The values to be copied and submitted to the FAPO.
+ * ParametersByteSize:	This should match what the FAPO expects!
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetEffectParameters(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
@@ -557,6 +748,14 @@ FAUDIOAPI uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t OperationSet
 );
 
+/* Requests the latest parameters from FAPO::GetParameters.
+ *
+ * EffectIndex:		The index of the effect (based on the chain order).
+ * pParameters:		Filled with the latest parameter values from the FAPO.
+ * ParametersByteSize:	This should match what the FAPO expects!
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_GetEffectParameters(
 	FAudioVoice *voice,
 	uint32_t EffectIndex,
@@ -564,17 +763,39 @@ FAUDIOAPI uint32_t FAudioVoice_GetEffectParameters(
 	uint32_t ParametersByteSize
 );
 
+/* Sets the filter variables for a voice.
+ * This is only valid on voices with the USEFILTER flag.
+ *
+ * pParameters:		See FAudioFilterParameters for details.
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetFilterParameters(
 	FAudioVoice *voice,
 	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 );
 
+/* Requests the filter variables for a voice.
+ * This is only valid on voices with the USEFILTER flag.
+ *
+ * pParameters: See FAudioFilterParameters for details.
+ */
 FAUDIOAPI void FAudioVoice_GetFilterParameters(
 	FAudioVoice *voice,
 	FAudioFilterParameters *pParameters
 );
 
+/* Sets the filter variables for a voice's output voice.
+ * This is only valid on sends with the USEFILTER flag.
+ *
+ * pDestinationVoice:	An output voice from the voice's send list.
+ * pParameters:		See FAudioFilterParameters for details.
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetOutputFilterParameters(
 	FAudioVoice *voice,
 	FAudioVoice *pDestinationVoice,
@@ -582,23 +803,50 @@ FAUDIOAPI uint32_t FAudioVoice_SetOutputFilterParameters(
 	uint32_t OperationSet
 );
 
+/* Requests the filter variables for a voice's output voice.
+ * This is only valid on sends with the USEFILTER flag.
+ *
+ * pDestinationVoice:	An output voice from the voice's send list.
+ * pParameters:		See FAudioFilterParameters for details.
+ */
 FAUDIOAPI void FAudioVoice_GetOutputFilterParameters(
 	FAudioVoice *voice,
 	FAudioVoice *pDestinationVoice,
 	FAudioFilterParameters *pParameters
 );
 
+/* Sets the global volume of a voice.
+ *
+ * Volume:		Amplitude ratio. 1.0f is default, 0.0f is silence.
+ *			Note that you can actually set volume < 0.0f!
+ *			Bounds: [-FAUDIO_MAX_VOLUME_LEVEL, FAUDIO_MAX_VOLUME_LEVEL]
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetVolume(
 	FAudioVoice *voice,
 	float Volume,
 	uint32_t OperationSet
 );
 
+/* Requests the global volume of a voice.
+ *
+ * pVolume: Filled with the current voice amplitude ratio.
+ */
 FAUDIOAPI void FAudioVoice_GetVolume(
 	FAudioVoice *voice,
 	float *pVolume
 );
 
+/* Sets the per-channel volumes of a voice.
+ *
+ * Channels:		Must match the channel count of this voice!
+ * pVolumes:		Amplitude ratios for each channel. Same as SetVolume.
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetChannelVolumes(
 	FAudioVoice *voice,
 	uint32_t Channels,
@@ -606,12 +854,34 @@ FAUDIOAPI uint32_t FAudioVoice_SetChannelVolumes(
 	uint32_t OperationSet
 );
 
+/* Requests the per-channel volumes of a voice.
+ *
+ * Channels:	Must match the channel count of this voice!
+ * pVolumes:	Filled with the current channel amplitude ratios.
+ */
 FAUDIOAPI void FAudioVoice_GetChannelVolumes(
 	FAudioVoice *voice,
 	uint32_t Channels,
 	float *pVolumes
 );
 
+/* Sets the volumes of a send's output channels. The matrix is based on the
+ * voice's input channels. For example, the default matrix for a 2-channel
+ * source and a 2-channel output voice is as follows:
+ * [0] = 1.0f; <- Left input, left output
+ * [1] = 0.0f; <- Right input, left output
+ * [2] = 0.0f; <- Left input, right output
+ * [3] = 1.0f; <- Right input, right output
+ * This is typically only used for panning or 3D sound (via F3DAudio).
+ *
+ * pDestinationVoice:	An output voice from the voice's send list.
+ * SourceChannels:	Must match the voice's input channel count!
+ * DestinationChannels:	Must match the destination's input channel count!
+ * pLevelMatrix:	A float[SourceChannels * DestinationChannels].
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioVoice_SetOutputMatrix(
 	FAudioVoice *voice,
 	FAudioVoice *pDestinationVoice,
@@ -621,6 +891,13 @@ FAUDIOAPI uint32_t FAudioVoice_SetOutputMatrix(
 	uint32_t OperationSet
 );
 
+/* Gets the volumes of a send's output channels. See SetOutputMatrix.
+ *
+ * pDestinationVoice:	An output voice from the voice's send list.
+ * SourceChannels:	Must match the voice's input channel count!
+ * DestinationChannels:	Must match the voice's output channel count!
+ * pLevelMatrix:	A float[SourceChannels * DestinationChannels].
+ */
 FAUDIOAPI void FAudioVoice_GetOutputMatrix(
 	FAudioVoice *voice,
 	FAudioVoice *pDestinationVoice,
@@ -629,58 +906,125 @@ FAUDIOAPI void FAudioVoice_GetOutputMatrix(
 	float *pLevelMatrix
 );
 
+/* Removes this voice from the audio graph and frees memory. */
 FAUDIOAPI void FAudioVoice_DestroyVoice(FAudioVoice *voice);
 
 /* FAudioSourceVoice Interface */
 
+/* Starts processing for a source voice.
+ *
+ * Flags:		Must be 0.
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_Start(
 	FAudioSourceVoice *voice,
 	uint32_t Flags,
 	uint32_t OperationSet
 );
 
+/* Pauses processing for a source voice. Yes, I said pausing.
+ * If you want to _actually_ stop, call FlushSourceBuffers next.
+ *
+ * Flags:		Can be 0 or FAUDIO_PLAY_TAILS, which allows effects to
+ *			keep emitting output even after processing has stopped.
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_Stop(
 	FAudioSourceVoice *voice,
 	uint32_t Flags,
 	uint32_t OperationSet
 );
 
+/* Submits a block of wavedata for the source to process.
+ *
+ * pBuffer:	See FAudioBuffer for details.
+ * pBufferWMA:	See FAudioBufferWMA for details. (Also, don't use WMA.)
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	FAudioSourceVoice *voice,
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA
 );
 
+/* Removes all buffers from a source, with a minor exception.
+ * If the voice is still playing, the active buffer is left alone.
+ * All buffers that are removed will spawn an OnBufferEnd callback.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudioSourceVoice *voice
 );
 
+/* Takes the last buffer currently queued and sets the END_OF_STREAM flag.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_Discontinuity(
 	FAudioSourceVoice *voice
 );
 
+/* Sets the loop count of the active buffer to 0.
+ *
+ * OperationSet: See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_ExitLoop(
 	FAudioSourceVoice *voice,
 	uint32_t OperationSet
 );
 
+/* Requests the state and some basic statistics for this source.
+ *
+ * pVoiceState:	See FAudioVoiceState for details.
+ * Flags:	Can be 0 or FAUDIO_VOICE_NOSAMPLESPLAYED.
+ */
 FAUDIOAPI void FAudioSourceVoice_GetState(
 	FAudioSourceVoice *voice,
 	FAudioVoiceState *pVoiceState,
-	uint32_t flags
+	uint32_t Flags
 );
 
+/* Sets the frequency ratio (fancy phrase for pitch) of this source.
+ *
+ * Ratio:		The frequency ratio, must be <= MaxFrequencyRatio.
+ * OperationSet:	See CommitChanges. Default is FAUDIO_COMMIT_NOW.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_SetFrequencyRatio(
 	FAudioSourceVoice *voice,
 	float Ratio,
 	uint32_t OperationSet
 );
 
+/* Requests the frequency ratio (fancy phrase for pitch) of this source.
+ *
+ * pRatio: Filled with the frequency ratio.
+ */
 FAUDIOAPI void FAudioSourceVoice_GetFrequencyRatio(
 	FAudioSourceVoice *voice,
 	float *pRatio
 );
 
+/* Resets the core sample rate of this source.
+ * You probably don't want this, it's more likely you want SetFrequencyRatio.
+ * This is used to recycle voices without having to constantly reallocate them.
+ * For example, if you have wavedata that's all float32 mono, but the sample
+ * rates are different, you can take a source that was being used for a 48KHz
+ * wave and call this so it can be used for a 44.1KHz wave.
+ *
+ * NewSourceSampleRate: The new sample rate for this source.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	FAudioSourceVoice *voice,
 	uint32_t NewSourceSampleRate
@@ -688,6 +1032,14 @@ FAUDIOAPI uint32_t FAudioSourceVoice_SetSourceSampleRate(
 
 /* FAudioMasteringVoice Interface */
 
+/* Requests the channel mask for the mastering voice.
+ * This is typically used with F3DAudioInitialize, but you may find it
+ * interesting if you want to see the user's basic speaker layout.
+ *
+ * pChannelMask: Filled with the channel mask.
+ *
+ * Returns 0 on success.
+ */
 FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
 	FAudioMasteringVoice *voice,
 	uint32_t *pChannelMask
@@ -695,13 +1047,21 @@ FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
 
 /* FAudioEngineCallback Interface */
 
+/* If something horrible happens, this will be called.
+ *
+ * Error: The error code that spawned this callback.
+ */
 typedef void (FAUDIOCALL * OnCriticalErrorFunc)(
 	FAudioEngineCallback *callback,
 	uint32_t Error
 );
+
+/* This is called at the end of a processing update. */
 typedef void (FAUDIOCALL * OnProcessingPassEndFunc)(
 	FAudioEngineCallback *callback
 );
+
+/* This is called at the beginning of a processing update. */
 typedef void (FAUDIOCALL * OnProcessingPassStartFunc)(
 	FAudioEngineCallback *callback
 );
@@ -715,29 +1075,61 @@ struct FAudioEngineCallback
 
 /* FAudioVoiceCallback Interface */
 
+/* When a buffer is no longer in use, this is called.
+ *
+ * pBufferContext: The pContext for the FAudioBuffer in question.
+ */
 typedef void (FAUDIOCALL * OnBufferEndFunc)(
 	FAudioVoiceCallback *callback,
 	void *pBufferContext
 );
+
+/* When a buffer is now being used, this is called.
+ *
+ * pBufferContext: The pContext for the FAudioBuffer in question.
+ */
 typedef void (FAUDIOCALL * OnBufferStartFunc)(
 	FAudioVoiceCallback *callback,
 	void *pBufferContext
 );
+
+/* When a buffer completes a loop, this is called.
+ *
+ * pBufferContext: The pContext for the FAudioBuffer in question.
+ */
 typedef void (FAUDIOCALL * OnLoopEndFunc)(
 	FAudioVoiceCallback *callback,
 	void *pBufferContext
 );
+
+/* When a buffer that has the END_OF_STREAM flag is finished, this is called. */
 typedef void (FAUDIOCALL * OnStreamEndFunc)(
 	FAudioVoiceCallback *callback
 );
+
+/* If something horrible happens to a voice, this is called.
+ *
+ * pBufferContext:	The pContext for the FAudioBuffer in question.
+ * Error:		The error code that spawned this callback.
+ */
 typedef void (FAUDIOCALL * OnVoiceErrorFunc)(
 	FAudioVoiceCallback *callback,
 	void *pBufferContext,
 	uint32_t Error
 );
+
+/* When this voice is done being processed, this is called. */
 typedef void (FAUDIOCALL * OnVoiceProcessingPassEndFunc)(
 	FAudioVoiceCallback *callback
 );
+
+/* When a voice is about to start being processed, this is called.
+ *
+ * BytesRequested:	The number of bytes needed from the application to
+ *			complete a full update. For example, if we need 512
+ *			frames for a whole update, and the voice is a float32
+ *			stereo source, BytesRequired will be 4096.
+ */
 typedef void (FAUDIOCALL * OnVoiceProcessingPassStartFunc)(
 	FAudioVoiceCallback *callback,
 	uint32_t BytesRequired
