@@ -146,7 +146,11 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 #if SDL_VERSION_ATLEAST(2, 0, 9)
 		SDL_AUDIO_ALLOW_SAMPLES_CHANGE
 #else
-#warning Please update to SDL 2.0.9 ASAP!
+#ifdef _WIN32
+#error Windows absolutely positively needs SDL 2.0.9!
+#else
+#pragma message("Please update to SDL 2.0.9 ASAP!")
+#endif
 		0
 #endif
 	);
