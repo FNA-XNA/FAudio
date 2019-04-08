@@ -50,18 +50,18 @@
  *	mine->base.pFree(fapo);
  * }
  *
- * MyFAPO result;
- * uint8_t *params = (uint8_t*) malloc(sizeof(MyFAPOParams) * 3);
+ * MyFAPO *result = (MyFAPO*) SDL_malloc(sizeof(MyFAPO));
+ * uint8_t *params = (uint8_t*) SDL_malloc(sizeof(MyFAPOParams) * 3);
  * CreateFAPOBase(
- *	&result.base,
+ *	&result->base,
  *	&MyFAPOProperties,
  *	params,
  *	sizeof(MyFAPOParams),
  *	producer
  * );
- * result.base.base.Initialize = (InitializeFunc) MyFAPO_Initialize;
- * result.base.base.Process = (ProcessFunc) MyFAPO_Process;
- * result.base.Destructor = MyFAPO_Free;
+ * result->base.base.Initialize = (InitializeFunc) MyFAPO_Initialize;
+ * result->base.base.Process = (ProcessFunc) MyFAPO_Process;
+ * result->base.Destructor = MyFAPO_Free;
  */
 
 #ifndef FAPOBASE_H
