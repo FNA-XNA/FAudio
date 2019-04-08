@@ -217,7 +217,11 @@ typedef struct FAudioBuffer
 {
 	/* Either 0 or FAUDIO_END_OF_STREAM */
 	uint32_t Flags;
-	/* Pointer to wave data, memory block size */
+	/* Pointer to wave data, memory block size.
+	 * Note that pAudioData is not copied; FAudio reads directly from your
+	 * pointer! This pointer must be valid until FAudio has finished using
+	 * it, at which point an OnBufferEnd callback will be generated.
+	 */
 	uint32_t AudioBytes;
 	const uint8_t *pAudioData;
 	/* Play region, in sample frames. */
