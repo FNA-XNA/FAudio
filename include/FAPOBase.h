@@ -37,12 +37,12 @@
  * typedef struct MyFAPOParams
  * {
  *	uint32_t something;
- * };
+ * } MyFAPOParams;
  * typedef struct MyFAPO
  * {
  *	FAPOBase base;
  *	uint32_t somethingElse;
- * };
+ * } MyFAPO;
  * void MyFAPO_Free(void* fapo)
  * {
  *	MyFAPO *mine = (MyFAPO*) fapo;
