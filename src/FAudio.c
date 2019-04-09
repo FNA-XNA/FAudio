@@ -448,7 +448,7 @@ uint32_t FAudio_CreateSourceVoice(
 	) + EXTRA_DECODE_PADDING * (*ppSourceVoice)->src.format->nChannels;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		audio,
-		(*ppSourceVoice)->src.decodeSamples * (*ppSourceVoice)->src.format->nChannels
+		((*ppSourceVoice)->src.decodeSamples + EXTRA_DECODE_PADDING) * (*ppSourceVoice)->src.format->nChannels
 	);
 
 	LOG_INFO(audio, "-> %p", *ppSourceVoice);
@@ -2389,7 +2389,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	) + EXTRA_DECODE_PADDING * voice->src.format->nChannels;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		voice->audio,
-		newDecodeSamples * voice->src.format->nChannels
+		(newDecodeSamples + EXTRA_DECODE_PADDING) * voice->src.format->nChannels
 	);
 	voice->src.decodeSamples = newDecodeSamples;
 
