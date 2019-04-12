@@ -626,7 +626,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex);
 void FAudio_PlatformQuit(FAudio *audio);
 
 uint32_t FAudio_PlatformGetDeviceCount(void);
-void FAudio_PlatformGetDeviceDetails(
+uint32_t FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
 );

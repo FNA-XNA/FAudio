@@ -206,7 +206,7 @@ uint32_t FACTAudioEngine_Initialize(
 				deviceIndex = 0;
 			}
 		}
-		FAudio_CreateMasteringVoice(
+		if (FAudio_CreateMasteringVoice(
 			pEngine->audio,
 			&pEngine->master,
 			FAUDIO_DEFAULT_CHANNELS,
@@ -214,7 +214,10 @@ uint32_t FACTAudioEngine_Initialize(
 			0,
 			deviceIndex,
 			NULL
-		);
+		) != 0) {
+			FAudio_Release(pEngine->audio);
+			return FAUDIO_E_INVALID_CALL;
+		}
 	}
 
 	/* Create the reverb effect, if applicable */

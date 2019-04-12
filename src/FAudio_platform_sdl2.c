@@ -192,12 +192,17 @@ void FAudio_PlatformQuit(FAudio *audio)
 
 uint32_t FAudio_PlatformGetDeviceCount()
 {
-	return SDL_GetNumAudioDevices(0) + 1;
+	uint32_t devCount = SDL_GetNumAudioDevices(0);
+	if (devCount == 0)
+	{
+		return 0;
+	}
+	return devCount + 1; /* Add one for "Default Device" */
 }
 
 void FAudio_UTF8_To_UTF16(const char *src, uint16_t *dst, size_t len);
 
-void FAudio_PlatformGetDeviceDetails(
+uint32_t FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
 ) {
@@ -205,9 +210,9 @@ void FAudio_PlatformGetDeviceDetails(
 	int channels, rate;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
-	if (index > FAudio_PlatformGetDeviceCount())
+	if (index >= FAudio_PlatformGetDeviceCount())
 	{
-		return;
+		return FAUDIO_E_INVALID_CALL;
 	}
 
 	details->DeviceID[0] = L'0' + index;
@@ -239,6 +244,7 @@ void FAudio_PlatformGetDeviceDetails(
 		channels = 2;
 	}
 	WriteWaveFormatExtensible(&details->OutputFormat, channels, rate);
+	return 0;
 }
 
 /* Threading */

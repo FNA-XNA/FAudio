@@ -170,10 +170,11 @@ uint32_t FAudio_GetDeviceDetails(
 	uint32_t Index,
 	FAudioDeviceDetails *pDeviceDetails
 ) {
+	uint32_t result;
 	LOG_API_ENTER(audio)
-	FAudio_PlatformGetDeviceDetails(Index, pDeviceDetails);
+	result = FAudio_PlatformGetDeviceDetails(Index, pDeviceDetails);
 	LOG_API_EXIT(audio)
-	return 0;
+	return result;
 }
 
 uint32_t FAudio_Initialize(
@@ -571,6 +572,11 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* For now we only support one allocated master voice at a time */
 	FAudio_assert(audio->master == NULL);
 
+	if (FAudio_GetDeviceDetails(audio, DeviceIndex, &details) != 0)
+	{
+		return FAUDIO_E_INVALID_CALL;
+	}
+
 	*ppMasteringVoice = (FAudioMasteringVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppMasteringVoice, sizeof(FAudioMasteringVoice));
 	(*ppMasteringVoice)->audio = audio;
@@ -585,7 +591,6 @@ uint32_t FAudio_CreateMasteringVoice(
 	(*ppMasteringVoice)->volume = 1.0f;
 
 	/* Master Properties */
-	FAudio_GetDeviceDetails(audio, DeviceIndex, &details);
 	(*ppMasteringVoice)->master.inputChannels = (InputChannels == FAUDIO_DEFAULT_CHANNELS) ?
 		details.OutputFormat.Format.nChannels :
 		InputChannels;
