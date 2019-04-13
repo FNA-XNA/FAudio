@@ -100,7 +100,7 @@ static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferCon
 		activeSong,
 		activeSongInfo.channels,
 		(float*) songCache,
-		activeSongInfo.sample_rate
+		activeSongInfo.sample_rate * activeSongInfo.channels
 	);
 	if (decoded == 0)
 	{
