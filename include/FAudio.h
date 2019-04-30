@@ -434,6 +434,22 @@ typedef struct FAudioDebugConfiguration
 extern FAudioGUID DATAFORMAT_SUBTYPE_PCM;
 extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
+/* FAudio Version API */
+
+#define FAUDIO_TARGET_VERSION 8 /* Targeting compatibility with XAudio 2.8 */
+
+#define FAUDIO_ABI_VERSION	0
+#define FAUDIO_MAJOR_VERSION	19
+#define FAUDIO_MINOR_VERSION	04
+
+#define FAUDIO_COMPILED_VERSION ( \
+	(FAUDIO_ABI_VERSION * 100 * 100) + \
+	(FAUDIO_MAJOR_VERSION * 100) + \
+	(FAUDIO_MINOR_VERSION) \
+)
+
+FAUDIOAPI uint32_t FAudioLinkedVersion();
+
 /* FAudio Interface */
 
 /* This should be your first FAudio call.
@@ -449,8 +465,6 @@ FAUDIOAPI uint32_t FAudioCreate(
 	uint32_t Flags,
 	FAudioProcessor XAudio2Processor
 );
-
-#define FAUDIO_TARGET_VERSION 8 /* targeting compatibility with XAudio 2.8 */
 
 /* See "extensions/COMConstructEXT.txt" for more details */
 FAUDIOAPI uint32_t FAudioCOMConstructEXT(FAudio **ppFAudio, uint8_t version);

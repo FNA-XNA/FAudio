@@ -51,6 +51,13 @@ MAKE_SUBFORMAT_GUID(WMAUDIO2, FAUDIO_FORMAT_WMAUDIO2);
 MAKE_SUBFORMAT_GUID(WMAUDIO3, FAUDIO_FORMAT_WMAUDIO3);
 #undef MAKE_SUBFORMAT_GUID
 
+/* FAudio Version */
+
+uint32_t FAudioLinkedVersion()
+{
+	return FAUDIO_COMPILED_VERSION;
+}
+
 /* FAudio Interface */
 
 uint32_t FAudioCreate(
