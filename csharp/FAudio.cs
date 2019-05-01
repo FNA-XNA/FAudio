@@ -54,6 +54,25 @@ public static class FAudio
 
 	#region FAudio API
 
+	/* Version */
+
+	public const uint FAUDIO_TARGET_VERSION = 8;
+
+	public const uint FAUDIO_ABI_VERSION =		0;
+	public const uint FAUDIO_MAJOR_VERSION =	19;
+	public const uint FAUDIO_MINOR_VERSION =	04;
+	public const uint FAUDIO_PATCH_VERSION =	00;
+
+	public const uint FAUDIO_COMPILED_VERSION = (
+		(FAUDIO_ABI_VERSION * 100 * 100 * 100) +
+		(FAUDIO_MAJOR_VERSION * 100 * 100) +
+		(FAUDIO_MINOR_VERSION * 100) +
+		(FAUDIO_PATCH_VERSION)
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioLinkedVersion();
+
 	/* Enumerations */
 
 	[Flags]
