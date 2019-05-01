@@ -26,6 +26,7 @@
 
 #include "FAudio.h"
 #include "FAPOBase.h"
+#include "Faudio_operationset.h"
 #include <stdarg.h>
 
 #ifdef FAUDIO_UNKNOWN_PLATFORM
@@ -273,7 +274,10 @@ struct FAudio
 	FAudioMutex sourceLock;
 	FAudioMutex submixLock;
 	FAudioMutex callbackLock;
+    FAudioMutex operationLock;
 	FAudioWaveFormatExtensible *mixFormat;
+
+    FAudioOp_QueuedOperation* queuedOperations;
 
 	/* Used to prevent destroying an active voice */
 	FAudioSourceVoice *processingSource;
