@@ -421,7 +421,8 @@ public static class FAudio
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudio_CommitChanges(
-		IntPtr audio /* FAudio* */
+		IntPtr audio /* FAudio* */,
+		uint OperationSet
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -1908,6 +1909,13 @@ public static class FAudio
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void F3DAudioInitialize(
+		uint SpeakerChannelMask,
+		float SpeedOfSound,
+		byte[] Instance // F3DAUDIO_HANDLE
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint F3DAudioInitialize8(
 		uint SpeakerChannelMask,
 		float SpeedOfSound,
 		byte[] Instance // F3DAUDIO_HANDLE
