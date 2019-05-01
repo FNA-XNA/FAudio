@@ -2331,8 +2331,14 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	LOG_API_ENTER(voice->audio)
 	//FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
     if(OperationSet != FAUDIO_COMMIT_NOW){
+        FAudio_PlatformLockMutex(audio->operationLock);
+        LOG_MUTEX_LOCK(audio, audio->operationLock)
+
         FAudioOp_QueuedOperation* op = FAudioOp_QueueOperation(&voice->audio->queuedOperations, voice->audio->pMalloc);
         FAudioOp_Build_ExitLoop(op, voice, OperationSet);
+        
+        FAudio_PlatformUnlockMutex(audio->operationLock);
+        LOG_MUTEX_UNLOCK(audio, audio->operationLock)
         return;
     }
 
