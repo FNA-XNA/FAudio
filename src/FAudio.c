@@ -701,7 +701,7 @@ void FAudio_StopEngine(FAudio *audio)
 	LOG_API_EXIT(audio)
 }
 
-uint32_t FAudio_CommitChanges(FAudio *audio)
+uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet)
 {
 	LOG_API_ENTER(audio)
 	FAudio_assert(0 && "Batching is not supported!");

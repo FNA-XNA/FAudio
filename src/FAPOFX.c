@@ -29,11 +29,26 @@
 
 uint32_t FAPOFX_CreateFX(
 	const FAudioGUID *clsid,
+	FAPO **pEffect
+) {
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		NULL,
+		0,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FAPOFX_CreateFX8(
+	const FAudioGUID *clsid,
 	FAPO **pEffect,
 	const void *pInitData,
 	uint32_t InitDataByteSize
 ) {
-	return FAPOFX_CreateFXWithCustomAllocatorEXT(
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
 		clsid,
 		pEffect,
 		pInitData,
@@ -45,6 +60,24 @@ uint32_t FAPOFX_CreateFX(
 }
 
 uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		NULL,
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
+	);
+}
+
+uint32_t FAPOFX_CreateFX8WithCustomAllocatorEXT(
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
 	const void *pInitData,

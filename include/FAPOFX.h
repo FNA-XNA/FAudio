@@ -138,7 +138,11 @@ typedef struct FAPOFXEchoParameters
 
 /* Functions */
 
-FAPOFXAPI uint32_t FAPOFX_CreateFX(
+FAPOFXAPI uint32_t FAPOFX_Create(
+	const FAudioGUID *clsid,
+	FAPO **pEffect
+);
+FAPOFXAPI uint32_t FAPOFX_CreateFX8(
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
 	const void *pInitData,
@@ -147,6 +151,13 @@ FAPOFXAPI uint32_t FAPOFX_CreateFX(
 
 /* See "extensions/CustomAllocatorEXT.txt" for more details. */
 FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+FAPOFXAPI uint32_t FAPOFX_CreateFX8WithCustomAllocatorEXT(
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
 	const void *pInitData,

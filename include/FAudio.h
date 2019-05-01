@@ -438,7 +438,7 @@ extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
 #define FAUDIO_TARGET_VERSION 8 /* Targeting compatibility with XAudio 2.8 */
 
-#define FAUDIO_ABI_VERSION	0
+#define FAUDIO_ABI_VERSION	1
 #define FAUDIO_MAJOR_VERSION	19
 #define FAUDIO_MINOR_VERSION	05
 #define FAUDIO_PATCH_VERSION	00
@@ -648,10 +648,18 @@ FAUDIOAPI uint32_t FAudio_StartEngine(FAudio *audio);
  */
 FAUDIOAPI void FAudio_StopEngine(FAudio *audio);
 
-/* This is where you'd push OperationSet changes if we actually supported them.
- * Don't bother with this function, sorry!
+/* Flushes a batch of FAudio calls compiled with a given "OperationSet" tag.
+ * This is useful for pushing calls that need to be done perfectly in sync. For
+ * example, if you want to play two separate sources at the exact same time, you
+ * can call FAudioSourceVoice_Start with an OperationSet value of your choice,
+ * then call CommitChanges with that same value to start the sources together.
+ * FIXME: This feature is not supported yet!
+ *
+ * OperationSet: Either a value known by you or FAUDIO_COMMIT_ALL
+ *
+ * Returns 0 on success.
  */
-FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
+FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet);
 
 /* Requests various bits of performance information from the engine.
  *

@@ -142,6 +142,14 @@ void F3DAudioInitialize(
 	float SpeedOfSound,
 	F3DAUDIO_HANDLE Instance
 ) {
+	F3DAudioInitialize8(SpeakerChannelMask, SpeedOfSound, Instance);
+}
+
+uint32_t F3DAudioInitialize8(
+	uint32_t SpeakerChannelMask,
+	float SpeedOfSound,
+	F3DAUDIO_HANDLE Instance
+) {
 	union
 	{
 		float f;
@@ -151,7 +159,7 @@ void F3DAudioInitialize(
 
 	if (!F3DAudioCheckInitParams(SpeakerChannelMask, SpeedOfSound, Instance))
 	{
-		return;
+		return FAUDIO_E_INVALID_CALL;
 	}
 
 	SPEAKERMASK(Instance) = SpeakerChannelMask;
@@ -183,6 +191,8 @@ void F3DAudioInitialize(
 		SpeakerChannelMask &= SpeakerChannelMask - 1;
 	}
 	SPEAKERCOUNT(Instance) = speakerCount;
+
+	return 0;
 }
 
 

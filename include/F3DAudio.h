@@ -240,6 +240,12 @@ F3DAUDIOAPI void F3DAudioInitialize(
 	F3DAUDIO_HANDLE Instance
 );
 
+F3DAUDIOAPI uint32_t F3DAudioInitialize8(
+	uint32_t SpeakerChannelMask,
+	float SpeedOfSound,
+	F3DAUDIO_HANDLE Instance
+);
+
 F3DAUDIOAPI void F3DAudioCalculate(
 	const F3DAUDIO_HANDLE Instance,
 	const F3DAUDIO_LISTENER *pListener,
