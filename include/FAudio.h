@@ -146,6 +146,13 @@ typedef struct FAudioADPCMWaveFormat
 	FAudioWaveFormatEx wfx;
 	uint16_t wSamplesPerBlock;
 	uint16_t wNumCoef;
+
+	/* MSVC warns on empty arrays in structs */
+	#ifdef _MSC_VER
+	#pragma warning(push)
+	#pragma warning(disable: 4200)
+	#endif
+
 	FAudioADPCMCoefSet aCoef[];
 	/* MSADPCM has 7 coefficient pairs:
 	 * {
@@ -158,6 +165,10 @@ typedef struct FAudioADPCMWaveFormat
 	 *	{ 392, -232 }
 	 * }
 	 */
+
+	#ifdef _MSC_VER
+	#pragma warning(pop)
+	#endif
 } FAudioADPCMWaveFormat;
 
 typedef struct FAudioDeviceDetails
