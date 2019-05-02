@@ -701,13 +701,29 @@ void FAudio_StopEngine(FAudio *audio)
 	LOG_API_EXIT(audio)
 }
 
+#if FAUDIO_ABI_VERSION >= 1
 uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet)
+#else
+uint32_t FAudio_CommitChangesBADABI(FAudio *audio, uint32_t OperationSet)
+#endif
 {
 	LOG_API_ENTER(audio)
 	FAudio_assert(0 && "Batching is not supported!");
 	LOG_API_EXIT(audio)
 	return 0;
 }
+
+#if FAUDIO_ABI_VERSION == 1
+uint32_t FAudio_CommitChangesBADABI(FAudio *audio, uint32_t OperationSet)
+{
+	FAudio_CommitChanges(audio, OperationSet);
+}
+#elif FAUDIO_ABI_VERSION == 0
+uint32_t FAudio_CommitChanges(FAudio *audio)
+{
+	FAudio_assert(0 && "THIS FUNCTION IS BOGUS, DO NOT USE IT!");
+}
+#endif
 
 void FAudio_GetPerformanceData(
 	FAudio *audio,

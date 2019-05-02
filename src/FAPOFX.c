@@ -27,7 +27,11 @@
 #include "FAPOFX.h"
 #include "FAudio_internal.h"
 
+#if FAUDIO_ABI_VERSION >= 1
 uint32_t FAPOFX_CreateFX(
+#else
+uint32_t FAPOFX_CreateFXBADABI(
+#endif
 	const FAudioGUID *clsid,
 	FAPO **pEffect
 ) {
@@ -59,7 +63,11 @@ uint32_t FAPOFX_CreateFX8(
 	);
 }
 
+#if FAUDIO_ABI_VERSION >= 1
 uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+#else
+uint32_t FAPOFX_CreateFXWithCustomAllocatorEXTBADABI(
+#endif
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
 	FAudioMallocFunc customMalloc,
@@ -118,5 +126,77 @@ uint32_t FAPOFX_CreateFX8WithCustomAllocatorEXT(
 	#undef CHECK_AND_RETURN
 	return -1;
 }
+
+/* ABI Compatibility Garbage */
+
+#if FAUDIO_ABI_VERSION == 1
+uint32_t FAPOFX_CreateFXBADABI(
+	const FAudioGUID *clsid,
+	FAPO **pEffect
+) {
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		NULL,
+		0,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+uint32_t FAPOFX_CreateFXWithCustomAllocatorEXTBADABI(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		NULL,
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
+	);
+}
+#elif FAUDIO_ABI_VERSION == 0
+uint32_t FAPOFX_CreateFX(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize
+) {
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		pInitData,
+		InitDataByteSize,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
+	return FAPOFX_CreateFX8WithCustomAllocatorEXT(
+		clsid,
+		pEffect,
+		pInitData,
+		InitDataByteSize,
+		customMalloc,
+		customFree,
+		customRealloc
+	);
+}
+#endif
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */

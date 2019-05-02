@@ -438,7 +438,7 @@ extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
 #define FAUDIO_TARGET_VERSION 8 /* Targeting compatibility with XAudio 2.8 */
 
-#define FAUDIO_ABI_VERSION	1
+#define FAUDIO_ABI_VERSION	0
 #define FAUDIO_MAJOR_VERSION	19
 #define FAUDIO_MINOR_VERSION	05
 #define FAUDIO_PATCH_VERSION	00
@@ -659,7 +659,28 @@ FAUDIOAPI void FAudio_StopEngine(FAudio *audio);
  *
  * Returns 0 on success.
  */
+#if FAUDIO_ABI_VERSION >= 2 /* FAudio 21.01 */
+
+/* The correct API, finally. */
 FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet);
+
+#elif FAUDIO_ABI_VERSION >= 1 /* FAudio 20.01 */
+
+/* This is the correct API and will stay as-is next ABI version */
+FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet);
+
+/* DEPRECATED */
+FAUDIOAPI uint32_t FAudio_CommitChangesBADABI(FAudio *audio, uint32_t OperationSet);
+
+#else /* FAudio 19.06 */
+
+/* Correct API with a terrible name. Will be deprecated next ABI version! */
+FAUDIOAPI uint32_t FAudio_CommitChangesBADABI(FAudio *audio, uint32_t OperationSet);
+
+/* DEPRECATED */
+FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
+
+#endif
 
 /* Requests various bits of performance information from the engine.
  *
