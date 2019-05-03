@@ -35,6 +35,12 @@
 #define FAUDIOCALL
 #endif
 
+#ifdef _MSC_VER
+#define FAUDIODEPRECATED(msg) __declspec(deprecated(msg))
+#else
+#define FAUDIODEPRECATED(msg) __attribute__((deprecated(msg)))
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -660,38 +666,24 @@ FAUDIOAPI uint32_t FAudio_StartEngine(FAudio *audio);
 FAUDIOAPI void FAudio_StopEngine(FAudio *audio);
 
 /* Flushes a batch of FAudio calls compiled with a given "OperationSet" tag.
+ * This function is based on IXAudio2::CommitChanges from the XAudio2 spec.
  * This is useful for pushing calls that need to be done perfectly in sync. For
  * example, if you want to play two separate sources at the exact same time, you
  * can call FAudioSourceVoice_Start with an OperationSet value of your choice,
  * then call CommitChanges with that same value to start the sources together.
- * FIXME: This feature is not supported yet!
  *
  * OperationSet: Either a value known by you or FAUDIO_COMMIT_ALL
  *
  * Returns 0 on success.
  */
-#if FAUDIO_ABI_VERSION >= 2 /* FAudio 21.01 */
+FAUDIOAPI uint32_t FAudio_CommitOperationSet(
+	FAudio *audio,
+	uint32_t OperationSet
+);
 
-/* The correct API, finally. */
-FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet);
-
-#elif FAUDIO_ABI_VERSION >= 1 /* FAudio 20.01 */
-
-/* This is the correct API and will stay as-is next ABI version */
-FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet);
-
-/* DEPRECATED */
-FAUDIOAPI uint32_t FAudio_CommitChangesBADABI(FAudio *audio, uint32_t OperationSet);
-
-#else /* FAudio 19.06 */
-
-/* Correct API with a terrible name. Will be deprecated next ABI version! */
-FAUDIOAPI uint32_t FAudio_CommitChangesBADABI(FAudio *audio, uint32_t OperationSet);
-
-/* DEPRECATED */
-FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
-
-#endif
+/* DO NOT USE THIS FUNCTION OR I SWEAR TO GOD */
+FAUDIOAPI FAUDIODEPRECATED("This function will break your program! Use FAudio_CommitOperationSet instead!")
+uint32_t FAudio_CommitChanges(FAudio *audio);
 
 /* Requests various bits of performance information from the engine.
  *
