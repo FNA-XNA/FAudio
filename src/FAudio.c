@@ -107,12 +107,14 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 ) {
+#ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
+	FAudioDebugConfiguration debugInit = {0};
+#endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 	FAudio_PlatformAddRef();
 	*ppFAudio = (FAudio*) customMalloc(sizeof(FAudio));
 	FAudio_zero(*ppFAudio, sizeof(FAudio));
 	(*ppFAudio)->version = version;
 #ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
-	FAudioDebugConfiguration debugInit = {0};
 	FAudio_SetDebugConfiguration(*ppFAudio, &debugInit, NULL);
 #endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 	(*ppFAudio)->sourceLock = FAudio_PlatformCreateMutex();
