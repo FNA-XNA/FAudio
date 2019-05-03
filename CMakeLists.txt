@@ -25,7 +25,7 @@ else()
 endif()
 
 # Version
-SET(LIB_MAJOR_VERSION "1")
+SET(LIB_MAJOR_VERSION "0")
 SET(LIB_MINOR_VERSION "19")
 SET(LIB_REVISION "05")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
@@ -92,6 +92,7 @@ add_library(FAudio SHARED
 	src/FAudioFX_volumemeter.c
 	src/FAudio_internal.c
 	src/FAudio_internal_simd.c
+	src/FAudio_operationset.c
 	src/FAudio_platform_sdl2.c
 	# Optional source files
 	src/XNA_Song.c

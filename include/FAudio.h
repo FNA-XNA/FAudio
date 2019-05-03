@@ -35,6 +35,12 @@
 #define FAUDIOCALL
 #endif
 
+#ifdef _MSC_VER
+#define FAUDIODEPRECATED(msg) __declspec(deprecated(msg))
+#else
+#define FAUDIODEPRECATED(msg) __attribute__((deprecated(msg)))
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -146,6 +152,13 @@ typedef struct FAudioADPCMWaveFormat
 	FAudioWaveFormatEx wfx;
 	uint16_t wSamplesPerBlock;
 	uint16_t wNumCoef;
+
+	/* MSVC warns on empty arrays in structs */
+	#ifdef _MSC_VER
+	#pragma warning(push)
+	#pragma warning(disable: 4200)
+	#endif
+
 	FAudioADPCMCoefSet aCoef[];
 	/* MSADPCM has 7 coefficient pairs:
 	 * {
@@ -158,6 +171,10 @@ typedef struct FAudioADPCMWaveFormat
 	 *	{ 392, -232 }
 	 * }
 	 */
+
+	#ifdef _MSC_VER
+	#pragma warning(pop)
+	#endif
 } FAudioADPCMWaveFormat;
 
 typedef struct FAudioDeviceDetails
@@ -438,7 +455,7 @@ extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
 #define FAUDIO_TARGET_VERSION 8 /* Targeting compatibility with XAudio 2.8 */
 
-#define FAUDIO_ABI_VERSION	1
+#define FAUDIO_ABI_VERSION	0
 #define FAUDIO_MAJOR_VERSION	19
 #define FAUDIO_MINOR_VERSION	05
 #define FAUDIO_PATCH_VERSION	00
@@ -649,17 +666,24 @@ FAUDIOAPI uint32_t FAudio_StartEngine(FAudio *audio);
 FAUDIOAPI void FAudio_StopEngine(FAudio *audio);
 
 /* Flushes a batch of FAudio calls compiled with a given "OperationSet" tag.
+ * This function is based on IXAudio2::CommitChanges from the XAudio2 spec.
  * This is useful for pushing calls that need to be done perfectly in sync. For
  * example, if you want to play two separate sources at the exact same time, you
  * can call FAudioSourceVoice_Start with an OperationSet value of your choice,
  * then call CommitChanges with that same value to start the sources together.
- * FIXME: This feature is not supported yet!
  *
  * OperationSet: Either a value known by you or FAUDIO_COMMIT_ALL
  *
  * Returns 0 on success.
  */
-FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio, uint32_t OperationSet);
+FAUDIOAPI uint32_t FAudio_CommitOperationSet(
+	FAudio *audio,
+	uint32_t OperationSet
+);
+
+/* DO NOT USE THIS FUNCTION OR I SWEAR TO GOD */
+FAUDIODEPRECATED("This function will break your program! Use FAudio_CommitOperationSet instead!")
+FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
 
 /* Requests various bits of performance information from the engine.
  *

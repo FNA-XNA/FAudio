@@ -1878,6 +1878,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			dspPresetOffset,
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count;
+	uint8_t version;
 	size_t memsize;
 	uint16_t i, j;
 
@@ -1899,7 +1900,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	ptr += 8;
 
 	/* XACT Version (Windows == 3, Xbox == 7) */
-	uint8_t version = read_u8(&ptr, se);
+	version = read_u8(&ptr, se);
 	if (	version != 3 &&
 		version != 7	)
 	{
@@ -2320,6 +2321,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		cueHashOffset,
 		cueNameIndexOffset,
 		soundOffset;
+	uint8_t platform;
 	size_t memsize;
 	uint16_t i, j, cur;
 	uint8_t *ptrBookmark;
@@ -2343,7 +2345,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	ptr += 8;
 
 	/* Windows == 1, Xbox == 3 */
-	uint8_t platform = read_u8(&ptr, se);
+	platform = read_u8(&ptr, se);
 	if (	platform != 1 &&
 		platform != 3	)
 	{

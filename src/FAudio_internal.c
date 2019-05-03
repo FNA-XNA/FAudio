@@ -1123,6 +1123,7 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 {
 	uint32_t totalSamples;
 	LinkedList *list;
+	float *effectOut;
 	FAudioEngineCallback *callback;
 
 	LOG_FUNC_ENTER(audio)
@@ -1132,8 +1133,8 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 		return;
 	}
 
-    FAudio_PlatformLockMutex(audio->operationLock);
-    LOG_MUTEX_LOCK(audio, audio->operationLock)
+	FAudio_PlatformLockMutex(audio->operationLock);
+	LOG_MUTEX_LOCK(audio, audio->operationLock)
 
 	/* ProcessingPassStart callbacks */
 	FAudio_PlatformLockMutex(audio->callbackLock);
@@ -1222,7 +1223,7 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	if (audio->master->effects.count > 0)
 	{
 		totalSamples = audio->updateSize;
-		float *effectOut = FAudio_INTERNAL_ProcessEffectChain(
+		effectOut = FAudio_INTERNAL_ProcessEffectChain(
 			audio->master,
 			audio->master->master.output,
 			&totalSamples
@@ -1265,8 +1266,8 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	FAudio_PlatformUnlockMutex(audio->callbackLock);
 	LOG_MUTEX_UNLOCK(audio, audio->callbackLock)
 
-    FAudio_PlatformUnlockMutex(audio->operationLock);
-    LOG_MUTEX_UNLOCK(audio, audio->operationLock)
+	FAudio_PlatformUnlockMutex(audio->operationLock);
+	LOG_MUTEX_UNLOCK(audio, audio->operationLock)
 
 	LOG_FUNC_EXIT(audio)
 }
