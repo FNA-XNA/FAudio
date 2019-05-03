@@ -24,10 +24,6 @@
  *
  */
 
-/* This file has no documentation since the MSDN docs are still perfectly fine:
- * https://docs.microsoft.com/en-us/windows/desktop/api/xapofx/
- */
-
 #ifndef FAPOFX_H
 #define FAPOFX_H
 
@@ -51,6 +47,9 @@ extern const FAudioGUID FAPOFX_CLSID_FXEcho, FAPOFX_CLSID_FXEcho_LEGACY;
 
 #pragma pack(push, 1)
 
+/* See FAPOFXEQ_* constants below.
+ * FrequencyCenter is in Hz, Gain is amplitude ratio, Bandwidth is Q factor.
+ */
 typedef struct FAPOFXEQParameters
 {
 	float FrequencyCenter0;
@@ -67,23 +66,28 @@ typedef struct FAPOFXEQParameters
 	float Bandwidth3;
 } FAPOFXEQParameters;
 
+/* See FAPOFXMASTERINGLIMITER_* constants below. */
 typedef struct FAPOFXMasteringLimiterParameters
 {
-	uint32_t Release;
-	uint32_t Loudness;
+	uint32_t Release;	/* In milliseconds */
+	uint32_t Loudness;	/* In... uh, MSDN doesn't actually say what. */
 } FAPOFXMasteringLimiterParameters;
 
+/* See FAPOFXREVERB_* constants below.
+ * Both parameters are arbitrary and should be treated subjectively.
+ */
 typedef struct FAPOFXReverbParameters
 {
 	float Diffusion;
 	float RoomSize;
 } FAPOFXReverbParameters;
 
+/* See FAPOFXECHO_* constants below. */
 typedef struct FAPOFXEchoParameters
 {
-	float WetDryMix;
-	float Feedback;
-	float Delay;
+	float WetDryMix;	/* Percentage of processed signal vs original */
+	float Feedback;		/* Percentage to feed back into input */
+	float Delay;		/* In milliseconds */
 } FAPOFXEchoParameters;
 
 #pragma pack(pop)
@@ -138,7 +142,16 @@ typedef struct FAPOFXEchoParameters
 
 /* Functions */
 
-FAPOFXAPI uint32_t FAPOFX_CreateFX8(
+/* Creates an effect from the pre-made FAPOFX effect library.
+ *
+ * clsid:		A reference to one of the FAPOFX_CLSID_* GUIDs
+ * pEffect:		Filled with the resulting FAPO object
+ * pInitData:		Starting parameters, pass NULL to use the default values
+ * InitDataByteSize:	Parameter struct size, pass 0 if pInitData is NULL
+ *
+ * Returns 0 on success.
+ */
+FAPOFXAPI uint32_t FAPOFX_CreateFX(
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
 	const void *pInitData,
@@ -146,81 +159,6 @@ FAPOFXAPI uint32_t FAPOFX_CreateFX8(
 );
 
 /* See "extensions/CustomAllocatorEXT.txt" for more details. */
-FAPOFXAPI uint32_t FAPOFX_CreateFX8WithCustomAllocatorEXT(
-	const FAudioGUID *clsid,
-	FAPO **pEffect,
-	const void *pInitData,
-	uint32_t InitDataByteSize,
-	FAudioMallocFunc customMalloc,
-	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
-);
-
-#if FAUDIO_ABI_VERSION >= 2 /* FAudio 21.01 */
-
-/* The correct 2.7 API, finally. */
-FAPOFXAPI uint32_t FAPOFX_Create(
-	const FAudioGUID *clsid,
-	FAPO **pEffect
-);
-FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
-	const FAudioGUID *clsid,
-	FAPO **pEffect,
-	FAudioMallocFunc customMalloc,
-	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
-);
-
-#elif FAUDIO_ABI_VERSION >= 1 /* FAudio 20.01 */
-
-/* The correct 2.7 API, will not be deprecated next ABI version */
-FAPOFXAPI uint32_t FAPOFX_Create(
-	const FAudioGUID *clsid,
-	FAPO **pEffect
-);
-FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
-	const FAudioGUID *clsid,
-	FAPO **pEffect,
-	FAudioMallocFunc customMalloc,
-	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
-);
-
-/* DEPRECATED */
-FAPOFXAPI uint32_t FAPOFX_CreateFXBADABI(
-	const FAudioGUID *clsid,
-	FAPO **pEffect
-);
-FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXTBADABI(
-	const FAudioGUID *clsid,
-	FAPO **pEffect,
-	FAudioMallocFunc customMalloc,
-	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
-);
-
-#else /* FAudio 19.06 */
-
-/* Correct 2.7 API with a terrible name. Will be deprecated next ABI version! */
-FAPOFXAPI uint32_t FAPOFX_CreateFXBADABI(
-	const FAudioGUID *clsid,
-	FAPO **pEffect
-);
-FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXTBADABI(
-	const FAudioGUID *clsid,
-	FAPO **pEffect,
-	FAudioMallocFunc customMalloc,
-	FAudioFreeFunc customFree,
-	FAudioReallocFunc customRealloc
-);
-
-/* DEPRECATED */
-FAPOFXAPI uint32_t FAPOFX_CreateFX(
-	const FAudioGUID *clsid,
-	FAPO **pEffect,
-	const void *pInitData,
-	uint32_t InitDataByteSize
-);
 FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
 	const FAudioGUID *clsid,
 	FAPO **pEffect,
@@ -230,7 +168,6 @@ FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 );
-#endif
 
 #ifdef __cplusplus
 }
