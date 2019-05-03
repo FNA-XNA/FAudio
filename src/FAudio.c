@@ -719,6 +719,7 @@ uint32_t FAudio_CommitChanges(FAudio *audio)
 		"\n\nIf somebody else is calling this, find out who it is and"
 		"\nfile a bug report with them ASAP."
 	);
+	return 0;
 }
 
 void FAudio_GetPerformanceData(
