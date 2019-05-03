@@ -25,6 +25,7 @@
 		7B7E14232190E10C00616654 /* FAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D692190C8E50020B14B /* FAudio.c */; };
 		7B7E14242190E10C00616654 /* FAudioFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6E2190C8E50020B14B /* FAudioFX_reverb.c */; };
 		7B7E14252190E10C00616654 /* FAudioFX_volumemeter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D5F2190C8E50020B14B /* FAudioFX_volumemeter.c */; };
+		7B80D133227CE0E000AE825D /* FAudio_operationset.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B80D132227CE0E000AE825D /* FAudio_operationset.c */; };
 		7BD20D6F2190C8E50020B14B /* FAudioFX_volumemeter.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D5F2190C8E50020B14B /* FAudioFX_volumemeter.c */; };
 		7BD20D712190C8E50020B14B /* FACT_internal.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D602190C8E50020B14B /* FACT_internal.c */; };
 		7BD20D732190C8E50020B14B /* F3DAudio.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D612190C8E50020B14B /* F3DAudio.c */; };
@@ -68,6 +69,7 @@
 		7B1CDD452190C0A200175C7B /* libFAudio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libFAudio.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B6908262190EC41003C0941 /* XNA_Song.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = XNA_Song.c; path = ../src/XNA_Song.c; sourceTree = "<group>"; };
 		7B7E140D2190E0CB00616654 /* libFAudio-tv.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libFAudio-tv.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B80D132227CE0E000AE825D /* FAudio_operationset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FAudio_operationset.c; path = ../src/FAudio_operationset.c; sourceTree = "<group>"; };
 		7BA5611F21B9C7D800AB0E8C /* F3DAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = F3DAudio.h; path = ../include/F3DAudio.h; sourceTree = "<group>"; };
 		7BA5612021B9C7D800AB0E8C /* FAPO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAPO.h; path = ../include/FAPO.h; sourceTree = "<group>"; };
 		7BA5612121B9C7D800AB0E8C /* FAudioFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FAudioFX.h; path = ../include/FAudioFX.h; sourceTree = "<group>"; };
@@ -146,6 +148,7 @@
 				7BD20D6D2190C8E50020B14B /* FAPOFX_reverb.c */,
 				7BD20D672190C8E50020B14B /* FAPOFX.c */,
 				7BD20D662190C8E50020B14B /* FAudio_internal_simd.c */,
+				7B80D132227CE0E000AE825D /* FAudio_operationset.c */,
 				7BD20D622190C8E50020B14B /* FAudio_internal.c */,
 				7BD20D6C2190C8E50020B14B /* FAudio_platform_sdl2.c */,
 				7BD20D692190C8E50020B14B /* FAudio.c */,
@@ -260,6 +263,7 @@
 				7BD20D7B2190C8E50020B14B /* FACT3D.c in Sources */,
 				7BD20D892190C8E50020B14B /* FAudio_platform_sdl2.c in Sources */,
 				7BD20D712190C8E50020B14B /* FACT_internal.c in Sources */,
+				7B80D133227CE0E000AE825D /* FAudio_operationset.c in Sources */,
 				7BD20D872190C8E50020B14B /* FAPOFX_eq.c in Sources */,
 				7BD20D812190C8E50020B14B /* FAPOFX_echo.c in Sources */,
 				7BD20D752190C8E50020B14B /* FAudio_internal.c in Sources */,
@@ -399,7 +403,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"FAUDIO_DISABLE_DEBUGCONFIGURATION",
+					FAUDIO_DISABLE_DEBUGCONFIGURATION,
 					"$(inherited)",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
