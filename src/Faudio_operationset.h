@@ -27,7 +27,8 @@ typedef struct {
 
 typedef struct {
     FAudioVoice *voice;
-    const FAudioFilterParameters *pParameters;
+    //const FAudioFilterParameters *pParameters;
+    FAudioFilterParameters pParameters;
 } FAudioOpData_SetFilterParameters;
 
 typedef struct {
@@ -48,7 +49,7 @@ typedef struct {
 typedef struct {
     FAudioVoice *voice;
     uint32_t Channels;
-    const float *pVolumes;
+    float* pVolumes;
 } FAudioOpData_SetChannelVolumes;
 
 typedef struct {
@@ -63,7 +64,7 @@ typedef struct {
     FAudioVoice *pDestinationVoice;
     uint32_t SourceChannels;
     uint32_t DestinationChannels;
-    const float *pLevelMatrix;
+    float *pLevelMatrix;
 } FAudioOpData_SetOutputMatrix;
 
 typedef struct {

@@ -15,7 +15,7 @@ void FAudioOp_ExecuteOperation(FAudioOp_QueuedOperation* op){
         case FAUDIOOP_SETFILTERPARAMETERS:
             FAudioVoice_SetFilterParameters(
                 op->opdata.SetFilterParameters.voice, 
-                op->opdata.SetFilterParameters.pParameters,
+                &op->opdata.SetFilterParameters.pParameters,
                 FAUDIO_COMMIT_NOW
             );
         break;
@@ -120,7 +120,7 @@ void FAudioOp_Build_SetFilterParameters(FAudioOp_QueuedOperation* dst,
     dst->operation = FAUDIOOP_SETFILTERPARAMETERS;
     dst->OperationSet = OperationSet;
     dst->opdata.SetFilterParameters.voice = voice;
-    dst->opdata.SetFilterParameters.pParameters = pParameters;
+    dst->opdata.SetFilterParameters.pParameters = *pParameters; //copy it
 }
 
 void FAudioOp_Build_SetFrequencyRatio(FAudioOp_QueuedOperation* dst, 
@@ -166,7 +166,8 @@ void FAudioOp_Build_SetChannelVolumes(FAudioOp_QueuedOperation* dst,
     dst->OperationSet = OperationSet;
     dst->opdata.SetChannelVolumes.voice = voice;
     dst->opdata.SetChannelVolumes.Channels = Channels;
-    dst->opdata.SetChannelVolumes.pVolumes = pVolumes;
+    dst->opdata.SetChannelVolumes.pVolumes = voice->audio->pMalloc(sizeof(float)*Channels);
+    FAudio_memcpy(dst->opdata.SetChannelVolumes.pVolumes, pVolumes, sizeof(float)*Channels);
 }
 
 void FAudioOp_Build_SetEffectParameters(FAudioOp_QueuedOperation* dst, 
@@ -198,7 +199,8 @@ void FAudioOp_Build_SetOutputMatrix(FAudioOp_QueuedOperation* dst,
     dst->opdata.SetOutputMatrix.pDestinationVoice = pDestinationVoice;
     dst->opdata.SetOutputMatrix.SourceChannels = SourceChannels;
     dst->opdata.SetOutputMatrix.DestinationChannels = DestinationChannels;
-    dst->opdata.SetOutputMatrix.pLevelMatrix = pLevelMatrix;
+    dst->opdata.SetOutputMatrix.pLevelMatrix = voice->audio->pMalloc(sizeof(float)*SourceChannels*DestinationChannels);
+    FAudio_memcpy(dst->opdata.SetOutputMatrix.pLevelMatrix, pLevelMatrix, sizeof(float)*SourceChannels*DestinationChannels);
 }
 
 void FAudioOp_Build_SetVolume(FAudioOp_QueuedOperation* dst, 
@@ -261,6 +263,14 @@ void FAudioOp_DeleteOperation(FAudioOp_QueuedOperation** previous, FAudioOp_Queu
     } else {
         (*previous)->next = current->next;
     }
+
+    if(current->operation == FAUDIOOP_SETCHANNELVOLUMES){
+        pFree(current->opdata.SetChannelVolumes.pVolumes);
+    }
+    if(current->operation == FAUDIOOP_SETOUTPUTMATRIX){
+        pFree(current->opdata.SetOutputMatrix.pLevelMatrix);
+    }
+
     pFree(current);
 }
 
@@ -294,6 +304,14 @@ void FAudioOp_ClearAll(FAudioOp_QueuedOperation** start, FAudioFreeFunc pFree){
 
     while(current){
         next = current->next;
+
+        if(current->operation == FAUDIOOP_SETCHANNELVOLUMES){
+            pFree(current->opdata.SetChannelVolumes.pVolumes);
+        }
+        if(current->operation == FAUDIOOP_SETOUTPUTMATRIX){
+            pFree(current->opdata.SetOutputMatrix.pLevelMatrix);
+        }
+
         pFree(current);
         current = next;
     }
