@@ -202,6 +202,7 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 			if (prev == op) /* Start of linked list */
 			{
 				prev = next;
+				audio->queuedOperations = next;
 			}
 			else
 			{
