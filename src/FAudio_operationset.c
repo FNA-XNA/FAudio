@@ -192,16 +192,15 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 	LOG_MUTEX_LOCK(audio, audio->operationLock);
 
 	op = audio->queuedOperations;
-	prev = op;
+	prev = NULL;
 	while (op != NULL)
 	{
 		next = op->next;
 		if (op->OperationSet == OperationSet)
 		{
 			ExecuteOperation(op);
-			if (prev == op) /* Start of linked list */
+			if (prev == NULL) /* Start of linked list */
 			{
-				prev = next;
 				audio->queuedOperations = next;
 			}
 			else
