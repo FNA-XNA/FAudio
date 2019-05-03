@@ -92,6 +92,7 @@ add_library(FAudio SHARED
 	src/FAudioFX_volumemeter.c
 	src/FAudio_internal.c
 	src/FAudio_internal_simd.c
+	src/FAudio_operationset.c
 	src/FAudio_platform_sdl2.c
 	# Optional source files
 	src/XNA_Song.c
