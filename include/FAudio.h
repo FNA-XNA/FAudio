@@ -682,8 +682,8 @@ FAUDIOAPI uint32_t FAudio_CommitOperationSet(
 );
 
 /* DO NOT USE THIS FUNCTION OR I SWEAR TO GOD */
-FAUDIOAPI FAUDIODEPRECATED("This function will break your program! Use FAudio_CommitOperationSet instead!")
-uint32_t FAudio_CommitChanges(FAudio *audio);
+FAUDIODEPRECATED("This function will break your program! Use FAudio_CommitOperationSet instead!")
+FAUDIOAPI uint32_t FAudio_CommitChanges(FAudio *audio);
 
 /* Requests various bits of performance information from the engine.
  *
