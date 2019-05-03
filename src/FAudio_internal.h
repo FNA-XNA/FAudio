@@ -452,6 +452,9 @@ void FAudio_INTERNAL_debug(
 	const char *fmt,
 	...
 );
+#if _MSC_VER <= 1700 /* <=2012 also doesn't support __func__ */
+#define __func__ __FUNCTION__
+#endif
 #else
 void FAudio_INTERNAL_debug(
 	FAudio *audio,
