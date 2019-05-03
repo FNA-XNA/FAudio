@@ -419,7 +419,7 @@ public static class FAudio
 		IntPtr audio /* FAudio* */
 	);
 
-	[DllImport(nativeLibName, EntryPoint = "FAudio_CommitChangesBADABI", CallingConvention = CallingConvention.Cdecl)]
+	[DllImport(nativeLibName, EntryPoint = "FAudio_CommitOperationSet", CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudio_CommitChanges(
 		IntPtr audio /* FAudio* */,
 		uint OperationSet
