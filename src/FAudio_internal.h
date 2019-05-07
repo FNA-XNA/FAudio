@@ -357,6 +357,7 @@ struct FAudio_OPERATIONSET_Operation
 
 void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet);
 void FAudio_OPERATIONSET_CommitAll(FAudio *audio);
+void FAudio_OPERATIONSET_Execute(FAudio *audio);
 
 void FAudio_OPERATIONSET_ClearAll(FAudio *audio);
 
@@ -443,10 +444,10 @@ struct FAudio
 	FAudioMutex submixLock;
 	FAudioMutex callbackLock;
 	FAudioMutex operationLock;
-	FAudioMutex processingLock;
 	FAudioWaveFormatExtensible *mixFormat;
 
 	FAudio_OPERATIONSET_Operation *queuedOperations;
+	FAudio_OPERATIONSET_Operation *committedOperations;
 
 	/* Used to prevent destroying an active voice */
 	FAudioSourceVoice *processingSource;

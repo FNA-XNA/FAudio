@@ -1133,8 +1133,12 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 		return;
 	}
 
-	FAudio_PlatformLockMutex(audio->processingLock);
-	LOG_MUTEX_LOCK(audio, audio->processingLock)
+	//FAudio_PlatformLockMutex(audio->processingLock);
+	//LOG_MUTEX_LOCK(audio, audio->processingLock)
+
+	/*apply any committed changes*/
+	FAudio_OPERATIONSET_Execute(audio);
+
 
 	/* ProcessingPassStart callbacks */
 	FAudio_PlatformLockMutex(audio->callbackLock);
@@ -1266,8 +1270,8 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	FAudio_PlatformUnlockMutex(audio->callbackLock);
 	LOG_MUTEX_UNLOCK(audio, audio->callbackLock)
 
-	FAudio_PlatformUnlockMutex(audio->processingLock);
-	LOG_MUTEX_UNLOCK(audio, audio->processingLock)
+	//FAudio_PlatformUnlockMutex(audio->processingLock);
+	//LOG_MUTEX_UNLOCK(audio, audio->processingLock)
 
 	LOG_FUNC_EXIT(audio)
 }

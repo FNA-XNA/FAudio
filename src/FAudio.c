@@ -125,8 +125,6 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->callbackLock)
 	(*ppFAudio)->operationLock = FAudio_PlatformCreateMutex();
 	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->operationLock)
-	(*ppFAudio)->processingLock = FAudio_PlatformCreateMutex();
-	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->processingLock)
 	(*ppFAudio)->pMalloc = customMalloc;
 	(*ppFAudio)->pFree = customFree;
 	(*ppFAudio)->pRealloc = customRealloc;
@@ -163,8 +161,6 @@ uint32_t FAudio_Release(FAudio *audio)
 		FAudio_PlatformDestroyMutex(audio->callbackLock);
 		LOG_MUTEX_DESTROY(audio, audio->operationLock)
 		FAudio_PlatformDestroyMutex(audio->operationLock);
-		LOG_MUTEX_DESTROY(audio, audio->processingLock)
-		FAudio_PlatformDestroyMutex(audio->processingLock);
 		audio->pFree(audio);
 		FAudio_PlatformRelease();
 	}
@@ -710,6 +706,7 @@ void FAudio_StopEngine(FAudio *audio)
 	LOG_API_ENTER(audio)
 	audio->active = 0;
 	FAudio_OPERATIONSET_CommitAll(audio);
+	FAudio_OPERATIONSET_Execute(audio);
 	LOG_API_EXIT(audio)
 }
 
