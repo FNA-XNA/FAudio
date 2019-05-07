@@ -273,7 +273,7 @@ typedef enum FAudio_OPERATIONSET_Type
 	FAUDIOOP_START,
 	FAUDIOOP_STOP,
 	FAUDIOOP_EXITLOOP,
-	FAUDIOOP_SETFREQUENCYRATIO
+	FAUDIOOP_SETFREQUENCYRATIO,
 } FAudio_OPERATIONSET_Type;
 
 typedef struct FAudio_OPERATIONSET_Operation FAudio_OPERATIONSET_Operation;
@@ -443,6 +443,7 @@ struct FAudio
 	FAudioMutex submixLock;
 	FAudioMutex callbackLock;
 	FAudioMutex operationLock;
+	FAudioMutex processingLock;
 	FAudioWaveFormatExtensible *mixFormat;
 
 	FAudio_OPERATIONSET_Operation *queuedOperations;
@@ -845,7 +846,7 @@ uint32_t FAudio_timems(void);
  * Steps are stored in fixed-point with 32 bits for the fraction:
  *
  * 00000000000000000000000000000000 00000000000000000000000000000000
- * ^ Integer block (32)             ^ Fraction block (32)
+ * ^ Integer block (32)				^ Fraction block (32)
  *
  * For example, to get 1.5:
  * 00000000000000000000000000000001 10000000000000000000000000000000
@@ -853,13 +854,13 @@ uint32_t FAudio_timems(void);
  * The Integer block works exactly like you'd expect.
  * The Fraction block is divided by the Integer's "One" value.
  * So, the above Fraction represented visually...
- *   1 << 31
- *   -------
- *   1 << 32
+ *	 1 << 31
+ *	 -------
+ *	 1 << 32
  * ... which, simplified, is...
- *   1 << 0
- *   ------
- *   1 << 1
+ *	 1 << 0
+ *	 ------
+ *	 1 << 1
  * ... in other words, 1 / 2, or 0.5.
  */
 #define FIXED_PRECISION		32
