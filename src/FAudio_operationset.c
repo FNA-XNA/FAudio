@@ -28,6 +28,93 @@
 
 #include "FAudio_internal.h"
 
+/* Core OperationSet Types */
+
+typedef enum FAudio_OPERATIONSET_Type
+{
+	FAUDIOOP_ENABLEEFFECT,
+	FAUDIOOP_DISABLEEFFECT,
+	FAUDIOOP_SETEFFECTPARAMETERS,
+	FAUDIOOP_SETFILTERPARAMETERS,
+	FAUDIOOP_SETOUTPUTFILTERPARAMETERS,
+	FAUDIOOP_SETVOLUME,
+	FAUDIOOP_SETCHANNELVOLUMES,
+	FAUDIOOP_SETOUTPUTMATRIX,
+	FAUDIOOP_START,
+	FAUDIOOP_STOP,
+	FAUDIOOP_EXITLOOP,
+	FAUDIOOP_SETFREQUENCYRATIO
+} FAudio_OPERATIONSET_Type;
+
+struct FAudio_OPERATIONSET_Operation
+{
+	FAudio_OPERATIONSET_Type Type;
+	uint32_t OperationSet;
+	FAudioVoice *Voice;
+
+	union
+	{
+		struct
+		{
+			uint32_t EffectIndex;
+		} EnableEffect;
+		struct
+		{
+			uint32_t EffectIndex;
+		} DisableEffect;
+		struct
+		{
+			uint32_t EffectIndex;
+			void *pParameters;
+			uint32_t ParametersByteSize;
+		} SetEffectParameters;
+		struct
+		{
+			FAudioFilterParameters Parameters;
+		} SetFilterParameters;
+		struct
+		{
+			FAudioVoice *pDestinationVoice;
+			FAudioFilterParameters Parameters;
+		} SetOutputFilterParameters;
+		struct
+		{
+			float Volume;
+		} SetVolume;
+		struct
+		{
+			uint32_t Channels;
+			float *pVolumes;
+		} SetChannelVolumes;
+		struct
+		{
+			FAudioVoice *pDestinationVoice;
+			uint32_t SourceChannels;
+			uint32_t DestinationChannels;
+			float *pLevelMatrix;
+		} SetOutputMatrix;
+		struct
+		{
+			uint32_t Flags;
+		} Start;
+		struct
+		{
+			uint32_t Flags;
+		} Stop;
+		/* No special data for ExitLoop
+		struct
+		{
+		} ExitLoop;
+		*/
+		struct
+		{
+			float Ratio;
+		} SetFrequencyRatio;
+	} Data;
+
+	FAudio_OPERATIONSET_Operation *next;
+};
+
 /* Used by both Commit and Clear routines */
 
 static inline void DeleteOperation(
@@ -57,7 +144,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 	{
 	case FAUDIOOP_ENABLEEFFECT:
 		FAudioVoice_EnableEffect(
-			op->Data.EnableEffect.voice,
+			op->Voice,
 			op->Data.EnableEffect.EffectIndex,
 			FAUDIO_COMMIT_NOW
 		);
@@ -65,7 +152,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_DISABLEEFFECT:
 		FAudioVoice_DisableEffect(
-			op->Data.DisableEffect.voice,
+			op->Voice,
 			op->Data.DisableEffect.EffectIndex,
 			FAUDIO_COMMIT_NOW
 		);
@@ -73,7 +160,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_SETEFFECTPARAMETERS:
 		FAudioVoice_SetEffectParameters(
-			op->Data.SetEffectParameters.voice,
+			op->Voice,
 			op->Data.SetEffectParameters.EffectIndex,
 			op->Data.SetEffectParameters.pParameters,
 			op->Data.SetEffectParameters.ParametersByteSize,
@@ -83,7 +170,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_SETFILTERPARAMETERS:
 		FAudioVoice_SetFilterParameters(
-			op->Data.SetFilterParameters.voice,
+			op->Voice,
 			&op->Data.SetFilterParameters.Parameters,
 			FAUDIO_COMMIT_NOW
 		);
@@ -91,7 +178,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_SETOUTPUTFILTERPARAMETERS:
 		FAudioVoice_SetOutputFilterParameters(
-			op->Data.SetOutputFilterParameters.voice,
+			op->Voice,
 			op->Data.SetOutputFilterParameters.pDestinationVoice,
 			&op->Data.SetOutputFilterParameters.Parameters,
 			FAUDIO_COMMIT_NOW
@@ -100,7 +187,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_SETVOLUME:
 		FAudioVoice_SetVolume(
-			op->Data.SetVolume.voice,
+			op->Voice,
 			op->Data.SetVolume.Volume,
 			FAUDIO_COMMIT_NOW
 		);
@@ -108,7 +195,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_SETCHANNELVOLUMES:
 		FAudioVoice_SetChannelVolumes(
-			op->Data.SetChannelVolumes.voice,
+			op->Voice,
 			op->Data.SetChannelVolumes.Channels,
 			op->Data.SetChannelVolumes.pVolumes,
 			FAUDIO_COMMIT_NOW
@@ -117,7 +204,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_SETOUTPUTMATRIX:
 		FAudioVoice_SetOutputMatrix(
-			op->Data.SetOutputMatrix.voice,
+			op->Voice,
 			op->Data.SetOutputMatrix.pDestinationVoice,
 			op->Data.SetOutputMatrix.SourceChannels,
 			op->Data.SetOutputMatrix.DestinationChannels,
@@ -128,7 +215,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_START:
 		FAudioSourceVoice_Start(
-			op->Data.Start.voice,
+			op->Voice,
 			op->Data.Start.Flags,
 			FAUDIO_COMMIT_NOW
 		);
@@ -136,7 +223,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_STOP:
 		FAudioSourceVoice_Stop(
-			op->Data.Stop.voice,
+			op->Voice,
 			op->Data.Stop.Flags,
 			FAUDIO_COMMIT_NOW
 		);
@@ -144,14 +231,14 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 
 	case FAUDIOOP_EXITLOOP:
 		FAudioSourceVoice_ExitLoop(
-			op->Data.ExitLoop.voice,
+			op->Voice,
 			FAUDIO_COMMIT_NOW
 		);
 	break;
 
 	case FAUDIOOP_SETFREQUENCYRATIO:
 		FAudioSourceVoice_SetFrequencyRatio(
-			op->Data.SetFrequencyRatio.voice,
+			op->Voice,
 			op->Data.SetFrequencyRatio.Ratio,
 			FAUDIO_COMMIT_NOW
 		);
@@ -171,7 +258,7 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio)
 	LOG_MUTEX_LOCK(audio, audio->operationLock);
 
 	committed_end = &audio->committedOperations;
-	while(*committed_end)
+	while (*committed_end)
 	{
 		committed_end = &((*committed_end)->next);
 	}
@@ -201,7 +288,7 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 	LOG_MUTEX_LOCK(audio, audio->operationLock);
 
 	committed_end = &audio->committedOperations;
-	while(*committed_end)
+	while (*committed_end)
 	{
 		committed_end = &((*committed_end)->next);
 	}
@@ -237,7 +324,8 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 	LOG_MUTEX_UNLOCK(audio, audio->operationLock);
 }
 
-void FAudio_OPERATIONSET_Execute(FAudio *audio){
+void FAudio_OPERATIONSET_Execute(FAudio *audio)
+{
 	FAudio_OPERATIONSET_Operation *op, *next;
 
 	FAudio_PlatformLockMutex(audio->operationLock);
@@ -260,25 +348,27 @@ void FAudio_OPERATIONSET_Execute(FAudio *audio){
 /* OperationSet Compilation */
 
 static inline FAudio_OPERATIONSET_Operation* QueueOperation(
-	FAudio_OPERATIONSET_Operation **start,
+	FAudioVoice *voice,
 	FAudio_OPERATIONSET_Type type,
-	uint32_t operationSet,
-	FAudioMallocFunc pMalloc
+	uint32_t operationSet
 ) {
 	FAudio_OPERATIONSET_Operation *latest;
-	FAudio_OPERATIONSET_Operation *newop = pMalloc(sizeof(FAudio_OPERATIONSET_Operation));
+	FAudio_OPERATIONSET_Operation *newop = voice->audio->pMalloc(
+		sizeof(FAudio_OPERATIONSET_Operation)
+	);
 
 	newop->Type = type;
+	newop->Voice = voice;
 	newop->OperationSet = operationSet;
 	newop->next = NULL;
 
-	if (*start == NULL)
+	if (voice->audio->queuedOperations == NULL)
 	{
-		*start = newop;
+		voice->audio->queuedOperations = newop;
 	}
 	else
 	{
-		latest = *start;
+		latest = voice->audio->queuedOperations;
 		while (latest->next != NULL)
 		{
 			latest = latest->next;
@@ -300,13 +390,11 @@ void FAudio_OPERATIONSET_QueueEnableEffect(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_ENABLEEFFECT,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.EnableEffect.voice = voice;
 	op->Data.EnableEffect.EffectIndex = EffectIndex;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
@@ -324,13 +412,11 @@ void FAudio_OPERATIONSET_QueueDisableEffect(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_DISABLEEFFECT,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.DisableEffect.voice = voice;
 	op->Data.DisableEffect.EffectIndex = EffectIndex;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
@@ -350,13 +436,11 @@ void FAudio_OPERATIONSET_QueueSetEffectParameters(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETEFFECTPARAMETERS,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetEffectParameters.voice = voice;
 	op->Data.SetEffectParameters.EffectIndex = EffectIndex;
 	op->Data.SetEffectParameters.pParameters = voice->audio->pMalloc(
 		ParametersByteSize
@@ -382,13 +466,11 @@ void FAudio_OPERATIONSET_QueueSetFilterParameters(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETFILTERPARAMETERS,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetFilterParameters.voice = voice;
 	FAudio_memcpy(
 		&op->Data.SetFilterParameters.Parameters,
 		pParameters,
@@ -411,13 +493,11 @@ void FAudio_OPERATIONSET_QueueSetOutputFilterParameters(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETOUTPUTFILTERPARAMETERS,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetOutputFilterParameters.voice = voice;
 	op->Data.SetOutputFilterParameters.pDestinationVoice = pDestinationVoice;
 	FAudio_memcpy(
 		&op->Data.SetOutputFilterParameters.Parameters,
@@ -440,13 +520,11 @@ void FAudio_OPERATIONSET_QueueSetVolume(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETVOLUME,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetVolume.voice = voice;
 	op->Data.SetVolume.Volume = Volume;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
@@ -465,13 +543,11 @@ void FAudio_OPERATIONSET_QueueSetChannelVolumes(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETCHANNELVOLUMES,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetChannelVolumes.voice = voice;
 	op->Data.SetChannelVolumes.Channels = Channels;
 	op->Data.SetChannelVolumes.pVolumes = voice->audio->pMalloc(
 		sizeof(float) * Channels
@@ -500,13 +576,11 @@ void FAudio_OPERATIONSET_QueueSetOutputMatrix(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETOUTPUTMATRIX,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetOutputMatrix.voice = voice;
 	op->Data.SetOutputMatrix.pDestinationVoice = pDestinationVoice;
 	op->Data.SetOutputMatrix.SourceChannels = SourceChannels;
 	op->Data.SetOutputMatrix.DestinationChannels = DestinationChannels;
@@ -534,13 +608,11 @@ void FAudio_OPERATIONSET_QueueStart(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_START,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.Start.voice = voice;
 	op->Data.Start.Flags = Flags;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
@@ -558,13 +630,11 @@ void FAudio_OPERATIONSET_QueueStop(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_STOP,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.Stop.voice = voice;
 	op->Data.Stop.Flags = Flags;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
@@ -581,13 +651,12 @@ void FAudio_OPERATIONSET_QueueExitLoop(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_EXITLOOP,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.ExitLoop.voice = voice;
+	/* No special data for ExitLoop */
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->audio->operationLock)
@@ -604,13 +673,11 @@ void FAudio_OPERATIONSET_QueueSetFrequencyRatio(
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	op = QueueOperation(
-		&voice->audio->queuedOperations,
+		voice,
 		FAUDIOOP_SETFREQUENCYRATIO,
-		OperationSet,
-		voice->audio->pMalloc
+		OperationSet
 	);
 
-	op->Data.SetFrequencyRatio.voice = voice;
 	op->Data.SetFrequencyRatio.Ratio = Ratio;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);

@@ -1133,7 +1133,7 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 		return;
 	}
 
-	/*apply any committed changes*/
+	/* Apply any committed changes */
 	FAudio_OPERATIONSET_Execute(audio);
 
 	/* ProcessingPassStart callbacks */
