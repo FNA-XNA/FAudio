@@ -705,3 +705,58 @@ void FAudio_OPERATIONSET_ClearAll(FAudio *audio)
 	FAudio_PlatformUnlockMutex(audio->operationLock);
 	LOG_MUTEX_UNLOCK(audio, audio->operationLock)
 }
+
+/* Called when releasing a voice */
+
+static inline void RemoveFromList(
+	FAudioVoice *voice,
+	FAudio_OPERATIONSET_Operation **list
+) {
+	FAudio_OPERATIONSET_Operation *current, *next, *prev;
+
+	current = *list;
+	prev = NULL;
+	while (current != NULL)
+	{
+		const uint8_t baseVoice = (voice == current->Voice);
+		const uint8_t dstVoice = (
+			current->Type == FAUDIOOP_SETOUTPUTFILTERPARAMETERS &&
+			voice == current->Data.SetOutputFilterParameters.pDestinationVoice
+		) || (
+			current->Type == FAUDIOOP_SETOUTPUTMATRIX &&
+			voice == current->Data.SetOutputMatrix.pDestinationVoice
+		);
+
+		next = current->next;
+		if (baseVoice || dstVoice)
+		{
+			if (prev == NULL) /* Start of linked list */
+			{
+				*list = next;
+			}
+			else
+			{
+				prev->next = next;
+			}
+
+			DeleteOperation(current, voice->audio->pFree);
+		}
+		else
+		{
+			prev = current;
+		}
+		current = next;
+	}
+}
+
+void FAudio_OPERATIONSET_ClearAllForVoice(FAudioVoice *voice)
+{
+	FAudio_PlatformLockMutex(voice->audio->operationLock);
+	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock);
+
+	RemoveFromList(voice, &voice->audio->queuedOperations);
+	RemoveFromList(voice, &voice->audio->committedOperations);
+
+	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
+	LOG_MUTEX_UNLOCK(voice->audio, voice->audio->operationLock)
+}

@@ -267,6 +267,7 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio);
 void FAudio_OPERATIONSET_Execute(FAudio *audio);
 
 void FAudio_OPERATIONSET_ClearAll(FAudio *audio);
+void FAudio_OPERATIONSET_ClearAllForVoice(FAudioVoice *voice);
 
 void FAudio_OPERATIONSET_QueueEnableEffect(
 	FAudioVoice *voice,
