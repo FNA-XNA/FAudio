@@ -260,106 +260,14 @@ typedef float FAudioFilterState[4];
 
 /* Operation Sets, original implementation by Tyler Glaiel */
 
-typedef enum FAudio_OPERATIONSET_Type
-{
-	FAUDIOOP_ENABLEEFFECT,
-	FAUDIOOP_DISABLEEFFECT,
-	FAUDIOOP_SETEFFECTPARAMETERS,
-	FAUDIOOP_SETFILTERPARAMETERS,
-	FAUDIOOP_SETOUTPUTFILTERPARAMETERS,
-	FAUDIOOP_SETVOLUME,
-	FAUDIOOP_SETCHANNELVOLUMES,
-	FAUDIOOP_SETOUTPUTMATRIX,
-	FAUDIOOP_START,
-	FAUDIOOP_STOP,
-	FAUDIOOP_EXITLOOP,
-	FAUDIOOP_SETFREQUENCYRATIO
-} FAudio_OPERATIONSET_Type;
-
 typedef struct FAudio_OPERATIONSET_Operation FAudio_OPERATIONSET_Operation;
-struct FAudio_OPERATIONSET_Operation
-{
-	FAudio_OPERATIONSET_Type Type;
-	uint32_t OperationSet;
-
-	union
-	{
-		struct
-		{
-			FAudioVoice *voice;
-			uint32_t EffectIndex;
-		} EnableEffect;
-		struct
-		{
-			FAudioVoice *voice;
-			uint32_t EffectIndex;
-		} DisableEffect;
-		struct
-		{
-			FAudioVoice *voice;
-			uint32_t EffectIndex;
-			void *pParameters;
-			uint32_t ParametersByteSize;
-		} SetEffectParameters;
-		struct
-		{
-			FAudioVoice *voice;
-			FAudioFilterParameters Parameters;
-		} SetFilterParameters;
-		struct
-		{
-			FAudioVoice *voice;
-			FAudioVoice *pDestinationVoice;
-			FAudioFilterParameters Parameters;
-		} SetOutputFilterParameters;
-		struct
-		{
-			FAudioVoice *voice;
-			float Volume;
-		} SetVolume;
-		struct
-		{
-			FAudioVoice *voice;
-			uint32_t Channels;
-			float *pVolumes;
-		} SetChannelVolumes;
-		struct
-		{
-			FAudioVoice *voice;
-			FAudioVoice *pDestinationVoice;
-			uint32_t SourceChannels;
-			uint32_t DestinationChannels;
-			float *pLevelMatrix;
-		} SetOutputMatrix;
-		struct
-		{
-			FAudioSourceVoice *voice;
-			uint32_t Flags;
-		} Start;
-		struct
-		{
-			FAudioSourceVoice *voice;
-			uint32_t Flags;
-		} Stop;
-		struct
-		{
-			FAudioSourceVoice *voice;
-		} ExitLoop;
-		struct
-		{
-			FAudioSourceVoice *voice;
-			float Ratio;
-		} SetFrequencyRatio;
-	} Data;
-
-	FAudio_OPERATIONSET_Operation *next;
-};
 
 void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet);
 void FAudio_OPERATIONSET_CommitAll(FAudio *audio);
 void FAudio_OPERATIONSET_Execute(FAudio *audio);
 
 void FAudio_OPERATIONSET_ClearAll(FAudio *audio);
+void FAudio_OPERATIONSET_ClearAllForVoice(FAudioVoice *voice);
 
 void FAudio_OPERATIONSET_QueueEnableEffect(
 	FAudioVoice *voice,

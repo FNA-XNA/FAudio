@@ -1957,7 +1957,9 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	uint32_t i;
 	LOG_API_ENTER(voice->audio)
 
-	/* TODO: Check for dependencies and fail if still in use */
+	/* TODO: Check for dependencies and remove from audio graph first! */
+	FAudio_OPERATIONSET_ClearAllForVoice(voice);
+
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
 		FAudioBufferEntry *entry, *next;
