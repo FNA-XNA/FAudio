@@ -123,6 +123,8 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->submixLock)
 	(*ppFAudio)->callbackLock = FAudio_PlatformCreateMutex();
 	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->callbackLock)
+	(*ppFAudio)->operationLock = FAudio_PlatformCreateMutex();
+	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->operationLock)
 	(*ppFAudio)->pMalloc = customMalloc;
 	(*ppFAudio)->pFree = customFree;
 	(*ppFAudio)->pRealloc = customRealloc;
@@ -146,6 +148,7 @@ uint32_t FAudio_Release(FAudio *audio)
 	refcount = audio->refcount;
 	if (audio->refcount == 0)
 	{
+		FAudio_OPERATIONSET_ClearAll(audio);
 		FAudio_StopEngine(audio);
 		audio->pFree(audio->decodeCache);
 		audio->pFree(audio->resampleCache);
@@ -156,6 +159,8 @@ uint32_t FAudio_Release(FAudio *audio)
 		FAudio_PlatformDestroyMutex(audio->submixLock);
 		LOG_MUTEX_DESTROY(audio, audio->callbackLock)
 		FAudio_PlatformDestroyMutex(audio->callbackLock);
+		LOG_MUTEX_DESTROY(audio, audio->operationLock)
+		FAudio_PlatformDestroyMutex(audio->operationLock);
 		audio->pFree(audio);
 		FAudio_PlatformRelease();
 	}
@@ -700,13 +705,22 @@ void FAudio_StopEngine(FAudio *audio)
 {
 	LOG_API_ENTER(audio)
 	audio->active = 0;
+	FAudio_OPERATIONSET_CommitAll(audio);
+	FAudio_OPERATIONSET_Execute(audio);
 	LOG_API_EXIT(audio)
 }
 
 uint32_t FAudio_CommitOperationSet(FAudio *audio, uint32_t OperationSet)
 {
 	LOG_API_ENTER(audio)
-	FAudio_assert(0 && "Batching is not supported!");
+	if (OperationSet == FAUDIO_COMMIT_ALL)
+	{
+		FAudio_OPERATIONSET_CommitAll(audio);
+	}
+	else
+	{
+		FAudio_OPERATIONSET_Commit(audio, OperationSet);
+	}
 	LOG_API_EXIT(audio)
 	return 0;
 }
@@ -1330,7 +1344,17 @@ uint32_t FAudioVoice_EnableEffect(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueEnableEffect(
+			voice,
+			EffectIndex,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	FAudio_PlatformLockMutex(voice->effectLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->effectLock)
@@ -1347,7 +1371,17 @@ uint32_t FAudioVoice_DisableEffect(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueDisableEffect(
+			voice,
+			EffectIndex,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	FAudio_PlatformLockMutex(voice->effectLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->effectLock)
@@ -1380,7 +1414,19 @@ uint32_t FAudioVoice_SetEffectParameters(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetEffectParameters(
+			voice,
+			EffectIndex,
+			pParameters,
+			ParametersByteSize,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	if (voice->effects.parameters[EffectIndex] == NULL)
 	{
@@ -1435,7 +1481,17 @@ uint32_t FAudioVoice_SetFilterParameters(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetFilterParameters(
+			voice,
+			pParameters,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	/* MSDN: "This method is usable only on source and submix voices and
 	 * has no effect on mastering voices."
@@ -1507,7 +1563,18 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 ) {
 	uint32_t i;
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetOutputFilterParameters(
+			voice,
+			pDestinationVoice,
+			pParameters,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	/* MSDN: "This method is usable only on source and submix voices and
 	 * has no effect on mastering voices."
@@ -1641,7 +1708,17 @@ uint32_t FAudioVoice_SetVolume(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetVolume(
+			voice,
+			Volume,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	voice->volume = FAudio_clamp(
 		Volume,
@@ -1668,7 +1745,18 @@ uint32_t FAudioVoice_SetChannelVolumes(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetChannelVolumes(
+			voice,
+			Channels,
+			pVolumes,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	if (pVolumes == NULL)
 	{
@@ -1729,7 +1817,20 @@ uint32_t FAudioVoice_SetOutputMatrix(
 ) {
 	uint32_t i;
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetOutputMatrix(
+			voice,
+			pDestinationVoice,
+			SourceChannels,
+			DestinationChannels,
+			pLevelMatrix,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 
 	FAudio_PlatformLockMutex(voice->sendLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
@@ -1856,7 +1957,9 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	uint32_t i;
 	LOG_API_ENTER(voice->audio)
 
-	/* TODO: Check for dependencies and fail if still in use */
+	/* TODO: Check for dependencies and remove from audio graph first! */
+	FAudio_OPERATIONSET_ClearAllForVoice(voice);
+
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
 		FAudioBufferEntry *entry, *next;
@@ -2009,7 +2112,19 @@ uint32_t FAudioSourceVoice_Start(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueStart(
+			voice,
+			Flags,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
+
+
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_assert(Flags == 0);
@@ -2024,7 +2139,18 @@ uint32_t FAudioSourceVoice_Stop(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueStop(
+			voice,
+			Flags,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
+
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	if (Flags & FAUDIO_PLAY_TAILS)
@@ -2282,7 +2408,17 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueExitLoop(
+			voice,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
+
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
@@ -2351,7 +2487,17 @@ uint32_t FAudioSourceVoice_SetFrequencyRatio(
 	uint32_t OperationSet
 ) {
 	LOG_API_ENTER(voice->audio)
-	FAudio_assert(OperationSet == FAUDIO_COMMIT_NOW);
+
+	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
+	{
+		FAudio_OPERATIONSET_QueueSetFrequencyRatio(
+			voice,
+			Ratio,
+			OperationSet
+		);
+		LOG_API_EXIT(voice->audio)
+		return 0;
+	}
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	if (voice->flags & FAUDIO_VOICE_NOPITCH)

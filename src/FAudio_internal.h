@@ -258,6 +258,84 @@ typedef void (FAUDIOCALL * FAudioMixCallback)(
 
 typedef float FAudioFilterState[4];
 
+/* Operation Sets, original implementation by Tyler Glaiel */
+
+typedef struct FAudio_OPERATIONSET_Operation FAudio_OPERATIONSET_Operation;
+
+void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet);
+void FAudio_OPERATIONSET_CommitAll(FAudio *audio);
+void FAudio_OPERATIONSET_Execute(FAudio *audio);
+
+void FAudio_OPERATIONSET_ClearAll(FAudio *audio);
+void FAudio_OPERATIONSET_ClearAllForVoice(FAudioVoice *voice);
+
+void FAudio_OPERATIONSET_QueueEnableEffect(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueDisableEffect(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetEffectParameters(
+	FAudioVoice *voice,
+	uint32_t EffectIndex,
+	const void *pParameters,
+	uint32_t ParametersByteSize,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetFilterParameters(
+	FAudioVoice *voice,
+	const FAudioFilterParameters *pParameters,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetOutputFilterParameters(
+	FAudioVoice *voice,
+	FAudioVoice *pDestinationVoice,
+	const FAudioFilterParameters *pParameters,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetVolume(
+	FAudioVoice *voice,
+	float Volume,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetChannelVolumes(
+	FAudioVoice *voice,
+	uint32_t Channels,
+	const float *pVolumes,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetOutputMatrix(
+	FAudioVoice *voice,
+	FAudioVoice *pDestinationVoice,
+	uint32_t SourceChannels,
+	uint32_t DestinationChannels,
+	const float *pLevelMatrix,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueStart(
+	FAudioSourceVoice *voice,
+	uint32_t Flags,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueStop(
+	FAudioSourceVoice *voice,
+	uint32_t Flags,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueExitLoop(
+	FAudioSourceVoice *voice,
+	uint32_t OperationSet
+);
+void FAudio_OPERATIONSET_QueueSetFrequencyRatio(
+	FAudioSourceVoice *voice,
+	float Ratio,
+	uint32_t OperationSet
+);
+
 /* Public FAudio Types */
 
 struct FAudio
@@ -273,7 +351,11 @@ struct FAudio
 	FAudioMutex sourceLock;
 	FAudioMutex submixLock;
 	FAudioMutex callbackLock;
+	FAudioMutex operationLock;
 	FAudioWaveFormatExtensible *mixFormat;
+
+	FAudio_OPERATIONSET_Operation *queuedOperations;
+	FAudio_OPERATIONSET_Operation *committedOperations;
 
 	/* Used to prevent destroying an active voice */
 	FAudioSourceVoice *processingSource;
