@@ -534,7 +534,6 @@ struct FACTCue
 
 /* Internal functions */
 
-float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel);
 void FACT_INTERNAL_GetNextWave(
 	FACTCue *cue,
 	FACTSound *sound,

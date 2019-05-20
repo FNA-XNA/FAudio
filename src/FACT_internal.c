@@ -34,7 +34,7 @@
 #include "stb.h"
 #define FACT_INTERNAL_rng() ((float) stb_frand())
 
-/* Internal Functions */
+/* Helper Functions */
 
 #define SWAP_16(x) \
 	((x >> 8)	& 0x00FF) | \
@@ -59,10 +59,45 @@
 	((x << 32)	& 0xFF00000000000000)
 #define DOSWAP_64(x) x = SWAP_32(x);
 
-float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
+static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
 	return (float) FAudio_pow(10.0, decibel / 2000.0);
 }
+
+static inline uint32_t FACT_INTERNAL_ReadFile(
+	FACTReadFileCallback pReadFile,
+	FACTGetOverlappedResultCallback pGetOverlappedResult,
+	void* io,
+	uint32_t offset,
+	void* dst,
+	uint32_t len
+) {
+	FACTOverlapped ovlp;
+	uint32_t result;
+
+	ovlp.Internal = NULL;
+	ovlp.InternalHigh = NULL;
+	ovlp.Offset = offset;
+	ovlp.OffsetHigh = 0; /* I sure hope so... */
+	ovlp.hEvent = NULL;
+
+	pReadFile(
+		io,
+		dst,
+		len,
+		NULL,
+		&ovlp
+	);
+	while (ovlp.Internal == (void*) 0x103) /* STATUS_PENDING */
+	{
+		/* Don't actually sleep, just yield the thread */
+		FAudio_sleep(0);
+	}
+	pGetOverlappedResult(io, &ovlp, &result, 1);
+	return result;
+}
+
+/* Internal Functions */
 
 void FACT_INTERNAL_GetNextWave(
 	FACTCue *cue,
@@ -1633,8 +1668,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	FAudioBufferWMA bufferWMA;
 	FACTWaveCallback *c = (FACTWaveCallback*) callback;
 	FACTWaveBankEntry *entry;
-	FACTOverlapped ovlp;
-	uint32_t end, left, read, length;
+	uint32_t end, left, length;
 
 	entry = &c->wave->parentBank->entries[c->wave->index];
 
@@ -1687,25 +1721,14 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	);
 
 	/* Read! */
-	ovlp.Internal = NULL;
-	ovlp.InternalHigh = NULL;
-	ovlp.Offset = c->wave->streamOffset;
-	ovlp.OffsetHigh = 0; /* I sure hope so... */
-	ovlp.hEvent = NULL;
-	c->wave->parentBank->parentEngine->pReadFile(
+	c->wave->streamOffset += FACT_INTERNAL_ReadFile(
+		c->wave->parentBank->parentEngine->pReadFile,
+		c->wave->parentBank->parentEngine->pGetOverlappedResult,
 		c->wave->parentBank->io,
+		c->wave->streamOffset,
 		c->wave->streamCache,
-		buffer.AudioBytes,
-		NULL,
-		&ovlp
+		buffer.AudioBytes
 	);
-	c->wave->parentBank->parentEngine->pGetOverlappedResult(
-		c->wave->parentBank->io,
-		&ovlp,
-		&read,
-		1
-	);
-	c->wave->streamOffset += buffer.AudioBytes;
 
 	/* Last buffer in the stream? */
 	buffer.Flags = 0;
@@ -2811,24 +2834,17 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTWaveBankData wbinfo;
 	uint32_t compactEntry;
 	int32_t seekTableOffset;
-	FACTOverlapped ovlp;
+	uint32_t fileOffset;
 	uint32_t read;
 
-	ovlp.Internal = NULL;
-	ovlp.InternalHigh = NULL;
-	ovlp.OffsetHigh = 0; /* I sure hope so... */
-	ovlp.hEvent = NULL;
-
 	#define SEEKSET(loc) \
-		ovlp.Offset = offset + loc;
+		fileOffset = offset + loc;
 	#define SEEKCUR(loc) \
-		ovlp.Offset += loc;
+		fileOffset += loc;
 	#define READ(dst, size) \
-		pRead(io, dst, size, NULL, &ovlp); \
-		pOverlap(io, &ovlp, &read, 1); \
-		SEEKCUR(read)
+		fileOffset += FACT_INTERNAL_ReadFile(pRead, pOverlap, io, fileOffset, dst, size);
 
-	SEEKSET(0)
+	fileOffset = offset;
 	READ(&header, sizeof(header))
 	se = header.dwSignature == 0x57424E44;
 	if (se)
