@@ -273,7 +273,10 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
 	/* Stop the platform stream before freeing stuff! */
-	FAudio_StopEngine(pEngine->audio);
+	if (pEngine->audio != NULL)
+	{
+		FAudio_StopEngine(pEngine->audio);
+	}
 
 	/* This method destroys all existing cues, sound banks, and wave banks.
 	 * It blocks until all cues are destroyed.
@@ -325,8 +328,14 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	{
 		FAudioVoice_DestroyVoice(pEngine->reverbVoice);
 	}
-	FAudioVoice_DestroyVoice(pEngine->master);
-	FAudio_Release(pEngine->audio);
+	if (pEngine->master != NULL)
+	{
+		FAudioVoice_DestroyVoice(pEngine->master);
+	}
+	if (pEngine->audio != NULL)
+	{
+		FAudio_Release(pEngine->audio);
+	}
 
 	/* Finally. */
 	refcount = pEngine->refcount;
