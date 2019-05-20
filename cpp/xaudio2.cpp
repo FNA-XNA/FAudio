@@ -1330,7 +1330,7 @@ public:
 
 	COM_METHOD(HRESULT) CommitChanges(UINT32 OperationSet)
 	{
-		return FAudio_CommitChanges(faudio);
+		return FAudio_CommitOperationSet(faudio, OperationSet);
 	}
 
 	COM_METHOD(void) GetPerformanceData(XAUDIO2_PERFORMANCE_DATA *pPerfData)
