@@ -560,7 +560,14 @@ public:
 		}
 		else if (desc.type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 		{
-			desc.pSoundBank = ((XACT3SoundBankImpl*) pNotificationDescription->pSoundBank)->soundBank;
+			if (pNotificationDescription->pSoundBank != NULL)
+			{
+				desc.pSoundBank = ((XACT3SoundBankImpl*) pNotificationDescription->pSoundBank)->soundBank;
+			}
+			else
+			{
+				desc.pSoundBank = NULL;
+			}
 		}
 		else if (desc.type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
 		{
