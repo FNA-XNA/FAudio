@@ -81,13 +81,7 @@ static inline uint32_t FACT_INTERNAL_ReadFile(
 	ovlp.OffsetHigh = 0; /* I sure hope so... */
 	ovlp.hEvent = NULL;
 
-	pReadFile(
-		io,
-		dst,
-		len,
-		NULL,
-		&ovlp
-	);
+	pReadFile(io, dst, len, NULL, &ovlp);
 	while (ovlp.Internal == (void*) 0x103) /* STATUS_PENDING */
 	{
 		/* Don't actually sleep, just yield the thread */
