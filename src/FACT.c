@@ -50,6 +50,7 @@ uint32_t FACTCreateEngineWithCustomAllocatorEXT(
 	FAudioReallocFunc customRealloc
 ) {
 	/* TODO: Anything fun with dwCreationFlags? */
+	FAudio_PlatformAddRef();
 	*ppEngine = (FACTAudioEngine*) customMalloc(sizeof(FACTAudioEngine));
 	if (*ppEngine == NULL)
 	{
@@ -89,6 +90,7 @@ uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine)
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	FAudio_PlatformDestroyMutex(pEngine->apiLock);
 	pEngine->pFree(pEngine);
+	FAudio_PlatformRelease();
 	return 0;
 }
 

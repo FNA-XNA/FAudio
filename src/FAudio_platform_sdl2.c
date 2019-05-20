@@ -192,16 +192,7 @@ void FAudio_PlatformQuit(FAudio *audio)
 
 uint32_t FAudio_PlatformGetDeviceCount()
 {
-	uint32_t devCount;
-
-	/* This can be called before any other audio work, so increment the
-	 * audio subsystem refcount and immediately decrement. For situations
-	 * where this is called after init, these function calls will be no-ops.
-	 */
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
-	devCount = SDL_GetNumAudioDevices(0);
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-
+	uint32_t devCount = SDL_GetNumAudioDevices(0);
 	if (devCount == 0)
 	{
 		return 0;
@@ -218,16 +209,9 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	const char *name, *envvar;
 	int channels, rate;
 
-	/* This can be called before any other audio work, so increment the
-	 * audio subsystem refcount and decrement at return time. For situations
-	 * where this is called after init, these function calls will be no-ops.
-	 */
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
-
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 	if (index >= FAudio_PlatformGetDeviceCount())
 	{
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
 		return FAUDIO_E_INVALID_CALL;
 	}
 
@@ -260,7 +244,6 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 		channels = 2;
 	}
 	WriteWaveFormatExtensible(&details->OutputFormat, channels, rate);
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	return 0;
 }
 
