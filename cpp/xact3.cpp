@@ -436,11 +436,11 @@ public:
 		params.pMasteringVoice = NULL;
 
 		/* Force Win32 I/O, do NOT use the default! */
-		if (pParams->fileIOCallbacks.readFileCallback != NULL)
+		if (pParams->fileIOCallbacks.readFileCallback == NULL)
 		{
 			params.fileIOCallbacks.readFileCallback = ReadFile;
 		}
-		if (pParams->fileIOCallbacks.getOverlappedResultCallback != NULL)
+		if (pParams->fileIOCallbacks.getOverlappedResultCallback == NULL)
 		{
 			params.fileIOCallbacks.getOverlappedResultCallback = GetOverlappedResult;
 		}
