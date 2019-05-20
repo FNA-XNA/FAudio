@@ -1385,7 +1385,7 @@ void *CreateXAudio2Internal()
 
 #if XAUDIO2_VERSION >= 8
 
-FAUDIOCPP_API XAudio2Create(IXAudio2 **ppXAudio2, UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor)
+extern "C" FAUDIOCPP_API XAudio2Create(IXAudio2 **ppXAudio2, UINT32 Flags, XAUDIO2_PROCESSOR XAudio2Processor)
 {
 	// FAudio only accepts one processor
 	*ppXAudio2 = new XAudio2Impl(Flags, FAUDIO_DEFAULT_PROCESSOR);

@@ -108,13 +108,13 @@ void *CreateAudioReverbInternal()
 
 #if XAUDIO2_VERSION >=8
 
-FAUDIOCPP_API CreateAudioVolumeMeter(class IUnknown** ppApo) 
+extern "C" FAUDIOCPP_API CreateAudioVolumeMeter(class IUnknown** ppApo)
 {
 	*ppApo = reinterpret_cast<IUnknown *> (CreateAudioVolumeMeterInternal());
 	return S_OK;
 }
 
-FAUDIOCPP_API CreateAudioReverb(class IUnknown** ppApo) 
+extern "C" FAUDIOCPP_API CreateAudioReverb(class IUnknown** ppApo)
 {
 	*ppApo = reinterpret_cast<IUnknown *> (CreateAudioReverbInternal());
 	return S_OK;
