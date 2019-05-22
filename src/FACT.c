@@ -1326,6 +1326,10 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		pWaveBank->parentEngine->pFree(pWaveBank->seekTables);
 	}
 	FAudio_close(pWaveBank->io);
+	if (pWaveBank->packetBuffer != NULL)
+	{
+		pWaveBank->parentEngine->pFree(pWaveBank->packetBuffer);
+	}
 	if (pWaveBank->notifyOnDestroy)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED;
