@@ -459,7 +459,10 @@ struct FACTWaveBank
 	FACTSeekTable *seekTables;
 
 	/* I/O information */
+	uint32_t packetSize;
 	uint16_t streaming;
+	uint8_t *packetBuffer;
+	uint32_t packetBufferLen;
 	void* io;
 };
 
@@ -593,6 +596,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTAudioEngine *pEngine,
 	void* io,
 	uint32_t offset,
+	uint32_t packetSize,
 	FACTReadFileCallback pRead,
 	FACTGetOverlappedResultCallback pOverlap,
 	uint16_t isStreaming,

@@ -120,7 +120,7 @@ typedef struct FACTStreamingParameters
 	void *file;
 	uint32_t offset;
 	uint32_t flags;
-	uint16_t packetSize;
+	uint16_t packetSize; /* Measured in DVD sectors, or 2048 bytes */
 } FACTStreamingParameters;
 
 #define FACT_WAVEBANK_TYPE_BUFFER		0x00000000

@@ -429,6 +429,7 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 		pEngine,
 		FAudio_memopen((void*) pvBuffer, dwSize),
 		0,
+		0,
 		FACT_INTERNAL_DefaultReadFile,
 		FACT_INTERNAL_DefaultGetOverlappedResult,
 		0,
@@ -443,12 +444,23 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	const FACTStreamingParameters *pParms,
 	FACTWaveBank **ppWaveBank
 ) {
-	uint32_t retval;
+	uint32_t retval, packetSize;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
+	if (	pEngine->pReadFile == FACT_INTERNAL_DefaultReadFile &&
+		pEngine->pGetOverlappedResult == FACT_INTERNAL_DefaultGetOverlappedResult	)
+	{
+		/* Our I/O doesn't care about packets, set to 0 as an optimization */
+		packetSize = 0;
+	}
+	else
+	{
+		packetSize = pParms->packetSize * 2048;
+	}
 	retval = FACT_INTERNAL_ParseWaveBank(
 		pEngine,
 		pParms->file,
 		pParms->offset,
+		packetSize,
 		pEngine->pReadFile,
 		pEngine->pGetOverlappedResult,
 		1,

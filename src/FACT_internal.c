@@ -64,31 +64,85 @@ static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 	return (float) FAudio_pow(10.0, decibel / 2000.0);
 }
 
-static inline uint32_t FACT_INTERNAL_ReadFile(
+static inline void FACT_INTERNAL_ReadFile(
 	FACTReadFileCallback pReadFile,
 	FACTGetOverlappedResultCallback pGetOverlappedResult,
 	void* io,
 	uint32_t offset,
+	uint32_t packetSize,
+	uint8_t **packetBuffer,
+	uint32_t *packetBufferLen,
+	FAudioReallocFunc pRealloc,
 	void* dst,
 	uint32_t len
 ) {
 	FACTOverlapped ovlp;
-	uint32_t result;
+	uint32_t realOffset, realLen, offPacket, lenPacket, result;
+	uint8_t usePacketBuffer;
+	void *buf;
 
 	ovlp.Internal = NULL;
 	ovlp.InternalHigh = NULL;
-	ovlp.Offset = offset;
 	ovlp.OffsetHigh = 0; /* I sure hope so... */
 	ovlp.hEvent = NULL;
 
-	pReadFile(io, dst, len, NULL, &ovlp);
-	while (ovlp.Internal == (void*) 0x103) /* STATUS_PENDING */
+	/* We have to read data in multiples of the sector size, or else
+	 * Win32 ReadFile returns ERROR_INVALID_PARAMETER
+	 */
+	realOffset = offset;
+	realLen = len;
+	usePacketBuffer = 0;
+	if (packetSize > 0)
 	{
-		/* Don't actually sleep, just yield the thread */
-		FAudio_sleep(0);
+		offPacket = realOffset % packetSize;
+		if (offPacket > 0)
+		{
+			usePacketBuffer = 1;
+			realOffset -= offPacket;
+			realLen += offPacket;
+		}
+		lenPacket = realLen % packetSize;
+		if (lenPacket > 0)
+		{
+			usePacketBuffer = 1;
+			realLen += (packetSize - lenPacket);
+		}
+	}
+
+	/* If we're compensating for sector alignment, use a temp buffer and copy to
+	 * the real destination after we're finished.
+	 */
+	if (usePacketBuffer)
+	{
+		if (*packetBufferLen < realLen)
+		{
+			*packetBufferLen = realLen;
+			*packetBuffer = pRealloc(*packetBuffer, realLen);
+		}
+		buf = *packetBuffer;
+	}
+	else
+	{
+		buf = dst;
+	}
+
+	/* Read, finally. */
+	ovlp.Offset = realOffset;
+	if (!pReadFile(io, buf, realLen, NULL, &ovlp))
+	{
+		while (ovlp.Internal == (void*) 0x103) /* STATUS_PENDING */
+		{
+			/* Don't actually sleep, just yield the thread */
+			FAudio_sleep(0);
+		}
 	}
 	pGetOverlappedResult(io, &ovlp, &result, 1);
-	return result;
+
+	/* Copy the subregion that we actually care about, if applicable */
+	if (usePacketBuffer)
+	{
+		FAudio_memcpy(dst, *packetBuffer + offPacket, len);
+	}
 }
 
 /* Internal Functions */
@@ -1715,14 +1769,19 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	);
 
 	/* Read! */
-	c->wave->streamOffset += FACT_INTERNAL_ReadFile(
+	FACT_INTERNAL_ReadFile(
 		c->wave->parentBank->parentEngine->pReadFile,
 		c->wave->parentBank->parentEngine->pGetOverlappedResult,
 		c->wave->parentBank->io,
 		c->wave->streamOffset,
+		c->wave->parentBank->packetSize,
+		&c->wave->parentBank->packetBuffer,
+		&c->wave->parentBank->packetBufferLen,
+		c->wave->parentBank->parentEngine->pRealloc,
 		c->wave->streamCache,
 		buffer.AudioBytes
 	);
+	c->wave->streamOffset += buffer.AudioBytes;
 
 	/* Last buffer in the stream? */
 	buffer.Flags = 0;
@@ -2815,6 +2874,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	FACTAudioEngine *pEngine,
 	void* io,
 	uint32_t offset,
+	uint32_t packetSize,
 	FACTReadFileCallback pRead,
 	FACTGetOverlappedResultCallback pOverlap,
 	uint16_t isStreaming,
@@ -2829,14 +2889,27 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t compactEntry;
 	int32_t seekTableOffset;
 	uint32_t fileOffset;
-	uint32_t read;
+	uint8_t *packetBuffer = NULL;
+	uint32_t packetBufferLen = 0;
 
 	#define SEEKSET(loc) \
 		fileOffset = offset + loc;
 	#define SEEKCUR(loc) \
 		fileOffset += loc;
 	#define READ(dst, size) \
-		fileOffset += FACT_INTERNAL_ReadFile(pRead, pOverlap, io, fileOffset, dst, size);
+		FACT_INTERNAL_ReadFile( \
+			pRead, \
+			pOverlap, \
+			io, \
+			fileOffset, \
+			packetSize, \
+			&packetBuffer, \
+			&packetBufferLen, \
+			pEngine->pRealloc, \
+			dst, \
+			size \
+		); \
+		SEEKCUR(size)
 
 	fileOffset = offset;
 	READ(&header, sizeof(header))
@@ -2863,6 +2936,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->parentEngine = pEngine;
 	wb->waveList = NULL;
 	wb->waveLock = FAudio_PlatformCreateMutex();
+	wb->packetSize = packetSize;
 	wb->io = io;
 	wb->notifyOnDestroy = 0;
 
@@ -3053,6 +3127,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	);
 
 	/* Finally. */
+	wb->packetBuffer = packetBuffer;
+	wb->packetBufferLen = packetBufferLen;
 	*ppWaveBank = wb;
 	return 0;
 }
