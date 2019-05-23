@@ -735,7 +735,11 @@ uint32_t FAudio_CommitChanges(FAudio *audio)
 		"\n\nIf somebody else is calling this, find out who it is and"
 		"\nfile a bug report with them ASAP."
 	);
-	return 0;
+
+	/* Seriously, this is like the worst possible thing short of no-oping.
+	 * For the love-a Pete, just migrate, do it, what is wrong with you
+	 */
+	return FAudio_CommitOperationSet(audio, FAUDIO_COMMIT_ALL);
 }
 
 void FAudio_GetPerformanceData(
