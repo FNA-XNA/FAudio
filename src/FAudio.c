@@ -53,7 +53,7 @@ MAKE_SUBFORMAT_GUID(WMAUDIO3, FAUDIO_FORMAT_WMAUDIO3);
 
 /* FAudio Version */
 
-uint32_t FAudioLinkedVersion()
+uint32_t FAudioLinkedVersion(void)
 {
 	return FAUDIO_COMPILED_VERSION;
 }
