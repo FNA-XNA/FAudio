@@ -467,7 +467,7 @@ extern FAudioGUID DATAFORMAT_SUBTYPE_IEEE_FLOAT;
 	(FAUDIO_PATCH_VERSION) \
 )
 
-FAUDIOAPI uint32_t FAudioLinkedVersion();
+FAUDIOAPI uint32_t FAudioLinkedVersion(void);
 
 /* FAudio Interface */
 
