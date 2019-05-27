@@ -450,6 +450,7 @@ void FAudio_OPERATIONSET_QueueSetEffectParameters(
 		pParameters,
 		ParametersByteSize
 	);
+	op->Data.SetEffectParameters.ParametersByteSize = ParametersByteSize;
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->audio->operationLock)
