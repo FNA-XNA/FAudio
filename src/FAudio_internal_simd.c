@@ -32,7 +32,7 @@
  * https://hg.icculus.org/icculus/mojoAL/file/default/mojoal.c
  */
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(_M_X64)
 #define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
 #ifndef __SSE2__ /* For some reason this is not always defined? -flibit */
 #define __SSE2__
@@ -491,6 +491,10 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	cur_scalar_2 &= FIXED_FRACTION_MASK;
 	cur_scalar_3 &= FIXED_FRACTION_MASK;
 
+	/* FIXME: These should be _mm_undefined_ps! */
+	current_next_0_1 = _mm_setzero_ps();
+	current_next_2_3 = _mm_setzero_ps();
+
 	/* Constants */
 	one_over_fixed_one = _mm_set1_ps(1.0f / FIXED_ONE);
 	half = _mm_set1_ps(0.5f);
@@ -501,11 +505,6 @@ void FAudio_INTERNAL_ResampleMono_SSE2(
 	tail = toResample % 4;
 	for (i = 0; i < toResample - tail; i += 4, resampleCache += 4)
 	{
-		/* This does not compile for me for some reason but should be used:
-		 * current_next_0_1 = _mm_undefined_ps();
-		 * current_next_2_3 = _mm_undefined_ps();
-		 */
-
 		/* current next holds 2 pairs of the sample and the sample + 1
 		 * after that need to seperate them.
 		 */
