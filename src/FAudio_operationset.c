@@ -775,3 +775,5 @@ void FAudio_OPERATIONSET_ClearAllForVoice(FAudioVoice *voice)
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->audio->operationLock)
 }
+
+/* vim: set noexpandtab shiftwidth=8 tabstop=8: */
