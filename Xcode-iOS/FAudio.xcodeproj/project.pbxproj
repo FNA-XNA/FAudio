@@ -42,6 +42,7 @@
 		7BD20D892190C8E50020B14B /* FAudio_platform_sdl2.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6C2190C8E50020B14B /* FAudio_platform_sdl2.c */; };
 		7BD20D8B2190C8E50020B14B /* FAPOFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6D2190C8E50020B14B /* FAPOFX_reverb.c */; };
 		7BD20D8D2190C8E50020B14B /* FAudioFX_reverb.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BD20D6E2190C8E50020B14B /* FAudioFX_reverb.c */; };
+		7BD806B122A0B4F900D9679D /* FAudio_operationset.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B80D132227CE0E000AE825D /* FAudio_operationset.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -278,6 +279,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7BD806B122A0B4F900D9679D /* FAudio_operationset.c in Sources */,
 				7B7E14162190E10C00616654 /* F3DAudio.c in Sources */,
 				7B7E14172190E10C00616654 /* FACT_internal.c in Sources */,
 				7B7E14182190E10C00616654 /* FACT.c in Sources */,
