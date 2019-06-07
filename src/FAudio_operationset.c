@@ -257,6 +257,13 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio)
 	FAudio_PlatformLockMutex(audio->operationLock);
 	LOG_MUTEX_LOCK(audio, audio->operationLock);
 
+	if (audio->queuedOperations == NULL)
+	{
+		FAudio_PlatformUnlockMutex(audio->operationLock);
+		LOG_MUTEX_UNLOCK(audio, audio->operationLock)
+		return;
+	}
+
 	committed_end = &audio->committedOperations;
 	while (*committed_end)
 	{
@@ -264,7 +271,7 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio)
 	}
 
 	op = audio->queuedOperations;
-	while (op != NULL)
+	do
 	{
 		next = op->next;
 
@@ -273,7 +280,7 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio)
 		committed_end = &op->next;
 
 		op = next;
-	}
+	} while (op != NULL);
 	audio->queuedOperations = NULL;
 
 	FAudio_PlatformUnlockMutex(audio->operationLock);
@@ -287,6 +294,13 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 	FAudio_PlatformLockMutex(audio->operationLock);
 	LOG_MUTEX_LOCK(audio, audio->operationLock);
 
+	if (audio->queuedOperations == NULL)
+	{
+		FAudio_PlatformUnlockMutex(audio->operationLock);
+		LOG_MUTEX_UNLOCK(audio, audio->operationLock);
+		return;
+	}
+
 	committed_end = &audio->committedOperations;
 	while (*committed_end)
 	{
@@ -295,7 +309,7 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 
 	op = audio->queuedOperations;
 	prev = NULL;
-	while (op != NULL)
+	do
 	{
 		next = op->next;
 		if (op->OperationSet == OperationSet)
@@ -318,7 +332,7 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 			prev = op;
 		}
 		op = next;
-	}
+	} while (op != NULL);
 
 	FAudio_PlatformUnlockMutex(audio->operationLock);
 	LOG_MUTEX_UNLOCK(audio, audio->operationLock);
