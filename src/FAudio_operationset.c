@@ -255,7 +255,7 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio)
 	FAudio_OPERATIONSET_Operation *op, *next, **committed_end;
 
 	FAudio_PlatformLockMutex(audio->operationLock);
-	LOG_MUTEX_LOCK(audio, audio->operationLock);
+	LOG_MUTEX_LOCK(audio, audio->operationLock)
 
 	if (audio->queuedOperations == NULL)
 	{
@@ -284,7 +284,7 @@ void FAudio_OPERATIONSET_CommitAll(FAudio *audio)
 	audio->queuedOperations = NULL;
 
 	FAudio_PlatformUnlockMutex(audio->operationLock);
-	LOG_MUTEX_UNLOCK(audio, audio->operationLock);
+	LOG_MUTEX_UNLOCK(audio, audio->operationLock)
 }
 
 void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
@@ -292,12 +292,12 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 	FAudio_OPERATIONSET_Operation *op, *next, *prev, **committed_end;
 
 	FAudio_PlatformLockMutex(audio->operationLock);
-	LOG_MUTEX_LOCK(audio, audio->operationLock);
+	LOG_MUTEX_LOCK(audio, audio->operationLock)
 
 	if (audio->queuedOperations == NULL)
 	{
 		FAudio_PlatformUnlockMutex(audio->operationLock);
-		LOG_MUTEX_UNLOCK(audio, audio->operationLock);
+		LOG_MUTEX_UNLOCK(audio, audio->operationLock)
 		return;
 	}
 
@@ -335,7 +335,7 @@ void FAudio_OPERATIONSET_Commit(FAudio *audio, uint32_t OperationSet)
 	} while (op != NULL);
 
 	FAudio_PlatformUnlockMutex(audio->operationLock);
-	LOG_MUTEX_UNLOCK(audio, audio->operationLock);
+	LOG_MUTEX_UNLOCK(audio, audio->operationLock)
 }
 
 void FAudio_OPERATIONSET_Execute(FAudio *audio)
@@ -343,7 +343,7 @@ void FAudio_OPERATIONSET_Execute(FAudio *audio)
 	FAudio_OPERATIONSET_Operation *op, *next;
 
 	FAudio_PlatformLockMutex(audio->operationLock);
-	LOG_MUTEX_LOCK(audio, audio->operationLock);
+	LOG_MUTEX_LOCK(audio, audio->operationLock)
 
 	op = audio->committedOperations;
 	while (op != NULL)
@@ -356,7 +356,7 @@ void FAudio_OPERATIONSET_Execute(FAudio *audio)
 	audio->committedOperations = NULL;
 
 	FAudio_PlatformUnlockMutex(audio->operationLock);
-	LOG_MUTEX_UNLOCK(audio, audio->operationLock);
+	LOG_MUTEX_UNLOCK(audio, audio->operationLock)
 }
 
 /* OperationSet Compilation */
@@ -767,7 +767,7 @@ static inline void RemoveFromList(
 void FAudio_OPERATIONSET_ClearAllForVoice(FAudioVoice *voice)
 {
 	FAudio_PlatformLockMutex(voice->audio->operationLock);
-	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock);
+	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
 	RemoveFromList(voice, &voice->audio->queuedOperations);
 	RemoveFromList(voice, &voice->audio->committedOperations);
