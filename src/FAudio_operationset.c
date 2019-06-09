@@ -706,7 +706,7 @@ void FAudio_OPERATIONSET_ClearAll(FAudio *audio)
 	FAudio_OPERATIONSET_Operation *current, *next;
 
 	FAudio_PlatformLockMutex(audio->operationLock);
-	LOG_MUTEX_LOCK(audio, audio->operationLock);
+	LOG_MUTEX_LOCK(audio, audio->operationLock)
 
 	current = audio->queuedOperations;
 	while (current != NULL)
