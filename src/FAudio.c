@@ -291,7 +291,8 @@ uint32_t FAudio_CreateSourceVoice(
 		fmtex->Format.nAvgBytesPerSec = pSourceFormat->nAvgBytesPerSec;
 		fmtex->Format.nBlockAlign = pSourceFormat->nBlockAlign;
 		fmtex->Format.wBitsPerSample = pSourceFormat->wBitsPerSample;
-		fmtex->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+		//fmtex->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+		fmtex->Format.cbSize = pSourceFormat->cbSize;
 		fmtex->Samples.wValidBitsPerSample = pSourceFormat->wBitsPerSample;
 		fmtex->dwChannelMask = 0;
 		if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM)
