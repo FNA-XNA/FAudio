@@ -233,11 +233,36 @@ function(install_shared_libs)
     # check if given library is no symlink to prevent double installation
     STRING(COMPARE NOTEQUAL "${lib}" "${lib_REAL}" real_lib_different)
     if(real_lib_different AND NOT x_NO_INSTALL_SYMLINKS)
-      if(NOT x_QUIET)
-        message(STATUS
-          "'${function_name}' ${x_conf_info}: install symlink to lib: ${lib}")
+      # find all the symlinks linking to lib_REAL
+      string(REGEX MATCH "\\.so" is_shared_lib_linux "${lib}")
+      string(REGEX MATCH "\\.dylib$" is_shared_lib_darwin "${lib}")
+      if(is_shared_lib_linux OR is_shared_lib_darwin)
+        if(is_shared_lib_linux)
+          string(REGEX REPLACE "\\.so.*" ".so" lib_base "${lib}")
+            file(GLOB lib_symlinks "${lib_base}*")
+        else()
+          string(REGEX REPLACE "\\.dylib$" "" lib_base "${lib}")
+            file(GLOB lib_symlinks "${lib_base}*.dylib")
+        endif()
+        foreach(lib_sym ${lib_symlinks})
+          STRING(COMPARE NOTEQUAL "${lib_sym}" "${lib_REAL}" real_lib_different)
+          if(NOT real_lib_different)
+            continue() # we found the real lib, not a symlink, skip it
+          endif()
+          if(NOT x_QUIET)
+            message(STATUS
+              "'${function_name}' ${x_conf_info}: install symlink to lib: ${lib_sym}")
+          endif()
+          # actually install the found symlink
+          install(FILES ${lib_sym}  ${x_conf_options} DESTINATION ${shared_libs_destination})
+        endforeach()
+      else() # neither linux nor darwin
+        if(NOT x_QUIET)
+          message(STATUS
+            "'${function_name}' ${x_conf_info}: install symlink to lib: ${lib}")
+        endif()
+        install(FILES ${lib}  ${x_conf_options}     DESTINATION ${shared_libs_destination})
       endif()
-      install(FILES ${lib}  ${x_conf_options}     DESTINATION ${shared_libs_destination})
-    endif()
+    endif() # x_NO_INSTALL_SYMLINKS
   endforeach()
 endfunction()
