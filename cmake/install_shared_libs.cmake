@@ -209,7 +209,7 @@ function(install_shared_libs)
         set(lib "${dyn_lib}")
       endif()
     endif()
-    string(REGEX MATCH "\\.(so|dll$)" is_shared_lib "${lib}")
+    string(REGEX MATCH "\\.(so|dll$|dylib$)" is_shared_lib "${lib}")
     if(NOT is_shared_lib)
       # don't install static libraries
       if(x_REQUIRED)
