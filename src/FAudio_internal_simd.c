@@ -71,6 +71,7 @@
 
 #define DIVBY128 0.0078125f
 #define DIVBY32768 0.000030517578125f
+#define DIVBY8388607 0.00000011920930376163766f
 
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 void FAudio_INTERNAL_Convert_U8_To_F32_Scalar(
@@ -94,6 +95,18 @@ void FAudio_INTERNAL_Convert_S16_To_F32_Scalar(
 	for (i = 0; i < len; i += 1)
 	{
 		*dst++ = *src++ * DIVBY32768;
+	}
+}
+
+void FAudio_INTERNAL_Convert_S32_To_F32_Scalar(
+	const int32_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+	uint32_t i;
+	for (i = 0; i < len; i += 1)
+	{
+		*dst++ = (*src++ >> 8) * DIVBY8388607;
 	}
 }
 #endif /* NEED_SCALAR_CONVERTER_FALLBACKS */
@@ -197,6 +210,40 @@ void FAudio_INTERNAL_Convert_S16_To_F32_SSE2(
         i--; src--; dst--;
     }
 }
+
+void FAudio_INTERNAL_Convert_S32_To_F32_SSE2(
+	const int32_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+    int i;
+
+    /* Get dst aligned to 16 bytes */
+    for (i = len; i && (((size_t) dst) & 15); --i, ++src, ++dst) {
+        *dst = ((float) (*src>>8)) * DIVBY8388607;
+    }
+
+    FAudio_assert(!i || ((((size_t) dst) & 15) == 0));
+    FAudio_assert(!i || ((((size_t) src) & 15) == 0));
+
+    {
+        /* Aligned! Do SSE blocks as long as we have 16 bytes available. */
+        const __m128 divby8388607 = _mm_set1_ps(DIVBY8388607);
+        const __m128i *mmsrc = (const __m128i *) src;
+        while (i >= 4) {   /* 4 * sint32 */
+            /* shift out lowest bits so int fits in a float32. Small precision loss, but much faster. */
+            _mm_store_ps(dst, _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_load_si128(mmsrc), 8)), divby8388607));
+            i -= 4; mmsrc++; dst += 4;
+        }
+        src = (const Sint32 *) mmsrc;
+    }
+
+    /* Finish off any leftovers with scalar operations. */
+    while (i) {
+        *dst = ((float) (*src>>8)) * DIVBY8388607;
+        i--; src++; dst++;
+    }
+}
 #endif /* HAVE_SSE2_INTRINSICS */
 
 #if HAVE_NEON_INTRINSICS
@@ -283,6 +330,40 @@ void FAudio_INTERNAL_Convert_S16_To_F32_NEON(
     while (i) {
         *dst = ((float) *src) * DIVBY32768;
         i--; src--; dst--;
+    }
+}
+
+void FAudio_INTERNAL_Convert_S32_To_F32_NEON(
+	const int32_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+) {
+    int i;
+
+    /* Get dst aligned to 16 bytes */
+    for (i = len; i && (((size_t) dst) & 15); --i, ++src, ++dst) {
+        *dst = ((float) (*src>>8)) * DIVBY8388607;
+    }
+
+    FAudio_assert(!i || ((((size_t) dst) & 15) == 0));
+    FAudio_assert(!i || ((((size_t) src) & 15) == 0));
+
+    {
+        /* Aligned! Do NEON blocks as long as we have 16 bytes available. */
+        const float32x4_t divby8388607 = vdupq_n_f32(DIVBY8388607);
+        const int32_t *mmsrc = (const int32_t *) src;
+        while (i >= 4) {   /* 4 * sint32 */
+            /* shift out lowest bits so int fits in a float32. Small precision loss, but much faster. */
+            vst1q_f32(dst, vmulq_f32(vcvtq_f32_s32(vshrq_n_s32(vld1q_s32(mmsrc), 8)), divby8388607));
+            i -= 4; mmsrc += 4; dst += 4;
+        }
+        src = (const Sint32 *) mmsrc;
+    }
+
+    /* Finish off any leftovers with scalar operations. */
+    while (i) {
+        *dst = ((float) (*src>>8)) * DIVBY8388607;
+        i--; src++; dst++;
     }
 }
 #endif /* HAVE_NEON_INTRINSICS */
@@ -1720,6 +1801,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 	{
 		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_SSE2;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_SSE2;
+		FAudio_INTERNAL_Convert_S32_To_F32 = FAudio_INTERNAL_Convert_S32_To_F32_SSE2;
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_SSE2;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_SSE2;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_SSE2;
@@ -1731,6 +1813,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 	{
 		FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_NEON;
 		FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_NEON;
+		FAudio_INTERNAL_Convert_S32_To_F32 = FAudio_INTERNAL_Convert_S32_To_F32_NEON;
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_NEON;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_NEON;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_NEON;
@@ -1740,6 +1823,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 	FAudio_INTERNAL_Convert_U8_To_F32 = FAudio_INTERNAL_Convert_U8_To_F32_Scalar;
 	FAudio_INTERNAL_Convert_S16_To_F32 = FAudio_INTERNAL_Convert_S16_To_F32_Scalar;
+	FAudio_INTERNAL_Convert_S32_To_F32 = FAudio_INTERNAL_Convert_S32_To_F32_Scalar;
 	FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_Scalar;
 	FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
 	FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_Scalar;

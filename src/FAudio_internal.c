@@ -1466,6 +1466,23 @@ void FAudio_INTERNAL_DecodePCM24(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
+void FAudio_INTERNAL_DecodePCM32(
+	FAudioVoice *voice,
+	FAudioBuffer *buffer,
+	float *decodeCache,
+	uint32_t samples
+) {
+	LOG_FUNC_ENTER(voice->audio)
+	FAudio_INTERNAL_Convert_S32_To_F32(
+		((int32_t*) buffer->pAudioData) + (
+			voice->src.curBufferOffset * voice->src.format->nChannels
+		),
+		decodeCache,
+		samples * voice->src.format->nChannels
+	);
+	LOG_FUNC_EXIT(voice->audio)
+}
+
 void FAudio_INTERNAL_DecodePCM32F(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,

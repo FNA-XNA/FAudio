@@ -632,6 +632,11 @@ extern void (*FAudio_INTERNAL_Convert_S16_To_F32)(
 	float *restrict dst,
 	uint32_t len
 );
+extern void (*FAudio_INTERNAL_Convert_S32_To_F32)(
+	const int32_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+);
 
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
 extern FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
@@ -686,6 +691,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 DECODE_FUNC(PCM8)
 DECODE_FUNC(PCM16)
 DECODE_FUNC(PCM24)
+DECODE_FUNC(PCM32)
 DECODE_FUNC(PCM32F)
 DECODE_FUNC(MonoMSADPCM)
 DECODE_FUNC(StereoMSADPCM)

@@ -353,6 +353,7 @@ uint32_t FAudio_CreateSourceVoice(
 			DECODER(16)
 			else DECODER(8)
 			else DECODER(24)
+			else DECODER(32)
 			else
 			{
 				LOG_ERROR(
