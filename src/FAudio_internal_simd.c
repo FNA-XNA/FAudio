@@ -235,7 +235,7 @@ void FAudio_INTERNAL_Convert_S32_To_F32_SSE2(
             _mm_store_ps(dst, _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_load_si128(mmsrc), 8)), divby8388607));
             i -= 4; mmsrc++; dst += 4;
         }
-        src = (const Sint32 *) mmsrc;
+        src = (const int32_t *) mmsrc;
     }
 
     /* Finish off any leftovers with scalar operations. */
@@ -357,7 +357,7 @@ void FAudio_INTERNAL_Convert_S32_To_F32_NEON(
             vst1q_f32(dst, vmulq_f32(vcvtq_f32_s32(vshrq_n_s32(vld1q_s32(mmsrc), 8)), divby8388607));
             i -= 4; mmsrc += 4; dst += 4;
         }
-        src = (const Sint32 *) mmsrc;
+        src = (const int32_t *) mmsrc;
     }
 
     /* Finish off any leftovers with scalar operations. */
