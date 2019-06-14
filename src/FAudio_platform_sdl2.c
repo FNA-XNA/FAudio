@@ -271,7 +271,7 @@ void FAudio_PlatformThreadPriority(FAudioThreadPriority priority)
 	SDL_SetThreadPriority((SDL_ThreadPriority) priority);
 }
 
-uint64_t FAudio_PlatformGetThreadID()
+uint64_t FAudio_PlatformGetThreadID(void)
 {
 	return (uint64_t) SDL_ThreadID();
 }
