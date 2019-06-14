@@ -731,7 +731,7 @@ FAudioThread FAudio_PlatformCreateThread(
 );
 void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval);
 void FAudio_PlatformThreadPriority(FAudioThreadPriority priority);
-uint64_t FAudio_PlatformGetThreadID();
+uint64_t FAudio_PlatformGetThreadID(void);
 FAudioMutex FAudio_PlatformCreateMutex(void);
 void FAudio_PlatformDestroyMutex(FAudioMutex mutex);
 void FAudio_PlatformLockMutex(FAudioMutex mutex);
