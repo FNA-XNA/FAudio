@@ -1784,6 +1784,11 @@ void (*FAudio_INTERNAL_Convert_S16_To_F32)(
 	float *restrict dst,
 	uint32_t len
 );
+void (*FAudio_INTERNAL_Convert_S32_To_F32)(
+	const int32_t *restrict src,
+	float *restrict dst,
+	uint32_t len
+);
 
 FAudioResampleCallback FAudio_INTERNAL_ResampleMono;
 FAudioResampleCallback FAudio_INTERNAL_ResampleStereo;
