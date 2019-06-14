@@ -456,12 +456,12 @@ uint32_t FAudio_CreateSourceVoice(
 	}
 
 	/* Sample Storage */
-	(*ppSourceVoice)->src.decodeSamples = (uint32_t) FAudio_ceil(
-		audio->updateSize *
+	(*ppSourceVoice)->src.decodeSamples = (uint32_t) (FAudio_ceil(
+		(double) audio->updateSize *
 		(double) MaxFrequencyRatio *
 		(double) (*ppSourceVoice)->src.format->nSamplesPerSec /
 		(double) audio->master->master.inputSampleRate
-	) + EXTRA_DECODE_PADDING * (*ppSourceVoice)->src.format->nChannels;
+	)) + EXTRA_DECODE_PADDING * (*ppSourceVoice)->src.format->nChannels;
 	FAudio_INTERNAL_ResizeDecodeCache(
 		audio,
 		((*ppSourceVoice)->src.decodeSamples + EXTRA_DECODE_PADDING) * (*ppSourceVoice)->src.format->nChannels
@@ -2330,8 +2330,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	LOG_INFO(
 		voice->audio,
 		"%p: appended buffer %p",
-		voice,
-		&entry->buffer
+		(void *) voice,
+		(void *) &entry->buffer
 	)
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
@@ -2589,11 +2589,11 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 	LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 
 	/* Resize resample cache */
-	newResampleSamples = (uint32_t) FAudio_ceil(
-		voice->audio->updateSize *
+	newResampleSamples = (uint32_t) (FAudio_ceil(
+		(double) voice->audio->updateSize *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
-	);
+	));
 	FAudio_INTERNAL_ResizeResampleCache(
 		voice->audio,
 		newResampleSamples * voice->src.format->nChannels
