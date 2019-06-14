@@ -90,7 +90,7 @@ void FAudio_INTERNAL_debug(
 	va_end(va);
 
 	/* Print, finally. */
-	FAudio_Log(output)
+	FAudio_Log(output);
 }
 
 static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)

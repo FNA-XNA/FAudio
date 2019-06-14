@@ -76,7 +76,7 @@
 #define FAudio_assert assert
 #define FAudio_snprintf snprintf
 #define FAudio_vsnprintf vsnprintf
-#define FAudio_Log(msg) fprintf(stderr, "%s\n", msg);
+#define FAudio_Log(msg) fprintf(stderr, "%s\n", msg)
 #define FAudio_getenv getenv
 #define FAudio_PRIu64 PRIu64
 #define FAudio_PRIx64 PRIx64
@@ -137,7 +137,7 @@
 #endif
 #define FAudio_snprintf SDL_snprintf
 #define FAudio_vsnprintf SDL_vsnprintf
-#define FAudio_Log(msg) SDL_Log("%s\n", msg);
+#define FAudio_Log(msg) SDL_Log("%s\n", msg)
 #define FAudio_getenv SDL_getenv
 #define FAudio_PRIu64 SDL_PRIu64
 #define FAudio_PRIx64 SDL_PRIx64
