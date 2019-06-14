@@ -253,7 +253,7 @@ uint32_t FAudio_CreateSourceVoice(
 	uint32_t i;
 
 	LOG_API_ENTER(audio)
-	LOG_FORMAT(audio, pSourceFormat);
+	LOG_FORMAT(audio, pSourceFormat)
 
 	*ppSourceVoice = (FAudioSourceVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
@@ -331,7 +331,7 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
 	(*ppSourceVoice)->src.bufferLock = FAudio_PlatformCreateMutex();
-	LOG_MUTEX_CREATE(audio, (*ppSourceVoice)->src.bufferLock);
+	LOG_MUTEX_CREATE(audio, (*ppSourceVoice)->src.bufferLock)
 
 	if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
 	{
@@ -467,7 +467,7 @@ uint32_t FAudio_CreateSourceVoice(
 		((*ppSourceVoice)->src.decodeSamples + EXTRA_DECODE_PADDING) * (*ppSourceVoice)->src.format->nChannels
 	);
 
-	LOG_INFO(audio, "-> %p", *ppSourceVoice);
+	LOG_INFO(audio, "-> %p", *ppSourceVoice)
 
 	/* Add to list, finally. */
 	LinkedList_PrependEntry(
@@ -2192,7 +2192,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		pBuffer->LoopBegin,
 		pBuffer->LoopLength,
 		pBuffer->LoopCount
-	);
+	)
 
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 #ifdef HAVE_FFMPEG
@@ -2332,7 +2332,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		"%p: appended buffer %p",
 		voice,
 		&entry->buffer
-	);
+	)
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
 	LOG_API_EXIT(voice->audio)
@@ -2479,7 +2479,7 @@ void FAudioSourceVoice_GetState(
 		"-> {pCurrentBufferContext: %p, BuffersQueued: %u, SamplesPlayed: %"FAudio_PRIu64"}",
 		pVoiceState->pCurrentBufferContext, pVoiceState->BuffersQueued,
 		pVoiceState->SamplesPlayed
-	);
+	)
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
