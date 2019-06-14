@@ -411,8 +411,8 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		LOG_INFO(
 			voice->audio,
 			"Voice %p, buffer %p, decoded %u samples from [%u,%u)",
-			voice,
-			buffer,
+			(void *) voice,
+			(void *) buffer,
 			endRead,
 			voice->src.curBufferOffset,
 			voice->src.curBufferOffset + endRead
@@ -459,8 +459,8 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				LOG_INFO(
 					voice->audio,
 					"Voice %p, finished with buffer %p",
-					voice,
-					buffer
+					(void *) voice,
+					(void *) buffer
 				);
 
 				/* Change active buffer, delete finished buffer */
