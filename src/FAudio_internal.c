@@ -90,7 +90,7 @@ void FAudio_INTERNAL_debug(
 	va_end(va);
 
 	/* Print, finally. */
-	FAudio_Log(output);
+	FAudio_Log(output)
 }
 
 static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)
@@ -416,7 +416,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			endRead,
 			voice->src.curBufferOffset,
 			voice->src.curBufferOffset + endRead
-		);
+		)
 
 		decoded += endRead;
 		voice->src.curBufferOffset += endRead;
@@ -461,7 +461,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					"Voice %p, finished with buffer %p",
 					(void *) voice,
 					(void *) buffer
-				);
+				)
 
 				/* Change active buffer, delete finished buffer */
 				toDelete = voice->src.bufferList;
