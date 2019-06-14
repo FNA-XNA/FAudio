@@ -22,6 +22,7 @@ if(${CMAKE_VERSION} VERSION_LESS "3.1.3")
 	message(WARNING "Your CMake version is too old, set -std=c99 yourself!")
 else()
 	set(CMAKE_C_STANDARD 99)
+	set(CMAKE_C_EXTENSIONS OFF)
 endif()
 
 # Version
