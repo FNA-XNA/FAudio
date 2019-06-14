@@ -1612,7 +1612,7 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 			"Destination not attached to source: %p %p",
 			(void *) voice,
 			(void *) pDestinationVoice
-		);
+		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 		LOG_API_EXIT(voice->audio)
@@ -1680,7 +1680,7 @@ void FAudioVoice_GetOutputFilterParameters(
 			"Destination not attached to source: %p %p",
 			(void *) voice,
 			(void *) pDestinationVoice
-		);
+		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 		LOG_API_EXIT(voice->audio)
@@ -1860,7 +1860,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 			"Destination not attached to source: %p %p",
 			(void *) voice,
 			(void *) pDestinationVoice
-		);
+		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 		LOG_API_EXIT(voice->audio)
@@ -1920,7 +1920,7 @@ void FAudioVoice_GetOutputMatrix(
 			"Destination not attached to source: %p %p",
 			(void *) voice,
 			(void *) pDestinationVoice
-		);
+		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 		LOG_API_EXIT(voice->audio)
