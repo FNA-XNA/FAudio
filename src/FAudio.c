@@ -467,7 +467,7 @@ uint32_t FAudio_CreateSourceVoice(
 		((*ppSourceVoice)->src.decodeSamples + EXTRA_DECODE_PADDING) * (*ppSourceVoice)->src.format->nChannels
 	);
 
-	LOG_INFO(audio, "-> %p", (void *)(*ppSourceVoice))
+	LOG_INFO(audio, "-> %p", (void*) (*ppSourceVoice))
 
 	/* Add to list, finally. */
 	LinkedList_PrependEntry(
@@ -1610,8 +1610,8 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 		LOG_ERROR(
 			voice->audio,
 			"Destination not attached to source: %p %p",
-			(void *) voice,
-			(void *) pDestinationVoice
+			(void*) voice,
+			(void*) pDestinationVoice
 		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
@@ -1678,8 +1678,8 @@ void FAudioVoice_GetOutputFilterParameters(
 		LOG_ERROR(
 			voice->audio,
 			"Destination not attached to source: %p %p",
-			(void *) voice,
-			(void *) pDestinationVoice
+			(void*) voice,
+			(void*) pDestinationVoice
 		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
@@ -1858,8 +1858,8 @@ uint32_t FAudioVoice_SetOutputMatrix(
 		LOG_ERROR(
 			voice->audio,
 			"Destination not attached to source: %p %p",
-			(void *) voice,
-			(void *) pDestinationVoice
+			(void*) voice,
+			(void*) pDestinationVoice
 		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
@@ -1918,8 +1918,8 @@ void FAudioVoice_GetOutputMatrix(
 		LOG_ERROR(
 			voice->audio,
 			"Destination not attached to source: %p %p",
-			(void *) voice,
-			(void *) pDestinationVoice
+			(void*) voice,
+			(void*) pDestinationVoice
 		)
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
@@ -2183,10 +2183,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	LOG_INFO(
 		voice->audio,
 		"%p: {Flags: 0x%x, AudioBytes: %u, pAudioData: %p, Play: %u + %u, Loop: %u + %u x %u}",
-		(void *) voice,
+		(void*) voice,
 		pBuffer->Flags,
 		pBuffer->AudioBytes,
-		(const void *) pBuffer->pAudioData,
+		(const void*) pBuffer->pAudioData,
 		pBuffer->PlayBegin,
 		pBuffer->PlayLength,
 		pBuffer->LoopBegin,
@@ -2330,8 +2330,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	LOG_INFO(
 		voice->audio,
 		"%p: appended buffer %p",
-		(void *) voice,
-		(void *) &entry->buffer
+		(void*) voice,
+		(void*) &entry->buffer
 	)
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
