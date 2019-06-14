@@ -13,6 +13,7 @@ endif()
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
 option(FORCE_ENABLE_DEBUGCONFIGURATION "Enable DebugConfiguration in all build types" OFF)
+option(DUMP_VOICES "Dump voices to RIFF WAVE files" OFF)
 if(WIN32)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
@@ -154,6 +155,11 @@ if(FFMPEG)
 		install_shared_libs(FILES ${FFmpeg_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
 	endif()
 endif(FFMPEG)
+
+# Dump source voices to RIFF WAVE files
+if(DUMP_VOICES)
+	target_compile_definitions(FAudio PRIVATE FAUDIO_DUMP_VOICES)
+endif()
 
 # SDL2 Dependency
 if (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
