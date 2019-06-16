@@ -214,6 +214,10 @@ CREDITS
 #define memcpy FAudio_memcpy
 #endif
 
+#define STB_EXTERN
+#define STB_DEFINE
+#include <stddef.h>
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //                         Miscellany
