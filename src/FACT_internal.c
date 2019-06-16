@@ -39,14 +39,14 @@
 #define SWAP_16(x) \
 	((x >> 8)	& 0x00FF) | \
 	((x << 8)	& 0xFF00)
-#define DOSWAP_16(x) x = SWAP_16(x);
+#define DOSWAP_16(x) x = SWAP_16(x)
 
 #define SWAP_32(x) \
 	((x >> 24)	& 0x000000FF) | \
 	((x >> 8)	& 0x0000FF00) | \
 	((x << 8)	& 0x00FF0000) | \
 	((x << 24)	& 0xFF000000)
-#define DOSWAP_32(x) x = SWAP_32(x);
+#define DOSWAP_32(x) x = SWAP_32(x)
 
 #define SWAP_64(x) \
 	((x >> 32)	& 0x00000000000000FF) | \
@@ -57,7 +57,7 @@
 	((x << 16)	& 0x0000FF0000000000) | \
 	((x << 24)	& 0x00FF000000000000) | \
 	((x << 32)	& 0xFF00000000000000)
-#define DOSWAP_64(x) x = SWAP_32(x);
+#define DOSWAP_64(x) x = SWAP_32(x)
 
 static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
