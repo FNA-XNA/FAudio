@@ -296,7 +296,7 @@ unsigned int  stb_randLCG(void)
 // public domain Mersenne Twister by Michael Brundage
 #define STB__MT_LEN       624
 
-int stb__mt_index = STB__MT_LEN*sizeof(int)+1;
+unsigned int stb__mt_index = STB__MT_LEN*sizeof(int)+1;
 unsigned int stb__mt_buffer[STB__MT_LEN];
 
 void stb_srand(unsigned int seed)
@@ -320,7 +320,7 @@ void stb_srand(unsigned int seed)
 unsigned int stb_rand()
 {
    unsigned int  * b = stb__mt_buffer;
-   int idx = stb__mt_index;
+   unsigned int idx = stb__mt_index;
    unsigned int  s,r;
    int i;
 	
