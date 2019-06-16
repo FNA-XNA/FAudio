@@ -165,7 +165,7 @@ void FACT_INTERNAL_GetNextWave(
 	uint8_t loopCount = 0;
 	float max, next;
 	uint8_t noTrackVariation = 1;
-	int32_t i;
+	uint32_t i;
 
 	/* Track Variation */
 	if (evt->wave.isComplex)
@@ -194,14 +194,14 @@ void FACT_INTERNAL_GetNextWave(
 				max += evt->wave.complex.weights[i];
 			}
 			next = FACT_INTERNAL_rng() * max;
-			for (i = evt->wave.complex.trackCount - 1; i >= 0; i -= 1)
+			for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
 			{
-				if (next > (max - evt->wave.complex.weights[i]))
+				if (next > (max - evt->wave.complex.weights[i - 1]))
 				{
-					evtInst->valuei = i;
+					evtInst->valuei = i - 1;
 					break;
 				}
-				max -= evt->wave.complex.weights[i];
+				max -= evt->wave.complex.weights[i - 1];
 			}
 		}
 		/* Random (No Immediate Repeats), Shuffle */
@@ -218,18 +218,18 @@ void FACT_INTERNAL_GetNextWave(
 				max += evt->wave.complex.weights[i];
 			}
 			next = FACT_INTERNAL_rng() * max;
-			for (i = evt->wave.complex.trackCount - 1; i >= 0; i -= 1)
+			for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
 			{
-				if (i == evtInst->valuei)
+				if (i - 1 == evtInst->valuei)
 				{
 					continue;
 				}
-				if (next > (max - evt->wave.complex.weights[i]))
+				if (next > (max - evt->wave.complex.weights[i - 1]))
 				{
-					evtInst->valuei = i;
+					evtInst->valuei = i - 1;
 					break;
 				}
-				max -= evt->wave.complex.weights[i];
+				max -= evt->wave.complex.weights[i - 1];
 			}
 		}
 
