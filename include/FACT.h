@@ -64,9 +64,9 @@ typedef struct FACTOverlapped
 {
 	void *Internal; /* ULONG_PTR */
 	void *InternalHigh; /* ULONG_PTR */
-	union
+	__extension__ union
 	{
-		struct
+		__extension__ struct
 		{
 			uint32_t Offset;
 			uint32_t OffsetHigh;
@@ -167,7 +167,7 @@ typedef struct FACTWaveBankHeader
 
 typedef union FACTWaveBankMiniWaveFormat
 {
-	struct
+	__extension__ struct
 	{
 		uint32_t wFormatTag : 2;
 		uint32_t nChannels : 3;
@@ -180,9 +180,9 @@ typedef union FACTWaveBankMiniWaveFormat
 
 typedef struct FACTWaveBankEntry
 {
-	union
+	__extension__ union
 	{
-		struct
+		__extension__ struct
 		{
 			uint32_t dwFlags : 4;
 			uint32_t Duration : 28;
@@ -350,7 +350,7 @@ struct FACTNotification
 	uint8_t type;
 	int32_t timeStamp;
 	void *pvContext;
-	union
+	__extension__ union
 	{
 		FACTNotificationCue cue;
 		FACTNotificationMarker marker;
