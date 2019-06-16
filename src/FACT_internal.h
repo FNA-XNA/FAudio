@@ -115,7 +115,7 @@ typedef struct FACTEvent
 	uint16_t type;
 	uint16_t timestamp;
 	uint16_t randomOffset;
-	union
+	__extension__ union
 	{
 		/* Play Wave Event */
 		struct
@@ -127,7 +127,7 @@ typedef struct FACTEvent
 
 			/* Track Variation */
 			uint8_t isComplex;
-			union
+			__extension__ union
 			{
 				struct
 				{
@@ -161,7 +161,7 @@ typedef struct FACTEvent
 			uint8_t settings;
 			uint16_t repeats;
 			uint16_t frequency;
-			union
+			__extension__ union
 			{
 				struct
 				{
@@ -240,9 +240,9 @@ typedef struct FACTCueData
 
 typedef struct FACTVariation
 {
-	union
+	__extension__ union
 	{
-		struct
+		__extension__ struct
 		{
 			uint16_t track;
 			uint8_t wavebank;
@@ -306,7 +306,7 @@ typedef struct FACTEventInstance
 	uint32_t timestamp;
 	uint16_t loopCount;
 	uint8_t finished;
-	union
+	__extension__ union
 	{
 		float value;
 		uint32_t valuei;
@@ -502,7 +502,7 @@ struct FACTCue
 
 	/* Sound data */
 	FACTCueData *data;
-	union
+	__extension__ union
 	{
 		FACTVariationTable *variation;
 

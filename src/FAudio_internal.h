@@ -398,7 +398,7 @@ struct FAudioVoice
 	FAudioMixCallback *sendMix;
 	FAudioFilterParameters *sendFilter;
 	FAudioFilterState **sendFilterState;
-	struct
+	__extension__ struct
 	{
 		uint32_t count;
 		FAudioEffectDescriptor *desc;
@@ -418,7 +418,7 @@ struct FAudioVoice
 	uint32_t outputChannels;
 	FAudioMutex volumeLock;
 
-	union
+	__extension__ union
 	{
 		struct
 		{
