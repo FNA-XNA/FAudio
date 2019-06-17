@@ -44,6 +44,15 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* pedantic nameless union/struct warning silencing */
+#ifndef FAUDIONAMELESS
+#ifdef __GNUC__
+#define FAUDIONAMELESS __extension__
+#else
+#define FAUDIONAMELESS
+#endif /* __GNUC__ */
+#endif /* FAUDIONAMELESS */
+
 /* Type Declarations */
 
 typedef struct FACTAudioEngine FACTAudioEngine;
@@ -64,9 +73,9 @@ typedef struct FACTOverlapped
 {
 	void *Internal; /* ULONG_PTR */
 	void *InternalHigh; /* ULONG_PTR */
-	__extension__ union
+	FAUDIONAMELESS union
 	{
-		__extension__ struct
+		FAUDIONAMELESS struct
 		{
 			uint32_t Offset;
 			uint32_t OffsetHigh;
@@ -167,7 +176,7 @@ typedef struct FACTWaveBankHeader
 
 typedef union FACTWaveBankMiniWaveFormat
 {
-	__extension__ struct
+	FAUDIONAMELESS struct
 	{
 		uint32_t wFormatTag : 2;
 		uint32_t nChannels : 3;
@@ -180,9 +189,9 @@ typedef union FACTWaveBankMiniWaveFormat
 
 typedef struct FACTWaveBankEntry
 {
-	__extension__ union
+	FAUDIONAMELESS union
 	{
-		__extension__ struct
+		FAUDIONAMELESS struct
 		{
 			uint32_t dwFlags : 4;
 			uint32_t Duration : 28;
@@ -350,7 +359,7 @@ struct FACTNotification
 	uint8_t type;
 	int32_t timeStamp;
 	void *pvContext;
-	__extension__ union
+	FAUDIONAMELESS union
 	{
 		FACTNotificationCue cue;
 		FACTNotificationMarker marker;

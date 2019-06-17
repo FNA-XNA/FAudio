@@ -173,6 +173,15 @@
 #define restrict
 #endif
 
+/* pedantic nameless union/struct warning silencing */
+#ifndef FAUDIONAMELESS
+#ifdef __GNUC__
+#define FAUDIONAMELESS __extension__
+#else
+#define FAUDIONAMELESS
+#endif /* __GNUC__ */
+#endif /* FAUDIONAMELESS */
+
 /* Threading Types */
 
 typedef void* FAudioThread;
@@ -398,7 +407,7 @@ struct FAudioVoice
 	FAudioMixCallback *sendMix;
 	FAudioFilterParameters *sendFilter;
 	FAudioFilterState **sendFilterState;
-	__extension__ struct
+	FAUDIONAMELESS struct
 	{
 		uint32_t count;
 		FAudioEffectDescriptor *desc;
@@ -418,7 +427,7 @@ struct FAudioVoice
 	uint32_t outputChannels;
 	FAudioMutex volumeLock;
 
-	__extension__ union
+	FAUDIONAMELESS union
 	{
 		struct
 		{
