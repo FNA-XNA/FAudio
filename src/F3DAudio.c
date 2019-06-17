@@ -53,7 +53,7 @@
 
 #define FLOAT_BETWEEN_CHECK(f, a, b) \
 	PARAM_CHECK(f >= a, "Value" #f " is too low"); \
-	PARAM_CHECK(f <= b, "Value" #f " is too big");
+	PARAM_CHECK(f <= b, "Value" #f " is too big")
 
 
 /* Quote X3DAUDIO docs:
@@ -69,13 +69,13 @@
 	PARAM_CHECK( \
 		FAudio_fabsf(VectorLength(v) - 1.0f) <= 1e-5f, \
 		"Vector " #v " isn't normal" \
-	);
+	)
 
 #define VECTOR_BASE_CHECK(u, v) \
 	PARAM_CHECK( \
 		FAudio_fabsf(VectorDot(u, v)) <= 1e-5f, \
 		"Vector u and v have non-negligible dot product" \
-	);
+	)
 
 /*************************************
  * F3DAudioInitialize Implementation *
