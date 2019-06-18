@@ -41,6 +41,15 @@
 #define FAUDIODEPRECATED(msg) __attribute__((deprecated(msg)))
 #endif
 
+/* -Wpedantic nameless union/struct silencing */
+#ifndef FAUDIONAMELESS
+#ifdef __GNUC__
+#define FAUDIONAMELESS __extension__
+#else
+#define FAUDIONAMELESS
+#endif /* __GNUC__ */
+#endif /* FAUDIONAMELESS */
+
 #include <stdint.h>
 #include <stddef.h>
 

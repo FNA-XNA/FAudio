@@ -173,15 +173,6 @@
 #define restrict
 #endif
 
-/* pedantic nameless union/struct warning silencing */
-#ifndef FAUDIONAMELESS
-#ifdef __GNUC__
-#define FAUDIONAMELESS __extension__
-#else
-#define FAUDIONAMELESS
-#endif /* __GNUC__ */
-#endif /* FAUDIONAMELESS */
-
 /* Threading Types */
 
 typedef void* FAudioThread;

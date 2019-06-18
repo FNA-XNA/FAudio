@@ -44,15 +44,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* pedantic nameless union/struct warning silencing */
-#ifndef FAUDIONAMELESS
-#ifdef __GNUC__
-#define FAUDIONAMELESS __extension__
-#else
-#define FAUDIONAMELESS
-#endif /* __GNUC__ */
-#endif /* FAUDIONAMELESS */
-
 /* Type Declarations */
 
 typedef struct FACTAudioEngine FACTAudioEngine;
