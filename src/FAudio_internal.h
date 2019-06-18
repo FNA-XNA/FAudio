@@ -398,7 +398,7 @@ struct FAudioVoice
 	FAudioMixCallback *sendMix;
 	FAudioFilterParameters *sendFilter;
 	FAudioFilterState **sendFilterState;
-	FAUDIONAMELESS struct
+	struct
 	{
 		uint32_t count;
 		FAudioEffectDescriptor *desc;

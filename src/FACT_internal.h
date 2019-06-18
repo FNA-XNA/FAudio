@@ -242,7 +242,7 @@ typedef struct FACTVariation
 {
 	FAUDIONAMELESS union
 	{
-		FAUDIONAMELESS struct
+		struct
 		{
 			uint16_t track;
 			uint8_t wavebank;
