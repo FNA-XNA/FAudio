@@ -74,7 +74,7 @@
     <ClCompile Include="..\..\src\FAudio.c" />
     <ClCompile Include="..\..\src\FAudio_internal.c" />
     <ClCompile Include="..\..\src\FAudio_internal_simd.c" />
-    <ClCompile Include="..\..\src\FAudio_operationset.c" /
+    <ClCompile Include="..\..\src\FAudio_operationset.c" />
     <ClCompile Include="..\..\src\FAudioFX_reverb.c" />
     <ClCompile Include="..\..\src\FAudioFX_volumemeter.c" />
     <ClCompile Include="..\..\src\FACT.c" />
