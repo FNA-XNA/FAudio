@@ -519,11 +519,11 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->mix.processingStage = ProcessingStage;
 
 	/* Sample Storage */
-	(*ppSubmixVoice)->mix.inputSamples = (uint32_t) FAudio_ceil(
+	(*ppSubmixVoice)->mix.inputSamples = ((uint32_t) FAudio_ceil(
 		audio->updateSize *
 		(double) InputSampleRate /
 		(double) audio->master->master.inputSampleRate
-	) * InputChannels;
+	) + EXTRA_DECODE_PADDING) * InputChannels;
 	(*ppSubmixVoice)->mix.inputCache = (float*) audio->pMalloc(
 		sizeof(float) * (*ppSubmixVoice)->mix.inputSamples
 	);
