@@ -715,6 +715,20 @@ FAUDIOAPI void FAudio_SetDebugConfiguration(
 	void* pReserved
 );
 
+/* Requests the values that determine's the engine's update size.
+ * For example, a 48KHz engine with a 1024-sample update period would return
+ * 1024 for the numerator and 48000 for the denominator. With this information,
+ * you can determine the precise update size in milliseconds.
+ *
+ * quantumNumerator - The engine's update size, in sample frames.
+ * quantumDenominator - The engine's sample rate, in Hz
+ */
+FAUDIOAPI void FAudio_GetProcessingQuantum(
+	FAudio *audio,
+	uint32_t *quantumNumerator,
+	uint32_t *quantumDenominator
+);
+
 /* FAudioVoice Interface */
 
 /* Requests basic information about a voice.

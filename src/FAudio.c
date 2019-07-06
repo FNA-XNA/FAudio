@@ -866,6 +866,22 @@ void FAudio_SetDebugConfiguration(
 #endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 }
 
+void FAudio_GetProcessingQuantum(
+	FAudio *audio,
+	uint32_t *quantumNumerator,
+	uint32_t *quantumDenominator
+) {
+	FAudio_assert(audio->master != NULL);
+	if (quantumNumerator != NULL)
+	{
+		*quantumNumerator = audio->updateSize;
+	}
+	if (quantumDenominator != NULL)
+	{
+		*quantumDenominator = audio->master->master.inputSampleRate;
+	}
+}
+
 /* FAudioVoice Interface */
 
 void FAudioVoice_GetVoiceDetails(

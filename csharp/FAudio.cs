@@ -438,6 +438,13 @@ public static class FAudio
 		IntPtr pReserved /* void* */
 	);
 
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern void FAudio_GetProcessingQuantum(
+		IntPtr audio, /* FAudio */
+		out uint quantumNumerator,
+		out uint quantumDenominator
+	);
+
 	/* FAudioVoice Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
