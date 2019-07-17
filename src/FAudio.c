@@ -2627,10 +2627,9 @@ FAUDIOAPI uint32_t FAudioMasteringVoice_GetChannelMask(
 ) {
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_MASTER);
-	FAudio_assert(voice->audio->mixFormat != NULL);
 	FAudio_assert(pChannelMask != NULL);
 
-	*pChannelMask = voice->audio->mixFormat->dwChannelMask;
+	*pChannelMask = voice->audio->mixFormat.dwChannelMask;
 	LOG_API_EXIT(voice->audio)
 	return 0;
 }

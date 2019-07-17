@@ -28,15 +28,6 @@
 
 #include <SDL.h>
 
-/* Internal Types */
-
-typedef struct FAudioPlatformDevice
-{
-	uint32_t bufferSize;
-	SDL_AudioDeviceID device;
-	FAudioWaveFormatExtensible format;
-} FAudioPlatformDevice;
-
 /* WaveFormatExtensible Helpers */
 
 static inline uint32_t GetMask(uint16_t channels)
@@ -49,7 +40,7 @@ static inline uint32_t GetMask(uint16_t channels)
 	if (channels == 6) return SPEAKER_5POINT1;
 	if (channels == 8) return SPEAKER_7POINT1;
 	FAudio_assert(0 && "Unrecognized speaker layout!");
-	return SPEAKER_STEREO;
+	return 0;
 }
 
 static inline void WriteWaveFormatExtensible(
@@ -114,13 +105,8 @@ void FAudio_PlatformRelease()
 
 void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 {
-	FAudioPlatformDevice *device;
+	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
-
-	/* Allocate a new device container*/
-	device = (FAudioPlatformDevice*) audio->pMalloc(
-		sizeof(FAudioPlatformDevice)
-	);
 
 	/* Build the device format.
 	 * The most unintuitive part of this is the use of outputChannels
@@ -138,7 +124,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 	want.userdata = audio;
 
 	/* Open the device, finally. */
-	device->device = SDL_OpenAudioDevice(
+	device = SDL_OpenAudioDevice(
 		deviceIndex > 0 ? SDL_GetAudioDeviceName(deviceIndex - 1, 0) : NULL,
 		0,
 		&want,
@@ -154,39 +140,31 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		0
 #endif
 	);
-	if (device->device == 0)
+	if (device == 0)
 	{
-		audio->pFree(device);
 		SDL_Log("OpenAudioDevice failed: %s\n", SDL_GetError());
 		FAudio_assert(0 && "Failed to open audio device!");
 		return;
 	}
 
-	/* Write up the format */
-	WriteWaveFormatExtensible(&device->format, have.channels, have.freq);
-	device->bufferSize = have.samples;
-
-	/* Give the output format to the engine */
-	audio->updateSize = device->bufferSize;
-	audio->mixFormat = &device->format;
+	/* Write up the format for the engine */
+	WriteWaveFormatExtensible(&audio->mixFormat, have.channels, have.freq);
+	audio->updateSize = have.samples;
 
 	/* Also give some info to the master voice */
 	audio->master->outputChannels = have.channels;
 	audio->master->master.inputSampleRate = have.freq;
 
 	/* Start the thread! */
-	SDL_PauseAudioDevice(device->device, 0);
+	SDL_PauseAudioDevice(device, 0);
 
-	audio->platform = device;
+	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
+	audio->platform = (void*) ((size_t) device);
 }
 
 void FAudio_PlatformQuit(FAudio *audio)
 {
-	FAudioPlatformDevice *device = audio->platform;
-	SDL_CloseAudioDevice(
-		device->device
-	);
-	audio->pFree(device);
+	SDL_CloseAudioDevice((SDL_AudioDeviceID) ((size_t) audio->platform));
 	audio->platform = NULL;
 }
 

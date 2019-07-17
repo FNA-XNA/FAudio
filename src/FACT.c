@@ -144,7 +144,7 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	FAudio_memcpy(
 		pFinalMixFormat,
-		pEngine->audio->mixFormat,
+		&pEngine->audio->mixFormat,
 		sizeof(FAudioWaveFormatExtensible)
 	);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);

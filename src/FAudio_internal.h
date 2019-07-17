@@ -352,7 +352,7 @@ struct FAudio
 	FAudioMutex submixLock;
 	FAudioMutex callbackLock;
 	FAudioMutex operationLock;
-	FAudioWaveFormatExtensible *mixFormat;
+	FAudioWaveFormatExtensible mixFormat;
 
 	FAudio_OPERATIONSET_Operation *queuedOperations;
 	FAudio_OPERATIONSET_Operation *committedOperations;
