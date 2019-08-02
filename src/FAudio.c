@@ -2037,6 +2037,10 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	else if (voice->type == FAUDIO_VOICE_MASTER)
 	{
 		FAudio_PlatformQuit(voice->audio);
+		if (voice->master.effectCache != NULL)
+		{
+			voice->audio->pFree(voice->master.effectCache);
+		}
 		voice->audio->master = NULL;
 	}
 
