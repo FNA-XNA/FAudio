@@ -172,12 +172,7 @@ void FAudio_PlatformInit(
 
 void FAudio_PlatformQuit(void* platformDevice)
 {
-	if (platformDevice != NULL)
-	{
-		SDL_CloseAudioDevice(
-			(SDL_AudioDeviceID) ((size_t) platformDevice)
-		);
-	}
+	SDL_CloseAudioDevice((SDL_AudioDeviceID) ((size_t) platformDevice));
 }
 
 uint32_t FAudio_PlatformGetDeviceCount()
