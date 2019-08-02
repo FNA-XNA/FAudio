@@ -103,8 +103,16 @@ void FAudio_PlatformRelease()
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
-{
+void FAudio_PlatformInit(
+	FAudio *audio,
+	uint32_t flags,
+	uint32_t deviceIndex,
+	uint32_t *channelCount,
+	uint32_t *sampleRate,
+	uint32_t *updateSize,
+	FAudioWaveFormatExtensible *mixFormat,
+	void** platformDevice
+) {
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
 
@@ -115,9 +123,9 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 	 * mismatches, we have to add a staging buffer for effects to process on
 	 * before ultimately copying the final result to the device. ARGH.
 	 */
-	want.freq = audio->master->master.inputSampleRate;
+	want.freq = *sampleRate;
 	want.format = AUDIO_F32;
-	want.channels = audio->master->outputChannels;
+	want.channels = *channelCount;
 	want.silence = 0;
 	want.samples = 1024;
 	want.callback = FAudio_INTERNAL_MixCallback;
@@ -130,7 +138,7 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 		&want,
 		&have,
 #if SDL_VERSION_ATLEAST(2, 0, 9)
-		SDL_AUDIO_ALLOW_SAMPLES_CHANGE
+		(flags & FAUDIO_1024_QUANTUM) ? 0 : SDL_AUDIO_ALLOW_SAMPLES_CHANGE
 #else
 #ifdef _WIN32
 #error Windows absolutely positively needs SDL 2.0.9!
@@ -148,24 +156,28 @@ void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex)
 	}
 
 	/* Write up the format for the engine */
-	WriteWaveFormatExtensible(&audio->mixFormat, have.channels, have.freq);
-	audio->updateSize = have.samples;
+	WriteWaveFormatExtensible(mixFormat, have.channels, have.freq);
+	*updateSize = have.samples;
 
 	/* Also give some info to the master voice */
-	audio->master->outputChannels = have.channels;
-	audio->master->master.inputSampleRate = have.freq;
+	*channelCount = have.channels;
+	*sampleRate = have.freq;
+
+	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
+	*platformDevice = (void*) ((size_t) device);
 
 	/* Start the thread! */
 	SDL_PauseAudioDevice(device, 0);
-
-	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
-	audio->platform = (void*) ((size_t) device);
 }
 
-void FAudio_PlatformQuit(FAudio *audio)
+void FAudio_PlatformQuit(void* platformDevice)
 {
-	SDL_CloseAudioDevice((SDL_AudioDeviceID) ((size_t) audio->platform));
-	audio->platform = NULL;
+	if (platformDevice != NULL)
+	{
+		SDL_CloseAudioDevice(
+			(SDL_AudioDeviceID) ((size_t) platformDevice)
+		);
+	}
 }
 
 uint32_t FAudio_PlatformGetDeviceCount()

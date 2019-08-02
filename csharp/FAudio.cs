@@ -294,16 +294,16 @@ public static class FAudio
 	public const uint FAUDIO_DEFAULT_CHANNELS =	0;
 	public const uint FAUDIO_DEFAULT_SAMPLERATE =	0;
 
-	public const byte FAUDIO_DEBUG_ENGINE =		0x01;
-	public const byte FAUDIO_VOICE_NOPITCH =	0x02;
-	public const byte FAUDIO_VOICE_NOSRC =		0x04;
-	public const byte FAUDIO_VOICE_USEFILTER =	0x08;
-	public const byte FAUDIO_VOICE_MUSIC =		0x10;
-	public const byte FAUDIO_PLAY_TAILS =		0x20;
-	public const byte FAUDIO_END_OF_STREAM =	0x40;
-	public const byte FAUDIO_SEND_USEFILTER =	0x80;
-
-	public const ushort FAUDIO_VOICE_NOSAMPLESPLAYED = 0x0100;
+	public const uint FAUDIO_DEBUG_ENGINE =			0x0001;
+	public const uint FAUDIO_VOICE_NOPITCH =		0x0002;
+	public const uint FAUDIO_VOICE_NOSRC =			0x0004;
+	public const uint FAUDIO_VOICE_USEFILTER =		0x0008;
+	public const uint FAUDIO_VOICE_MUSIC =			0x0010;
+	public const uint FAUDIO_PLAY_TAILS =			0x0020;
+	public const uint FAUDIO_END_OF_STREAM =		0x0040;
+	public const uint FAUDIO_SEND_USEFILTER =		0x0080;
+	public const uint FAUDIO_VOICE_NOSAMPLESPLAYED =	0x0100;
+	public const uint FAUDIO_1024_QUANTUM =			0x8000;
 
 	public const FAudioFilterType FAUDIO_DEFAULT_FILTER_TYPE =	FAudioFilterType.FAudioLowPassFilter;
 	public const float FAUDIO_DEFAULT_FILTER_FREQUENCY =		FAUDIO_MAX_FILTER_FREQUENCY;

@@ -200,6 +200,8 @@ uint32_t FAudio_Initialize(
 	FAudio_assert(Flags == 0);
 	FAudio_assert(XAudio2Processor == FAUDIO_DEFAULT_PROCESSOR);
 
+	audio->initFlags = Flags;
+
 	/* FIXME: This is lazy... */
 	audio->decodeCache = (float*) audio->pMalloc(sizeof(float));
 	audio->resampleCache = (float*) audio->pMalloc(sizeof(float));
@@ -620,7 +622,24 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* Platform Device */
 	audio->master = *ppMasteringVoice;
 	FAudio_AddRef(audio);
-	FAudio_PlatformInit(audio, DeviceIndex);
+	FAudio_PlatformInit(
+		audio,
+		audio->initFlags,
+		DeviceIndex,
+		&audio->master->outputChannels,
+		&audio->master->master.inputSampleRate,
+		&audio->updateSize,
+		&audio->mixFormat,
+		&audio->platform
+	);
+	if (audio->platform == NULL)
+	{
+		FAudioVoice_DestroyVoice(*ppMasteringVoice);
+		*ppMasteringVoice = NULL;
+
+		/* Not the best code, but it's probably true? */
+		return FAUDIO_E_DEVICE_INVALIDATED;
+	}
 
 	/* Effect Chain Cache */
 	if ((*ppMasteringVoice)->master.inputChannels != (*ppMasteringVoice)->outputChannels)
@@ -2036,11 +2055,12 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 	}
 	else if (voice->type == FAUDIO_VOICE_MASTER)
 	{
-		FAudio_PlatformQuit(voice->audio);
+		FAudio_PlatformQuit(voice->audio->platform);
 		if (voice->master.effectCache != NULL)
 		{
 			voice->audio->pFree(voice->master.effectCache);
 		}
+		voice->audio->platform = NULL;
 		voice->audio->master = NULL;
 	}
 

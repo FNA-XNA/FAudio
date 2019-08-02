@@ -343,6 +343,7 @@ struct FAudio
 	uint8_t version;
 	uint8_t active;
 	uint32_t refcount;
+	uint32_t initFlags;
 	uint32_t updateSize;
 	FAudioMasteringVoice *master;
 	LinkedList *sources;
@@ -713,8 +714,17 @@ void FAudio_FFMPEG_reset(FAudioSourceVoice *voice);
 
 void FAudio_PlatformAddRef(void);
 void FAudio_PlatformRelease(void);
-void FAudio_PlatformInit(FAudio *audio, uint32_t deviceIndex);
-void FAudio_PlatformQuit(FAudio *audio);
+void FAudio_PlatformInit(
+	FAudio *audio,
+	uint32_t flags,
+	uint32_t deviceIndex,
+	uint32_t *channelCount,
+	uint32_t *sampleRate,
+	uint32_t *updateSize,
+	FAudioWaveFormatExtensible *mixFormat,
+	void** platformDevice
+);
+void FAudio_PlatformQuit(void* platformDevice);
 
 uint32_t FAudio_PlatformGetDeviceCount(void);
 uint32_t FAudio_PlatformGetDeviceDetails(
