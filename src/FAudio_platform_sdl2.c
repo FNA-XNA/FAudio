@@ -132,6 +132,7 @@ void FAudio_PlatformInit(
 	want.userdata = audio;
 
 	/* Open the device, finally. */
+iosretry:
 	device = SDL_OpenAudioDevice(
 		deviceIndex > 0 ? SDL_GetAudioDeviceName(deviceIndex - 1, 0) : NULL,
 		0,
@@ -150,7 +151,25 @@ void FAudio_PlatformInit(
 	);
 	if (device == 0)
 	{
-		SDL_Log("OpenAudioDevice failed: %s\n", SDL_GetError());
+		const char *err = SDL_GetError();
+		SDL_Log("OpenAudioDevice failed: %s\n", err);
+
+		/* iOS has a weird thing where you can't open a stream when the
+		 * app is in the background, even though the program is meant
+		 * to be suspended and thus not trip this in the first place.
+		 *
+		 * Startup suspend behavior when an app is opened then closed
+		 * is a big pile of crap, basically.
+		 *
+		 * Google the error code and you'll find that this has been a
+		 * long-standing issue that nobody seems to care about.
+		 * -flibit
+		 */
+		if (SDL_strstr(err, "Code=561015905") != NULL)
+		{
+			goto iosretry;
+		}
+
 		FAudio_assert(0 && "Failed to open audio device!");
 		return;
 	}
