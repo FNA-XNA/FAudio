@@ -28,44 +28,6 @@
 
 #include <SDL.h>
 
-/* WaveFormatExtensible Helpers */
-
-static inline uint32_t GetMask(uint16_t channels)
-{
-	if (channels == 1) return SPEAKER_MONO;
-	if (channels == 2) return SPEAKER_STEREO;
-	if (channels == 3) return SPEAKER_2POINT1;
-	if (channels == 4) return SPEAKER_QUAD;
-	if (channels == 5) return SPEAKER_4POINT1;
-	if (channels == 6) return SPEAKER_5POINT1;
-	if (channels == 8) return SPEAKER_7POINT1;
-	FAudio_assert(0 && "Unrecognized speaker layout!");
-	return 0;
-}
-
-static inline void WriteWaveFormatExtensible(
-	FAudioWaveFormatExtensible *fmt,
-	int channels,
-	int samplerate
-) {
-	fmt->Format.wBitsPerSample = 32;
-	fmt->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
-	fmt->Format.nChannels = channels;
-	fmt->Format.nSamplesPerSec = samplerate;
-	fmt->Format.nBlockAlign = (
-		fmt->Format.nChannels *
-		(fmt->Format.wBitsPerSample / 8)
-	);
-	fmt->Format.nAvgBytesPerSec = (
-		fmt->Format.nSamplesPerSec *
-		fmt->Format.nBlockAlign
-	);
-	fmt->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
-	fmt->Samples.wValidBitsPerSample = 32;
-	fmt->dwChannelMask = GetMask(fmt->Format.nChannels);
-	FAudio_memcpy(&fmt->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
-}
-
 /* Mixer Thread */
 
 void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
@@ -107,31 +69,23 @@ void FAudio_PlatformInit(
 	FAudio *audio,
 	uint32_t flags,
 	uint32_t deviceIndex,
-	uint32_t *channelCount,
-	uint32_t *sampleRate,
-	uint32_t *updateSize,
 	FAudioWaveFormatExtensible *mixFormat,
+	uint32_t *updateSize,
 	void** platformDevice
 ) {
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
 
-	/* Build the device format.
-	 * The most unintuitive part of this is the use of outputChannels
-	 * instead of master.inputChannels. Bizarrely, the effect chain can
-	 * dictate the _actual_ output channel count, and when the channel count
-	 * mismatches, we have to add a staging buffer for effects to process on
-	 * before ultimately copying the final result to the device. ARGH.
-	 */
-	want.freq = *sampleRate;
+	/* Build the device spec */
+	want.freq = mixFormat->Format.nSamplesPerSec;
 	want.format = AUDIO_F32;
-	want.channels = *channelCount;
+	want.channels = mixFormat->Format.nChannels;
 	want.silence = 0;
 	want.samples = 1024;
 	want.callback = FAudio_INTERNAL_MixCallback;
 	want.userdata = audio;
 
-	/* Open the device, finally. */
+	/* Open the device (or at least try to) */
 iosretry:
 	device = SDL_OpenAudioDevice(
 		deviceIndex > 0 ? SDL_GetAudioDeviceName(deviceIndex - 1, 0) : NULL,
@@ -174,13 +128,10 @@ iosretry:
 		return;
 	}
 
-	/* Write up the format for the engine */
-	WriteWaveFormatExtensible(mixFormat, have.channels, have.freq);
+	/* Write up the received format for the engine */
+	mixFormat->Format.nChannels = have.channels;
+	mixFormat->Format.nSamplesPerSec = have.freq;
 	*updateSize = have.samples;
-
-	/* Also give some info to the master voice */
-	*channelCount = have.channels;
-	*sampleRate = have.freq;
 
 	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
 	*platformDevice = (void*) ((size_t) device);

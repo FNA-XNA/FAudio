@@ -718,10 +718,8 @@ void FAudio_PlatformInit(
 	FAudio *audio,
 	uint32_t flags,
 	uint32_t deviceIndex,
-	uint32_t *channelCount,
-	uint32_t *sampleRate,
-	uint32_t *updateSize,
 	FAudioWaveFormatExtensible *mixFormat,
+	uint32_t *updateSize,
 	void** platformDevice
 );
 void FAudio_PlatformQuit(void* platformDevice);
@@ -751,6 +749,44 @@ void FAudio_sleep(uint32_t ms);
 /* Time */
 
 uint32_t FAudio_timems(void);
+
+/* WaveFormatExtensible Helpers */
+
+static inline uint32_t GetMask(uint16_t channels)
+{
+	if (channels == 1) return SPEAKER_MONO;
+	if (channels == 2) return SPEAKER_STEREO;
+	if (channels == 3) return SPEAKER_2POINT1;
+	if (channels == 4) return SPEAKER_QUAD;
+	if (channels == 5) return SPEAKER_4POINT1;
+	if (channels == 6) return SPEAKER_5POINT1;
+	if (channels == 8) return SPEAKER_7POINT1;
+	FAudio_assert(0 && "Unrecognized speaker layout!");
+	return 0;
+}
+
+static inline void WriteWaveFormatExtensible(
+	FAudioWaveFormatExtensible *fmt,
+	int channels,
+	int samplerate
+) {
+	fmt->Format.wBitsPerSample = 32;
+	fmt->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
+	fmt->Format.nChannels = channels;
+	fmt->Format.nSamplesPerSec = samplerate;
+	fmt->Format.nBlockAlign = (
+		fmt->Format.nChannels *
+		(fmt->Format.wBitsPerSample / 8)
+	);
+	fmt->Format.nAvgBytesPerSec = (
+		fmt->Format.nSamplesPerSec *
+		fmt->Format.nBlockAlign
+	);
+	fmt->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
+	fmt->Samples.wValidBitsPerSample = 32;
+	fmt->dwChannelMask = GetMask(fmt->Format.nChannels);
+	FAudio_memcpy(&fmt->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+}
 
 /* Resampling */
 

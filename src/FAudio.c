@@ -619,17 +619,30 @@ uint32_t FAudio_CreateMasteringVoice(
 	FAudio_zero(&(*ppMasteringVoice)->sends, sizeof(FAudioVoiceSends));
 	FAudioVoice_SetEffectChain(*ppMasteringVoice, pEffectChain);
 
-	/* Platform Device */
+	/* This is now safe enough to assign */
 	audio->master = *ppMasteringVoice;
+
+	/* Build the device format.
+	 * The most unintuitive part of this is the use of outputChannels
+	 * instead of master.inputChannels. Bizarrely, the effect chain can
+	 * dictate the _actual_ output channel count, and when the channel count
+	 * mismatches, we have to add a staging buffer for effects to process on
+	 * before ultimately copying the final result to the device. ARGH.
+	 */
+	WriteWaveFormatExtensible(
+		&audio->mixFormat,
+		audio->master->outputChannels,
+		audio->master->master.inputSampleRate
+	);
+
+	/* Platform Device */
 	FAudio_AddRef(audio);
 	FAudio_PlatformInit(
 		audio,
 		audio->initFlags,
 		DeviceIndex,
-		&audio->master->outputChannels,
-		&audio->master->master.inputSampleRate,
-		&audio->updateSize,
 		&audio->mixFormat,
+		&audio->updateSize,
 		&audio->platform
 	);
 	if (audio->platform == NULL)
@@ -640,6 +653,8 @@ uint32_t FAudio_CreateMasteringVoice(
 		/* Not the best code, but it's probably true? */
 		return FAUDIO_E_DEVICE_INVALIDATED;
 	}
+	audio->master->outputChannels = audio->mixFormat.Format.nChannels;
+	audio->master->master.inputSampleRate = audio->mixFormat.Format.nSamplesPerSec;
 
 	/* Effect Chain Cache */
 	if ((*ppMasteringVoice)->master.inputChannels != (*ppMasteringVoice)->outputChannels)
