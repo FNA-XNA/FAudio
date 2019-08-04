@@ -129,8 +129,7 @@ iosretry:
 	}
 
 	/* Write up the received format for the engine */
-	mixFormat->Format.nChannels = have.channels;
-	mixFormat->Format.nSamplesPerSec = have.freq;
+	WriteWaveFormatExtensible(mixFormat, have.channels, have.freq);
 	*updateSize = have.samples;
 
 	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
