@@ -30,7 +30,7 @@
 
 /* Mixer Thread */
 
-void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
+static void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 {
 	FAudio *audio = (FAudio*) userdata;
 
