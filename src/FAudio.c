@@ -1646,7 +1646,7 @@ uint32_t FAudioVoice_SetOutputFilterParameters(
 	/* Find the send index */
 	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
 	{
-		pDestinationVoice = voice->audio->master;
+		pDestinationVoice = voice->sends.pSends[0].pOutputVoice;
 	}
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
@@ -1714,7 +1714,7 @@ void FAudioVoice_GetOutputFilterParameters(
 	/* Find the send index */
 	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
 	{
-		pDestinationVoice = voice->audio->master;
+		pDestinationVoice = voice->sends.pSends[0].pOutputVoice;
 	}
 	for (i = 0; i < voice->sends.SendCount; i += 1)
 	{
@@ -1893,7 +1893,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	/* Find the send index */
 	if (pDestinationVoice == NULL && voice->sends.SendCount == 1)
 	{
-		pDestinationVoice = voice->audio->master;
+		pDestinationVoice = voice->sends.pSends[0].pOutputVoice;
 	}
 	FAudio_assert(pDestinationVoice != NULL);
 	for (i = 0; i < voice->sends.SendCount; i += 1)
