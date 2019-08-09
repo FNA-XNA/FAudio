@@ -174,6 +174,19 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	{
 		name = "Default Device";
 		details->Role = FAudioGlobalDefaultDevice;
+
+		/* This variable will look like a DSound GUID or WASAPI ID, i.e.
+		 * "{0.0.0.00000000}.{FD47D9CC-4218-4135-9CE2-0C195C87405B}"
+		 */
+		envvar = SDL_getenv("FAUDIO_FORCE_DEFAULT_DEVICEID");
+		if (envvar != NULL)
+		{
+			FAudio_UTF8_To_UTF16(
+				envvar,
+				(uint16_t*) details->DeviceID,
+				sizeof(details->DeviceID)
+			);
+		}
 	}
 	else
 	{
