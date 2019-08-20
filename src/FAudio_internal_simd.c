@@ -33,26 +33,36 @@
  */
 
 #if defined(__x86_64__) || defined(_M_X64)
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
-#ifndef __SSE2__ /* For some reason this is not always defined? -flibit */
-#define __SSE2__
-#endif
-#elif __MACOSX__
-#ifndef __SSE2__
-#error macOS does not have SSE2? Bad compiler? They actually moved to ARM?!
-#endif
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* Mac OS X/Intel guarantees SSE2. */
+	/* Some platforms fail to define this... */
+	#ifndef __SSE2__
+	#define __SSE2__ 1
+	#endif
+
+	/* x86_64 guarantees SSE2. */
+	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
 #elif defined(__aarch64__) || defined(_M_ARM64)
-#define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* AArch64 guarantees NEON. */
+	/* Some platforms fail to define this... */
+	#ifndef __ARM_NEON__
+	#define __ARM_NEON__ 1
+	#endif
+
+	/* AArch64 guarantees NEON. */
+	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
+#elif __MACOSX__
+	/* Some build systems may need to specify this. Also, macOS ARM? Sigh */
+	#ifndef __SSE2__
+	#error macOS does not have SSE2? Bad compiler? They actually moved to ARM?!
+	#endif
+
+	/* Mac OS X/Intel guarantees SSE2. */
+	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
 #else
-#define NEED_SCALAR_CONVERTER_FALLBACKS 1
+	/* Need plain C implementations to support all other hardware */
+	#define NEED_SCALAR_CONVERTER_FALLBACKS 1
 #endif
 
-/* Our NEON paths require AArch64 */
+/* Our NEON paths require AArch64, don't check __ARM_NEON__ here */
 #if defined(__aarch64__) || defined(_M_ARM64)
-#ifndef __ARM_NEON__ /* Some platforms fail to define this... */
-#define __ARM_NEON__ 1
-#endif
 #include <arm_neon.h>
 #define HAVE_NEON_INTRINSICS 1
 #endif
