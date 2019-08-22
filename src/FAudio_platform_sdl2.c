@@ -76,6 +76,8 @@ void FAudio_PlatformInit(
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
 
+	FAudio_assert(mixFormat != NULL);
+	FAudio_assert(updateSize != NULL);
 	/* Build the device spec */
 	want.freq = mixFormat->Format.nSamplesPerSec;
 	want.format = AUDIO_F32;
