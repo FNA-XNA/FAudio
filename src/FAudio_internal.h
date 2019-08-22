@@ -770,6 +770,7 @@ static inline void WriteWaveFormatExtensible(
 	int channels,
 	int samplerate
 ) {
+	FAudio_assert(fmt != NULL);
 	fmt->Format.wBitsPerSample = 32;
 	fmt->Format.wFormatTag = FAUDIO_FORMAT_EXTENSIBLE;
 	fmt->Format.nChannels = channels;
