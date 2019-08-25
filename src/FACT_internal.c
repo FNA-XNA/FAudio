@@ -1629,7 +1629,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 
 /* FACT Thread */
 
-int32_t FACT_INTERNAL_APIThread(void* enginePtr)
+int32_t FAUDIOCALL FACT_INTERNAL_APIThread(void* enginePtr)
 {
 	FACTAudioEngine *engine = (FACTAudioEngine*) enginePtr;
 	LinkedList *sbList;

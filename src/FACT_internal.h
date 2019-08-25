@@ -556,7 +556,7 @@ FACTRPC* FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code);
 
 /* FACT Thread */
 
-int32_t FACT_INTERNAL_APIThread(void* enginePtr);
+int32_t FAUDIOCALL FACT_INTERNAL_APIThread(void* enginePtr);
 
 /* FAudio callbacks */
 
