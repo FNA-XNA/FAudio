@@ -361,11 +361,6 @@ void FAPOBase_ProcessThru(
 			/* Add, don't overwrite! */
 			pOutputBuffer[i * OutputChannelCount + co] +=
 				input[i * InputChannelCount + ci];
-			pOutputBuffer[i * OutputChannelCount + co] = FAudio_clamp(
-				pOutputBuffer[i * OutputChannelCount + co],
-				-FAUDIO_MAX_VOLUME_LEVEL,
-				FAUDIO_MAX_VOLUME_LEVEL
-			);
 		}
 	}
 	else
@@ -378,11 +373,6 @@ void FAPOBase_ProcessThru(
 			/* Overwrite, don't add! */
 			pOutputBuffer[i * OutputChannelCount + co] =
 				input[i * InputChannelCount + ci];
-			pOutputBuffer[i * OutputChannelCount + co] = FAudio_clamp(
-				pOutputBuffer[i * OutputChannelCount + co],
-				-FAUDIO_MAX_VOLUME_LEVEL,
-				FAUDIO_MAX_VOLUME_LEVEL
-			);
 		}
 	}
 }
