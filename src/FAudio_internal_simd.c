@@ -1192,11 +1192,6 @@ void FAudio_INTERNAL_Amplify_Scalar(
 	for (i = 0; i < totalSamples; i += 1)
 	{
 		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 #endif /* NEED_SCALAR_CONVERTER_FALLBACKS */
@@ -1212,7 +1207,7 @@ void FAudio_INTERNAL_Amplify_SSE2(
 	uint32_t i;
 	uint32_t header = (16 - (((size_t) output) % 16)) / 4;
 	uint32_t tail = (totalSamples - header) % 4;
-	__m128 volumeVec, minVolumeVec, maxVolumeVec, outVec;
+	__m128 volumeVec, outVec;
 	if (header == 4)
 	{
 		header = 0;
@@ -1225,33 +1220,19 @@ void FAudio_INTERNAL_Amplify_SSE2(
 	for (i = 0; i < header; i += 1)
 	{
 		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 
 	volumeVec = _mm_set1_ps(volume);
-	minVolumeVec = _mm_set1_ps(-FAUDIO_MAX_VOLUME_LEVEL);
-	maxVolumeVec = _mm_set1_ps(FAUDIO_MAX_VOLUME_LEVEL);
 	for (i = header; i < totalSamples - tail; i += 4)
 	{
 		outVec = _mm_load_ps(output + i);
 		outVec = _mm_mul_ps(outVec, volumeVec);
-		outVec = _mm_max_ps(outVec, minVolumeVec);
-		outVec = _mm_min_ps(outVec, maxVolumeVec);
 		_mm_store_ps(output + i, outVec);
 	}
 
 	for (i = totalSamples - tail; i < totalSamples; i += 1)
 	{
 		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 #endif /* HAVE_SSE2_INTRINSICS */
@@ -1265,7 +1246,7 @@ void FAudio_INTERNAL_Amplify_NEON(
 	uint32_t i;
 	uint32_t header = (16 - (((size_t) output) % 16)) / 4;
 	uint32_t tail = (totalSamples - header) % 4;
-	float32x4_t volumeVec, minVolumeVec, maxVolumeVec, outVec;
+	float32x4_t volumeVec, outVec;
 	if (header == 4)
 	{
 		header = 0;
@@ -1278,33 +1259,19 @@ void FAudio_INTERNAL_Amplify_NEON(
 	for (i = 0; i < header; i += 1)
 	{
 		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 
 	volumeVec = vdupq_n_f32(volume);
-	minVolumeVec = vdupq_n_f32(-FAUDIO_MAX_VOLUME_LEVEL);
-	maxVolumeVec = vdupq_n_f32(FAUDIO_MAX_VOLUME_LEVEL);
 	for (i = header; i < totalSamples - tail; i += 4)
 	{
 		outVec = vld1q_f32(output + i);
 		outVec = vmulq_f32(outVec, volumeVec);
-		outVec = vmaxq_f32(outVec, minVolumeVec);
-		outVec = vminq_f32(outVec, maxVolumeVec);
 		vst1q_f32(output + i, outVec);
 	}
 
 	for (i = totalSamples - tail; i < totalSamples; i += 1)
 	{
 		output[i] *= volume;
-		output[i] = FAudio_clamp(
-			output[i],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 #endif /* HAVE_NEON_INTRINSICS */
@@ -1334,11 +1301,6 @@ void FAudio_INTERNAL_Mix_Generic_Scalar(
 				coefficients[co * srcChans + ci]
 			);
 		}
-		dst[co] = FAudio_clamp(
-			dst[co],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 
@@ -1356,15 +1318,8 @@ void FAudio_INTERNAL_Mix_1in_1out_Scalar(
 	float totalVolume = baseVolume * channelVolume[0] * coefficients[0];
 	for (i = 0; i < toMix; i += 1, src += 1, dst += 1)
 	{
-		/* Base source data, combined with the coefficients... */
+		/* Base source data, combined with the coefficients */
 		dst[0] += src[0] * totalVolume;
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 
@@ -1385,21 +1340,9 @@ void FAudio_INTERNAL_Mix_1in_2out_Scalar(
 		/* Base source data... */
 		const float sample = src[0] * totalVolume;
 
-		/* ... combined with the coefficients... */
+		/* ... combined with the coefficients. */
 		dst[0] += sample * coefficients[0];
 		dst[1] += sample * coefficients[1];
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[1] = FAudio_clamp(
-			dst[1],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 
@@ -1420,45 +1363,13 @@ void FAudio_INTERNAL_Mix_1in_6out_Scalar(
 		/* Base source data... */
 		const float sample = src[0] * totalVolume;
 
-		/* ... combined with the coefficients... */
+		/* ... combined with the coefficients. */
 		dst[0] += sample * coefficients[0];
 		dst[1] += sample * coefficients[1];
 		dst[2] += sample * coefficients[2];
 		dst[3] += sample * coefficients[3];
 		dst[4] += sample * coefficients[4];
 		dst[5] += sample * coefficients[5];
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[1] = FAudio_clamp(
-			dst[1],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[2] = FAudio_clamp(
-			dst[2],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[3] = FAudio_clamp(
-			dst[3],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[4] = FAudio_clamp(
-			dst[4],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[5] = FAudio_clamp(
-			dst[5],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 
@@ -1479,7 +1390,7 @@ void FAudio_INTERNAL_Mix_1in_8out_Scalar(
 		/* Base source data... */
 		const float sample = src[0] * totalVolume;
 
-		/* ... combined with the coefficients... */
+		/* ... combined with the coefficients. */
 		dst[0] += sample * coefficients[0];
 		dst[1] += sample * coefficients[1];
 		dst[2] += sample * coefficients[2];
@@ -1488,48 +1399,6 @@ void FAudio_INTERNAL_Mix_1in_8out_Scalar(
 		dst[5] += sample * coefficients[5];
 		dst[6] += sample * coefficients[6];
 		dst[7] += sample * coefficients[7];
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[1] = FAudio_clamp(
-			dst[1],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[2] = FAudio_clamp(
-			dst[2],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[3] = FAudio_clamp(
-			dst[3],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[4] = FAudio_clamp(
-			dst[4],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[5] = FAudio_clamp(
-			dst[5],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[6] = FAudio_clamp(
-			dst[6],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[7] = FAudio_clamp(
-			dst[7],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 
@@ -1548,17 +1417,10 @@ void FAudio_INTERNAL_Mix_2in_1out_Scalar(
 	float totalVolumeR = baseVolume * channelVolume[1] * coefficients[1];
 	for (i = 0; i < toMix; i += 1, src += 2, dst += 1)
 	{
-		/* Base source data, combined with the coefficients... */
+		/* Base source data, combined with the coefficients */
 		dst[0] += (
 			(src[0] * totalVolumeL) +
 			(src[1] * totalVolumeR)
-		);
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
 		);
 	}
 }
@@ -1582,7 +1444,7 @@ void FAudio_INTERNAL_Mix_2in_2out_Scalar(
 		const float left = src[0] * totalVolumeL;
 		const float right = src[1] * totalVolumeR;
 
-		/* ... combined with the coefficients... */
+		/* ... combined with the coefficients. */
 		dst[0] += (
 			(left * coefficients[0]) +
 			(right * coefficients[1])
@@ -1590,18 +1452,6 @@ void FAudio_INTERNAL_Mix_2in_2out_Scalar(
 		dst[1] += (
 			(left * coefficients[2]) +
 			(right * coefficients[3])
-		);
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[1] = FAudio_clamp(
-			dst[1],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
 		);
 	}
 }
@@ -1625,7 +1475,7 @@ void FAudio_INTERNAL_Mix_2in_6out_Scalar(
 		const float left = src[0] * totalVolumeL;
 		const float right = src[1] * totalVolumeR;
 
-		/* ... combined with the coefficients... */
+		/* ... combined with the coefficients. */
 		dst[0] += (
 			(left * coefficients[0]) +
 			(right * coefficients[1])
@@ -1650,38 +1500,6 @@ void FAudio_INTERNAL_Mix_2in_6out_Scalar(
 			(left * coefficients[10]) +
 			(right * coefficients[11])
 		);
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[1] = FAudio_clamp(
-			dst[1],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[2] = FAudio_clamp(
-			dst[2],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[3] = FAudio_clamp(
-			dst[3],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[4] = FAudio_clamp(
-			dst[4],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[5] = FAudio_clamp(
-			dst[5],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
 	}
 }
 
@@ -1704,7 +1522,7 @@ void FAudio_INTERNAL_Mix_2in_8out_Scalar(
 		const float left = src[0] * totalVolumeL;
 		const float right = src[1] * totalVolumeR;
 
-		/* ... combined with the coefficients... */
+		/* ... combined with the coefficients. */
 		dst[0] += (
 			(left * coefficients[0]) +
 			(right * coefficients[1])
@@ -1736,48 +1554,6 @@ void FAudio_INTERNAL_Mix_2in_8out_Scalar(
 		dst[7] += (
 			(left * coefficients[14]) +
 			(right * coefficients[15])
-		);
-
-		/* ... then clamped. */
-		dst[0] = FAudio_clamp(
-			dst[0],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[1] = FAudio_clamp(
-			dst[1],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[2] = FAudio_clamp(
-			dst[2],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[3] = FAudio_clamp(
-			dst[3],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[4] = FAudio_clamp(
-			dst[4],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[5] = FAudio_clamp(
-			dst[5],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[6] = FAudio_clamp(
-			dst[6],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
-		);
-		dst[7] = FAudio_clamp(
-			dst[7],
-			-FAUDIO_MAX_VOLUME_LEVEL,
-			FAUDIO_MAX_VOLUME_LEVEL
 		);
 	}
 }
