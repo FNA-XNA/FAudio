@@ -151,13 +151,7 @@ static void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 
 /* Component - Comb Filter */
 
-typedef struct DspComb
-{
-	DspDelay delay;
-	float feedback_gain;
-} DspComb;
-
-static inline float DspComb_FeedbackFromRT60(DspComb *filter, float rt60_ms)
+static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
 {
 	float exponent;
 
@@ -167,29 +161,13 @@ static inline float DspComb_FeedbackFromRT60(DspComb *filter, float rt60_ms)
 	}
 
 	exponent = (
-		(-3.0f * filter->delay.delay * 1000.0f) /
-		(filter->delay.sampleRate * rt60_ms)
+		(-3.0f * delay->delay * 1000.0f) /
+		(delay->sampleRate * rt60_ms)
 	);
 	return (float) FAudio_pow(10.0f, exponent);
 }
 
-static void DspComb_Initialize(
-	DspComb *filter,
-	int32_t sampleRate,
-	float delay_ms,
-	float rt60_ms,
-	FAudioMallocFunc pMalloc
-) {
-	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms, pMalloc);
-	filter->feedback_gain = DspComb_FeedbackFromRT60(filter, rt60_ms);
-}
-
-static void DspComb_Change(DspComb *filter, float delay_ms, float rt60_ms)
-{
-	DspDelay_Change(&filter->delay, delay_ms);
-	filter->feedback_gain = DspComb_FeedbackFromRT60(filter, rt60_ms);
-}
-
+#if 0 /* FIXME: What was this supposed to be for? */
 static inline float DspComb_Process(DspComb *filter, float sample_in)
 {
 	float delay_out, to_buf;
@@ -202,15 +180,7 @@ static inline float DspComb_Process(DspComb *filter, float sample_in)
 	return delay_out;
 }
 
-static inline void DspComb_Reset(DspComb *filter)
-{
-	DspDelay_Reset(&filter->delay);
-}
-
-static void DspComb_Destroy(DspComb *filter, FAudioFreeFunc pFree)
-{
-	DspDelay_Destroy(&filter->delay, pFree);
-}
+#endif
 
 /* Component - Bi-Quad Filter */
 
@@ -348,7 +318,9 @@ static void DspBiQuad_Destroy(DspBiQuad *filter)
 
 typedef struct DspCombShelving
 {
-	DspComb comb;
+	DspDelay comb_delay;
+	float comb_feedback_gain;
+
 	DspBiQuad low_shelving;
 	DspBiQuad high_shelving;
 } DspCombShelving;
@@ -364,13 +336,12 @@ static void DspCombShelving_Initialize(
 	float high_gain,
 	FAudioMallocFunc pMalloc
 ) {
-	DspComb_Initialize(
-		&filter->comb,
-		sampleRate,
-		delay_ms,
-		rt60_ms,
-		pMalloc
+	DspDelay_Initialize(&filter->comb_delay, sampleRate, delay_ms, pMalloc);
+	filter->comb_feedback_gain = DspComb_FeedbackFromRT60(
+		&filter->comb_delay,
+		rt60_ms
 	);
+
 	DspBiQuad_Initialize(
 		&filter->low_shelving,
 		sampleRate,
@@ -395,22 +366,22 @@ static inline float DspCombShelving_Process(
 ) {
 	float delay_out, feedback, to_buf;
 
-	delay_out = DspDelay_Read(&filter->comb.delay);
+	delay_out = DspDelay_Read(&filter->comb_delay);
 
 	/* Apply shelving filters */
 	feedback = DspBiQuad_Process(&filter->high_shelving, delay_out);
 	feedback = DspBiQuad_Process(&filter->low_shelving, feedback);
 
 	/* Apply comb filter */
-	to_buf = Undenormalize(sample_in + (filter->comb.feedback_gain * feedback));
-	DspDelay_Write(&filter->comb.delay, to_buf);
+	to_buf = Undenormalize(sample_in + (filter->comb_feedback_gain * feedback));
+	DspDelay_Write(&filter->comb_delay, to_buf);
 
 	return delay_out;
 }
 
 static void DspCombShelving_Reset(DspCombShelving *filter)
 {
-	DspComb_Reset(&filter->comb);
+	DspDelay_Reset(&filter->comb_delay);
 	DspBiQuad_Reset(&filter->low_shelving);
 	DspBiQuad_Reset(&filter->high_shelving);
 }
@@ -419,7 +390,7 @@ static void DspCombShelving_Destroy(
 	DspCombShelving *filter,
 	FAudioFreeFunc pFree
 ) {
-	DspComb_Destroy(&filter->comb, pFree);
+	DspDelay_Destroy(&filter->comb_delay, pFree);
 	DspBiQuad_Destroy(&filter->low_shelving);
 	DspBiQuad_Destroy(&filter->high_shelving);
 }
@@ -741,6 +712,7 @@ static void DspReverb_SetParameters(
 		params->RearDelay,
 		params->RearDelay
 	};
+	DspCombShelving *comb;
 	int32_t i, c;
 
 	/* Pre-Delay */
@@ -768,21 +740,27 @@ static void DspReverb_SetParameters(
 
 		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 		{
+			comb = &reverb->channel[c].lpf_comb[i];
+
 			/* Set decay time of comb filter */
-			DspComb_Change(
-				&reverb->channel[c].lpf_comb[i].comb,
-				COMB_DELAYS[i] + STEREO_SPREAD[c],
-				params->DecayTime * 1000.0f);
+			DspDelay_Change(
+				&comb->comb_delay,
+				COMB_DELAYS[i] + STEREO_SPREAD[c]
+			);
+			comb->comb_feedback_gain = DspComb_FeedbackFromRT60(
+				&comb->comb_delay,
+				params->DecayTime * 1000.0f
+			);
 
 			/* High/Low shelving */
 			DspBiQuad_Change(
-				&reverb->channel[c].lpf_comb[i].low_shelving,
+				&comb->low_shelving,
 				50.0f + params->LowEQCutoff * 50.0f,
 				0.0f,
 				params->LowEQGain - 8.0f
 			);
 			DspBiQuad_Change(
-				&reverb->channel[c].lpf_comb[i].high_shelving,
+				&comb->high_shelving,
 				1000 + params->HighEQCutoff * 500.0f,
 				0.0f,
 				params->HighEQGain - 8.0f
