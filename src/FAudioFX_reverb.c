@@ -34,17 +34,17 @@
 
 /* Utility Functions */
 
-static inline float FAudioFX_INTERNAL_DbGainToFactor(float gain)
+static inline float DbGainToFactor(float gain)
 {
 	return (float) FAudio_pow(10, gain / 20.0f);
 }
 
-static inline uint32_t FAudioFX_INTERNAL_MsToSamples(float msec, int32_t sampleRate)
+static inline uint32_t MsToSamples(float msec, int32_t sampleRate)
 {
 	return (uint32_t) ((sampleRate * msec) / 1000.0f);
 }
 
-static inline float FAudioFX_INTERNAL_undenormalize(float sample_in)
+static inline float Undenormalize(float sample_in)
 {
 	union
 	{
@@ -90,8 +90,8 @@ static void DspDelay_Initialize(
 	FAudio_assert(filter != NULL);
 
 	filter->sampleRate = sampleRate;
-	filter->capacity = FAudioFX_INTERNAL_MsToSamples(DSP_DELAY_MAX_DELAY_MS, sampleRate);
-	filter->delay = FAudioFX_INTERNAL_MsToSamples(delay_ms, sampleRate);
+	filter->capacity = MsToSamples(DSP_DELAY_MAX_DELAY_MS, sampleRate);
+	filter->delay = MsToSamples(delay_ms, sampleRate);
 	filter->read_idx = 0;
 	filter->write_idx = filter->delay;
 	filter->buffer = (float*) pMalloc(filter->capacity * sizeof(float));
@@ -104,7 +104,7 @@ static void DspDelay_Change(DspDelay *filter, float delay_ms)
 	FAudio_assert(delay_ms >= 0 && delay_ms <= DSP_DELAY_MAX_DELAY_MS);
 
 	/* length */
-	filter->delay = FAudioFX_INTERNAL_MsToSamples(delay_ms, filter->sampleRate);
+	filter->delay = MsToSamples(delay_ms, filter->sampleRate);
 	filter->read_idx = (filter->write_idx - filter->delay + filter->capacity) % filter->capacity;
 }
 
@@ -212,7 +212,7 @@ static inline float DspComb_Process(DspComb *filter, float sample_in)
 
 	delay_out = DspDelay_Read(&filter->delay);
 
-	to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->feedback_gain * delay_out));
+	to_buf = Undenormalize(sample_in + (filter->feedback_gain * delay_out));
 	DspDelay_Write(&filter->delay, to_buf);
 
 	return delay_out;
@@ -304,7 +304,7 @@ static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float 
 	}
 	else if (filter->type == DSP_BIQUAD_LOWSHELVING || filter->type == DSP_BIQUAD_HIGHSHELVING)
 	{
-		float mu = FAudioFX_INTERNAL_DbGainToFactor(gain);
+		float mu = DbGainToFactor(gain);
 		float beta = (filter->type == DSP_BIQUAD_LOWSHELVING) ? 4.0f / (1 + mu) : (1 + mu) / 4.0f;
 		float delta = beta * (float)FAudio_tan(theta_c * 0.5f);
 		float gamma = (1 - delta) / (1 + delta);
@@ -338,7 +338,7 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 	filter->delay[0] = (filter->a1 * sample_in) - (filter->b1 * result) + filter->delay[1];
 	filter->delay[1] = (filter->a2 * sample_in) - (filter->b2 * result);
 
-	result = FAudioFX_INTERNAL_undenormalize(
+	result = Undenormalize(
 		(result * filter->c0) +
 		(sample_in * filter->d0)
 	);
@@ -415,7 +415,7 @@ static inline float DspCombShelving_Process(DspCombShelving *filter, float sampl
 	feedback = DspBiQuad_Process(&filter->low_shelving, feedback);
 
 	/* apply comb filter */
-	to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->comb.feedback_gain * feedback));
+	to_buf = Undenormalize(sample_in + (filter->comb.feedback_gain * feedback));
 	DspDelay_Write(&filter->comb.delay, to_buf);
 
 	return delay_out;
@@ -478,10 +478,10 @@ static inline float DspAllPass_Process(DspAllPass *filter, float sample_in)
 
 	delay_out = DspDelay_Read(&filter->delay);
 
-	to_buf = FAudioFX_INTERNAL_undenormalize(sample_in + (filter->feedback_gain * delay_out));
+	to_buf = Undenormalize(sample_in + (filter->feedback_gain * delay_out));
 	DspDelay_Write(&filter->delay, to_buf);
 
-	return FAudioFX_INTERNAL_undenormalize(delay_out - (filter->feedback_gain * to_buf));
+	return Undenormalize(delay_out - (filter->feedback_gain * to_buf));
 }
 
 static void DspAllPass_Reset(DspAllPass *filter)
@@ -803,9 +803,9 @@ static void DspReverb_SetParameters(
 	}
 
 	/* gain */
-	reverb->early_gain = FAudioFX_INTERNAL_DbGainToFactor(params->ReflectionsGain);
-	reverb->reverb_gain = FAudioFX_INTERNAL_DbGainToFactor(params->ReverbGain);
-	reverb->room_gain = FAudioFX_INTERNAL_DbGainToFactor(params->RoomFilterMain);
+	reverb->early_gain = DbGainToFactor(params->ReflectionsGain);
+	reverb->reverb_gain = DbGainToFactor(params->ReverbGain);
+	reverb->room_gain = DbGainToFactor(params->RoomFilterMain);
 
 	/* late diffusion */
 	late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
