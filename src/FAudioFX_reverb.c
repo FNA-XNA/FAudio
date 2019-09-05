@@ -278,12 +278,10 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 	filter->delay0 = (filter->a1 * sample_in) - (filter->b1 * result) + filter->delay1;
 	filter->delay1 = (filter->a2 * sample_in) - (filter->b2 * result);
 
-	result = Undenormalize(
+	return Undenormalize(
 		(result * filter->c0) +
 		(sample_in * filter->d0)
 	);
-
-	return  result;
 }
 
 static inline void DspBiQuad_Reset(DspBiQuad *filter)
