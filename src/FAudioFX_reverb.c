@@ -27,9 +27,8 @@
 #include "FAudioFX.h"
 #include "FAudio_internal.h"
 
-/* DspReverb Implementation */
+/* Constants */
 
-/* constants */
 #define PI 3.1415926536f
 #define DSP_DELAY_MAX_DELAY_MS 300
 
