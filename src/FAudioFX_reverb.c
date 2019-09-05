@@ -87,7 +87,6 @@ static void DspDelay_Initialize(
 	FAudioMallocFunc pMalloc
 ) {
 	FAudio_assert(delay_ms >= 0 && delay_ms <= DSP_DELAY_MAX_DELAY_MS);
-	FAudio_assert(filter != NULL);
 
 	filter->sampleRate = sampleRate;
 	filter->capacity = MsToSamples(DSP_DELAY_MAX_DELAY_MS, sampleRate);
@@ -100,7 +99,6 @@ static void DspDelay_Initialize(
 
 static void DspDelay_Change(DspDelay *filter, float delay_ms)
 {
-	FAudio_assert(filter != NULL);
 	FAudio_assert(delay_ms >= 0 && delay_ms <= DSP_DELAY_MAX_DELAY_MS);
 
 	/* length */
@@ -112,7 +110,6 @@ static inline float DspDelay_Read(DspDelay *filter)
 {
 	float delay_out;
 
-	FAudio_assert(filter != NULL);
 	FAudio_assert(filter->read_idx < filter->capacity);
 
 	delay_out = filter->buffer[filter->read_idx];
@@ -122,7 +119,6 @@ static inline float DspDelay_Read(DspDelay *filter)
 
 static inline void DspDelay_Write(DspDelay *filter, float sample)
 {
-	FAudio_assert(filter != NULL);
 	FAudio_assert(filter->write_idx < filter->capacity);
 
 	filter->buffer[filter->write_idx] = sample;
@@ -131,26 +127,19 @@ static inline void DspDelay_Write(DspDelay *filter, float sample)
 
 static inline float DspDelay_Process(DspDelay *filter, float sample_in)
 {
-	float delay_out;
-
-	FAudio_assert(filter != NULL);
-
-	delay_out = DspDelay_Read(filter);
+	float delay_out = DspDelay_Read(filter);
 	DspDelay_Write(filter, sample_in);
-
 	return delay_out;
 }
 
 static inline float DspDelay_Tap(DspDelay *filter, uint32_t delay)
 {
-	FAudio_assert(filter != NULL);
 	FAudio_assert(delay <= filter->delay);
 	return filter->buffer[(filter->write_idx - delay + filter->capacity) % filter->capacity];
 }
 
 static inline void DspDelay_Reset(DspDelay *filter)
 {
-	FAudio_assert(filter != NULL);
 	filter->read_idx = 0;
 	filter->write_idx = filter->delay;
 	FAudio_zero(filter->buffer, filter->capacity * sizeof(float));
@@ -158,7 +147,6 @@ static inline void DspDelay_Reset(DspDelay *filter)
 
 static void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 {
-	FAudio_assert(filter != NULL);
 	pFree(filter->buffer);
 }
 
@@ -193,16 +181,12 @@ static void DspComb_Initialize(
 	float rt60_ms,
 	FAudioMallocFunc pMalloc
 ) {
-	FAudio_assert(filter != NULL);
-
 	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms, pMalloc);
 	filter->feedback_gain = DspComb_FeedbackFromRT60(filter, rt60_ms);
 }
 
 static void DspComb_Change(DspComb *filter, float delay_ms, float rt60_ms)
 {
-	FAudio_assert(filter != NULL);
-
 	DspDelay_Change(&filter->delay, delay_ms);
 	filter->feedback_gain = DspComb_FeedbackFromRT60(filter, rt60_ms);
 }
@@ -210,8 +194,6 @@ static void DspComb_Change(DspComb *filter, float delay_ms, float rt60_ms)
 static inline float DspComb_Process(DspComb *filter, float sample_in)
 {
 	float delay_out, to_buf;
-
-	FAudio_assert(filter != NULL);
 
 	delay_out = DspDelay_Read(&filter->delay);
 
@@ -228,7 +210,6 @@ static inline void DspComb_Reset(DspComb *filter)
 
 static void DspComb_Destroy(DspComb *filter, FAudioFreeFunc pFree)
 {
-	FAudio_assert(filter != NULL);
 	DspDelay_Destroy(&filter->delay, pFree);
 }
 
@@ -260,7 +241,6 @@ static void DspBiQuad_Change(
 ) {
 	float theta_c;
 
-	FAudio_assert(filter != NULL);
 	theta_c = (2.0f * PI * frequency) / (float) filter->sampleRate;
 
 	if (	filter->type == DSP_BIQUAD_LOWPASS ||
@@ -331,8 +311,6 @@ static void DspBiQuad_Initialize(
 	float q,		/* Only used by low/high-pass filters */
 	float gain		/* Only used by low/high-shelving filters */
 ) {
-	FAudio_assert(filter != NULL);
-
 	FAudio_zero(filter, sizeof(DspBiQuad));
 	filter->type = type;
 	filter->sampleRate = sampleRate;
@@ -359,7 +337,6 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 
 static inline void DspBiQuad_Reset(DspBiQuad *filter)
 {
-	FAudio_assert(filter != NULL);
 	FAudio_zero(&filter->delay, sizeof(filter->delay));
 }
 
@@ -387,7 +364,6 @@ static void DspCombShelving_Initialize(
 	float high_gain,
 	FAudioMallocFunc pMalloc
 ) {
-	FAudio_assert(filter != NULL);
 	DspComb_Initialize(
 		&filter->comb,
 		sampleRate,
@@ -419,8 +395,6 @@ static inline float DspCombShelving_Process(
 ) {
 	float delay_out, feedback, to_buf;
 
-	FAudio_assert(filter != NULL);
-
 	delay_out = DspDelay_Read(&filter->comb.delay);
 
 	/* Apply shelving filters */
@@ -436,8 +410,6 @@ static inline float DspCombShelving_Process(
 
 static void DspCombShelving_Reset(DspCombShelving *filter)
 {
-	FAudio_assert(filter != NULL);
-
 	DspComb_Reset(&filter->comb);
 	DspBiQuad_Reset(&filter->low_shelving);
 	DspBiQuad_Reset(&filter->high_shelving);
@@ -447,8 +419,6 @@ static void DspCombShelving_Destroy(
 	DspCombShelving *filter,
 	FAudioFreeFunc pFree
 ) {
-	FAudio_assert(filter != NULL);
-
 	DspComb_Destroy(&filter->comb, pFree);
 	DspBiQuad_Destroy(&filter->low_shelving);
 	DspBiQuad_Destroy(&filter->high_shelving);
@@ -469,16 +439,12 @@ static void DspAllPass_Initialize(
 	float gain,
 	FAudioMallocFunc pMalloc
 ) {
-	FAudio_assert(filter != NULL);
-
 	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms, pMalloc);
 	filter->feedback_gain = gain;
 }
 
 static void DspAllPass_Change(DspAllPass *filter, float delay_ms, float gain)
 {
-	FAudio_assert(filter != NULL);
-
 	DspDelay_Change(&filter->delay, delay_ms);
 	filter->feedback_gain = gain;
 }
@@ -486,8 +452,6 @@ static void DspAllPass_Change(DspAllPass *filter, float delay_ms, float gain)
 static inline float DspAllPass_Process(DspAllPass *filter, float sample_in)
 {
 	float delay_out, to_buf;
-
-	FAudio_assert(filter != NULL);
 
 	delay_out = DspDelay_Read(&filter->delay);
 
@@ -499,13 +463,11 @@ static inline float DspAllPass_Process(DspAllPass *filter, float sample_in)
 
 static void DspAllPass_Reset(DspAllPass *filter)
 {
-	FAudio_assert(filter != NULL);
 	DspDelay_Reset(&filter->delay);
 }
 
 static void DspAllPass_Destroy(DspAllPass *filter, FAudioFreeFunc pFree)
 {
-	FAudio_assert(filter != NULL);
 	DspDelay_Destroy(&filter->delay, pFree);
 }
 
