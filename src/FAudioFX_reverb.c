@@ -63,6 +63,22 @@ static inline float Undenormalize(float sample_in)
 	return sample_in * denormal_factor;
 }
 
+static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
+{
+	float exponent;
+
+	if (rt60_ms == 0)
+	{
+		return 0;
+	}
+
+	exponent = (
+		(-3.0f * delay->delay * 1000.0f) /
+		(delay->sampleRate * rt60_ms)
+	);
+	return (float) FAudio_pow(10.0f, exponent);
+}
+
 /* Component - Delay */
 
 #define DSP_DELAY_MAX_DELAY_MS 300
@@ -145,24 +161,6 @@ static inline void DspDelay_Reset(DspDelay *filter)
 static inline void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 {
 	pFree(filter->buffer);
-}
-
-/* Component - Comb Filter */
-
-static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
-{
-	float exponent;
-
-	if (rt60_ms == 0)
-	{
-		return 0;
-	}
-
-	exponent = (
-		(-3.0f * delay->delay * 1000.0f) /
-		(delay->sampleRate * rt60_ms)
-	);
-	return (float) FAudio_pow(10.0f, exponent);
 }
 
 /* Component - Bi-Quad Filter */
