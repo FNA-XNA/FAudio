@@ -27,10 +27,6 @@
 #include "FAudioFX.h"
 #include "FAudio_internal.h"
 
-/* Constants */
-
-#define DSP_DELAY_MAX_DELAY_MS 300
-
 /* Utility Functions */
 
 static inline float DbGainToFactor(float gain)
@@ -68,6 +64,8 @@ static inline float Undenormalize(float sample_in)
 }
 
 /* Component - Delay */
+
+#define DSP_DELAY_MAX_DELAY_MS 300
 
 typedef struct DspDelay
 {
