@@ -29,7 +29,6 @@
 
 /* Constants */
 
-#define PI 3.1415926536f
 #define DSP_DELAY_MAX_DELAY_MS 300
 
 /* Utility Functions */
@@ -240,8 +239,9 @@ static void DspBiQuad_Change(
 	float gain
 ) {
 	float theta_c;
+	const float TWOPI = 6.283185307179586476925286766559005;
 
-	theta_c = (2.0f * PI * frequency) / (float) filter->sampleRate;
+	theta_c = (TWOPI * frequency) / (float) filter->sampleRate;
 
 	if (	filter->type == DSP_BIQUAD_LOWPASS ||
 		filter->type == DSP_BIQUAD_HIGHPASS	)
