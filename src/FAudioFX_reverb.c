@@ -648,7 +648,7 @@ static DspReverb* DspReverb_Create(
 	FAudio_zero(reverb, sizeof(DspReverb));
 	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10, pMalloc);
 
-	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
 		DspAllPass_Initialize(
 			&reverb->apf_in[i],
@@ -661,7 +661,7 @@ static DspReverb* DspReverb_Create(
 
 	reverb->reverb_channels = (out_channels == 6) ? 4 : out_channels;
 
-	for (c = 0; c < reverb->reverb_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
 		DspDelay_Initialize(
 			&reverb->channel[c].reverb_delay,
@@ -670,7 +670,7 @@ static DspReverb* DspReverb_Create(
 			pMalloc
 		);
 
-		for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 		{
 			DspCombShelving_Initialize(
 				&reverb->channel[c].lpf_comb[i],
@@ -685,7 +685,7 @@ static DspReverb* DspReverb_Create(
 			);
 		}
 
-		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
 			DspAllPass_Initialize(
 				&reverb->channel[c].apf_out[i],
@@ -717,6 +717,43 @@ static DspReverb* DspReverb_Create(
 	return reverb;
 }
 
+static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
+{
+	int32_t i, c;
+
+	DspDelay_Destroy(&reverb->early_delay, pFree);
+
+	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
+	{
+		DspAllPass_Destroy(&reverb->apf_in[i], pFree);
+	}
+
+	for (c = 0; c < reverb->reverb_channels; c += 1)
+	{
+		DspDelay_Destroy(&reverb->channel[c].reverb_delay, pFree);
+
+		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
+		{
+			DspCombShelving_Destroy(
+				&reverb->channel[c].lpf_comb[i],
+				pFree
+			);
+		}
+
+		DspBiQuad_Destroy(&reverb->channel[c].room_high_shelf);
+
+		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
+		{
+			DspAllPass_Destroy(
+				&reverb->channel[c].apf_out[i],
+				pFree
+			);
+		}
+	}
+
+	pFree(reverb);
+}
+
 static void DspReverb_SetParameters(
 	DspReverb *reverb,
 	FAudioFXReverbParameters *params
@@ -726,22 +763,22 @@ static void DspReverb_SetParameters(
 	int32_t i, c;
 
 	/* pre delay */
-	DspDelay_Change(&reverb->early_delay, (float)params->ReflectionsDelay);
+	DspDelay_Change(&reverb->early_delay, (float) params->ReflectionsDelay);
 
 	/* early reflections - diffusion */
 	early_diffusion = 0.6f - ((params->EarlyDiffusion / 15.0f) * 0.2f);
 
-	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
 		DspAllPass_Change(&reverb->apf_in[i], APF_IN_DELAYS[i], early_diffusion);
 	}
 
 	/* reverberation */
-	for (c = 0; c < reverb->reverb_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
 		DspDelay_Change(&reverb->channel[c].reverb_delay, (float) params->ReverbDelay + channel_delay[c]);
 
-		for (i = 0; i < REVERB_COUNT_COMB; ++i)
+		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 		{
 			/* set decay time of comb filter */
 			DspComb_Change(
@@ -773,9 +810,9 @@ static void DspReverb_SetParameters(
 	/* late diffusion */
 	late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
 
-	for (c = 0; c < reverb->reverb_channels; ++c)
+	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
-		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
 			DspAllPass_Change(
 				&reverb->channel[c].apf_out[i],
@@ -819,7 +856,7 @@ static inline float DspReverb_INTERNAL_ProcessEarly(
 	/* early reflections */
 	early = delay_in;
 
-	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
 		early = DspAllPass_Process(&reverb->apf_in[i], early);
 	}
@@ -841,14 +878,14 @@ static inline float DspReverb_INTERNAL_ProcessChannel(
 	comb_out = 0.0f;
 	comb_gain = 1.0f / REVERB_COUNT_COMB;
 
-	for (i = 0; i < REVERB_COUNT_COMB; ++i)
+	for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 	{
 		comb_out += comb_gain * DspCombShelving_Process(&channel->lpf_comb[i], revdelay);
 	}
 
 	/* output diffusion */
 	late = comb_out;
-	for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
+	for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 	{
 		late = DspAllPass_Process(&channel->apf_out[i], late);
 	}
@@ -924,7 +961,7 @@ static inline float DspReverb_INTERNAL_Process_1_to_5p1(
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
 
 		/* Reverberation with Wet/Dry Mix */
-		for (c = 0; c < 4; ++c)
+		for (c = 0; c < 4; c += 1)
 		{
 			late[c] = (DspReverb_INTERNAL_ProcessChannel(
 				reverb,
@@ -1032,107 +1069,6 @@ static inline float DspReverb_INTERNAL_Process_2_to_5p1(
 }
 
 #undef OUTPUT_SAMPLE
-
-static float DspReverb_Process(
-	DspReverb *reverb,
-	float *restrict samples_in,
-	float *restrict samples_out,
-	size_t sample_count,
-	int32_t num_channels
-) {
-	FAudio_assert(reverb != NULL);
-	FAudio_assert(samples_in != NULL);
-	FAudio_assert(samples_out != NULL);
-
-	#define PROCESS(pin, pout) \
-		DspReverb_INTERNAL_Process_##pin##_to_##pout( \
-			reverb, \
-			samples_in, \
-			samples_out, \
-			sample_count \
-		)
-	switch (reverb->out_channels)
-	{
-		case 1: return PROCESS(1, 1);
-		case 2: return PROCESS(2, 2);
-		default: /* 5.1 */
-			if (reverb->in_channels == 1)
-			{
-				return PROCESS(1, 5p1);
-			}
-			else
-			{
-				return PROCESS(2, 5p1);
-			}
-	}
-	#undef PROCESS
-}
-
-static void DspReverb_Reset(DspReverb *reverb)
-{
-	int32_t i, c;
-
-	DspDelay_Reset(&reverb->early_delay);
-
-	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
-	{
-		DspAllPass_Reset(&reverb->apf_in[i]);
-	}
-
-	for (c = 0; c < reverb->reverb_channels; ++c)
-	{
-		DspDelay_Reset(&reverb->channel[c].reverb_delay);
-
-		for (i = 0; i < REVERB_COUNT_COMB; ++i)
-		{
-			DspCombShelving_Reset(&reverb->channel[c].lpf_comb[i]);
-		}
-
-		DspBiQuad_Reset(&reverb->channel[c].room_high_shelf);
-
-		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
-		{
-			DspAllPass_Reset(&reverb->channel[c].apf_out[i]);
-		}
-	}
-}
-
-static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
-{
-	int32_t i, c;
-
-	DspDelay_Destroy(&reverb->early_delay, pFree);
-
-	for (i = 0; i < REVERB_COUNT_APF_IN; ++i)
-	{
-		DspAllPass_Destroy(&reverb->apf_in[i], pFree);
-	}
-
-	for (c = 0; c < reverb->reverb_channels; ++c)
-	{
-		DspDelay_Destroy(&reverb->channel[c].reverb_delay, pFree);
-
-		for (i = 0; i < REVERB_COUNT_COMB; ++i)
-		{
-			DspCombShelving_Destroy(
-				&reverb->channel[c].lpf_comb[i],
-				pFree
-			);
-		}
-
-		DspBiQuad_Destroy(&reverb->channel[c].room_high_shelf);
-
-		for (i = 0; i < REVERB_COUNT_APF_OUT; ++i)
-		{
-			DspAllPass_Destroy(
-				&reverb->channel[c].apf_out[i],
-				pFree
-			);
-		}
-	}
-
-	pFree(reverb);
-}
 
 /* Reverb FAPO Implementation */
 
@@ -1510,13 +1446,33 @@ void FAudioFXReverb_Process(
 	}
 
 	/* run reverb effect */
-	total = DspReverb_Process(
-		fapo->reverb,
-		(float*) pInputProcessParameters->pBuffer,
-		(float*) pOutputProcessParameters->pBuffer,
-		pInputProcessParameters->ValidFrameCount * fapo->inChannels,
-		fapo->inChannels
-	);
+	#define PROCESS(pin, pout) \
+		DspReverb_INTERNAL_Process_##pin##_to_##pout( \
+			fapo->reverb, \
+			(float*) pInputProcessParameters->pBuffer, \
+			(float*) pOutputProcessParameters->pBuffer, \
+			pInputProcessParameters->ValidFrameCount * fapo->inChannels \
+		)
+	switch (fapo->reverb->out_channels)
+	{
+		case 1:
+			total = PROCESS(1, 1);
+			break;
+		case 2:
+			total = PROCESS(2, 2);
+			break;
+		default: /* 5.1 */
+			if (fapo->reverb->in_channels == 1)
+			{
+				total = PROCESS(1, 5p1);
+			}
+			else
+			{
+				total = PROCESS(2, 5p1);
+			}
+			break;
+	}
+	#undef PROCESS
 
 	/* set BufferFlags to silent so PLAY_TAILS knows when to stop */
 	pOutputProcessParameters->BufferFlags = (total < 0.0000001f) ? FAPO_BUFFER_SILENT : FAPO_BUFFER_VALID;
@@ -1526,10 +1482,33 @@ void FAudioFXReverb_Process(
 
 void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 {
+	int32_t i, c;
 	FAPOBase_Reset(&fapo->base);
 
-	/* reset the cached state of the reverb filter */
-	DspReverb_Reset(fapo->reverb);
+	/* Reset the cached state of the reverb filter */
+	DspDelay_Reset(&fapo->reverb->early_delay);
+
+	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
+	{
+		DspAllPass_Reset(&fapo->reverb->apf_in[i]);
+	}
+
+	for (c = 0; c < fapo->reverb->reverb_channels; c += 1)
+	{
+		DspDelay_Reset(&fapo->reverb->channel[c].reverb_delay);
+
+		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
+		{
+			DspCombShelving_Reset(&fapo->reverb->channel[c].lpf_comb[i]);
+		}
+
+		DspBiQuad_Reset(&fapo->reverb->channel[c].room_high_shelf);
+
+		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
+		{
+			DspAllPass_Reset(&fapo->reverb->channel[c].apf_out[i]);
+		}
+	}
 }
 
 void FAudioFXReverb_Free(void* fapo)
