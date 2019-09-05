@@ -1070,7 +1070,7 @@ static float DspReverb_Process(
 	#undef PROCESS
 }
 
-void DspReverb_Reset(DspReverb *reverb)
+static void DspReverb_Reset(DspReverb *reverb)
 {
 	int32_t i, c;
 
@@ -1099,7 +1099,7 @@ void DspReverb_Reset(DspReverb *reverb)
 	}
 }
 
-void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
+static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 {
 	int32_t i, c;
 
