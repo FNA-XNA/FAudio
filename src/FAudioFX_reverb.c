@@ -1058,13 +1058,12 @@ static float DspReverb_Process(
 		default: /* 5.1 */
 			if (reverb->in_channels == 1)
 			{
-				PROCESS(1, 5p1);
+				return PROCESS(1, 5p1);
 			}
 			else
 			{
-				PROCESS(2, 5p1);
+				return PROCESS(2, 5p1);
 			}
-			break;
 	}
 	#undef PROCESS
 }
