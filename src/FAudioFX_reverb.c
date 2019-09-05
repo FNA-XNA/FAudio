@@ -73,8 +73,8 @@ static inline float Undenormalize(float sample_in)
 typedef struct DspDelay
 {
 	int32_t	 sampleRate;
-	uint32_t capacity;	/* in samples */
-	uint32_t delay;		/* in samples */
+	uint32_t capacity;	/* In samples */
+	uint32_t delay;		/* In samples */
 	uint32_t read_idx;
 	uint32_t write_idx;
 	float *buffer;
@@ -179,8 +179,11 @@ static inline float DspComb_FeedbackFromRT60(DspComb *filter, float rt60_ms)
 		return 0;
 	}
 
-	exponent = (-3.0f * filter->delay.delay * 1000.0f) / (filter->delay.sampleRate * rt60_ms);
-	return (float)FAudio_pow(10.0f, exponent);
+	exponent = (
+		(-3.0f * filter->delay.delay * 1000.0f) /
+		(filter->delay.sampleRate * rt60_ms)
+	);
+	return (float) FAudio_pow(10.0f, exponent);
 }
 
 static void DspComb_Initialize(
@@ -249,38 +252,27 @@ typedef struct DspBiQuad
 	float delay[2];
 } DspBiQuad;
 
-static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float gain);
-
-static void DspBiQuad_Initialize(
+static void DspBiQuad_Change(
 	DspBiQuad *filter,
-	int32_t sampleRate,
-	DspBiQuadType type,
-	float frequency,	/* corner frequency */
-	float q,		/* only used by low/high-pass filters */
-	float gain		/* only used by low/high-shelving filters */
+	float frequency,
+	float q,
+	float gain
 ) {
-	FAudio_assert(filter != NULL);
-
-	FAudio_zero(filter, sizeof(DspBiQuad));
-	filter->type = type;
-	filter->sampleRate = sampleRate;
-	DspBiQuad_Change(filter, frequency, q, gain);
-}
-
-static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float gain)
-{
 	float theta_c;
 
 	FAudio_assert(filter != NULL);
-	theta_c = (2.0f * PI * frequency) / (float)filter->sampleRate;
+	theta_c = (2.0f * PI * frequency) / (float) filter->sampleRate;
 
-	if (filter->type == DSP_BIQUAD_LOWPASS || filter->type == DSP_BIQUAD_HIGHPASS)
+	if (	filter->type == DSP_BIQUAD_LOWPASS ||
+		filter->type == DSP_BIQUAD_HIGHPASS	)
 	{
-		float sin_theta_c = (float)FAudio_sin(theta_c);
-		float cos_theta_c = (float)FAudio_cos(theta_c);
+		float sin_theta_c = (float) FAudio_sin(theta_c);
+		float cos_theta_c = (float) FAudio_cos(theta_c);
 		float oneOverQ = 1.0f / q;
-		float beta = (1.0f - (oneOverQ * 0.5f * sin_theta_c)) /
-					 (1.0f + (oneOverQ *  0.5f * sin_theta_c));
+		float beta = (
+			(1.0f - (oneOverQ * 0.5f * sin_theta_c)) /
+			(1.0f + (oneOverQ *  0.5f * sin_theta_c))
+		);
 		float gamma = (0.5f + beta) * cos_theta_c;
 
 		if (filter->type == DSP_BIQUAD_LOWPASS)
@@ -302,11 +294,14 @@ static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float 
 		filter->c0 = 1.0f;
 		filter->d0 = 0.0f;
 	}
-	else if (filter->type == DSP_BIQUAD_LOWSHELVING || filter->type == DSP_BIQUAD_HIGHSHELVING)
+	else if (	filter->type == DSP_BIQUAD_LOWSHELVING ||
+			filter->type == DSP_BIQUAD_HIGHSHELVING	)
 	{
 		float mu = DbGainToFactor(gain);
-		float beta = (filter->type == DSP_BIQUAD_LOWSHELVING) ? 4.0f / (1 + mu) : (1 + mu) / 4.0f;
-		float delta = beta * (float)FAudio_tan(theta_c * 0.5f);
+		float beta = (filter->type == DSP_BIQUAD_LOWSHELVING) ?
+			4.0f / (1 + mu) :
+			(1 + mu) / 4.0f;
+		float delta = beta * (float) FAudio_tan(theta_c * 0.5f);
 		float gamma = (1 - delta) / (1 + delta);
 
 		if (filter->type == DSP_BIQUAD_LOWSHELVING)
@@ -328,11 +323,27 @@ static void DspBiQuad_Change(DspBiQuad *filter, float frequency, float q, float 
 	}
 }
 
+static void DspBiQuad_Initialize(
+	DspBiQuad *filter,
+	int32_t sampleRate,
+	DspBiQuadType type,
+	float frequency,	/* Corner frequency */
+	float q,		/* Only used by low/high-pass filters */
+	float gain		/* Only used by low/high-shelving filters */
+) {
+	FAudio_assert(filter != NULL);
+
+	FAudio_zero(filter, sizeof(DspBiQuad));
+	filter->type = type;
+	filter->sampleRate = sampleRate;
+	DspBiQuad_Change(filter, frequency, q, gain);
+}
+
 static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 {
 	/* Direct Form II Transposed:
-	 * - less delay registers than Direct Form I
-	 * - more numerically stable than Direct Form II
+	 * - Less delay registers than Direct Form I
+	 * - More numerically stable than Direct Form II
 	 */
 	float result = (filter->a0 * sample_in) + filter->delay[0];
 	filter->delay[0] = (filter->a1 * sample_in) - (filter->b1 * result) + filter->delay[1];
@@ -402,19 +413,21 @@ static void DspCombShelving_Initialize(
 	);
 }
 
-static inline float DspCombShelving_Process(DspCombShelving *filter, float sample_in)
-{
+static inline float DspCombShelving_Process(
+	DspCombShelving *filter,
+	float sample_in
+) {
 	float delay_out, feedback, to_buf;
 
 	FAudio_assert(filter != NULL);
 
 	delay_out = DspDelay_Read(&filter->comb.delay);
 
-	/* apply shelving filters */
+	/* Apply shelving filters */
 	feedback = DspBiQuad_Process(&filter->high_shelving, delay_out);
 	feedback = DspBiQuad_Process(&filter->low_shelving, feedback);
 
-	/* apply comb filter */
+	/* Apply comb filter */
 	to_buf = Undenormalize(sample_in + (filter->comb.feedback_gain * feedback));
 	DspDelay_Write(&filter->comb.delay, to_buf);
 
@@ -759,34 +772,47 @@ static void DspReverb_SetParameters(
 	FAudioFXReverbParameters *params
 ) {
 	float early_diffusion, late_diffusion;
-	float channel_delay[4] = { 0.0f, 0.0f, params->RearDelay, params->RearDelay };
+	float channel_delay[4] =
+	{
+		0.0f,
+		0.0f,
+		params->RearDelay,
+		params->RearDelay
+	};
 	int32_t i, c;
 
-	/* pre delay */
+	/* Pre-Delay */
 	DspDelay_Change(&reverb->early_delay, (float) params->ReflectionsDelay);
 
-	/* early reflections - diffusion */
+	/* Early Reflections - Diffusion */
 	early_diffusion = 0.6f - ((params->EarlyDiffusion / 15.0f) * 0.2f);
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		DspAllPass_Change(&reverb->apf_in[i], APF_IN_DELAYS[i], early_diffusion);
+		DspAllPass_Change(
+			&reverb->apf_in[i],
+			APF_IN_DELAYS[i],
+			early_diffusion
+		);
 	}
 
-	/* reverberation */
+	/* Reverberation */
 	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
-		DspDelay_Change(&reverb->channel[c].reverb_delay, (float) params->ReverbDelay + channel_delay[c]);
+		DspDelay_Change(
+			&reverb->channel[c].reverb_delay,
+			(float) params->ReverbDelay + channel_delay[c]
+		);
 
 		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 		{
-			/* set decay time of comb filter */
+			/* Set decay time of comb filter */
 			DspComb_Change(
 				&reverb->channel[c].lpf_comb[i].comb,
 				COMB_DELAYS[i] + STEREO_SPREAD[c],
 				params->DecayTime * 1000.0f);
 
-			/* high/low shelving */
+			/* High/Low shelving */
 			DspBiQuad_Change(
 				&reverb->channel[c].lpf_comb[i].low_shelving,
 				50.0f + params->LowEQCutoff * 50.0f,
@@ -802,12 +828,12 @@ static void DspReverb_SetParameters(
 		}
 	}
 
-	/* gain */
+	/* Gain */
 	reverb->early_gain = DbGainToFactor(params->ReflectionsGain);
 	reverb->reverb_gain = DbGainToFactor(params->ReverbGain);
 	reverb->room_gain = DbGainToFactor(params->RoomFilterMain);
 
-	/* late diffusion */
+	/* Late Diffusion */
 	late_diffusion = 0.6f - ((params->LateDiffusion / 15.0f) * 0.2f);
 
 	for (c = 0; c < reverb->reverb_channels; c += 1)
@@ -827,18 +853,31 @@ static void DspReverb_SetParameters(
 			0.0f,
 			params->RoomFilterMain + params->RoomFilterHF);
 
-		reverb->channel[c].gain = 1.5f - (((c % 2 == 0 ? params->PositionMatrixLeft : params->PositionMatrixRight) / 27.0f) * 0.5f);
+		reverb->channel[c].gain = 1.5f - (
+			((c % 2 == 0 ?
+				params->PositionMatrixLeft :
+				params->PositionMatrixRight
+			) / 27.0f) * 0.5f
+		);
 		if (c >= 2)
 		{
-			/* rear-channel attenuation */
+			/* Rear-channel Attenuation */
 			reverb->channel[c].gain *= 0.75f;
 		}
 
-		reverb->channel[c].early_gain = 1.2f - (((c % 2 == 0 ? params->PositionLeft : params->PositionRight) / 6.0f) * 0.2f);
-		reverb->channel[c].early_gain = reverb->channel[c].early_gain * reverb->early_gain;
+		reverb->channel[c].early_gain = 1.2f - (
+			((c % 2 == 0 ?
+				params->PositionLeft :
+				params->PositionRight
+			) / 6.0f) * 0.2f
+		);
+		reverb->channel[c].early_gain = (
+			reverb->channel[c].early_gain *
+			reverb->early_gain
+		);
 	}
 
-	/* wet/dry mix (100 = fully wet / 0 = fully dry) */
+	/* Wet/Dry Mix (100 = fully wet, 0 = fully dry) */
 	reverb->wet_ratio = params->WetDryMix / 100.0f;
 	reverb->dry_ratio = 1.0f - reverb->wet_ratio;
 }
