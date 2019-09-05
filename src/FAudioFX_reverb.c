@@ -997,9 +997,9 @@ static inline float DspReverb_INTERNAL_Process_2_to_2(
 	while (samples_in < in_end)
 	{
 		/* Input - Combine 2 channels into 1 */
-		in = *samples_in++;
-		in = 0.5f * (in + *samples_in++);
+		in = (samples_in[0] + samples_in[1]) / 2.0f;
 		in_ratio = in * reverb->dry_ratio;
+		samples_in += 2;
 
 		/* Early Reflections */
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
@@ -1039,9 +1039,9 @@ static inline float DspReverb_INTERNAL_Process_2_to_5p1(
 	while (samples_in < in_end)
 	{
 		/* Input - Combine 2 channels into 1 */
-		in = *samples_in++;
-		in = 0.5f * (in + *samples_in++);
+		in = (samples_in[0] + samples_in[1]) / 2.0f;
 		in_ratio = in * reverb->dry_ratio;
+		samples_in += 2;
 
 		/* Early Reflections */
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
