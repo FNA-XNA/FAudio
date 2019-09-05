@@ -63,22 +63,6 @@ static inline float Undenormalize(float sample_in)
 	return sample_in * denormal_factor;
 }
 
-static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
-{
-	float exponent;
-
-	if (rt60_ms == 0)
-	{
-		return 0;
-	}
-
-	exponent = (
-		(-3.0f * delay->delay * 1000.0f) /
-		(delay->sampleRate * rt60_ms)
-	);
-	return (float) FAudio_pow(10.0f, exponent);
-}
-
 /* Component - Delay */
 
 #define DSP_DELAY_MAX_DELAY_MS 300
@@ -163,6 +147,22 @@ static inline void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 	pFree(filter->buffer);
 }
 
+static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
+{
+	float exponent;
+
+	if (rt60_ms == 0)
+	{
+		return 0;
+	}
+
+	exponent = (
+		(-3.0f * delay->delay * 1000.0f) /
+		(delay->sampleRate * rt60_ms)
+	);
+	return (float) FAudio_pow(10.0f, exponent);
+}
+
 /* Component - Bi-Quad Filter */
 
 typedef enum DspBiQuadType
@@ -180,7 +180,7 @@ typedef struct DspBiQuad
 	float a0, a1, a2;
 	float b1, b2;
 	float c0, d0;
-	float delay[2];
+	float delay0, delay1;
 } DspBiQuad;
 
 static inline void DspBiQuad_Change(
@@ -274,9 +274,9 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 	 * - Less delay registers than Direct Form I
 	 * - More numerically stable than Direct Form II
 	 */
-	float result = (filter->a0 * sample_in) + filter->delay[0];
-	filter->delay[0] = (filter->a1 * sample_in) - (filter->b1 * result) + filter->delay[1];
-	filter->delay[1] = (filter->a2 * sample_in) - (filter->b2 * result);
+	float result = (filter->a0 * sample_in) + filter->delay0;
+	filter->delay0 = (filter->a1 * sample_in) - (filter->b1 * result) + filter->delay1;
+	filter->delay1 = (filter->a2 * sample_in) - (filter->b2 * result);
 
 	result = Undenormalize(
 		(result * filter->c0) +
@@ -288,7 +288,8 @@ static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
 
 static inline void DspBiQuad_Reset(DspBiQuad *filter)
 {
-	FAudio_zero(&filter->delay, sizeof(filter->delay));
+	filter->delay0 = 0.0f;
+	filter->delay1 = 0.0f;
 }
 
 static inline void DspBiQuad_Destroy(DspBiQuad *filter)
