@@ -1132,19 +1132,19 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 		(*ppSupportedInputFormat)->field = (value);	\
 	}
 
-	/* sample rate */
+	/* Sample Rate */
 	if (pOutputFormat->nSamplesPerSec != pRequestedInputFormat->nSamplesPerSec)
 	{
 		SET_SUPPORTED_FIELD(nSamplesPerSec, pOutputFormat->nSamplesPerSec);
 	}
 
-	/* data type */
+	/* Data Type */
 	if (!IsFloatFormat(pRequestedInputFormat))
 	{
 		SET_SUPPORTED_FIELD(wFormatTag, FAUDIO_FORMAT_IEEE_FLOAT);
 	}
 
-	/* number of input / output channels */
+	/* Input/Output Channel Count */
 	if (pOutputFormat->nChannels == 1 || pOutputFormat->nChannels == 2)
 	{
 		if (pRequestedInputFormat->nChannels != pOutputFormat->nChannels)
@@ -1186,19 +1186,19 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 		(*ppSupportedOutputFormat)->field = (value);	\
 	}
 
-	/* sample rate */
+	/* Sample Rate */
 	if (pInputFormat->nSamplesPerSec != pRequestedOutputFormat->nSamplesPerSec)
 	{
 		SET_SUPPORTED_FIELD(nSamplesPerSec, pInputFormat->nSamplesPerSec);
 	}
 
-	/* data type */
+	/* Data Type */
 	if (!IsFloatFormat(pRequestedOutputFormat))
 	{
 		SET_SUPPORTED_FIELD(wFormatTag, FAUDIO_FORMAT_IEEE_FLOAT);
 	}
 
-	/* number of input / output channels */
+	/* Input/Output Channel Count */
 	if (pInputFormat->nChannels == 1 || pInputFormat->nChannels == 2)
 	{
 		if (	pRequestedOutputFormat->nChannels != pInputFormat->nChannels &&
@@ -1242,7 +1242,7 @@ uint32_t FAudioFXReverb_LockForProcess(
 	uint32_t OutputLockedParameterCount,
 	const FAPOLockForProcessBufferParameters *pOutputLockedParameters
 ) {
-	/* reverb specific validation */
+	/* Reverb specific validation */
 	if (!IsFloatFormat(pInputLockedParameters->pFormat))
 	{
 		return FAPO_E_FORMAT_UNSUPPORTED;
@@ -1264,14 +1264,14 @@ uint32_t FAudioFXReverb_LockForProcess(
 		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
 
-	/* save the things we care about */
+	/* Save the things we care about */
 	fapo->inChannels = pInputLockedParameters->pFormat->nChannels;
 	fapo->outChannels = pOutputLockedParameters->pFormat->nChannels;
 	fapo->sampleRate = pOutputLockedParameters->pFormat->nSamplesPerSec;
 	fapo->inBlockAlign = pInputLockedParameters->pFormat->nBlockAlign;
 	fapo->outBlockAlign = pOutputLockedParameters->pFormat->nBlockAlign;
 
-	/* create the network if necessary */
+	/* Create the network if necessary */
 	if (fapo->reverb == NULL)
 	{
 		fapo->reverb = DspReverb_Create(
@@ -1282,7 +1282,7 @@ uint32_t FAudioFXReverb_LockForProcess(
 		);
 	}
 
-	/* call	parent to do basic validation */
+	/* Call	parent to do basic validation */
 	return FAPOBase_LockForProcess(
 		&fapo->base,
 		InputLockedParameterCount,
@@ -1363,7 +1363,7 @@ void FAudioFXReverb_Process(
 	uint8_t update_params = FAPOBase_ParametersChanged(&fapo->base);
 	float total;
 	
-	/* handle disabled filter */
+	/* Handle disabled filter */
 	if (IsEnabled == 0)
 	{
 		pOutputProcessParameters->BufferFlags = pInputProcessParameters->BufferFlags;
@@ -1384,8 +1384,7 @@ void FAudioFXReverb_Process(
 	/* XAudio2 passes a 'silent' buffer when no input buffer is available to play the effect tail */
 	if (pInputProcessParameters->BufferFlags == FAPO_BUFFER_SILENT)
 	{
-		/* make sure input data is usable */
-		/* FIXME: Is this required? */
+		/* Make sure input data is usable. FIXME: Is this required? */
 		FAudio_zero(
 			pInputProcessParameters->pBuffer,
 			pInputProcessParameters->ValidFrameCount * fapo->inBlockAlign
@@ -1394,13 +1393,13 @@ void FAudioFXReverb_Process(
 
 	params = (FAudioFXReverbParameters*) FAPOBase_BeginProcess(&fapo->base);
 
-	/* update parameters  */
+	/* Update parameters  */
 	if (update_params)
 	{
 		DspReverb_SetParameters(fapo->reverb, params);
 	}
 
-	/* run reverb effect */
+	/* Run reverb effect */
 	#define PROCESS(pin, pout) \
 		DspReverb_INTERNAL_Process_##pin##_to_##pout( \
 			fapo->reverb, \
@@ -1429,8 +1428,10 @@ void FAudioFXReverb_Process(
 	}
 	#undef PROCESS
 
-	/* set BufferFlags to silent so PLAY_TAILS knows when to stop */
-	pOutputProcessParameters->BufferFlags = (total < 0.0000001f) ? FAPO_BUFFER_SILENT : FAPO_BUFFER_VALID;
+	/* Set BufferFlags to silent so PLAY_TAILS knows when to stop */
+	pOutputProcessParameters->BufferFlags = (total < 0.0000001f) ?
+		FAPO_BUFFER_SILENT :
+		FAPO_BUFFER_VALID;
 
 	FAPOBase_EndProcess(&fapo->base);
 }
