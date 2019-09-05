@@ -167,21 +167,6 @@ static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
 	return (float) FAudio_pow(10.0f, exponent);
 }
 
-#if 0 /* FIXME: What was this supposed to be for? */
-static inline float DspComb_Process(DspComb *filter, float sample_in)
-{
-	float delay_out, to_buf;
-
-	delay_out = DspDelay_Read(&filter->delay);
-
-	to_buf = Undenormalize(sample_in + (filter->feedback_gain * delay_out));
-	DspDelay_Write(&filter->delay, to_buf);
-
-	return delay_out;
-}
-
-#endif
-
 /* Component - Bi-Quad Filter */
 
 typedef enum DspBiQuadType
