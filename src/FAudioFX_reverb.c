@@ -395,53 +395,6 @@ static void DspCombShelving_Destroy(
 	DspBiQuad_Destroy(&filter->high_shelving);
 }
 
-/* Component - Delaying All-Pass Filter */
-
-typedef struct DspAllPass
-{
-	DspDelay delay;
-	float feedback_gain;
-} DspAllPass;
-
-static void DspAllPass_Initialize(
-	DspAllPass *filter,
-	int32_t sampleRate,
-	float delay_ms,
-	float gain,
-	FAudioMallocFunc pMalloc
-) {
-	DspDelay_Initialize(&filter->delay, sampleRate, delay_ms, pMalloc);
-	filter->feedback_gain = gain;
-}
-
-static void DspAllPass_Change(DspAllPass *filter, float delay_ms, float gain)
-{
-	DspDelay_Change(&filter->delay, delay_ms);
-	filter->feedback_gain = gain;
-}
-
-static inline float DspAllPass_Process(DspAllPass *filter, float sample_in)
-{
-	float delay_out, to_buf;
-
-	delay_out = DspDelay_Read(&filter->delay);
-
-	to_buf = Undenormalize(sample_in + (filter->feedback_gain * delay_out));
-	DspDelay_Write(&filter->delay, to_buf);
-
-	return Undenormalize(delay_out - (filter->feedback_gain * to_buf));
-}
-
-static void DspAllPass_Reset(DspAllPass *filter)
-{
-	DspDelay_Reset(&filter->delay);
-}
-
-static void DspAllPass_Destroy(DspAllPass *filter, FAudioFreeFunc pFree)
-{
-	DspDelay_Destroy(&filter->delay, pFree);
-}
-
 /*
 Reverb network - loosely based on the reverberator from
 "Designing Audio Effect Plug-Ins in C++" by Will Pirkle and
@@ -555,7 +508,12 @@ typedef struct DspReverbChannel
 {
 	DspDelay reverb_delay;
 	DspCombShelving	lpf_comb[REVERB_COUNT_COMB];
-	DspAllPass	apf_out[REVERB_COUNT_APF_OUT];
+	struct
+	{
+		/* Delaying All-Pass Filter */
+		DspDelay delay;
+		float feedback_gain;
+	} apf_out[REVERB_COUNT_APF_OUT];
 	DspBiQuad room_high_shelf;
 	float early_gain;
 	float gain;
@@ -564,7 +522,12 @@ typedef struct DspReverbChannel
 typedef struct DspReverb
 {
 	DspDelay early_delay;
-	DspAllPass apf_in[REVERB_COUNT_APF_IN];
+	struct
+	{
+		/* Delaying All-Pass Filter */
+		DspDelay delay;
+		float feedback_gain;
+	} apf_in[REVERB_COUNT_APF_IN];
 	
 	int32_t in_channels;
 	int32_t out_channels;
@@ -596,13 +559,13 @@ static DspReverb* DspReverb_Create(
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		DspAllPass_Initialize(
-			&reverb->apf_in[i],
+		DspDelay_Initialize(
+			&reverb->apf_in[i].delay,
 			sampleRate,
 			APF_IN_DELAYS[i],
-			0.5f,
 			pMalloc
 		);
+		reverb->apf_in[i].feedback_gain = 0.5f;
 	}
 
 	reverb->reverb_channels = (out_channels == 6) ? 4 : out_channels;
@@ -633,13 +596,13 @@ static DspReverb* DspReverb_Create(
 
 		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
-			DspAllPass_Initialize(
-				&reverb->channel[c].apf_out[i],
+			DspDelay_Initialize(
+				&reverb->channel[c].apf_out[i].delay,
 				sampleRate,
 				APF_OUT_DELAYS[i] + STEREO_SPREAD[c],
-				0.5f,
 				pMalloc
 			);
+			reverb->channel[c].apf_out[i].feedback_gain = 0.5f;
 		}
 
 		DspBiQuad_Initialize(
@@ -671,7 +634,7 @@ static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		DspAllPass_Destroy(&reverb->apf_in[i], pFree);
+		DspDelay_Destroy(&reverb->apf_in[i].delay, pFree);
 	}
 
 	for (c = 0; c < reverb->reverb_channels; c += 1)
@@ -690,8 +653,8 @@ static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 
 		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
-			DspAllPass_Destroy(
-				&reverb->channel[c].apf_out[i],
+			DspDelay_Destroy(
+				&reverb->channel[c].apf_out[i].delay,
 				pFree
 			);
 		}
@@ -723,11 +686,8 @@ static void DspReverb_SetParameters(
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		DspAllPass_Change(
-			&reverb->apf_in[i],
-			APF_IN_DELAYS[i],
-			early_diffusion
-		);
+		DspDelay_Change(&reverb->apf_in[i].delay, APF_IN_DELAYS[i]);
+		reverb->apf_in[i].feedback_gain = early_diffusion;
 	}
 
 	/* Reverberation */
@@ -780,11 +740,11 @@ static void DspReverb_SetParameters(
 	{
 		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
-			DspAllPass_Change(
-				&reverb->channel[c].apf_out[i],
-				APF_OUT_DELAYS[i] + STEREO_SPREAD[c],
-				late_diffusion
+			DspDelay_Change(
+				&reverb->channel[c].apf_out[i].delay,
+				APF_OUT_DELAYS[i] + STEREO_SPREAD[c]
 			);
+			reverb->channel[c].apf_out[i].feedback_gain = late_diffusion;
 		}
 
 		DspBiQuad_Change(
@@ -826,7 +786,7 @@ static inline float DspReverb_INTERNAL_ProcessEarly(
 	DspReverb *reverb,
 	float sample_in
 ) {
-	float early;
+	float early, delay_out, to_buf;
 	int32_t i;
 
 	/* Pre-Delay */
@@ -835,7 +795,14 @@ static inline float DspReverb_INTERNAL_ProcessEarly(
 	/* Early Reflections */
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		early = DspAllPass_Process(&reverb->apf_in[i], early);
+		delay_out = DspDelay_Read(&reverb->apf_in[i].delay);
+		to_buf = Undenormalize(
+			early + (reverb->apf_in[i].feedback_gain * delay_out)
+		);
+		DspDelay_Write(&reverb->apf_in[i].delay, to_buf);
+		early = Undenormalize(
+			delay_out - (reverb->apf_in[i].feedback_gain * to_buf)
+		);
 	}
 
 	return early;
@@ -846,7 +813,7 @@ static inline float DspReverb_INTERNAL_ProcessChannel(
 	DspReverbChannel *channel,
 	float sample_in
 ) {
-	float revdelay, early_late, sample_out;
+	float revdelay, early_late, delay_out, to_buf, sample_out;
 	int32_t i;
 
 	revdelay = DspDelay_Process(&channel->reverb_delay, sample_in);
@@ -864,9 +831,13 @@ static inline float DspReverb_INTERNAL_ProcessChannel(
 	/* Output Diffusion */
 	for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 	{
-		sample_out = DspAllPass_Process(
-			&channel->apf_out[i],
-			sample_out
+		delay_out = DspDelay_Read(&channel->apf_out[i].delay);
+		to_buf = Undenormalize(
+			sample_out + (channel->apf_out[i].feedback_gain * delay_out)
+		);
+		DspDelay_Write(&channel->apf_out[i].delay, to_buf);
+		sample_out = Undenormalize(
+			delay_out - (channel->apf_out[i].feedback_gain * to_buf)
 		);
 	}
 
@@ -1474,7 +1445,7 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		DspAllPass_Reset(&fapo->reverb->apf_in[i]);
+		DspDelay_Reset(&fapo->reverb->apf_in[i].delay);
 	}
 
 	for (c = 0; c < fapo->reverb->reverb_channels; c += 1)
@@ -1490,7 +1461,7 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 
 		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
-			DspAllPass_Reset(&fapo->reverb->channel[c].apf_out[i]);
+			DspDelay_Reset(&fapo->reverb->channel[c].apf_out[i].delay);
 		}
 	}
 }
