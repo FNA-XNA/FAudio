@@ -847,15 +847,13 @@ static inline float DspReverb_INTERNAL_ProcessEarly(
 	DspReverb *reverb,
 	float sample_in
 ) {
-	float delay_in, early;
+	float early;
 	int32_t i;
 
-	/* pre delay */
-	delay_in = DspDelay_Process(&reverb->early_delay, sample_in);
+	/* Pre-Delay */
+	early = DspDelay_Process(&reverb->early_delay, sample_in);
 
-	/* early reflections */
-	early = delay_in;
-
+	/* Early Reflections */
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
 		early = DspAllPass_Process(&reverb->apf_in[i], early);
@@ -869,38 +867,44 @@ static inline float DspReverb_INTERNAL_ProcessChannel(
 	DspReverbChannel *channel,
 	float sample_in
 ) {
-	float revdelay, comb_out, comb_gain;
-	float late, early_late, out;
+	float revdelay, early_late, sample_out;
 	int32_t i;
 
 	revdelay = DspDelay_Process(&channel->reverb_delay, sample_in);
 
-	comb_out = 0.0f;
-	comb_gain = 1.0f / REVERB_COUNT_COMB;
-
+	sample_out = 0.0f;
 	for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 	{
-		comb_out += comb_gain * DspCombShelving_Process(&channel->lpf_comb[i], revdelay);
+		sample_out += DspCombShelving_Process(
+			&channel->lpf_comb[i],
+			revdelay
+		);
 	}
+	sample_out /= (float) REVERB_COUNT_COMB;
 
-	/* output diffusion */
-	late = comb_out;
+	/* Output Diffusion */
 	for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 	{
-		late = DspAllPass_Process(&channel->apf_out[i], late);
+		sample_out = DspAllPass_Process(
+			&channel->apf_out[i],
+			sample_out
+		);
 	}
 
-	/* combine early reflections and reverberation */
-	early_late = (channel->early_gain * sample_in) + (reverb->reverb_gain * late);
+	/* Combine early reflections and reverberation */
+	early_late = (
+		(sample_in * channel->early_gain) +
+		(sample_out * reverb->reverb_gain)
+	);
 
-	/* room filter */
-	out = early_late * reverb->room_gain;
-	out = DspBiQuad_Process(&channel->room_high_shelf, out);
+	/* Room filter */
+	sample_out = DspBiQuad_Process(
+		&channel->room_high_shelf,
+		early_late * reverb->room_gain
+	);
 
-	/* PositionMatrixLeft/Rigth */
-	out = out * channel->gain;
-
-	return out;
+	/* PositionMatrixLeft/Right */
+	return sample_out * channel->gain;
 }
 
 /* Reverb Process Functions */
