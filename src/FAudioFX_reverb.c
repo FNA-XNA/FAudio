@@ -956,6 +956,7 @@ static inline float DspReverb_INTERNAL_Process_1_to_5p1(
 	{
 		/* Input */
 		in = *samples_in++;
+		in_ratio = in * reverb->dry_ratio;
 
 		/* Early Reflections */
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
