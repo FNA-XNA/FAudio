@@ -523,19 +523,18 @@ typedef struct DspReverb
 	float dry_ratio;
 } DspReverb;
 
-static inline DspReverb* DspReverb_Create(
+static inline void DspReverb_Create(
+	DspReverb *reverb,
 	int32_t sampleRate,
 	int32_t in_channels,
 	int32_t out_channels,
 	FAudioMallocFunc pMalloc
 ) {
-	DspReverb *reverb;
 	int32_t i, c;
 
 	FAudio_assert(in_channels == 1 || in_channels == 2);
 	FAudio_assert(out_channels == 1 || out_channels == 2 || out_channels == 6);
 
-	reverb = (DspReverb*) pMalloc(sizeof(DspReverb));
 	FAudio_zero(reverb, sizeof(DspReverb));
 	DspDelay_Initialize(&reverb->early_delay, sampleRate, 10, pMalloc);
 
@@ -604,8 +603,6 @@ static inline DspReverb* DspReverb_Create(
 	reverb->wet_ratio = 1.0f;
 	reverb->in_channels = in_channels;
 	reverb->out_channels = out_channels;
-
-	return reverb;
 }
 
 static inline void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
@@ -641,8 +638,6 @@ static inline void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 			);
 		}
 	}
-
-	pFree(reverb);
 }
 
 static inline void DspReverb_SetParameters(
@@ -1061,7 +1056,7 @@ typedef struct FAudioFXReverb
 	uint16_t inBlockAlign;
 	uint16_t outBlockAlign;
 
-	DspReverb *reverb;
+	DspReverb reverb;
 } FAudioFXReverb;
 
 static inline int8_t IsFloatFormat(const FAudioWaveFormatEx *format)
@@ -1253,16 +1248,14 @@ uint32_t FAudioFXReverb_LockForProcess(
 	fapo->inBlockAlign = pInputLockedParameters->pFormat->nBlockAlign;
 	fapo->outBlockAlign = pOutputLockedParameters->pFormat->nBlockAlign;
 
-	/* Create the network if necessary */
-	if (fapo->reverb == NULL)
-	{
-		fapo->reverb = DspReverb_Create(
-			fapo->sampleRate,
-			fapo->inChannels,
-			fapo->outChannels,
-			fapo->base.pMalloc
-		);
-	}
+	/* Create the network */
+	DspReverb_Create(
+		&fapo->reverb,
+		fapo->sampleRate,
+		fapo->inChannels,
+		fapo->outChannels,
+		fapo->base.pMalloc
+	);
 
 	/* Call	parent to do basic validation */
 	return FAPOBase_LockForProcess(
@@ -1378,18 +1371,18 @@ void FAudioFXReverb_Process(
 	/* Update parameters  */
 	if (update_params)
 	{
-		DspReverb_SetParameters(fapo->reverb, params);
+		DspReverb_SetParameters(&fapo->reverb, params);
 	}
 
 	/* Run reverb effect */
 	#define PROCESS(pin, pout) \
 		DspReverb_INTERNAL_Process_##pin##_to_##pout( \
-			fapo->reverb, \
+			&fapo->reverb, \
 			(float*) pInputProcessParameters->pBuffer, \
 			(float*) pOutputProcessParameters->pBuffer, \
 			pInputProcessParameters->ValidFrameCount * fapo->inChannels \
 		)
-	switch (fapo->reverb->out_channels)
+	switch (fapo->reverb.out_channels)
 	{
 		case 1:
 			total = PROCESS(1, 1);
@@ -1398,7 +1391,7 @@ void FAudioFXReverb_Process(
 			total = PROCESS(2, 2);
 			break;
 		default: /* 5.1 */
-			if (fapo->reverb->in_channels == 1)
+			if (fapo->reverb.in_channels == 1)
 			{
 				total = PROCESS(1, 5p1);
 			}
@@ -1424,27 +1417,27 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 	FAPOBase_Reset(&fapo->base);
 
 	/* Reset the cached state of the reverb filter */
-	DspDelay_Reset(&fapo->reverb->early_delay);
+	DspDelay_Reset(&fapo->reverb.early_delay);
 
 	for (i = 0; i < REVERB_COUNT_APF_IN; i += 1)
 	{
-		DspDelay_Reset(&fapo->reverb->apf_in[i].delay);
+		DspDelay_Reset(&fapo->reverb.apf_in[i].delay);
 	}
 
-	for (c = 0; c < fapo->reverb->reverb_channels; c += 1)
+	for (c = 0; c < fapo->reverb.reverb_channels; c += 1)
 	{
-		DspDelay_Reset(&fapo->reverb->channel[c].reverb_delay);
+		DspDelay_Reset(&fapo->reverb.channel[c].reverb_delay);
 
 		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
 		{
-			DspCombShelving_Reset(&fapo->reverb->channel[c].lpf_comb[i]);
+			DspCombShelving_Reset(&fapo->reverb.channel[c].lpf_comb[i]);
 		}
 
-		DspBiQuad_Reset(&fapo->reverb->channel[c].room_high_shelf);
+		DspBiQuad_Reset(&fapo->reverb.channel[c].room_high_shelf);
 
 		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
-			DspDelay_Reset(&fapo->reverb->channel[c].apf_out[i].delay);
+			DspDelay_Reset(&fapo->reverb.channel[c].apf_out[i].delay);
 		}
 	}
 }
@@ -1452,7 +1445,7 @@ void FAudioFXReverb_Reset(FAudioFXReverb *fapo)
 void FAudioFXReverb_Free(void* fapo)
 {
 	FAudioFXReverb *reverb = (FAudioFXReverb*) fapo;
-	DspReverb_Destroy(reverb->reverb, reverb->base.pFree);
+	DspReverb_Destroy(&reverb->reverb, reverb->base.pFree);
 	reverb->base.pFree(reverb->base.m_pParameterBlocks);
 	reverb->base.pFree(fapo);
 }
@@ -1539,7 +1532,7 @@ uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 	result->inChannels = 0;
 	result->outChannels = 0;
 	result->sampleRate = 0;
-	result->reverb = NULL;
+	FAudio_zero(&result->reverb, sizeof(DspReverb));
 
 	/* Function table... */
 	#define ASSIGN_VT(name) \
