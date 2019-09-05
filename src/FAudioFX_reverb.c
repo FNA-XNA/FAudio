@@ -79,7 +79,7 @@ typedef struct DspDelay
 	float *buffer;
 } DspDelay;
 
-static void DspDelay_Initialize(
+static inline void DspDelay_Initialize(
 	DspDelay *filter,
 	int32_t sampleRate,
 	float delay_ms,
@@ -96,11 +96,11 @@ static void DspDelay_Initialize(
 	FAudio_zero(filter->buffer, filter->capacity * sizeof(float));
 }
 
-static void DspDelay_Change(DspDelay *filter, float delay_ms)
+static inline void DspDelay_Change(DspDelay *filter, float delay_ms)
 {
 	FAudio_assert(delay_ms >= 0 && delay_ms <= DSP_DELAY_MAX_DELAY_MS);
 
-	/* length */
+	/* Length */
 	filter->delay = MsToSamples(delay_ms, filter->sampleRate);
 	filter->read_idx = (filter->write_idx - filter->delay + filter->capacity) % filter->capacity;
 }
@@ -144,7 +144,7 @@ static inline void DspDelay_Reset(DspDelay *filter)
 	FAudio_zero(filter->buffer, filter->capacity * sizeof(float));
 }
 
-static void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
+static inline void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 {
 	pFree(filter->buffer);
 }
@@ -202,7 +202,7 @@ typedef struct DspBiQuad
 	float delay[2];
 } DspBiQuad;
 
-static void DspBiQuad_Change(
+static inline void DspBiQuad_Change(
 	DspBiQuad *filter,
 	float frequency,
 	float q,
@@ -273,7 +273,7 @@ static void DspBiQuad_Change(
 	}
 }
 
-static void DspBiQuad_Initialize(
+static inline void DspBiQuad_Initialize(
 	DspBiQuad *filter,
 	int32_t sampleRate,
 	DspBiQuadType type,
@@ -310,7 +310,7 @@ static inline void DspBiQuad_Reset(DspBiQuad *filter)
 	FAudio_zero(&filter->delay, sizeof(filter->delay));
 }
 
-static void DspBiQuad_Destroy(DspBiQuad *filter)
+static inline void DspBiQuad_Destroy(DspBiQuad *filter)
 {
 }
 
@@ -325,7 +325,7 @@ typedef struct DspCombShelving
 	DspBiQuad high_shelving;
 } DspCombShelving;
 
-static void DspCombShelving_Initialize(
+static inline void DspCombShelving_Initialize(
 	DspCombShelving *filter,
 	int32_t sampleRate,
 	float delay_ms,
@@ -379,14 +379,14 @@ static inline float DspCombShelving_Process(
 	return delay_out;
 }
 
-static void DspCombShelving_Reset(DspCombShelving *filter)
+static inline void DspCombShelving_Reset(DspCombShelving *filter)
 {
 	DspDelay_Reset(&filter->comb_delay);
 	DspBiQuad_Reset(&filter->low_shelving);
 	DspBiQuad_Reset(&filter->high_shelving);
 }
 
-static void DspCombShelving_Destroy(
+static inline void DspCombShelving_Destroy(
 	DspCombShelving *filter,
 	FAudioFreeFunc pFree
 ) {
@@ -541,7 +541,7 @@ typedef struct DspReverb
 	float dry_ratio;
 } DspReverb;
 
-static DspReverb* DspReverb_Create(
+static inline DspReverb* DspReverb_Create(
 	int32_t sampleRate,
 	int32_t in_channels,
 	int32_t out_channels,
@@ -626,7 +626,7 @@ static DspReverb* DspReverb_Create(
 	return reverb;
 }
 
-static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
+static inline void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 {
 	int32_t i, c;
 
@@ -663,7 +663,7 @@ static void DspReverb_Destroy(DspReverb *reverb, FAudioFreeFunc pFree)
 	pFree(reverb);
 }
 
-static void DspReverb_SetParameters(
+static inline void DspReverb_SetParameters(
 	DspReverb *reverb,
 	FAudioFXReverbParameters *params
 ) {
