@@ -27,6 +27,18 @@
 #include "FAudioFX.h"
 #include "FAudio_internal.h"
 
+/* #define DISABLE_SUBNORMALS */
+#ifdef DISABLE_SUBNORMALS
+#include <math.h> /* ONLY USE THIS FOR fpclassify/_fpclass! */
+
+/* VS2010 doesn't define fpclassify (which is C99), so here it is. */
+#if defined(_MSC_VER) && !defined(fpclassify)
+#define IS_SUBNORMAL(a) (_fpclass(a) & (_FPCLASS_ND | _FPCLASS_PD))
+#else
+#define IS_SUBNORMAL(a) (fpclassify(a) == FP_SUBNORMAL)
+#endif
+#endif /* DISABLE_SUBNORMALS */
+
 /* Utility Functions */
 
 static inline float DbGainToFactor(float gain)
@@ -39,29 +51,18 @@ static inline uint32_t MsToSamples(float msec, int32_t sampleRate)
 	return (uint32_t) ((sampleRate * msec) / 1000.0f);
 }
 
+#ifndef DISABLE_SUBNORMALS
+#define Undenormalize(a) ((a))
+#else /* DISABLE_SUBNORMALS */
 static inline float Undenormalize(float sample_in)
 {
-	union
+	if (IS_SUBNORMAL(sample_in))
 	{
-		float f;
-		uint32_t i;
-	} sampleHack;
-	uint32_t exponent;
-	int32_t denormal_factor;
-
-	/* Set denormal (or subnormal) float values to zero.
-	 * (See: https://en.wikipedia.org/wiki/Denormal_number)
-	 * Based upon code available from:
-	 * http://www.musicdsp.org/archive.php?classid=5#191)
-	 */
-	sampleHack.f = sample_in;
-	exponent = sampleHack.i & 0x7F800000;
-
-	/* exponent > 0 is 0 if denormalized, otherwise 1 */
-	denormal_factor = exponent > 0;
-
-	return sample_in * denormal_factor;
+		return 0.0f;
+	}
+	return sample_in;
 }
+#endif /* DISABLE_SUBNORMALS */
 
 /* Component - Delay */
 
