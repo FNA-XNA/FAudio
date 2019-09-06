@@ -168,15 +168,12 @@ static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
 
 typedef enum DspBiQuadType
 {
-	DSP_BIQUAD_LOWPASS = 0,
-	DSP_BIQUAD_HIGHPASS,
 	DSP_BIQUAD_LOWSHELVING,
 	DSP_BIQUAD_HIGHSHELVING
 } DspBiQuadType;
 
 typedef struct DspBiQuad
 {
-	DspBiQuadType type;
 	int32_t sampleRate;
 	float a0, a1, a2;
 	float b1, b2;
@@ -186,73 +183,36 @@ typedef struct DspBiQuad
 
 static inline void DspBiQuad_Change(
 	DspBiQuad *filter,
+	DspBiQuadType type,
 	float frequency,
 	float q,
 	float gain
 ) {
-	float theta_c;
 	const float TWOPI = 6.283185307179586476925286766559005;
+	float theta_c = (TWOPI * frequency) / (float) filter->sampleRate;
+	float mu = DbGainToFactor(gain);
+	float beta = (type == DSP_BIQUAD_LOWSHELVING) ?
+		4.0f / (1 + mu) :
+		(1 + mu) / 4.0f;
+	float delta = beta * (float) FAudio_tan(theta_c * 0.5f);
+	float gamma = (1 - delta) / (1 + delta);
 
-	theta_c = (TWOPI * frequency) / (float) filter->sampleRate;
-
-	if (	filter->type == DSP_BIQUAD_LOWPASS ||
-		filter->type == DSP_BIQUAD_HIGHPASS	)
+	if (type == DSP_BIQUAD_LOWSHELVING)
 	{
-		float sin_theta_c = (float) FAudio_sin(theta_c);
-		float cos_theta_c = (float) FAudio_cos(theta_c);
-		float oneOverQ = 1.0f / q;
-		float beta = (
-			(1.0f - (oneOverQ * 0.5f * sin_theta_c)) /
-			(1.0f + (oneOverQ *  0.5f * sin_theta_c))
-		);
-		float gamma = (0.5f + beta) * cos_theta_c;
-
-		if (filter->type == DSP_BIQUAD_LOWPASS)
-		{
-			filter->a0 = (0.5f + beta - gamma) * 0.5f;
-			filter->a1 = filter->a0 * 2.0f;
-			filter->a2 = (0.5f + beta - gamma) * 0.5f;
-			filter->b1 = -2.0f * gamma;
-			filter->b2 = 2.0f * beta;
-		}
-		else
-		{
-			filter->a0 = (0.5f + beta + gamma) * 0.5f;
-			filter->a1 = filter->a0 * -2.0f;
-			filter->a2 = (0.5f + beta + gamma) * 0.5f;
-			filter->b1 = -2.0f * gamma;
-			filter->b2 = 2.0f * beta;
-		}
-		filter->c0 = 1.0f;
-		filter->d0 = 0.0f;
+		filter->a0 = (1 - gamma) * 0.5f;
+		filter->a1 = filter->a0;
 	}
-	else if (	filter->type == DSP_BIQUAD_LOWSHELVING ||
-			filter->type == DSP_BIQUAD_HIGHSHELVING	)
+	else
 	{
-		float mu = DbGainToFactor(gain);
-		float beta = (filter->type == DSP_BIQUAD_LOWSHELVING) ?
-			4.0f / (1 + mu) :
-			(1 + mu) / 4.0f;
-		float delta = beta * (float) FAudio_tan(theta_c * 0.5f);
-		float gamma = (1 - delta) / (1 + delta);
-
-		if (filter->type == DSP_BIQUAD_LOWSHELVING)
-		{
-			filter->a0 = (1 - gamma) * 0.5f;
-			filter->a1 = filter->a0;
-		}
-		else
-		{
-			filter->a0 = (1 + gamma) * 0.5f;
-			filter->a1 = -filter->a0;
-		}
-
-		filter->a2 = 0.0f;
-		filter->b1 = -gamma;
-		filter->b2 = 0.0f;
-		filter->c0 = mu - 1.0f;
-		filter->d0 = 1.0f;
+		filter->a0 = (1 + gamma) * 0.5f;
+		filter->a1 = -filter->a0;
 	}
+
+	filter->a2 = 0.0f;
+	filter->b1 = -gamma;
+	filter->b2 = 0.0f;
+	filter->c0 = mu - 1.0f;
+	filter->d0 = 1.0f;
 }
 
 static inline void DspBiQuad_Initialize(
@@ -263,10 +223,10 @@ static inline void DspBiQuad_Initialize(
 	float q,		/* Only used by low/high-pass filters */
 	float gain		/* Only used by low/high-shelving filters */
 ) {
-	FAudio_zero(filter, sizeof(DspBiQuad));
-	filter->type = type;
 	filter->sampleRate = sampleRate;
-	DspBiQuad_Change(filter, frequency, q, gain);
+	filter->delay0 = 0.0f;
+	filter->delay1 = 0.0f;
+	DspBiQuad_Change(filter, type, frequency, q, gain);
 }
 
 static inline float DspBiQuad_Process(DspBiQuad *filter, float sample_in)
@@ -731,12 +691,14 @@ static inline void DspReverb_SetParameters(
 			/* High/Low shelving */
 			DspBiQuad_Change(
 				&comb->low_shelving,
+				DSP_BIQUAD_LOWSHELVING,
 				50.0f + params->LowEQCutoff * 50.0f,
 				0.0f,
 				params->LowEQGain - 8.0f
 			);
 			DspBiQuad_Change(
 				&comb->high_shelving,
+				DSP_BIQUAD_HIGHSHELVING,
 				1000 + params->HighEQCutoff * 500.0f,
 				0.0f,
 				params->HighEQGain - 8.0f
@@ -765,9 +727,11 @@ static inline void DspReverb_SetParameters(
 
 		DspBiQuad_Change(
 			&reverb->channel[c].room_high_shelf,
+			DSP_BIQUAD_HIGHSHELVING,
 			params->RoomFilterFreq,
 			0.0f,
-			params->RoomFilterMain + params->RoomFilterHF);
+			params->RoomFilterMain + params->RoomFilterHF
+		);
 
 		reverb->channel[c].gain = 1.5f - (
 			((c % 2 == 0 ?
