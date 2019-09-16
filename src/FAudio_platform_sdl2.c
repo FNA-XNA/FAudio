@@ -51,7 +51,7 @@ void FAudio_PlatformAddRef()
 	/* SDL tracks ref counts for each subsystem */
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
-		SDL_Log("SDL_INIT_AUDIO failed: %s\n", SDL_GetError());
+		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
 	}
 	FAudio_INTERNAL_InitSIMDFunctions(
 		SDL_HasSSE2(),
@@ -109,7 +109,7 @@ iosretry:
 	if (device == 0)
 	{
 		const char *err = SDL_GetError();
-		SDL_Log("OpenAudioDevice failed: %s\n", err);
+		SDL_Log("OpenAudioDevice failed: %s", err);
 
 		/* iOS has a weird thing where you can't open a stream when the
 		 * app is in the background, even though the program is meant

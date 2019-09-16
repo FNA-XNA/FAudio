@@ -128,7 +128,7 @@
 		static uint8_t logged = 0; \
 		if (!(condition) && !logged) \
 		{ \
-			SDL_Log("Assertion failed: %s\n", #condition); \
+			SDL_Log("Assertion failed: %s", #condition); \
 			logged = 1; \
 		} \
 	}
@@ -137,7 +137,7 @@
 #endif
 #define FAudio_snprintf SDL_snprintf
 #define FAudio_vsnprintf SDL_vsnprintf
-#define FAudio_Log(msg) SDL_Log("%s\n", msg)
+#define FAudio_Log(msg) SDL_Log("%s", msg)
 #define FAudio_getenv SDL_getenv
 #define FAudio_PRIu64 SDL_PRIu64
 #define FAudio_PRIx64 SDL_PRIx64
