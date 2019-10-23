@@ -315,6 +315,33 @@ uint32_t FAudio_CreateSourceVoice(
 		}
 		(*ppSourceVoice)->src.format = &fmtex->Format;
 	}
+	else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_MSADPCM)
+	{
+		FAudioADPCMWaveFormat *fmtex = (FAudioADPCMWaveFormat*) audio->pMalloc(
+			sizeof(FAudioADPCMWaveFormat)
+		);
+
+		/* Copy what we can, ideally the sizes match! */
+		size_t cbSize = sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize;
+		FAudio_memcpy(
+			fmtex,
+			pSourceFormat,
+			FAudio_min(cbSize, sizeof(FAudioADPCMWaveFormat))
+		);
+		if (cbSize < sizeof(FAudioADPCMWaveFormat))
+		{
+			FAudio_zero(
+				((uint8_t*) fmtex) + cbSize,
+				sizeof(FAudioADPCMWaveFormat) - cbSize
+			);
+		}
+
+		/* XAudio2 does not validate this input! */
+		fmtex->wfx.cbSize = sizeof(FAudioADPCMWaveFormat) - sizeof(FAudioWaveFormatEx);
+		fmtex->wSamplesPerBlock = ((
+			fmtex->wfx.nBlockAlign / fmtex->wfx.nChannels
+		) - 6) * 2;
+	}
 	else
 	{
 		/* direct copy anything else */
@@ -338,7 +365,7 @@ uint32_t FAudio_CreateSourceVoice(
 
 	if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
 	{
-		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*)(*ppSourceVoice)->src.format;
+		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) (*ppSourceVoice)->src.format;
 
 		#define COMPARE_GUID(type) \
 			(FAudio_memcmp( \
@@ -2278,10 +2305,11 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	{
 		if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 		{
+			FAudioADPCMWaveFormat *fmtex = (FAudioADPCMWaveFormat*) voice->src.format;
 			playLength = (
 				pBuffer->AudioBytes /
-				voice->src.format->nBlockAlign *
-				(((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2)
+				fmtex->wfx.nBlockAlign *
+				fmtex->wSamplesPerBlock
 			) - playBegin;
 		}
 		else if (pBufferWMA != NULL)
@@ -2330,7 +2358,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	/* For ADPCM, round down to the nearest sample block size */
 	if (voice->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
-		adpcmMask = ((voice->src.format->nBlockAlign / voice->src.format->nChannels) - 6) * 2;
+		adpcmMask = ((FAudioADPCMWaveFormat*) voice->src.format)->wSamplesPerBlock;
 		playBegin -= playBegin % adpcmMask;
 		playLength -= playLength % adpcmMask;
 		loopBegin -= loopBegin % adpcmMask;
