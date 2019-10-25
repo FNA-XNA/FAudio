@@ -341,6 +341,7 @@ uint32_t FAudio_CreateSourceVoice(
 		fmtex->wSamplesPerBlock = ((
 			fmtex->wfx.nBlockAlign / fmtex->wfx.nChannels
 		) - 6) * 2;
+		(*ppSourceVoice)->src.format = &fmtex->wfx;
 	}
 	else
 	{
