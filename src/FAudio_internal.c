@@ -834,7 +834,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	toResample = FAudio_min(toResample, voice->src.resampleSamples);
 
 	/* Resample... */
-	if (voice->mix.resampleStep == FIXED_ONE)
+	if (voice->src.resampleStep == FIXED_ONE)
 	{
 		/* Actually, just use the existing buffer... */
 		finalSamples = voice->audio->decodeCache;
@@ -1004,7 +1004,7 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 
 	/* Resample */
-	if (voice->src.resampleStep == FIXED_ONE)
+	if (voice->mix.resampleStep == FIXED_ONE)
 	{
 		/* Actually, just use the existing buffer... */
 		finalSamples = voice->mix.inputCache;
