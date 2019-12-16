@@ -114,7 +114,6 @@ uint32_t load_data(const char *filename)
 	fseek(hFile, 0, SEEK_SET);
 
 	uint32_t chunkID;
-	uint32_t dwChunkSize;
 	uint32_t dwChunkPosition = 0;
 
 	// search for 'RIFF' chunk
@@ -152,6 +151,7 @@ uint32_t load_data(const char *filename)
 				  << uint32_to_charstr(format) << std::endl;
 	}
 	uint32_t fmt_chunk_start = dwChunkPosition;
+	uint32_t fmt_chunk_size  = 0;
 	{ /* fmt sub-chunk 24 */
 		if (fread(&chunkID, sizeof(uint32_t), 1, hFile) < 1)
 			throw std::runtime_error("can't read fmt chunkID");
@@ -163,11 +163,11 @@ uint32_t load_data(const char *filename)
 			std::cout << "expected chunkID 'fmt '" << std::endl;
 			return 1;
 		}
-		if (fread(&dwChunkSize, sizeof(uint32_t), 1, hFile) < 1)
+		if (fread(&fmt_chunk_size, sizeof(uint32_t), 1, hFile) < 1)
 			throw std::runtime_error("can't read fmt  chunkSize");
 		dwChunkPosition += sizeof (uint32_t);
 		std::cout << "ChunkSize:        "
-				  << uint32_to_charstr(dwChunkSize) << std::endl;
+				  << uint32_to_charstr(fmt_chunk_size) << std::endl;
 		uint16_t audio_format;
 		if (fread(&audio_format, sizeof(uint16_t), 1, hFile) < 1)
 			throw std::runtime_error("can't read fmt  AudioFormat");
@@ -226,6 +226,7 @@ uint32_t load_data(const char *filename)
 				  << uint16_to_charstr(BitsPerSample) << std::endl;
 	}
 	/* in case of extensible audio format write the additional data to the file */
+	if (fmt_chunk_size > 16)
 	{
 		std::cout << "fmt chunk position: " << dwChunkPosition - fmt_chunk_start << std::endl;
 		uint16_t cb_size;
