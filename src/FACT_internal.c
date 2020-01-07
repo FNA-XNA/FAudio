@@ -2940,8 +2940,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		}
 	}
 	if (	header.dwSignature != 0x444E4257 ||
-		header.dwVersion != FACT_CONTENT_VERSION ||
-		header.dwHeaderVersion != 44	)
+		(header.dwVersion != FACT_CONTENT_VERSION && header.dwVersion != FACT_CONTENT_VERSION_3_1) ||
+		(header.dwHeaderVersion != 44 && header.dwHeaderVersion != 42) )
 	{
 		return -1; /* TODO: NOT XACT FILE */
 	}
