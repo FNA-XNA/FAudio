@@ -59,6 +59,8 @@
 	((x << 32)	& 0xFF00000000000000)
 #define DOSWAP_64(x) x = SWAP_32(x)
 
+#define FACT_CONTENT_VERSION_3_1 44
+
 static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
 	return (float) FAudio_pow(10.0, decibel / 2000.0);
@@ -1954,7 +1956,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			dspPresetOffset,
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count;
-	uint8_t version;
+	uint8_t version, content, tool;
 	size_t memsize;
 	uint16_t i, j;
 
@@ -1963,11 +1965,23 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	
 	uint8_t se = 0; /* Swap Endian */
 	uint32_t magic = read_u32(&ptr, 0);
-	if (	(magic != 0x46534758 && !(se = (magic == 0x58475346))) /* 'XGSF' */ ||
-		read_u16(&ptr, se) != FACT_CONTENT_VERSION ||
-		read_u16(&ptr, se) != 42 /* Tool version */	)
+	se = magic == 0x58475346;
+	if (magic != 0x46534758 && magic != 0x58475346) /* 'XGSF' */
 	{
 		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	content = read_u16(&ptr, se);
+	if (	content != FACT_CONTENT_VERSION &&
+		content != FACT_CONTENT_VERSION_3_1)
+	{
+		return -2;
+	}
+
+	tool = read_u16(&ptr, se); /* Tool version */
+	if (tool != 42)
+	{
+		return -3;
 	}
 
 	ptr += 2; /* Unknown value */
@@ -1980,7 +1994,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	if (	version != 3 &&
 		version != 7	)
 	{
-		return -1; /* TODO: VERSION TOO OLD */
+		return -4; /* TODO: VERSION TOO OLD */
 	}
 
 	/* Object counts */
