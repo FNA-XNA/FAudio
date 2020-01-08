@@ -2413,19 +2413,31 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		soundOffset;
 	uint8_t platform;
 	size_t memsize;
-	uint16_t i, j, cur;
+	uint16_t i, j, cur, content, tool;
 	uint8_t *ptrBookmark;
 
 	uint8_t *ptr = (uint8_t*) pvBuffer;
 	uint8_t *start = ptr;
 
 	uint32_t magic = read_u32(&ptr, 0);
-	uint8_t se = 0; /* Swap Endian */
-	if (	(magic != 0x4B424453 && !(se = (magic == 0x5344424B))) /* 'SDBK' */ ||
-		read_u16(&ptr, se) != FACT_CONTENT_VERSION ||
-		read_u16(&ptr, se) != 43 /* Tool version */	)
+	uint8_t se = magic == 0x5344424B; /* Swap Endian */
+
+	if (magic != 0x4B424453 && magic != 0x5344424B)  /* 'SDBK' */
 	{
 		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	content = read_u16(&ptr, se);
+	if (	content != FACT_CONTENT_VERSION &&
+		content != FACT_CONTENT_VERSION_3_1)
+	{
+		return -2;
+	}
+
+	tool = read_u16(&ptr, se); /* Tool version */
+	if (tool != 43)
+	{
+		return -3;
 	}
 
 	/* CRC, unused */
