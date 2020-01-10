@@ -2006,30 +2006,27 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	/* Stop before we start deleting everything */
 	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
 
-	if (pCue->parentBank != NULL)
+	/* Remove this Cue from the SoundBank list */
+	cue = pCue->parentBank->cueList;
+	prev = cue;
+	while (cue != NULL)
 	{
-		/* Remove this Cue from the SoundBank list */
-		cue = pCue->parentBank->cueList;
-		prev = cue;
-		while (cue != NULL)
+		if (cue == pCue)
 		{
-			if (cue == pCue)
+			if (cue == prev) /* First in list */
 			{
-				if (cue == prev) /* First in list */
-				{
-					pCue->parentBank->cueList = cue->next;
-				}
-				else
-				{
-					prev->next = cue->next;
-				}
-				break;
+				pCue->parentBank->cueList = cue->next;
 			}
-			prev = cue;
-			cue = cue->next;
+			else
+			{
+				prev->next = cue->next;
+			}
+			break;
 		}
-		FAudio_assert(cue != NULL && "Could not find Cue reference!");
+		prev = cue;
+		cue = cue->next;
 	}
+	FAudio_assert(cue != NULL && "Could not find Cue reference!");
 
 	pCue->parentBank->parentEngine->pFree(pCue->variableValues);
 	if (pCue->notifyOnDestroy)
