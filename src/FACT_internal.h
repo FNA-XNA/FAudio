@@ -420,6 +420,7 @@ struct FACTSoundBank
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Array sizes */
 	uint16_t cueCount;
@@ -450,6 +451,7 @@ struct FACTWaveBank
 	LinkedList *waveList;
 	FAudioMutex waveLock;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Actual WaveBank information */
 	char *name;
@@ -473,6 +475,7 @@ struct FACTWave
 	FACTCue *parentCue;
 	uint16_t index;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Playback */
 	uint32_t state;
@@ -499,6 +502,7 @@ struct FACTCue
 	uint8_t managed;
 	uint16_t index;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Sound data */
 	FACTCueData *data;

@@ -2458,6 +2458,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
 	sb->notifyOnDestroy = 0;
+	sb->usercontext = NULL;
 
 	cueSimpleCount = read_u16(&ptr, se);
 	cueComplexCount = read_u16(&ptr, se);
@@ -2965,6 +2966,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->packetSize = packetSize;
 	wb->io = io;
 	wb->notifyOnDestroy = 0;
+	wb->usercontext = NULL;
 
 	/* WaveBank Data */
 	SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset)
