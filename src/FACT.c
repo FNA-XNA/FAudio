@@ -1297,15 +1297,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	while (pWaveBank->waveList != NULL)
 	{
 		wave = (FACTWave*) pWaveBank->waveList->entry;
-		if (wave->parentCue != NULL)
-		{
-			/* Destroying this Cue destroys the Wave */
-			FACTCue_Destroy(wave->parentCue);
-		}
-		else
-		{
-			FACTWave_Destroy(wave);
-		}
+		FACTWave_Destroy(wave);
 	}
 
 	if (pWaveBank->parentEngine != NULL)
