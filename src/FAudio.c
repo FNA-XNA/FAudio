@@ -2870,6 +2870,22 @@ static void FAudio_DUMPVOICE_Init(const FAudioSourceVoice *voice)
 	 * | 30 FF 88 01  18 FF 64 61  74 61 00 4A  02 00 00 00 | 0ÿ...ÿdata.J....
 	 */
 
+	uint16_t cbSize = format->cbSize;
+	const char *formatFourcc = "WAVE";
+	uint16_t wFormatTag = format->wFormatTag;
+	/* special handling for WMAUDIO2 */
+	if (wFormatTag == FAUDIO_FORMAT_EXTENSIBLE && cbSize >= 22)
+	{
+		const FAudioWaveFormatExtensible *format_ex =
+				(const FAudioWaveFormatExtensible*) format;
+		uint16_t format_ex_tag = (uint16_t) (format_ex->SubFormat.Data1);
+		if (format_ex_tag == FAUDIO_FORMAT_WMAUDIO2)
+		{
+			cbSize = 0;
+			formatFourcc = "XWMA";
+			wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
+		}
+	}
 
 	{ /* RIFF chunk descriptor - 12 byte */
 		/* ChunkID - 4 */
@@ -2878,17 +2894,17 @@ static void FAudio_DUMPVOICE_Init(const FAudioSourceVoice *voice)
 		uint32_t filesize = 0; /* the real file size is written in finalize step */
 		io->write(io->data, &filesize, 4, 1);
 		/* Format - 4 */
-		io->write(io->data, "WAVE", 4, 1);
+		io->write(io->data, formatFourcc, 4, 1);
 	}
 	{ /* fmt sub-chunk 24 */
 		/* Subchunk1ID - 4 */
 		io->write(io->data, "fmt ", 4, 1);
 		/* Subchunk1Size - 4 */
 		/* 18 byte for WAVEFORMATEX and cbSize for WAVEFORMATEXTENDED */
-		uint32_t chunk_data_size = 18 + (uint32_t) format->cbSize;
+		uint32_t chunk_data_size = 18 + (uint32_t) cbSize;
 		io->write(io->data, &chunk_data_size, 4, 1);
 		/* AudioFormat - 2 */
-		io->write(io->data, &format->wFormatTag, 2, 1);
+		io->write(io->data, &wFormatTag, 2, 1);
 		/* NumChannels - 2 */
 		io->write(io->data, &format->nChannels, 2, 1);
 		/* SampleRate - 4 */
@@ -2905,9 +2921,9 @@ static void FAudio_DUMPVOICE_Init(const FAudioSourceVoice *voice)
 	/* in case of extensible audio format write the additional data to the file */
 	{
 		/* always write the cbSize */
-		io->write(io->data, &format->cbSize, 2, 1);
+		io->write(io->data, &cbSize, 2, 1);
 
-		if (format->cbSize >= 22)
+		if (cbSize >= 22)
 		{
 			/* we have a WAVEFORMATEXTENSIBLE struct to write */
 			const FAudioWaveFormatExtensible *format_ex =
