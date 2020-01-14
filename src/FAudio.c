@@ -2753,11 +2753,6 @@ static inline FAudioIOStreamOut *DumpVoices_fopen(
 				(const FAudioWaveFormatExtensible*) format;
 		format_ex_tag = (uint16_t) (format_ex->SubFormat.Data1);
 	}
-	if (format->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
-	{
-		format_tag = FAUDIO_FORMAT_EXTENSIBLE;
-		format_ex_tag = FAUDIO_FORMAT_WMAUDIO2;
-	}
 	FAudio_snprintf(
 		loc,
 		sizeof(loc),
