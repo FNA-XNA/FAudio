@@ -1290,9 +1290,13 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		note.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
 		note.soundBank.pSoundBank = pSoundBank;
 		if (pSoundBank->parentEngine->notifications & NOTIFY_SOUNDBANKDESTROY)
+		{
 			note.pvContext = pSoundBank->parentEngine->sb_context;
+		}
 		else
+		{
 			note.pvContext = pSoundBank->usercontext;
+		}
 		pSoundBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -1409,9 +1413,13 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		note.type = FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED;
 		note.waveBank.pWaveBank = pWaveBank;
 		if (pWaveBank->parentEngine->notifications & NOTIFY_WAVEBANKDESTROY)
+		{
 			note.pvContext = pWaveBank->parentEngine->wb_context;
+		}
 		else
+		{
 			note.pvContext = pWaveBank->usercontext;
+		}
 		pWaveBank->parentEngine->notificationCallback(&note);
 	}
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
@@ -1836,9 +1844,13 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
 		note.wave.pWave = pWave;
 		if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVEDESTROY)
+		{
 			note.pvContext = pWave->parentBank->parentEngine->wave_context;
+		}
 		else
+		{
 			note.pvContext = pWave->usercontext;
+		}
 		pWave->parentBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -2117,9 +2129,13 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
 		note.cue.pCue = pCue;
 		if (pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
+		{
 			note.pvContext = pCue->parentBank->parentEngine->cue_context;
+		}
 		else
+		{
 			note.pvContext = pCue->usercontext;
+		}
 		pCue->parentBank->parentEngine->notificationCallback(&note);
 	}
 
