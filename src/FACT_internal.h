@@ -93,6 +93,14 @@ typedef struct FACTDSPPreset
 	FACTDSPParameter *parameters;
 } FACTDSPPreset;
 
+typedef enum FACTNoticationsFlags
+{
+	NOTIFY_CUEDESTROY        = 0x0001,
+	NOTIFY_SOUNDBANKDESTROY  = 0x0002,
+	NOTIFY_WAVEBANKDESTROY   = 0x0004,
+	NOTIFY_WAVEDESTROY       = 0x0008,
+} FACTNoticationsFlags;
+
 /* Internal SoundBank Types */
 
 typedef enum
@@ -412,6 +420,13 @@ struct FACTAudioEngine
 	FAudioMallocFunc pMalloc;
 	FAudioFreeFunc pFree;
 	FAudioReallocFunc pRealloc;
+
+	/* Peristent Notifications */
+	FACTNoticationsFlags notifications;
+	void *cue_context;
+	void *sb_context;
+	void *wb_context;
+	void *wave_context;
 };
 
 struct FACTSoundBank

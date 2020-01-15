@@ -2174,6 +2174,13 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		ptr += memsize;
 	}
 
+	/* Peristent Notifications */
+	pEngine->notifications = 0;
+	pEngine->cue_context = NULL;
+	pEngine->sb_context = NULL;
+	pEngine->wb_context = NULL;
+	pEngine->wave_context = NULL;
+
 	/* Finally. */
 	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	return 0;

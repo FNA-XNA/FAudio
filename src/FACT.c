@@ -528,7 +528,8 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
 		{
-			FAudio_assert(0 && "TODO: PERSIST Cue Unimplemented notification!");
+			pEngine->notifications |= NOTIFY_CUEDESTROY;
+			pEngine->cue_context = pNotificationDescription->pvContext;
 		}
 		else
 		{
@@ -538,10 +539,10 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
-		/* TODO: When NULL, this callback is for ALL SoundBanks! */
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
 		{
-			FAudio_assert(0 && "TODO: PERSIST SoundBank Unimplemented notification!");
+			pEngine->notifications |= NOTIFY_SOUNDBANKDESTROY;
+			pEngine->sb_context = pNotificationDescription->pvContext;
 		}
 		else
 		{
@@ -553,7 +554,8 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
 		{
-			FAudio_assert(0 && "TODO: PERSIST WaveBank Unimplemented notification!");
+			pEngine->notifications |= NOTIFY_WAVEBANKDESTROY;
+			pEngine->wb_context = pNotificationDescription->pvContext;
 		}
 		else
 		{
@@ -565,7 +567,8 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
 		{
-			FAudio_assert(0 && "TODO: PERSIST Wave Unimplemented notification!");
+			pEngine->notifications |= NOTIFY_WAVEDESTROY;
+			pEngine->wave_context = pNotificationDescription->pvContext;
 		}
 		else
 		{
@@ -592,33 +595,57 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
-	 if(pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-	{
-		/* FIXNE: Just ignore these for the time being */
-		FAudio_PlatformUnlockMutex(pEngine->apiLock);
-		return 0;
-	}
-
-
 	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
-		pNotificationDescription->pCue->notifyOnDestroy = 0;
-		pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_CUEDESTROY;
+			pEngine->cue_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pCue->notifyOnDestroy = 0;
+			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
-		pNotificationDescription->pSoundBank->notifyOnDestroy = 0;
-		pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_SOUNDBANKDESTROY;
+			pEngine->sb_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pSoundBank->notifyOnDestroy = 0;
+			pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
 	{
-		pNotificationDescription->pWaveBank->notifyOnDestroy = 0;
-		pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_WAVEBANKDESTROY;
+			pEngine->wb_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pWaveBank->notifyOnDestroy = 0;
+			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
 	{
-		pNotificationDescription->pWave->notifyOnDestroy = 0;
-		pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_WAVEDESTROY;
+			pEngine->wave_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pWave->notifyOnDestroy = 0;
+			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else
 	{
@@ -1258,11 +1285,14 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	pSoundBank->parentEngine->pFree(pSoundBank->cueNames);
 
 	/* Finally. */
-	if (pSoundBank->notifyOnDestroy)
+	if (pSoundBank->notifyOnDestroy || pSoundBank->parentEngine->notifications & NOTIFY_SOUNDBANKDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
 		note.soundBank.pSoundBank = pSoundBank;
-		note.pvContext = pSoundBank->usercontext;
+		if (pSoundBank->parentEngine->notifications & NOTIFY_SOUNDBANKDESTROY)
+			note.pvContext = pSoundBank->parentEngine->sb_context;
+		else
+			note.pvContext = pSoundBank->usercontext;
 		pSoundBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -1374,11 +1404,14 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	{
 		pWaveBank->parentEngine->pFree(pWaveBank->packetBuffer);
 	}
-	if (pWaveBank->notifyOnDestroy)
+	if (pWaveBank->notifyOnDestroy || pWaveBank->parentEngine->notifications & NOTIFY_WAVEBANKDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED;
 		note.waveBank.pWaveBank = pWaveBank;
-		note.pvContext = pWaveBank->usercontext;
+		if (pWaveBank->parentEngine->notifications & NOTIFY_WAVEBANKDESTROY)
+			note.pvContext = pWaveBank->parentEngine->wb_context;
+		else
+			note.pvContext = pWaveBank->usercontext;
 		pWaveBank->parentEngine->notificationCallback(&note);
 	}
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
@@ -1798,11 +1831,14 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	{
 		pWave->parentBank->parentEngine->pFree(pWave->streamCache);
 	}
-	if (pWave->notifyOnDestroy)
+	if (pWave->notifyOnDestroy || pWave->parentBank->parentEngine->notifications & NOTIFY_WAVEDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
 		note.wave.pWave = pWave;
-		note.pvContext = pWave->usercontext;
+		if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVEDESTROY)
+			note.pvContext = pWave->parentBank->parentEngine->wave_context;
+		else
+			note.pvContext = pWave->usercontext;
 		pWave->parentBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -2076,11 +2112,14 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	FAudio_assert(cue != NULL && "Could not find Cue reference!");
 
 	pCue->parentBank->parentEngine->pFree(pCue->variableValues);
-	if (pCue->notifyOnDestroy)
+	if (pCue->notifyOnDestroy || pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
 		note.cue.pCue = pCue;
-		note.pvContext = pCue->usercontext;
+		if (pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
+			note.pvContext = pCue->parentBank->parentEngine->cue_context;
+		else
+			note.pvContext = pCue->usercontext;
 		pCue->parentBank->parentEngine->notificationCallback(&note);
 	}
 
