@@ -526,13 +526,24 @@ uint32_t FACTAudioEngine_RegisterNotification(
 
 	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
-		pNotificationDescription->pCue->notifyOnDestroy = 1;
-		pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			FAudio_assert(0 && "TODO: PERSIST Cue Unimplemented notification!");
+		}
+		else
+		{
+			pNotificationDescription->pCue->notifyOnDestroy = 1;
+			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
 		/* TODO: When NULL, this callback is for ALL SoundBanks! */
-		if (pNotificationDescription->pSoundBank != NULL)
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			FAudio_assert(0 && "TODO: PERSIST SoundBank Unimplemented notification!");
+		}
+		else
 		{
 			pNotificationDescription->pSoundBank->notifyOnDestroy = 1;
 			pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
@@ -540,13 +551,27 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
 	{
-		pNotificationDescription->pWaveBank->notifyOnDestroy = 1;
-		pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			FAudio_assert(0 && "TODO: PERSIST WaveBank Unimplemented notification!");
+		}
+		else
+		{
+			pNotificationDescription->pWaveBank->notifyOnDestroy = 1;
+			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
 	{
-		pNotificationDescription->pWave->notifyOnDestroy = 1;
-		pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			FAudio_assert(0 && "TODO: PERSIST Wave Unimplemented notification!");
+		}
+		else
+		{
+			pNotificationDescription->pWave->notifyOnDestroy = 1;
+			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else
 	{
@@ -566,6 +591,14 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 	FAudio_assert(pEngine->notificationCallback != NULL);
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
+
+	 if(pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+	{
+		/* FIXNE: Just ignore these for the time being */
+		FAudio_PlatformUnlockMutex(pEngine->apiLock);
+		return 0;
+	}
+
 
 	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
@@ -2047,7 +2080,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	{
 		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
 		note.cue.pCue = pCue;
-                note.pvContext = pCue->usercontext;
+		note.pvContext = pCue->usercontext;
 		pCue->parentBank->parentEngine->notificationCallback(&note);
 	}
 
