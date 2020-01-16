@@ -2274,7 +2274,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~(
 		FACT_STATE_PAUSED |
-		FACT_STATE_STOPPED
+		FACT_STATE_STOPPED |
+		FACT_STATE_PREPARED
 	);
 	pCue->start = FAudio_timems();
 
