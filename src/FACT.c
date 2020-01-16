@@ -1443,14 +1443,6 @@ uint32_t FACTWaveBank_GetState(
 
 	FAudio_PlatformLockMutex(pWaveBank->parentEngine->apiLock);
 
-	if (pWaveBank == NULL)
-	{
-		*pdwState = 0;
-		FAudio_PlatformUnlockMutex(
-			pWaveBank->parentEngine->apiLock
-		);
-		return 0;
-	}
 	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pWaveBank->entryCount; i += 1)
 	{
