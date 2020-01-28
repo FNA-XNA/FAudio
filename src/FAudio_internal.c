@@ -305,14 +305,14 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 
 	LOG_FUNC_ENTER(voice->audio)
 
-#ifdef HAVE_FFMPEG
-	if (voice->src.ffmpeg != NULL)
+#ifdef HAVE_GSTREAMER
+	if (voice->src.gstreamer != NULL)
 	{
 		/* Always 0, per the spec */
 		LOG_FUNC_EXIT(voice->audio)
 		return 0;
 	}
-#endif /* HAVE_FFMPEG */
+#endif /* HAVE_GSTREAMER */
 	while (list != NULL && decoding > 0)
 	{
 		buffer = &list->buffer;
@@ -443,12 +443,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			}
 			else
 			{
-#ifdef HAVE_FFMPEG
-				if (voice->src.ffmpeg != NULL)
-				{
-					FAudio_FFMPEG_reset(voice);
-				}
-#endif /* HAVE_FFMPEG */
 				/* For EOS we can stop storing fraction offsets */
 				if (buffer->Flags & FAUDIO_END_OF_STREAM)
 				{

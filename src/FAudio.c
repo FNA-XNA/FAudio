@@ -431,15 +431,15 @@ uint32_t FAudio_CreateSourceVoice(
 				COMPARE_GUID(WMAUDIO_LOSSLESS) ||
 				COMPARE_GUID(XMAUDIO2)	)
 		{
-#ifdef HAVE_FFMPEG
-			if (FAudio_FFMPEG_init(*ppSourceVoice, fmtex->SubFormat.Data1) != 0)
+#ifdef HAVE_GSTREAMER
+			if (FAudio_GSTREAMER_init(*ppSourceVoice, fmtex->SubFormat.Data1) != 0)
 			{
 				(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
 			}
 #else
 			FAudio_assert(0 && "xWMA is not supported!");
 			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
-#endif /* HAVE_FFMPEG */
+#endif /* HAVE_GSTREAMER */
 		}
 		else
 		{
@@ -2098,12 +2098,12 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 		voice->audio->pFree(voice->src.format);
 		LOG_MUTEX_DESTROY(voice->audio, voice->src.bufferLock)
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
-#ifdef HAVE_FFMPEG
-		if (voice->src.ffmpeg)
+#ifdef HAVE_GSTREAMER
+		if (voice->src.gstreamer)
 		{
-			FAudio_FFMPEG_free(voice);
+			FAudio_GSTREAMER_free(voice);
 		}
-#endif /* HAVE_FFMPEG */
+#endif /* HAVE_GSTREAMER */
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -2303,10 +2303,10 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	)
 
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
-#ifdef HAVE_FFMPEG
-	FAudio_assert(	(voice->src.ffmpeg != NULL && pBufferWMA != NULL) ||
-			(voice->src.ffmpeg == NULL && pBufferWMA == NULL)	);
-#endif /* HAVE_FFMPEG */
+#ifdef HAVE_GSTREAMER
+	FAudio_assert(	(voice->src.gstreamer != NULL && pBufferWMA != NULL) ||
+			(voice->src.gstreamer == NULL && pBufferWMA == NULL)	);
+#endif /* HAVE_GSTREAMER */
 
 	/* Start off with whatever they just sent us... */
 	playBegin = pBuffer->PlayBegin;
