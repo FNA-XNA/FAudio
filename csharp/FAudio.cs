@@ -2154,8 +2154,20 @@ public static class FAudio
 		public int max_frame_size;
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
+	public struct stb_vorbis_comment
+	{
+		public IntPtr vendor;
+		
+		public int comment_list_length;
+		public IntPtr comment_list;
+	}
+
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern stb_vorbis_info stb_vorbis_get_info(IntPtr f);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern stb_vorbis_comment stb_vorbis_get_comment(IntPtr f);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern int stb_vorbis_get_error(IntPtr f);
