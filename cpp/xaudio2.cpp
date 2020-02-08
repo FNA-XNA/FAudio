@@ -924,6 +924,7 @@ public:
 			device_index = device_index_from_device_id(faudio, szDeviceId);
 		}
 
+		voice_sends = NULL;
 		effect_chain = wrap_effect_chain(pEffectChain);
 		FAudio_CreateMasteringVoice(
 			faudio,

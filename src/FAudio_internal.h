@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2018 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2020 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -128,7 +128,7 @@
 		static uint8_t logged = 0; \
 		if (!(condition) && !logged) \
 		{ \
-			SDL_Log("Assertion failed: %s\n", #condition); \
+			SDL_Log("Assertion failed: %s", #condition); \
 			logged = 1; \
 		} \
 	}
@@ -137,7 +137,7 @@
 #endif
 #define FAudio_snprintf SDL_snprintf
 #define FAudio_vsnprintf SDL_vsnprintf
-#define FAudio_Log(msg) SDL_Log("%s\n", msg)
+#define FAudio_Log(msg) SDL_Log("%s", msg)
 #define FAudio_getenv SDL_getenv
 #define FAudio_PRIu64 SDL_PRIu64
 #define FAudio_PRIx64 SDL_PRIx64
@@ -843,5 +843,31 @@ static inline void WriteWaveFormatExtensible(
 	(float) (fxd >> FIXED_PRECISION) + /* Integer part */ \
 	((fxd & FIXED_FRACTION_MASK) * (1.0f / FIXED_ONE)) /* Fraction part */ \
 )
+
+#ifdef FAUDIO_DUMP_VOICES
+/* File writing structure */
+typedef size_t (FAUDIOCALL * FAudio_writefunc)(
+	void *data,
+	const void *src,
+	size_t size,
+	size_t count
+);
+typedef size_t (FAUDIOCALL * FAudio_sizefunc)(
+	void *data
+);
+typedef struct FAudioIOStreamOut
+{
+	void *data;
+	FAudio_readfunc read;
+	FAudio_writefunc write;
+	FAudio_seekfunc seek;
+	FAudio_sizefunc size;
+	FAudio_closefunc close;
+	void *lock;
+} FAudioIOStreamOut;
+
+FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode);
+void FAudio_close_out(FAudioIOStreamOut *io);
+#endif /* FAUDIO_DUMP_VOICES */
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */

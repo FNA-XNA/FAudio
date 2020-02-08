@@ -13,6 +13,7 @@ endif()
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
 option(FORCE_ENABLE_DEBUGCONFIGURATION "Enable DebugConfiguration in all build types" OFF)
+option(DUMP_VOICES "Dump voices to RIFF WAVE files" OFF)
 if(WIN32)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
@@ -27,8 +28,8 @@ endif()
 
 # Version
 SET(LIB_MAJOR_VERSION "0")
-SET(LIB_MINOR_VERSION "19")
-SET(LIB_REVISION "09")
+SET(LIB_MINOR_VERSION "20")
+SET(LIB_REVISION "02")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 
 # Build Type
@@ -155,6 +156,11 @@ if(FFMPEG)
 	endif()
 endif(FFMPEG)
 
+# Dump source voices to RIFF WAVE files
+if(DUMP_VOICES)
+	target_compile_definitions(FAudio PRIVATE FAUDIO_DUMP_VOICES)
+endif()
+
 # SDL2 Dependency
 if (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
 	message(STATUS "using pre-defined SDL2 variables SDL2_INCLUDE_DIRS and SDL2_LIBRARIES")
@@ -219,6 +225,8 @@ if(BUILD_UTILS)
 	target_link_libraries(testparse PRIVATE FAudio)
 	add_executable(testxwma utils/testxwma/testxwma.cpp)
 	target_link_libraries(testxwma PRIVATE FAudio)
+	add_executable(showriffheader utils/showriffheader/showriffheader.cpp)
+	target_link_libraries(showriffheader PRIVATE FAudio)
 
 	# These tools use uicommon, but NOT wavs
 	add_executable(facttool utils/facttool/facttool.cpp)

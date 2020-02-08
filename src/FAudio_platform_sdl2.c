@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2018 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2020 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -51,7 +51,7 @@ void FAudio_PlatformAddRef()
 	/* SDL tracks ref counts for each subsystem */
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
-		SDL_Log("SDL_INIT_AUDIO failed: %s\n", SDL_GetError());
+		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
 	}
 	FAudio_INTERNAL_InitSIMDFunctions(
 		SDL_HasSSE2(),
@@ -109,7 +109,7 @@ iosretry:
 	if (device == 0)
 	{
 		const char *err = SDL_GetError();
-		SDL_Log("OpenAudioDevice failed: %s\n", err);
+		SDL_Log("OpenAudioDevice failed: %s", err);
 
 		/* iOS has a weird thing where you can't open a stream when the
 		 * app is in the background, even though the program is meant
@@ -321,6 +321,31 @@ void FAudio_close(FAudioIOStream *io)
 	FAudio_PlatformDestroyMutex((FAudioMutex) io->lock);
 	FAudio_free(io);
 }
+
+#ifdef FAUDIO_DUMP_VOICES
+FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
+{
+	FAudioIOStreamOut *io = (FAudioIOStreamOut*) SDL_malloc(
+		sizeof(FAudioIOStreamOut)
+	);
+	SDL_RWops *rwops = SDL_RWFromFile(path, mode);
+	io->data = rwops;
+	io->read = (FAudio_readfunc) rwops->read;
+	io->write = (FAudio_writefunc) rwops->write;
+	io->seek = (FAudio_seekfunc) rwops->seek;
+	io->size = (FAudio_sizefunc) rwops->size;
+	io->close = (FAudio_closefunc) rwops->close;
+	io->lock = FAudio_PlatformCreateMutex();
+	return io;
+}
+
+void FAudio_close_out(FAudioIOStreamOut *io)
+{
+	io->close(io->data);
+	FAudio_PlatformDestroyMutex((FAudioMutex) io->lock);
+	FAudio_free(io);
+}
+#endif /* FAUDIO_DUMP_VOICES */
 
 /* UTF8->UTF16 Conversion, taken from PhysicsFS */
 

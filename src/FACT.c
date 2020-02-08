@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2018 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2020 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -526,23 +526,55 @@ uint32_t FACTAudioEngine_RegisterNotification(
 
 	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
-		pNotificationDescription->pCue->notifyOnDestroy = 1;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications |= NOTIFY_CUEDESTROY;
+			pEngine->cue_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pCue->notifyOnDestroy = 1;
+			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
-		/* TODO: When NULL, this callback is for ALL SoundBanks! */
-		if (pNotificationDescription->pSoundBank != NULL)
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications |= NOTIFY_SOUNDBANKDESTROY;
+			pEngine->sb_context = pNotificationDescription->pvContext;
+		}
+		else
 		{
 			pNotificationDescription->pSoundBank->notifyOnDestroy = 1;
+			pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
 	{
-		pNotificationDescription->pWaveBank->notifyOnDestroy = 1;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications |= NOTIFY_WAVEBANKDESTROY;
+			pEngine->wb_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pWaveBank->notifyOnDestroy = 1;
+			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
 	{
-		pNotificationDescription->pWave->notifyOnDestroy = 1;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications |= NOTIFY_WAVEDESTROY;
+			pEngine->wave_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pWave->notifyOnDestroy = 1;
+			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else
 	{
@@ -565,19 +597,55 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 
 	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
-		pNotificationDescription->pCue->notifyOnDestroy = 0;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_CUEDESTROY;
+			pEngine->cue_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pCue->notifyOnDestroy = 0;
+			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
-		pNotificationDescription->pSoundBank->notifyOnDestroy = 0;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_SOUNDBANKDESTROY;
+			pEngine->sb_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pSoundBank->notifyOnDestroy = 0;
+			pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)
 	{
-		pNotificationDescription->pWaveBank->notifyOnDestroy = 0;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_WAVEBANKDESTROY;
+			pEngine->wb_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pWaveBank->notifyOnDestroy = 0;
+			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
 	{
-		pNotificationDescription->pWave->notifyOnDestroy = 0;
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_WAVEDESTROY;
+			pEngine->wave_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			pNotificationDescription->pWave->notifyOnDestroy = 0;
+			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		}
 	}
 	else
 	{
@@ -922,6 +990,8 @@ uint32_t FACTSoundBank_Prepare(
 	(*ppCue)->next = NULL;
 	(*ppCue)->managed = 0;
 	(*ppCue)->index = nCueIndex;
+	(*ppCue)->notifyOnDestroy = 0;
+	(*ppCue)->usercontext = NULL;
 
 	/* Sound data */
 	(*ppCue)->data = &pSoundBank->cues[nCueIndex];
@@ -1215,10 +1285,18 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	pSoundBank->parentEngine->pFree(pSoundBank->cueNames);
 
 	/* Finally. */
-	if (pSoundBank->notifyOnDestroy)
+	if (pSoundBank->notifyOnDestroy || pSoundBank->parentEngine->notifications & NOTIFY_SOUNDBANKDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
 		note.soundBank.pSoundBank = pSoundBank;
+		if (pSoundBank->parentEngine->notifications & NOTIFY_SOUNDBANKDESTROY)
+		{
+			note.pvContext = pSoundBank->parentEngine->sb_context;
+		}
+		else
+		{
+			note.pvContext = pSoundBank->usercontext;
+		}
 		pSoundBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -1241,15 +1319,6 @@ uint32_t FACTSoundBank_GetState(
 
 	FAudio_PlatformLockMutex(pSoundBank->parentEngine->apiLock);
 
-	if (pSoundBank == NULL)
-	{
-		*pdwState = 0;
-
-		FAudio_PlatformUnlockMutex(
-			pSoundBank->parentEngine->apiLock
-		);
-		return 0;
-	}
 	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
@@ -1330,10 +1399,18 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	{
 		pWaveBank->parentEngine->pFree(pWaveBank->packetBuffer);
 	}
-	if (pWaveBank->notifyOnDestroy)
+	if (pWaveBank->notifyOnDestroy || pWaveBank->parentEngine->notifications & NOTIFY_WAVEBANKDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED;
 		note.waveBank.pWaveBank = pWaveBank;
+		if (pWaveBank->parentEngine->notifications & NOTIFY_WAVEBANKDESTROY)
+		{
+			note.pvContext = pWaveBank->parentEngine->wb_context;
+		}
+		else
+		{
+			note.pvContext = pWaveBank->usercontext;
+		}
 		pWaveBank->parentEngine->notificationCallback(&note);
 	}
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
@@ -1357,14 +1434,6 @@ uint32_t FACTWaveBank_GetState(
 
 	FAudio_PlatformLockMutex(pWaveBank->parentEngine->apiLock);
 
-	if (pWaveBank == NULL)
-	{
-		*pdwState = 0;
-		FAudio_PlatformUnlockMutex(
-			pWaveBank->parentEngine->apiLock
-		);
-		return 0;
-	}
 	*pdwState = FACT_STATE_PREPARED;
 	for (i = 0; i < pWaveBank->entryCount; i += 1)
 	{
@@ -1480,6 +1549,7 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->parentCue = NULL;
 	(*ppWave)->index = nWaveIndex;
 	(*ppWave)->notifyOnDestroy = 0;
+	(*ppWave)->usercontext = NULL;
 
 	/* Playback */
 	(*ppWave)->state = FACT_STATE_PREPARED;
@@ -1752,10 +1822,18 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	{
 		pWave->parentBank->parentEngine->pFree(pWave->streamCache);
 	}
-	if (pWave->notifyOnDestroy)
+	if (pWave->notifyOnDestroy || pWave->parentBank->parentEngine->notifications & NOTIFY_WAVEDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
 		note.wave.pWave = pWave;
+		if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVEDESTROY)
+		{
+			note.pvContext = pWave->parentBank->parentEngine->wave_context;
+		}
+		else
+		{
+			note.pvContext = pWave->usercontext;
+		}
 		pWave->parentBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -2006,36 +2084,41 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	/* Stop before we start deleting everything */
 	FACTCue_Stop(pCue, FACT_FLAG_STOP_IMMEDIATE);
 
-	if (pCue->parentBank != NULL)
+	/* Remove this Cue from the SoundBank list */
+	cue = pCue->parentBank->cueList;
+	prev = cue;
+	while (cue != NULL)
 	{
-		/* Remove this Cue from the SoundBank list */
-		cue = pCue->parentBank->cueList;
-		prev = cue;
-		while (cue != NULL)
+		if (cue == pCue)
 		{
-			if (cue == pCue)
+			if (cue == prev) /* First in list */
 			{
-				if (cue == prev) /* First in list */
-				{
-					pCue->parentBank->cueList = cue->next;
-				}
-				else
-				{
-					prev->next = cue->next;
-				}
-				break;
+				pCue->parentBank->cueList = cue->next;
 			}
-			prev = cue;
-			cue = cue->next;
+			else
+			{
+				prev->next = cue->next;
+			}
+			break;
 		}
-		FAudio_assert(cue != NULL && "Could not find Cue reference!");
+		prev = cue;
+		cue = cue->next;
 	}
+	FAudio_assert(cue != NULL && "Could not find Cue reference!");
 
 	pCue->parentBank->parentEngine->pFree(pCue->variableValues);
-	if (pCue->notifyOnDestroy)
+	if (pCue->notifyOnDestroy || pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
 	{
 		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
 		note.cue.pCue = pCue;
+		if (pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
+		{
+			note.pvContext = pCue->parentBank->parentEngine->cue_context;
+		}
+		else
+		{
+			note.pvContext = pCue->usercontext;
+		}
 		pCue->parentBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -2174,7 +2257,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~(
 		FACT_STATE_PAUSED |
-		FACT_STATE_STOPPED
+		FACT_STATE_STOPPED |
+		FACT_STATE_PREPARED
 	);
 	pCue->start = FAudio_timems();
 

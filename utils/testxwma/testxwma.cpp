@@ -13,7 +13,7 @@ FAudio *faudio = NULL;
 FAudioMasteringVoice *mastering_voice = NULL;
 FAudioSourceVoice *source_voice = NULL;
 
-FAudioWaveFormatExtensible wfx = {0};
+FAudioWaveFormatExtensible *wfx = NULL;
 FAudioBuffer buffer = {0};
 FAudioBufferWMA buffer_wma = {0};
 
@@ -117,13 +117,24 @@ uint32_t load_data(const char *filename)
 
 	/* Locate the 'fmt ' chunk, and copy its contents into a WAVEFORMATEXTENSIBLE structure. */
 	FindChunk(hFile,fourccFMT, &dwChunkSize, &dwChunkPosition );
-	ReadChunkData(hFile, &wfx, dwChunkSize, dwChunkPosition );
+	if (dwChunkSize > sizeof(FAudioWaveFormatExtensible))
+	{
+		wfx = (FAudioWaveFormatExtensible *) malloc(dwChunkSize);
+		printf("chunk-size exceeds wfx size, allocating more: %u > %u\n", dwChunkSize, sizeof(FAudioWaveFormatExtensible));
+	}
+	else
+	{
+		wfx = (FAudioWaveFormatExtensible *) malloc(sizeof(FAudioWaveFormatExtensible));
+		printf("chunk-size equal or less than wfx size, capping: %u <= %u\n", dwChunkSize, sizeof(FAudioWaveFormatExtensible));
+	}
+	ReadChunkData(hFile, wfx, dwChunkSize, dwChunkPosition );
 
 	/* Locate the 'data' chunk, and read its contents into a buffer. */
 	FindChunk(hFile, fourccDATA, &dwChunkSize, &dwChunkPosition);
 	uint8_t *pDataBuffer = (uint8_t *) malloc(dwChunkSize);
 	ReadChunkData(hFile, pDataBuffer, dwChunkSize, dwChunkPosition);
 
+	printf("data chunk size: %u\n", dwChunkSize);
 	buffer.AudioBytes = dwChunkSize;  //buffer containing audio data
 	buffer.pAudioData = pDataBuffer;  //size of the audio buffer in bytes
 	buffer.Flags = FAUDIO_END_OF_STREAM; // tell the source voice not to expect any data after this buffer
@@ -157,7 +168,7 @@ void faudio_setup() {
 	hr = FAudio_CreateSourceVoice(
 		faudio, 
 		&source_voice, 
-		(FAudioWaveFormatEx *) &wfx, 
+		(FAudioWaveFormatEx *) wfx,
 		FAUDIO_VOICE_USEFILTER, 
 		FAUDIO_MAX_FREQ_RATIO, 
 		NULL, NULL, NULL
@@ -166,11 +177,11 @@ void faudio_setup() {
 
 void play(void) {
 
-	buffer.PlayBegin = argPlayBegin * wfx.Format.nSamplesPerSec;
-	buffer.PlayLength = argPlayLength * wfx.Format.nSamplesPerSec;
+	buffer.PlayBegin = argPlayBegin * wfx->Format.nSamplesPerSec;
+	buffer.PlayLength = argPlayLength * wfx->Format.nSamplesPerSec;
 
-	buffer.LoopBegin = argLoopBegin * wfx.Format.nSamplesPerSec;
-	buffer.LoopLength = argLoopLength * wfx.Format.nSamplesPerSec;
+	buffer.LoopBegin = argLoopBegin * wfx->Format.nSamplesPerSec;
+	buffer.LoopLength = argLoopLength * wfx->Format.nSamplesPerSec;
 	buffer.LoopCount = argLoopCount;
 
 	if (buffer_wma.pDecodedPacketCumulativeBytes != NULL)
@@ -189,6 +200,9 @@ void play(void) {
 	}
 
 	FAudioVoice_DestroyVoice(source_voice);
+
+	/* free allocated space for FAudioWafeFormatExtensible */
+	free(wfx);
 }
 
 int main(int argc, char *argv[]) {

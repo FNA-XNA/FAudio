@@ -79,8 +79,9 @@
     <Compile Include="FAudio.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="FAudio-CS.dll.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <None Include="app.config">
+      <Link>$(TargetFileName).config</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>

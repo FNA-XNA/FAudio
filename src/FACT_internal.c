@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2018 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2020 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -58,6 +58,8 @@
 	((x << 24)	& 0x00FF000000000000) | \
 	((x << 32)	& 0xFF00000000000000)
 #define DOSWAP_64(x) x = SWAP_32(x)
+
+#define FACT_CONTENT_VERSION_3_1 44
 
 static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
@@ -1954,7 +1956,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			dspPresetOffset,
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count;
-	uint8_t version;
+	uint8_t version, content, tool;
 	size_t memsize;
 	uint16_t i, j;
 
@@ -1963,11 +1965,23 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	
 	uint8_t se = 0; /* Swap Endian */
 	uint32_t magic = read_u32(&ptr, 0);
-	if (	(magic != 0x46534758 && !(se = (magic == 0x58475346))) /* 'XGSF' */ ||
-		read_u16(&ptr, se) != FACT_CONTENT_VERSION ||
-		read_u16(&ptr, se) != 42 /* Tool version */	)
+	se = magic == 0x58475346;
+	if (magic != 0x46534758 && magic != 0x58475346) /* 'XGSF' */
 	{
 		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	content = read_u16(&ptr, se);
+	if (	content != FACT_CONTENT_VERSION &&
+		content != FACT_CONTENT_VERSION_3_1	)
+	{
+		return -2;
+	}
+
+	tool = read_u16(&ptr, se); /* Tool version */
+	if (tool != 42)
+	{
+		return -3;
 	}
 
 	ptr += 2; /* Unknown value */
@@ -1980,7 +1994,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	if (	version != 3 &&
 		version != 7	)
 	{
-		return -1; /* TODO: VERSION TOO OLD */
+		return -4; /* TODO: VERSION TOO OLD */
 	}
 
 	/* Object counts */
@@ -2159,6 +2173,13 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		FAudio_memcpy(pEngine->variableNames[i], ptr, memsize);
 		ptr += memsize;
 	}
+
+	/* Peristent Notifications */
+	pEngine->notifications = 0;
+	pEngine->cue_context = NULL;
+	pEngine->sb_context = NULL;
+	pEngine->wb_context = NULL;
+	pEngine->wave_context = NULL;
 
 	/* Finally. */
 	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
@@ -2399,19 +2420,31 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		soundOffset;
 	uint8_t platform;
 	size_t memsize;
-	uint16_t i, j, cur;
+	uint16_t i, j, cur, content, tool;
 	uint8_t *ptrBookmark;
 
 	uint8_t *ptr = (uint8_t*) pvBuffer;
 	uint8_t *start = ptr;
 
 	uint32_t magic = read_u32(&ptr, 0);
-	uint8_t se = 0; /* Swap Endian */
-	if (	(magic != 0x4B424453 && !(se = (magic == 0x5344424B))) /* 'SDBK' */ ||
-		read_u16(&ptr, se) != FACT_CONTENT_VERSION ||
-		read_u16(&ptr, se) != 43 /* Tool version */	)
+	uint8_t se = magic == 0x5344424B; /* Swap Endian */
+
+	if (magic != 0x4B424453 && magic != 0x5344424B)  /* 'SDBK' */
 	{
 		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	content = read_u16(&ptr, se);
+	if (	content != FACT_CONTENT_VERSION &&
+		content != FACT_CONTENT_VERSION_3_1	)
+	{
+		return -2;
+	}
+
+	tool = read_u16(&ptr, se); /* Tool version */
+	if (tool != 43)
+	{
+		return -3;
 	}
 
 	/* CRC, unused */
@@ -2432,6 +2465,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
 	sb->notifyOnDestroy = 0;
+	sb->usercontext = NULL;
 
 	cueSimpleCount = read_u16(&ptr, se);
 	cueComplexCount = read_u16(&ptr, se);
@@ -2926,8 +2960,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		}
 	}
 	if (	header.dwSignature != 0x444E4257 ||
-		header.dwVersion != FACT_CONTENT_VERSION ||
-		header.dwHeaderVersion != 44	)
+		(header.dwVersion != FACT_CONTENT_VERSION && header.dwVersion != FACT_CONTENT_VERSION_3_1) ||
+		(header.dwHeaderVersion != 44 && header.dwHeaderVersion != 42)	)
 	{
 		return -1; /* TODO: NOT XACT FILE */
 	}
@@ -2939,6 +2973,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->packetSize = packetSize;
 	wb->io = io;
 	wb->notifyOnDestroy = 0;
+	wb->usercontext = NULL;
 
 	/* WaveBank Data */
 	SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset)

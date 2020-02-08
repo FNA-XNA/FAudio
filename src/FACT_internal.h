@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2018 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2020 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -92,6 +92,14 @@ typedef struct FACTDSPPreset
 	uint32_t parameterCount;
 	FACTDSPParameter *parameters;
 } FACTDSPPreset;
+
+typedef enum FACTNoticationsFlags
+{
+	NOTIFY_CUEDESTROY        = 0x0001,
+	NOTIFY_SOUNDBANKDESTROY  = 0x0002,
+	NOTIFY_WAVEBANKDESTROY   = 0x0004,
+	NOTIFY_WAVEDESTROY       = 0x0008,
+} FACTNoticationsFlags;
 
 /* Internal SoundBank Types */
 
@@ -412,6 +420,13 @@ struct FACTAudioEngine
 	FAudioMallocFunc pMalloc;
 	FAudioFreeFunc pFree;
 	FAudioReallocFunc pRealloc;
+
+	/* Peristent Notifications */
+	FACTNoticationsFlags notifications;
+	void *cue_context;
+	void *sb_context;
+	void *wb_context;
+	void *wave_context;
 };
 
 struct FACTSoundBank
@@ -420,6 +435,7 @@ struct FACTSoundBank
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Array sizes */
 	uint16_t cueCount;
@@ -450,6 +466,7 @@ struct FACTWaveBank
 	LinkedList *waveList;
 	FAudioMutex waveLock;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Actual WaveBank information */
 	char *name;
@@ -473,6 +490,7 @@ struct FACTWave
 	FACTCue *parentCue;
 	uint16_t index;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Playback */
 	uint32_t state;
@@ -499,6 +517,7 @@ struct FACTCue
 	uint8_t managed;
 	uint16_t index;
 	uint8_t notifyOnDestroy;
+	void *usercontext;
 
 	/* Sound data */
 	FACTCueData *data;

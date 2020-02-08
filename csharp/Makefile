@@ -3,7 +3,7 @@
 
 build: clean
 	mkdir bin
-	cp FAudio-CS.dll.config bin
+	cp app.config bin/FAudio-CS.dll.config
 	mcs /unsafe -debug -out:bin/FAudio-CS.dll -target:library FAudio.cs
 
 clean:
