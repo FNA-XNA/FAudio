@@ -14,6 +14,7 @@ option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
 option(FORCE_ENABLE_DEBUGCONFIGURATION "Enable DebugConfiguration in all build types" OFF)
 option(DUMP_VOICES "Dump voices to RIFF WAVE files" OFF)
+option(BUILD_SHARED_LIBS "Build shared library" ON)
 if(WIN32)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
@@ -63,7 +64,7 @@ if(INSTALL_MINGW_DEPENDENCIES)
 endif()
 
 # Source lists
-add_library(FAudio SHARED
+add_library(FAudio
 	# Public Headers
 	include/F3DAudio.h
 	include/FACT3D.h
