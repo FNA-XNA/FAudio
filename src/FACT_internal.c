@@ -34,6 +34,29 @@
 #include "stb.h"
 #define FACT_INTERNAL_rng() ((float) stb_frand())
 
+/* XACT Versions */
+
+#define FACT_CONTENT_VERSION_3_4 45
+#define FACT_CONTENT_VERSION_3_1 44
+
+static inline int FACT_INTERNAL_SupportedContent(uint16_t version)
+{
+	return (	version == FACT_CONTENT_VERSION ||
+			version == FACT_CONTENT_VERSION_3_4 ||
+			version == FACT_CONTENT_VERSION_3_1	);
+}
+
+#define WAVEBANK_HEADER_VERSION		44
+#define WAVEBANK_HEADER_VERSION_3_4	43
+#define WAVEBANK_HEADER_VERSION_3_1	42
+
+static inline int FACT_INTERNAL_SupportedWBContent(uint16_t version)
+{
+	return (	version == WAVEBANK_HEADER_VERSION ||
+			version == WAVEBANK_HEADER_VERSION_3_4 ||
+			version == WAVEBANK_HEADER_VERSION_3_1	);
+}
+
 /* Helper Functions */
 
 #define SWAP_16(x) \
@@ -58,9 +81,6 @@
 	((x << 24)	& 0x00FF000000000000) | \
 	((x << 32)	& 0xFF00000000000000)
 #define DOSWAP_64(x) x = SWAP_32(x)
-
-#define FACT_CONTENT_VERSION_3_1 44
-#define FACT_CONTENT_VERSION_3_4 45
 
 static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
@@ -1957,7 +1977,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			dspPresetOffset,
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count;
-	uint8_t version, content, tool;
+	uint8_t version, tool;
 	size_t memsize;
 	uint16_t i, j;
 
@@ -1972,10 +1992,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		return -1; /* TODO: NOT XACT FILE */
 	}
 
-	content = read_u16(&ptr, se);
-	if (	content != FACT_CONTENT_VERSION &&
-		content != FACT_CONTENT_VERSION_3_1 &&
-		content != FACT_CONTENT_VERSION_3_4	)
+	if (!FACT_INTERNAL_SupportedContent(read_u16(&ptr, se)))
 	{
 		return -2;
 	}
@@ -2422,7 +2439,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		soundOffset;
 	uint8_t platform;
 	size_t memsize;
-	uint16_t i, j, cur, content, tool;
+	uint16_t i, j, cur, tool;
 	uint8_t *ptrBookmark;
 
 	uint8_t *ptr = (uint8_t*) pvBuffer;
@@ -2436,10 +2453,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		return -1; /* TODO: NOT XACT FILE */
 	}
 
-	content = read_u16(&ptr, se);
-	if (	content != FACT_CONTENT_VERSION &&
-		content != FACT_CONTENT_VERSION_3_1 &&
-		content != FACT_CONTENT_VERSION_3_4	)
+	if (!FACT_INTERNAL_SupportedContent(read_u16(&ptr, se)))
 	{
 		return -2;
 	}
@@ -2962,13 +2976,19 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			DOSWAP_32(header.Segments[i].dwLength);
 		}
 	}
-	if (	header.dwSignature != 0x444E4257 ||
-		(header.dwVersion != FACT_CONTENT_VERSION && header.dwVersion != FACT_CONTENT_VERSION_3_1 &&
-		 header.dwVersion != FACT_CONTENT_VERSION_3_4) ||
-		(header.dwHeaderVersion != 44 && header.dwHeaderVersion != 43 &&
-		 header.dwHeaderVersion != 42)	)
+	if (header.dwSignature != 0x444E4257)
 	{
 		return -1; /* TODO: NOT XACT FILE */
+	}
+
+	if (!FACT_INTERNAL_SupportedContent(header.dwVersion))
+	{
+		return -2;
+	}
+
+	if (!FACT_INTERNAL_SupportedWBContent(header.dwHeaderVersion))
+	{
+		return -3;
 	}
 
 	wb = (FACTWaveBank*) pEngine->pMalloc(sizeof(FACTWaveBank));
