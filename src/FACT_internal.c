@@ -60,6 +60,7 @@
 #define DOSWAP_64(x) x = SWAP_32(x)
 
 #define FACT_CONTENT_VERSION_3_1 44
+#define FACT_CONTENT_VERSION_3_4 45
 
 static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
@@ -1973,7 +1974,8 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	content = read_u16(&ptr, se);
 	if (	content != FACT_CONTENT_VERSION &&
-		content != FACT_CONTENT_VERSION_3_1	)
+		content != FACT_CONTENT_VERSION_3_1 &&
+		content != FACT_CONTENT_VERSION_3_4	)
 	{
 		return -2;
 	}
@@ -2436,7 +2438,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 	content = read_u16(&ptr, se);
 	if (	content != FACT_CONTENT_VERSION &&
-		content != FACT_CONTENT_VERSION_3_1	)
+		content != FACT_CONTENT_VERSION_3_1 &&
+		content != FACT_CONTENT_VERSION_3_4	)
 	{
 		return -2;
 	}
@@ -2960,8 +2963,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		}
 	}
 	if (	header.dwSignature != 0x444E4257 ||
-		(header.dwVersion != FACT_CONTENT_VERSION && header.dwVersion != FACT_CONTENT_VERSION_3_1) ||
-		(header.dwHeaderVersion != 44 && header.dwHeaderVersion != 42)	)
+		(header.dwVersion != FACT_CONTENT_VERSION && header.dwVersion != FACT_CONTENT_VERSION_3_1 &&
+		 header.dwVersion != FACT_CONTENT_VERSION_3_4) ||
+		(header.dwHeaderVersion != 44 && header.dwHeaderVersion != 43 &&
+		 header.dwHeaderVersion != 42)	)
 	{
 		return -1; /* TODO: NOT XACT FILE */
 	}
