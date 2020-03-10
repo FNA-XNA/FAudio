@@ -282,7 +282,7 @@ uint32_t FAudio_timems()
 
 FAudioIOStream* FAudio_fopen(const char *path)
 {
-	FAudioIOStream *io = (FAudioIOStream*) SDL_malloc(
+	FAudioIOStream *io = (FAudioIOStream*) FAudio_malloc(
 		sizeof(FAudioIOStream)
 	);
 	SDL_RWops *rwops = SDL_RWFromFile(path, "rb");
@@ -325,7 +325,7 @@ void FAudio_close(FAudioIOStream *io)
 #ifdef FAUDIO_DUMP_VOICES
 FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
 {
-	FAudioIOStreamOut *io = (FAudioIOStreamOut*) SDL_malloc(
+	FAudioIOStreamOut *io = (FAudioIOStreamOut*) FAudio_malloc(
 		sizeof(FAudioIOStreamOut)
 	);
 	SDL_RWops *rwops = SDL_RWFromFile(path, mode);
