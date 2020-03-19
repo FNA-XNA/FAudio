@@ -84,9 +84,21 @@ void FAudio_PlatformInit(
 	want.format = AUDIO_F32;
 	want.channels = mixFormat->Format.nChannels;
 	want.silence = 0;
-	want.samples = 1024;
 	want.callback = FAudio_INTERNAL_MixCallback;
 	want.userdata = audio;
+	if (flags & FAUDIO_1024_QUANTUM)
+	{
+		/* Get the sample count for a 21.33ms frame.
+		 * For 48KHz this should be 1024.
+		 */
+		want.samples = (int) (
+			want.freq / (1000.0 / (64.0 / 3.0))
+		);
+	}
+	else
+	{
+		want.samples = want.freq / 100;
+	}
 
 	/* Open the device (or at least try to) */
 iosretry:
@@ -95,16 +107,7 @@ iosretry:
 		0,
 		&want,
 		&have,
-#if SDL_VERSION_ATLEAST(2, 0, 9)
-		(flags & FAUDIO_1024_QUANTUM) ? 0 : SDL_AUDIO_ALLOW_SAMPLES_CHANGE
-#else
-#ifdef _WIN32
-#error Windows absolutely positively needs SDL 2.0.9!
-#else
-#pragma message("Please update to SDL 2.0.9 ASAP!")
-#endif
 		0
-#endif
 	);
 	if (device == 0)
 	{
