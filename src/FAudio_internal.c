@@ -1468,19 +1468,6 @@ uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
 		{
 			voice->mix.outputSamples -= 1;
 		}
-
-		if (voice->mix.inputChannels == 1)
-		{
-			voice->mix.resample = FAudio_INTERNAL_ResampleMono;
-		}
-		else if (voice->mix.inputChannels == 2)
-		{
-			voice->mix.resample = FAudio_INTERNAL_ResampleStereo;
-		}
-		else
-		{
-			voice->mix.resample = FAudio_INTERNAL_ResampleGeneric;
-		}
 	}
 
 	/* Allocate resample cache */

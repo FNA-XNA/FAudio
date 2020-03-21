@@ -567,6 +567,20 @@ uint32_t FAudio_CreateSubmixVoice(
 	(*ppSubmixVoice)->mix.inputSampleRate = InputSampleRate;
 	(*ppSubmixVoice)->mix.processingStage = ProcessingStage;
 
+	/* Resampler */
+	if (InputChannels == 1)
+	{
+		(*ppSubmixVoice)->mix.resample = FAudio_INTERNAL_ResampleMono;
+	}
+	else if (InputChannels == 2)
+	{
+		(*ppSubmixVoice)->mix.resample = FAudio_INTERNAL_ResampleStereo;
+	}
+	else
+	{
+		(*ppSubmixVoice)->mix.resample = FAudio_INTERNAL_ResampleGeneric;
+	}
+
 	/* Sample Storage */
 	(*ppSubmixVoice)->mix.inputSamples = ((uint32_t) FAudio_ceil(
 		audio->updateSize *
