@@ -1431,14 +1431,7 @@ uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
 			(newResampleSamples != voice->src.resampleSamples) &&
 			(voice->effects.count > 0)	)
 		{
-			LOG_ERROR(
-				voice->audio,
-				"%s",
-				"Changing the sample rate while an effect chain is attached is invalid!"
-			)
-			FAudio_PlatformUnlockMutex(voice->sendLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-			LOG_API_EXIT(voice->audio)
+			LOG_FUNC_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
 		}
 		channelCount = voice->src.format->nChannels;
@@ -1450,14 +1443,7 @@ uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
 			(newResampleSamples != voice->mix.outputSamples) &&
 			(voice->effects.count > 0)	)
 		{
-			LOG_ERROR(
-				voice->audio,
-				"%s",
-				"Changing the sample rate while an effect chain is attached is invalid!"
-			)
-			FAudio_PlatformUnlockMutex(voice->sendLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-			LOG_API_EXIT(voice->audio)
+			LOG_FUNC_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
 		}
 		channelCount = voice->mix.inputChannels;
