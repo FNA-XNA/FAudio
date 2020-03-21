@@ -1019,6 +1019,14 @@ uint32_t FAudioVoice_SetOutputVoices(
 
 	if (FAudio_INTERNAL_VoiceOutputFrequency(voice, pSendList) != 0)
 	{
+		LOG_ERROR(
+			voice->audio,
+			"%s",
+			"Changing the sample rate while an effect chain is attached is invalid!"
+		)
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
 	}
 
