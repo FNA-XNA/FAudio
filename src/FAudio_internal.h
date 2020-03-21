@@ -499,6 +499,10 @@ void FAudio_INTERNAL_AllocEffectChain(
 	const FAudioEffectChain *pEffectChain
 );
 void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice);
+uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
+	FAudioVoice *voice,
+	const FAudioVoiceSends *pSendList
+);
 extern const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64];
 
 /* Debug */

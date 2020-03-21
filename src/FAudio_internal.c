@@ -1398,6 +1398,114 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 	LOG_FUNC_EXIT(voice->audio)
 }
 
+uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
+	FAudioVoice *voice,
+	const FAudioVoiceSends *pSendList
+) {
+	uint32_t channelCount = 0;
+	uint32_t outSampleRate;
+	uint32_t newResampleSamples;
+	uint64_t resampleSanityCheck;
+
+	LOG_FUNC_ENTER(voice->audio)
+
+	if ((pSendList == NULL) || (pSendList->SendCount == 0))
+	{
+		/* When we're deliberately given no sends, use master rate! */
+		outSampleRate = voice->audio->master->master.inputSampleRate;
+	}
+	else
+	{
+		outSampleRate = pSendList->pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
+			pSendList->pSends[0].pOutputVoice->master.inputSampleRate :
+			pSendList->pSends[0].pOutputVoice->mix.inputSampleRate;
+	}
+	newResampleSamples = (uint32_t) FAudio_ceil(
+		voice->audio->updateSize *
+		(double) outSampleRate /
+		(double) voice->audio->master->master.inputSampleRate
+	);
+	if (voice->type == FAUDIO_VOICE_SOURCE)
+	{
+		if (	(voice->src.resampleSamples != 0) &&
+			(newResampleSamples != voice->src.resampleSamples) &&
+			(voice->effects.count > 0)	)
+		{
+			LOG_ERROR(
+				voice->audio,
+				"%s",
+				"Changing the sample rate while an effect chain is attached is invalid!"
+			)
+			FAudio_PlatformUnlockMutex(voice->sendLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+			LOG_API_EXIT(voice->audio)
+			return FAUDIO_E_INVALID_CALL;
+		}
+		channelCount = voice->src.format->nChannels;
+		voice->src.resampleSamples = newResampleSamples;
+	}
+	else /* (voice->type == FAUDIO_VOICE_SUBMIX) */
+	{
+		if (	(voice->mix.outputSamples != 0) &&
+			(newResampleSamples != voice->mix.outputSamples) &&
+			(voice->effects.count > 0)	)
+		{
+			LOG_ERROR(
+				voice->audio,
+				"%s",
+				"Changing the sample rate while an effect chain is attached is invalid!"
+			)
+			FAudio_PlatformUnlockMutex(voice->sendLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+			LOG_API_EXIT(voice->audio)
+			return FAUDIO_E_INVALID_CALL;
+		}
+		channelCount = voice->mix.inputChannels;
+		voice->mix.outputSamples = newResampleSamples;
+
+		voice->mix.resampleStep = DOUBLE_TO_FIXED((
+			(double) voice->mix.inputSampleRate /
+			(double) outSampleRate
+		));
+
+		/* Because we used ceil earlier, there's a chance that
+		 * downsampling submixes will go past the number of samples
+		 * available. Sources can do this thanks to padding, but we
+		 * don't have that luxury for submixes, so unfortunately we
+		 * just have to undo the ceil and turn it into a floor.
+		 * -flibit
+		 */
+		resampleSanityCheck = (
+			voice->mix.resampleStep * voice->mix.outputSamples
+		) >> FIXED_PRECISION;
+		if (resampleSanityCheck > (voice->mix.inputSamples / voice->mix.inputChannels))
+		{
+			voice->mix.outputSamples -= 1;
+		}
+
+		if (voice->mix.inputChannels == 1)
+		{
+			voice->mix.resample = FAudio_INTERNAL_ResampleMono;
+		}
+		else if (voice->mix.inputChannels == 2)
+		{
+			voice->mix.resample = FAudio_INTERNAL_ResampleStereo;
+		}
+		else
+		{
+			voice->mix.resample = FAudio_INTERNAL_ResampleGeneric;
+		}
+	}
+
+	/* Allocate resample cache */
+	FAudio_INTERNAL_ResizeResampleCache(
+		voice->audio,
+		newResampleSamples * channelCount
+	);
+	LOG_FUNC_EXIT(voice->audio)
+	return 0;
+}
+
 const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64] =
 {
 	#include "matrix_defaults.inl"

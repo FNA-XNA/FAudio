@@ -474,6 +474,7 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.curBufferOffset = 0;
 
 	/* Sends/Effects */
+	FAudio_INTERNAL_VoiceOutputFrequency(*ppSourceVoice, pSendList);
 	FAudioVoice_SetEffectChain(*ppSourceVoice, pEffectChain);
 	FAudioVoice_SetOutputVoices(*ppSourceVoice, pSendList);
 
@@ -581,6 +582,7 @@ uint32_t FAudio_CreateSubmixVoice(
 	);
 
 	/* Sends/Effects */
+	FAudio_INTERNAL_VoiceOutputFrequency(*ppSubmixVoice, pSendList);
 	FAudioVoice_SetEffectChain(*ppSubmixVoice, pEffectChain);
 	FAudioVoice_SetOutputVoices(*ppSubmixVoice, pSendList);
 
@@ -1001,10 +1003,6 @@ uint32_t FAudioVoice_SetOutputVoices(
 ) {
 	uint32_t i;
 	uint32_t outChannels;
-	uint32_t channelCount = 0;
-	uint32_t outSampleRate;
-	uint32_t newResampleSamples;
-	uint64_t resampleSanityCheck;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
 
@@ -1016,111 +1014,13 @@ uint32_t FAudioVoice_SetOutputVoices(
 		return FAUDIO_E_INVALID_CALL;
 	}
 
-	/* Default to the mastering voice as output */
-	if (pSendList == NULL)
-	{
-		defaultSend.Flags = 0;
-		defaultSend.pOutputVoice = voice->audio->master;
-		defaultSends.SendCount = 1;
-		defaultSends.pSends = &defaultSend;
-		pSendList = &defaultSends;
-	}
-
 	FAudio_PlatformLockMutex(voice->sendLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 
-	/* Allocate resample cache */
-	if (pSendList->SendCount == 0)
+	if (FAudio_INTERNAL_VoiceOutputFrequency(voice, pSendList) != 0)
 	{
-		/* When we're deliberately given no sends, use master rate! */
-		outSampleRate = voice->audio->master->master.inputSampleRate;
+		return FAUDIO_E_INVALID_CALL;
 	}
-	else
-	{
-		outSampleRate = pSendList->pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER ?
-			pSendList->pSends[0].pOutputVoice->master.inputSampleRate :
-			pSendList->pSends[0].pOutputVoice->mix.inputSampleRate;
-	}
-	newResampleSamples = (uint32_t) FAudio_ceil(
-		voice->audio->updateSize *
-		(double) outSampleRate /
-		(double) voice->audio->master->master.inputSampleRate
-	);
-	if (voice->type == FAUDIO_VOICE_SOURCE)
-	{
-		if (	(voice->src.resampleSamples != 0) &&
-			(newResampleSamples != voice->src.resampleSamples) &&
-			(voice->effects.count > 0)	)
-		{
-			LOG_ERROR(
-				voice->audio,
-				"%s",
-				"Changing the sample rate while an effect chain is attached is invalid!"
-			)
-			FAudio_PlatformUnlockMutex(voice->sendLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-			LOG_API_EXIT(voice->audio)
-			return FAUDIO_E_INVALID_CALL;
-		}
-		channelCount = voice->src.format->nChannels;
-		voice->src.resampleSamples = newResampleSamples;
-	}
-	else /* (voice->type == FAUDIO_VOICE_SUBMIX) */
-	{
-		if (	(voice->mix.outputSamples != 0) &&
-			(newResampleSamples != voice->mix.outputSamples) &&
-			(voice->effects.count > 0)	)
-		{
-			LOG_ERROR(
-				voice->audio,
-				"%s",
-				"Changing the sample rate while an effect chain is attached is invalid!"
-			)
-			FAudio_PlatformUnlockMutex(voice->sendLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-			LOG_API_EXIT(voice->audio)
-			return FAUDIO_E_INVALID_CALL;
-		}
-		channelCount = voice->mix.inputChannels;
-		voice->mix.outputSamples = newResampleSamples;
-
-		voice->mix.resampleStep = DOUBLE_TO_FIXED((
-			(double) voice->mix.inputSampleRate /
-			(double) outSampleRate
-		));
-
-		/* Because we used ceil earlier, there's a chance that
-		 * downsampling submixes will go past the number of samples
-		 * available. Sources can do this thanks to padding, but we
-		 * don't have that luxury for submixes, so unfortunately we
-		 * just have to undo the ceil and turn it into a floor.
-		 * -flibit
-		 */
-		resampleSanityCheck = (
-			voice->mix.resampleStep * voice->mix.outputSamples
-		) >> FIXED_PRECISION;
-		if (resampleSanityCheck > (voice->mix.inputSamples / voice->mix.inputChannels))
-		{
-			voice->mix.outputSamples -= 1;
-		}
-
-		if (voice->mix.inputChannels == 1)
-		{
-			voice->mix.resample = FAudio_INTERNAL_ResampleMono;
-		}
-		else if (voice->mix.inputChannels == 2)
-		{
-			voice->mix.resample = FAudio_INTERNAL_ResampleStereo;
-		}
-		else
-		{
-			voice->mix.resample = FAudio_INTERNAL_ResampleGeneric;
-		}
-	}
-	FAudio_INTERNAL_ResizeResampleCache(
-		voice->audio,
-		newResampleSamples * channelCount
-	);
 
 	/* FIXME: This is lazy... */
 	for (i = 0; i < voice->sends.SendCount; i += 1)
@@ -1157,7 +1057,16 @@ uint32_t FAudioVoice_SetOutputVoices(
 		voice->audio->pFree(voice->sends.pSends);
 	}
 
-	if (pSendList->SendCount == 0)
+	/* Default to the mastering voice as output */
+	if (pSendList == NULL)
+	{
+		defaultSend.Flags = 0;
+		defaultSend.pOutputVoice = voice->audio->master;
+		defaultSends.SendCount = 1;
+		defaultSends.pSends = &defaultSend;
+		pSendList = &defaultSends;
+	}
+	else if (pSendList->SendCount == 0)
 	{
 		/* No sends? Nothing to do... */
 		voice->sendCoefficients = NULL;
