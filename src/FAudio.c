@@ -1065,9 +1065,9 @@ uint32_t FAudioVoice_SetOutputVoices(
 		voice->audio->pFree(voice->sends.pSends);
 	}
 
-	/* Default to the mastering voice as output */
 	if (pSendList == NULL)
 	{
+		/* Default to the mastering voice as output */
 		defaultSend.Flags = 0;
 		defaultSend.pOutputVoice = voice->audio->master;
 		defaultSends.SendCount = 1;
