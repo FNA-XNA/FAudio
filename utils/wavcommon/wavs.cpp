@@ -30,12 +30,13 @@ float* WAVS_Open(
 	unsigned int *wav_samplerate,
 	drwav_uint64 *wav_sample_count
 ) {
-	return drwav_open_and_read_file_f32(
+	return drwav_open_file_and_read_pcm_frames_f32(
 		(!stereo) ?
 			audio_sample_filenames[sample] :
 			audio_stereo_filenames[sample],
 		wav_channels,
 		wav_samplerate,
-		wav_sample_count
+		wav_sample_count,
+		NULL
 	);
 }
