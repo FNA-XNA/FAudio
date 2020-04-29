@@ -208,6 +208,7 @@ if(BUILD_UTILS)
 		utils/uicommon/imgui.cpp
 		utils/uicommon/imgui_demo.cpp
 		utils/uicommon/imgui_draw.cpp
+		utils/uicommon/imgui_widgets.cpp
 		utils/uicommon/imgui.h
 		utils/uicommon/imgui_internal.h
 		utils/uicommon/stb_rect_pack.h

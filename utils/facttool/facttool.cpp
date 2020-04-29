@@ -84,7 +84,7 @@ void FAudioTool_Quit()
 bool show_test_window = false;
 void FAudioTool_Update()
 {
-	ImGui::ShowTestWindow(&show_test_window);
+	ImGui::ShowDemoWindow(&show_test_window);
 
 	uint8_t *buf;
 	size_t len;

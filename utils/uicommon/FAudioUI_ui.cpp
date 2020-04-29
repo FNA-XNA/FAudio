@@ -112,6 +112,8 @@ void UI_RenderDrawLists(ImDrawData *draw_data)
 
 /* Public API */
 
+static ImGuiContext *imContext = NULL;
+
 void UI_Init(
 	int tab,
 	int left,
@@ -136,6 +138,9 @@ void UI_Init(
 	int *tw,
 	int *th
 ) {
+	imContext = ImGui::CreateContext(NULL);
+	ImGui::SetCurrentContext(imContext);
+
 	ImGuiIO& io = ImGui::GetIO();
 
 	/* Keyboard */
@@ -203,6 +208,11 @@ uint8_t UI_Update(
 	/* BEGIN */
 	ImGui::NewFrame();
 	return io.MouseDrawCursor;
+}
+
+void UI_Quit()
+{
+	ImGui::DestroyContext(imContext);
 }
 
 void UI_Render()
