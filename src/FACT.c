@@ -1066,7 +1066,10 @@ uint32_t FACTSoundBank_Play(
 	FACTCue *result;
 	if (pSoundBank == NULL)
 	{
-		*ppCue = NULL;
+		if (ppCue != NULL)
+		{
+			*ppCue = NULL;
+		}
 		return 1;
 	}
 
@@ -1105,7 +1108,10 @@ uint32_t FACTSoundBank_Play3D(
 	FACTCue *result;
 	if (pSoundBank == NULL)
 	{
-		*ppCue = NULL;
+		if (ppCue != NULL)
+		{
+			*ppCue = NULL;
+		}
 		return 1;
 	}
 
