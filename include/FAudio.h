@@ -390,7 +390,7 @@ typedef struct FAudioDebugConfiguration
 #define _SPEAKER_POSITIONS_
 #endif
 
-#ifndef _SPEAKER_COMBINATIONS_
+#ifndef SPEAKER_MONO
 #define SPEAKER_MONO	SPEAKER_FRONT_CENTER
 #define SPEAKER_STEREO	(SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT)
 #define SPEAKER_2POINT1 \
@@ -446,7 +446,6 @@ typedef struct FAudioDebugConfiguration
 		SPEAKER_SIDE_LEFT	| \
 		SPEAKER_SIDE_RIGHT	)
 #define SPEAKER_XBOX SPEAKER_5POINT1
-#define _SPEAKER_COMBINATIONS_
 #endif
 
 #define FAUDIO_FORMAT_PCM		1
