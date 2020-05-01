@@ -211,9 +211,9 @@ if(BUILD_UTILS)
 		utils/uicommon/imgui_widgets.cpp
 		utils/uicommon/imgui.h
 		utils/uicommon/imgui_internal.h
-		utils/uicommon/stb_rect_pack.h
-		utils/uicommon/stb_textedit.h
-		utils/uicommon/stb_truetype.h
+		utils/uicommon/imstb_rectpack.h
+		utils/uicommon/imstb_textedit.h
+		utils/uicommon/imstb_truetype.h
 	)
 	target_link_libraries(uicommon PUBLIC FAudio)
 
