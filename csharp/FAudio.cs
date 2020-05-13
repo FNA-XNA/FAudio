@@ -37,21 +37,6 @@ public static class FAudio
 
 	#endregion
 
-	#region UTF8 Marshaling
-
-	private static byte[] UTF8_ToNative(string s)
-	{
-		if (s == null)
-		{
-			return null;
-		}
-
-		// Add a null terminator. That's kind of it... :/
-		return System.Text.Encoding.UTF8.GetBytes(s + '\0');
-	}
-
-	#endregion
-
 	#region FAudio API
 
 	/* Version */
@@ -1292,37 +1277,16 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern uint FACTAudioEngine_PrepareWave(
+	public static extern uint FACTAudioEngine_PrepareWave(
 		IntPtr pEngine, /* FACTAudioEngine* */
 		uint dwFlags,
-		byte[] szWavePath,
+		[MarshalAs(UnmanagedType.LPStr)] string szWavePath,
 		uint wStreamingPacketSize,
 		uint dwAlignment,
 		uint dwPlayOffset,
 		byte nLoopCount,
 		out IntPtr ppWave /* FACTWave** */
 	);
-	public static uint FACTAudioEngine_PrepareWave(
-		IntPtr pEngine, /* FACTAudioEngine* */
-		uint dwFlags,
-		string szWavePath,
-		uint wStreamingPacketSize,
-		uint dwAlignment,
-		uint dwPlayOffset,
-		byte nLoopCount,
-		out IntPtr ppWave /* FACTWave** */
-	) {
-		return FACTAudioEngine_PrepareWave(
-			pEngine,
-			dwFlags,
-			UTF8_ToNative(szWavePath),
-			wStreamingPacketSize,
-			dwAlignment,
-			dwPlayOffset,
-			nLoopCount,
-			out ppWave
-		);
-	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTAudioEngine_PrepareInMemoryWave(
@@ -1363,19 +1327,10 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTAudioEngine_GetCategory(
+	public static extern ushort FACTAudioEngine_GetCategory(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		byte[] szFriendlyName
+		[MarshalAs(UnmanagedType.LPStr)] string szFriendlyName
 	);
-	public static ushort FACTAudioEngine_GetCategory(
-		IntPtr pEngine, /* FACTAudioEngine* */
-		string szFriendlyName
-	) {
-		return FACTAudioEngine_GetCategory(
-			pEngine,
-			UTF8_ToNative(szFriendlyName)
-		);
-	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTAudioEngine_Stop(
@@ -1399,19 +1354,10 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTAudioEngine_GetGlobalVariableIndex(
+	public static extern ushort FACTAudioEngine_GetGlobalVariableIndex(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		byte[] szFriendlyName
+		[MarshalAs(UnmanagedType.LPStr)] string szFriendlyName
 	);
-	public static ushort FACTAudioEngine_GetGlobalVariableIndex(
-		IntPtr pEngine, /* FACTAudioEngine* */
-		string szFriendlyName
-	) {
-		return FACTAudioEngine_GetGlobalVariableIndex(
-			pEngine,
-			UTF8_ToNative(szFriendlyName)
-		);
-	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTAudioEngine_SetGlobalVariable(
@@ -1430,20 +1376,11 @@ public static class FAudio
 	/* SoundBank Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTSoundBank_GetCueIndex(
+	public static extern ushort FACTSoundBank_GetCueIndex(
 		IntPtr pSoundBank, /* FACTSoundBank* */
-		byte[] szFriendlyName
+		[MarshalAs(UnmanagedType.LPStr)] string szFriendlyName
 	);
-	public static ushort FACTSoundBank_GetCueIndex(
-		IntPtr pSoundBank, /* FACTSoundBank* */
-		string szFriendlyName
-	) {
-		return FACTSoundBank_GetCueIndex(
-			pSoundBank, /* FACTSoundBank* */
-			UTF8_ToNative(szFriendlyName)
-		);
-	}
-
+	
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTSoundBank_GetNumCues(
 		IntPtr pSoundBank, /* FACTSoundBank* */
@@ -1532,19 +1469,10 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTWaveBank_GetWaveIndex(
+	public static extern ushort FACTWaveBank_GetWaveIndex(
 		IntPtr pWaveBank, /* FACTWaveBank* */
-		byte[] szFriendlyName
+		[MarshalAs(UnmanagedType.LPStr)] string szFriendlyName
 	);
-	public static ushort FACTWaveBank_GetWaveIndex(
-		IntPtr pWaveBank, /* FACTWaveBank* */
-		string szFriendlyName
-	) {
-		return FACTWaveBank_GetWaveIndex(
-			pWaveBank,
-			UTF8_ToNative(szFriendlyName)
-		);
-	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTWaveBank_GetWaveProperties(
@@ -1669,19 +1597,10 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTCue_GetVariableIndex(
+	public static extern ushort FACTCue_GetVariableIndex(
 		IntPtr pCue, /* FACTCue* */
-		byte[] szFriendlyName
+		[MarshalAs(UnmanagedType.LPStr)] string szFriendlyName
 	);
-	public static ushort FACTCue_GetVariableIndex(
-		IntPtr pCue, /* FACTCue* */
-		string szFriendlyName
-	) {
-		return FACTCue_GetVariableIndex(
-			pCue,
-			UTF8_ToNative(szFriendlyName)
-		);
-	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FACTCue_SetVariable(
@@ -2035,11 +1954,7 @@ public static class FAudio
 	public static extern void XNA_SongQuit();
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern float XNA_PlaySong(byte[] name);
-	public static float XNA_PlaySong(string name)
-	{
-		return XNA_PlaySong(UTF8_ToNative(name));
-	}
+	public static extern float XNA_PlaySong([MarshalAs(UnmanagedType.LPStr)] string name);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void XNA_PauseSong();
@@ -2110,11 +2025,7 @@ public static class FAudio
 
 	/* IntPtr refers to an FAudioIOStream* */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern IntPtr FAudio_fopen(byte[] path);
-	public static IntPtr FAudio_fopen(string path)
-	{
-		return FAudio_fopen(UTF8_ToNative(path));
-	}
+	public static extern IntPtr FAudio_fopen([MarshalAs(UnmanagedType.LPStr)] string path);
 
 	/* IntPtr refers to an FAudioIOStream* */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -2190,22 +2101,11 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern IntPtr stb_vorbis_open_filename(
-		byte[] filename,
+	public static extern IntPtr stb_vorbis_open_filename(
+		[MarshalAs(UnmanagedType.LPStr)] string filename,
 		out int error,
 		IntPtr alloc_buffer /* stb_vorbis_alloc* */
 	);
-	public static IntPtr stb_vorbis_open_filename(
-		string filename,
-		out int error,
-		IntPtr alloc_buffer /* stb_vorbis_alloc* */
-	) {
-		return stb_vorbis_open_filename(
-			UTF8_ToNative(filename),
-			out error,
-			alloc_buffer
-		);
-	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern IntPtr stb_vorbis_open_file(
