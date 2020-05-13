@@ -27,6 +27,7 @@
 #region Using Statements
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 #endregion
 
 public static class FAudio
@@ -39,17 +40,35 @@ public static class FAudio
 
 	#region UTF8 Marshaling
 
-	private static byte[] UTF8_ToNative(string s)
+	/* Used for stack allocated string marshaling. */
+	private static int Utf8Size(string str)
 	{
-		if (s == null)
+		return (str.Length * 4) + 1;
+	}
+	private static unsafe byte* Utf8Encode(string str, byte* buffer, int bufferSize)
+	{
+		fixed (char* strPtr = str)
 		{
-			return null;
+			Encoding.UTF8.GetBytes(strPtr, str.Length + 1, buffer, bufferSize);
 		}
 
-		// Add a null terminator. That's kind of it... :/
-		return System.Text.Encoding.UTF8.GetBytes(s + '\0');
+		return buffer;
 	}
 
+	/* Used for heap allocated string marshaling
+	 * Returned byte* must be free'd with FreeHGlobal.
+	 */
+	private static unsafe byte* Utf8Encode(string str)
+	{
+		int bufferSize = (str.Length * 4) + 1;
+		byte* buffer = (byte*)Marshal.AllocHGlobal(bufferSize);
+		fixed (char* strPtr = str)
+		{
+			Encoding.UTF8.GetBytes(strPtr, str.Length + 1, buffer, bufferSize);
+		}
+		return buffer;
+	}
+	
 	#endregion
 
 	#region FAudio API
@@ -1292,17 +1311,17 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern uint FACTAudioEngine_PrepareWave(
+	private static extern unsafe uint FACTAudioEngine_PrepareWave(
 		IntPtr pEngine, /* FACTAudioEngine* */
 		uint dwFlags,
-		byte[] szWavePath,
+		byte* szWavePath,
 		uint wStreamingPacketSize,
 		uint dwAlignment,
 		uint dwPlayOffset,
 		byte nLoopCount,
 		out IntPtr ppWave /* FACTWave** */
 	);
-	public static uint FACTAudioEngine_PrepareWave(
+	public static unsafe uint FACTAudioEngine_PrepareWave(
 		IntPtr pEngine, /* FACTAudioEngine* */
 		uint dwFlags,
 		string szWavePath,
@@ -1312,16 +1331,11 @@ public static class FAudio
 		byte nLoopCount,
 		out IntPtr ppWave /* FACTWave** */
 	) {
-		return FACTAudioEngine_PrepareWave(
-			pEngine,
-			dwFlags,
-			UTF8_ToNative(szWavePath),
-			wStreamingPacketSize,
-			dwAlignment,
-			dwPlayOffset,
-			nLoopCount,
-			out ppWave
-		);
+		byte* utf8WavePath = Utf8Encode(szWavePath);
+		uint wave = FACTAudioEngine_PrepareWave(pEngine, dwFlags, utf8WavePath,
+			wStreamingPacketSize, dwAlignment, dwPlayOffset, nLoopCount, out ppWave);
+		Marshal.FreeHGlobal((IntPtr)utf8WavePath);
+		return wave;
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -1363,17 +1377,19 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTAudioEngine_GetCategory(
+	private static extern unsafe ushort FACTAudioEngine_GetCategory(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		byte[] szFriendlyName
+		byte* szFriendlyName
 	);
-	public static ushort FACTAudioEngine_GetCategory(
+	public static unsafe ushort FACTAudioEngine_GetCategory(
 		IntPtr pEngine, /* FACTAudioEngine* */
 		string szFriendlyName
 	) {
+		int utf8BufSize = Utf8Size(szFriendlyName);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
 		return FACTAudioEngine_GetCategory(
 			pEngine,
-			UTF8_ToNative(szFriendlyName)
+			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize)
 		);
 	}
 
@@ -1399,17 +1415,19 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTAudioEngine_GetGlobalVariableIndex(
+	private static extern unsafe ushort FACTAudioEngine_GetGlobalVariableIndex(
 		IntPtr pEngine, /* FACTAudioEngine* */
-		byte[] szFriendlyName
+		byte* szFriendlyName
 	);
-	public static ushort FACTAudioEngine_GetGlobalVariableIndex(
+	public static unsafe ushort FACTAudioEngine_GetGlobalVariableIndex(
 		IntPtr pEngine, /* FACTAudioEngine* */
 		string szFriendlyName
 	) {
+		int utf8BufSize = Utf8Size(szFriendlyName);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
 		return FACTAudioEngine_GetGlobalVariableIndex(
 			pEngine,
-			UTF8_ToNative(szFriendlyName)
+			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize)
 		);
 	}
 
@@ -1430,18 +1448,19 @@ public static class FAudio
 	/* SoundBank Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTSoundBank_GetCueIndex(
+	private static extern unsafe ushort FACTSoundBank_GetCueIndex(
 		IntPtr pSoundBank, /* FACTSoundBank* */
-		byte[] szFriendlyName
+		byte* szFriendlyName
 	);
-	public static ushort FACTSoundBank_GetCueIndex(
+	public static unsafe ushort FACTSoundBank_GetCueIndex(
 		IntPtr pSoundBank, /* FACTSoundBank* */
 		string szFriendlyName
-	) {
-		return FACTSoundBank_GetCueIndex(
-			pSoundBank, /* FACTSoundBank* */
-			UTF8_ToNative(szFriendlyName)
-		);
+	)
+	{
+		int utf8BufSize = Utf8Size(szFriendlyName);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
+		return FACTSoundBank_GetCueIndex(pSoundBank, /* FACTSoundBank* */
+			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize));
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -1532,17 +1551,19 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTWaveBank_GetWaveIndex(
+	private static extern unsafe ushort FACTWaveBank_GetWaveIndex(
 		IntPtr pWaveBank, /* FACTWaveBank* */
-		byte[] szFriendlyName
+		byte* szFriendlyName
 	);
-	public static ushort FACTWaveBank_GetWaveIndex(
+	public static unsafe ushort FACTWaveBank_GetWaveIndex(
 		IntPtr pWaveBank, /* FACTWaveBank* */
 		string szFriendlyName
 	) {
+		int utf8BufSize = Utf8Size(szFriendlyName);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
 		return FACTWaveBank_GetWaveIndex(
 			pWaveBank,
-			UTF8_ToNative(szFriendlyName)
+			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize)
 		);
 	}
 
@@ -1669,17 +1690,19 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ushort FACTCue_GetVariableIndex(
+	private static extern unsafe ushort FACTCue_GetVariableIndex(
 		IntPtr pCue, /* FACTCue* */
-		byte[] szFriendlyName
+		byte* szFriendlyName
 	);
-	public static ushort FACTCue_GetVariableIndex(
+	public static unsafe ushort FACTCue_GetVariableIndex(
 		IntPtr pCue, /* FACTCue* */
 		string szFriendlyName
 	) {
+		int utf8BufSize = Utf8Size(szFriendlyName);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
 		return FACTCue_GetVariableIndex(
 			pCue,
-			UTF8_ToNative(szFriendlyName)
+			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize)
 		);
 	}
 
@@ -2035,10 +2058,12 @@ public static class FAudio
 	public static extern void XNA_SongQuit();
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern float XNA_PlaySong(byte[] name);
-	public static float XNA_PlaySong(string name)
+	private static extern unsafe float XNA_PlaySong(byte* name);
+	public static unsafe float XNA_PlaySong(string name)
 	{
-		return XNA_PlaySong(UTF8_ToNative(name));
+		int utf8BufSize = Utf8Size(name);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
+		return XNA_PlaySong(Utf8Encode(name, utf8Buf, utf8BufSize));
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -2110,10 +2135,12 @@ public static class FAudio
 
 	/* IntPtr refers to an FAudioIOStream* */
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern IntPtr FAudio_fopen(byte[] path);
-	public static IntPtr FAudio_fopen(string path)
+	private static extern unsafe IntPtr FAudio_fopen(byte* path);
+	public static unsafe IntPtr FAudio_fopen(string path)
 	{
-		return FAudio_fopen(UTF8_ToNative(path));
+		int utf8BufSize = Utf8Size(path);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
+		return FAudio_fopen(Utf8Encode(path, utf8Buf, utf8BufSize));
 	}
 
 	/* IntPtr refers to an FAudioIOStream* */
@@ -2190,18 +2217,20 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern IntPtr stb_vorbis_open_filename(
-		byte[] filename,
+	private static extern unsafe IntPtr stb_vorbis_open_filename(
+		byte* filename,
 		out int error,
 		IntPtr alloc_buffer /* stb_vorbis_alloc* */
 	);
-	public static IntPtr stb_vorbis_open_filename(
+	public static unsafe IntPtr stb_vorbis_open_filename(
 		string filename,
 		out int error,
 		IntPtr alloc_buffer /* stb_vorbis_alloc* */
 	) {
+		int utf8BufSize = Utf8Size(filename);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
 		return stb_vorbis_open_filename(
-			UTF8_ToNative(filename),
+			Utf8Encode(filename, utf8Buf, utf8BufSize),
 			out error,
 			alloc_buffer
 		);
