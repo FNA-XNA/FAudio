@@ -2314,7 +2314,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		}
 	}
 
-	if (pBuffer->LoopCount > 0)
+	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL)
 	{
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
 		if (loopBegin >= (playBegin + playLength))
@@ -2355,6 +2355,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		*adpcmByteCount = (
 			pBuffer->AudioBytes / voice->src.format->nBlockAlign
 		) * voice->src.format->nBlockAlign;
+	}
+	else if (pBufferWMA != NULL)
+	{
+		/* WMA only supports looping the whole buffer */
+		loopBegin = 0;
+		loopLength = playBegin + playLength;
 	}
 
 	/* Allocate, now that we have valid input */
