@@ -1332,10 +1332,18 @@ public static class FAudio
 		out IntPtr ppWave /* FACTWave** */
 	) {
 		byte* utf8WavePath = Utf8Encode(szWavePath);
-		uint wave = FACTAudioEngine_PrepareWave(pEngine, dwFlags, utf8WavePath,
-			wStreamingPacketSize, dwAlignment, dwPlayOffset, nLoopCount, out ppWave);
-		Marshal.FreeHGlobal((IntPtr)utf8WavePath);
-		return wave;
+		uint result = FACTAudioEngine_PrepareWave(
+			pEngine,
+			dwFlags,
+			utf8WavePath,
+			wStreamingPacketSize,
+			dwAlignment,
+			dwPlayOffset,
+			nLoopCount,
+			out ppWave
+		);
+		Marshal.FreeHGlobal((IntPtr) utf8WavePath);
+		return result;
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -1459,8 +1467,10 @@ public static class FAudio
 	{
 		int utf8BufSize = Utf8Size(szFriendlyName);
 		byte* utf8Buf = stackalloc byte[utf8BufSize];
-		return FACTSoundBank_GetCueIndex(pSoundBank, /* FACTSoundBank* */
-			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize));
+		return FACTSoundBank_GetCueIndex(
+			pSoundBank,
+			Utf8Encode(szFriendlyName, utf8Buf, utf8BufSize)
+		);
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
