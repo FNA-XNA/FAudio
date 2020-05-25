@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #endif
 
 #include <inttypes.h>
@@ -108,6 +109,21 @@ static void ok_(const char *file, int line, BOOL success, const char *fmt, ...)
 }
 
 static int xaudio27;
+
+#ifdef _WIN32
+DWORD main_thread_id;
+#else
+pthread_t main_thread_id;
+#endif
+
+static int is_main_thread(void)
+{
+#ifdef _WIN32
+    return GetCurrentThreadId() == main_thread_id;
+#else
+    return pthread_equal(pthread_self(), main_thread_id);
+#endif
+}
 
 static void fill_buf(float *buf, WAVEFORMATEX *fmt, DWORD hz, DWORD len_frames)
 {
@@ -1093,6 +1109,124 @@ static void test_submix(IXAudio2 *xa)
     IXAudio2MasteringVoice_DestroyVoice(master);
 }
 
+static void WINAPI flush_buf_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *This,
+        UINT32 BytesRequired)
+{
+}
+
+static void WINAPI flush_buf_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *This)
+{
+}
+
+static void WINAPI flush_buf_OnStreamEnd(IXAudio2VoiceCallback *This)
+{
+    ok(0, "Unexpected OnStreamEnd\n");
+}
+
+static void WINAPI flush_buf_OnBufferStart(IXAudio2VoiceCallback *This,
+        void *pBufferContext)
+{
+}
+
+struct flush_buf_testdata {
+    IXAudio2SourceVoice *src;
+    int idx;
+    int test;
+};
+
+static int flush_buf_tested;
+
+static void WINAPI flush_buf_OnBufferEnd(IXAudio2VoiceCallback *This,
+        void *pBufferContext)
+{
+    struct flush_buf_testdata *data = pBufferContext;
+    XAUDIO2_VOICE_STATE state;
+    XAUDIO2_BUFFER buf;
+    HRESULT hr;
+
+    ok(!is_main_thread(), "Buffer callback called from main thread!\n");
+    if(!data)
+        return;
+
+    IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)data->src, &state);
+    switch(data->test){
+        case 0:
+            ok(state.BuffersQueued == data->idx ? 0 : 1,
+                "Got wrong number of buffers remaining for index %u: %u\n", data->idx, state.BuffersQueued);
+            ok(data->idx == flush_buf_tested, "Wrong index %u\n", data->idx);
+            break;
+
+        case 1:
+            ok(state.BuffersQueued == 1, "Got wrong number of buffers remaining: %u\n", state.BuffersQueued);
+            ok(data->idx == 1, "Wrong index %u\n", data->idx);
+            break;
+
+        case 2:
+            ok(state.BuffersQueued == 1, "Got wrong number of buffers remaining: %u\n", state.BuffersQueued);
+
+            /* Avoid it when first buffer is flushed */
+            if(data->idx == 0)
+                return;
+
+            /* FlushSourceBuffers is not executed immediately even when called from a callback */
+            memset(&buf, 0, sizeof(buf));
+            buf.AudioBytes = 22050 * 2 * 4;
+            buf.pAudioData = FAtest_malloc(buf.AudioBytes);
+            memset((float*)buf.pAudioData, 0, buf.AudioBytes);
+
+            hr = IXAudio2SourceVoice_SubmitSourceBuffer(data->src, &buf, NULL);
+            ok(hr == S_OK, "SubmitSourceBuffer failed: %08x\n", hr);
+
+            IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)data->src, &state);
+            ok(state.BuffersQueued == 2, "Got wrong number of buffers remaining: %u\n", state.BuffersQueued);
+
+            hr = IXAudio2SourceVoice_FlushSourceBuffers(data->src);
+            ok(hr == S_OK, "FlushSourceBuffers failed: %08x\n", hr);
+
+            IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)data->src, &state);
+            ok(state.BuffersQueued == 2, "Got wrong number of buffers remaining: %u\n", state.BuffersQueued);
+            break;
+    }
+
+    flush_buf_tested++;
+}
+
+static void WINAPI flush_buf_OnLoopEnd(IXAudio2VoiceCallback *This,
+        void *pBufferContext)
+{
+    ok(0, "Unexpected OnLoopEnd\n");
+}
+
+static void WINAPI flush_buf_OnVoiceError(IXAudio2VoiceCallback *This,
+        void *pBuffercontext, HRESULT Error)
+{
+    ok(0, "Unexpected OnVoiceError\n");
+}
+
+#ifdef _WIN32
+static IXAudio2VoiceCallbackVtbl flush_buf_vtbl = {
+    flush_buf_OnVoiceProcessingPassStart,
+    flush_buf_OnVoiceProcessingPassEnd,
+    flush_buf_OnStreamEnd,
+    flush_buf_OnBufferStart,
+    flush_buf_OnBufferEnd,
+    flush_buf_OnLoopEnd,
+    flush_buf_OnVoiceError
+};
+
+static IXAudio2VoiceCallback flush_buf = { &flush_buf_vtbl };
+#else
+static FAudioVoiceCallback flush_buf = {
+    flush_buf_OnBufferEnd,
+    flush_buf_OnBufferStart,
+    flush_buf_OnLoopEnd,
+    flush_buf_OnStreamEnd,
+    flush_buf_OnVoiceError,
+    flush_buf_OnVoiceProcessingPassEnd,
+    flush_buf_OnVoiceProcessingPassStart
+};
+#endif
+
 static void test_flush(IXAudio2 *xa)
 {
     HRESULT hr;
@@ -1101,6 +1235,8 @@ static void test_flush(IXAudio2 *xa)
     WAVEFORMATEX fmt;
     XAUDIO2_BUFFER buf;
     XAUDIO2_VOICE_STATE state;
+    struct flush_buf_testdata testdata[2];
+    int i, j;
 
     XA2CALL_0V(StopEngine);
 
@@ -1168,6 +1304,74 @@ static void test_flush(IXAudio2 *xa)
         IXAudio27SourceVoice_DestroyVoice((IXAudio27SourceVoice*)src);
     }else{
         IXAudio2SourceVoice_DestroyVoice(src);
+    }
+
+    /* In XA2.7 FlushSourceBuffers is always asynchronous. We also test Stop both
+     * before and after FlushSourceBuffers, with two buffers submitted. During the
+     * FlushSourceBuffers callbacks, even if Stop was called first (and thus both
+     * buffers get OnBufferEnd events), the BuffersQueued is still 1 for the first
+     * event. The game Legend of Heroes: Trails of Cold Steel 2 relies on this. */
+    if(xaudio27){
+        for(i = 0; i < 3; ++i){
+            flush_buf_tested = 0;
+
+            XA2CALL(CreateSourceVoice, &src, &fmt, 0, 1.f, &flush_buf, NULL, NULL);
+            ok(hr == S_OK, "CreateSourceVoice failed: %08x\n", hr);
+
+            for(j = 0; j < 2; j++){
+                testdata[j].idx = j;
+                testdata[j].test = i;
+                testdata[j].src = src;
+                buf.pContext = &testdata[j];
+
+                hr = IXAudio2SourceVoice_SubmitSourceBuffer(src, &buf, NULL);
+                ok(hr == S_OK, "SubmitSourceBuffer failed: %08x\n", hr);
+            }
+
+            hr = IXAudio2SourceVoice_Start(src, 0, XAUDIO2_COMMIT_NOW);
+            ok(hr == S_OK, "Start failed: %08x\n", hr);
+
+            while(1){
+                IXAudio27SourceVoice_GetState((IXAudio27SourceVoice*)src, &state);
+                if(state.SamplesPlayed >= 2205)
+                    break;
+                FAtest_sleep(10);
+            }
+
+            switch(i){
+                case 0:
+                    hr = IXAudio2SourceVoice_Stop(src, 0, XAUDIO2_COMMIT_NOW);
+                    ok(hr == S_OK, "Stop failed: %08x\n", hr);
+
+                    hr = IXAudio2SourceVoice_FlushSourceBuffers(src);
+                    ok(hr == S_OK, "FlushSourceBuffers failed: %08x\n", hr);
+
+                    while(1){
+                        if(flush_buf_tested >= 2)
+                            break;
+                        FAtest_sleep(10);
+                    }
+                    ok(flush_buf_tested == 2, "Wrong number of OnBufferEnd callbacks tested: %u\n", flush_buf_tested);
+                    break;
+
+                case 1:
+                case 2:
+                    hr = IXAudio2SourceVoice_FlushSourceBuffers(src);
+                    ok(hr == S_OK, "FlushSourceBuffers failed: %08x\n", hr);
+
+                    hr = IXAudio2SourceVoice_Stop(src, 0, XAUDIO2_COMMIT_NOW);
+                    ok(hr == S_OK, "Stop failed: %08x\n", hr);
+
+                    while(1){
+                        if(flush_buf_tested >= 1)
+                            break;
+                        FAtest_sleep(10);
+                    }
+                    ok(flush_buf_tested == 1, "Wrong number of OnBufferEnd callbacks tested: %u\n", flush_buf_tested);
+                    break;
+            }
+            IXAudio27SourceVoice_DestroyVoice((IXAudio27SourceVoice*)src);
+        }
     }
     IXAudio2MasteringVoice_DestroyVoice(master);
 
@@ -1258,12 +1462,14 @@ int main(int argc, char **argv)
 #ifdef _WIN32
     HANDLE xa28dll;
 
+    main_thread_id = GetCurrentThreadId();
 
     CoInitialize(NULL);
 
     hr = CoCreateInstance(&CLSID_XAudio27, NULL, CLSCTX_INPROC_SERVER,
             &IID_IXAudio27, (void**)&xa27);
 #else
+    main_thread_id = pthread_self();
     hr = FAudioCOMConstructEXT(&xa27, 7);
     ok(hr == S_OK, "Failed to create FAudio object\n");
 #endif
