@@ -452,6 +452,7 @@ struct FAudioVoice
 			uint8_t newBuffer;
 			uint64_t totalSamples;
 			FAudioBufferEntry *bufferList;
+			FAudioBufferEntry *flushList;
 			FAudioMutex bufferLock;
 		} src;
 		struct

@@ -373,6 +373,7 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
 	(*ppSourceVoice)->src.bufferList = NULL;
+	(*ppSourceVoice)->src.flushList = NULL;
 	(*ppSourceVoice)->src.bufferLock = FAudio_PlatformCreateMutex();
 	LOG_MUTEX_CREATE(audio, (*ppSourceVoice)->src.bufferLock)
 
@@ -2051,6 +2052,14 @@ void FAudioVoice_DestroyVoice(FAudioVoice *voice)
 			entry = next;
 		}
 
+		entry = voice->src.flushList;
+		while (entry != NULL)
+		{
+			next = entry->next;
+			voice->audio->pFree(entry);
+			entry = next;
+		}
+
 		voice->audio->pFree(voice->src.format);
 		LOG_MUTEX_DESTROY(voice->audio, voice->src.bufferLock)
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
@@ -2415,7 +2424,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudioSourceVoice *voice
 ) {
-	FAudioBufferEntry *entry, *next;
+	FAudioBufferEntry *entry, *latest;
 
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
@@ -2437,19 +2446,22 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 		voice->src.newBuffer = 0;
 	}
 
-	/* Go through each buffer, send an event for each one before deleting */
-	while (entry != NULL)
+	/* Move them to the pending flush list */
+	if (entry != NULL)
 	{
-		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
+		if (voice->src.flushList == NULL)
 		{
-			voice->src.callback->OnBufferEnd(
-				voice->src.callback,
-				entry->buffer.pContext
-			);
+			voice->src.flushList = entry;
 		}
-		next = entry->next;
-		voice->audio->pFree(entry);
-		entry = next;
+		else
+		{
+			latest = voice->src.flushList;
+			while (latest->next != NULL)
+			{
+				latest = latest->next;
+			}
+			latest->next = entry;
+		}
 	}
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
@@ -2545,6 +2557,14 @@ void FAudioSourceVoice_GetState(
 			pVoiceState->BuffersQueued += 1;
 			entry = entry->next;
 		} while (entry != NULL);
+	}
+
+	/* Pending flushed buffers also count */
+	entry = voice->src.flushList;
+	while (entry != NULL)
+	{
+		pVoiceState->BuffersQueued += 1;
+		entry = entry->next;
 	}
 
 	LOG_INFO(

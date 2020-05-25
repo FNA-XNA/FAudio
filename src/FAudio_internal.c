@@ -1119,6 +1119,33 @@ end:
 	LOG_FUNC_EXIT(voice->audio)
 }
 
+static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
+{
+	FAudioBufferEntry *entry;
+
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
+	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+
+	/* Remove pending flushed buffers and send an event for each one */
+	while (voice->src.flushList != NULL)
+	{
+		entry = voice->src.flushList;
+		voice->src.flushList = voice->src.flushList->next;
+
+		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
+		{
+			voice->src.callback->OnBufferEnd(
+				voice->src.callback,
+				entry->buffer.pContext
+			);
+		}
+		voice->audio->pFree(entry);
+	}
+
+	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+}
+
 static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *output)
 {
 	uint32_t totalSamples;
@@ -1183,10 +1210,14 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 		audio->processingSource = (FAudioSourceVoice*) list->entry;
 		FAudio_PlatformUnlockMutex(audio->sourceLock);
 		LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
+
+		FAudio_INTERNAL_FlushPendingBuffers(audio->processingSource);
 		if (audio->processingSource->src.active)
 		{
 			FAudio_INTERNAL_MixSource(audio->processingSource);
+			FAudio_INTERNAL_FlushPendingBuffers(audio->processingSource);
 		}
+
 		FAudio_PlatformLockMutex(audio->sourceLock);
 		LOG_MUTEX_LOCK(audio, audio->sourceLock)
 		list = list->next;
