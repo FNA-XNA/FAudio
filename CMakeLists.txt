@@ -1,7 +1,7 @@
 # CMake Project for FAudio
 # Written by @NeroBurner
 cmake_minimum_required(VERSION 2.8.12)
-project(FAudio)
+project(FAudio C)
 
 # Options
 option(FFMPEG "Enable FFmpeg support (WMA, XMA)" OFF)
@@ -280,6 +280,8 @@ endif()
 
 # cpp/ Folder
 if(BUILD_CPP)
+	enable_language(CXX)
+
 	# XAPOBase, used by XAudio2 and XAPOFX
 	add_library(XAPOBase STATIC
 		cpp/XAPOBase.cpp
