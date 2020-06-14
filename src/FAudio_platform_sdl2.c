@@ -75,6 +75,7 @@ void FAudio_PlatformInit(
 ) {
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
+	int changes = 0;
 
 	FAudio_assert(mixFormat != NULL);
 	FAudio_assert(updateSize != NULL);
@@ -100,6 +101,22 @@ void FAudio_PlatformInit(
 		want.samples = want.freq / 100;
 	}
 
+	/* FIXME: SDL bug!
+	 * The PulseAudio backend does this annoying thing where it halves the
+	 * buffer size to prevent latency issues:
+	 *
+	 * https://hg.libsdl.org/SDL/file/df343364c6c5/src/audio/pulseaudio/SDL_pulseaudio.c#l577
+	 *
+	 * To get the _actual_ quantum size we want, we just double the buffer
+	 * size and allow SDL to set the quantum size back to normal.
+	 * -flibit
+	 */
+	if (SDL_strcmp(SDL_GetCurrentAudioDriver(), "pulseaudio") == 0)
+	{
+		want.samples *= 2;
+		changes = SDL_AUDIO_ALLOW_SAMPLES_CHANGE;
+	}
+
 	/* Open the device (or at least try to) */
 iosretry:
 	device = SDL_OpenAudioDevice(
@@ -107,7 +124,7 @@ iosretry:
 		0,
 		&want,
 		&have,
-		0
+		changes
 	);
 	if (device == 0)
 	{
