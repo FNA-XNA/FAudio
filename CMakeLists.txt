@@ -198,6 +198,8 @@ endif()
 
 # utils/ Folder
 if(BUILD_UTILS)
+	enable_language(CXX)
+
 	# Shared ImGui Framework
 	add_library(uicommon STATIC
 		utils/uicommon/FAudioUI_main.cpp
