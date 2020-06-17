@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(FAudio C)
 
 # Options
-option(FFMPEG "Enable FFmpeg support (WMA, XMA)" OFF)
+option(GSTREAMER "Enable GStreamer support (WMA, XMA)" OFF)
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 if(WIN32)
@@ -100,7 +100,7 @@ add_library(FAudio
 	src/FAudio_platform_sdl2.c
 	# Optional source files
 	src/XNA_Song.c
-	src/FAudio_ffmpeg.c
+	src/FAudio_gstreamer.c
 )
 
 # Only disable DebugConfiguration in release builds
@@ -135,28 +135,29 @@ if(NOT XNASONG)
 	target_compile_definitions(FAudio PRIVATE DISABLE_XNASONG)
 endif()
 
-# FFmpeg Support
-if(FFMPEG)
+# GStreamer Support
+if(GSTREAMER)
 	# Add the extra definition...
-	target_compile_definitions(FAudio PRIVATE HAVE_FFMPEG=1)
+	target_compile_definitions(FAudio PRIVATE HAVE_GSTREAMER=1)
 
-	# Find FFmpeg...
-	find_package(FFmpeg COMPONENTS
-		avcodec
-		avutil # dep of avcodec
-		swresample # dep of avcodec
-		REQUIRED
+	# Find GStreamer
+	find_package(PkgConfig)
+	pkg_check_modules(GST REQUIRED IMPORTED_TARGET gstreamer-1.0)
+	pkg_check_modules(GSTAUDIO REQUIRED IMPORTED_TARGET gstreamer-audio-1.0)
+	pkg_check_modules(GSTAPP REQUIRED IMPORTED_TARGET gstreamer-app-1.0)
+
+	# Include/Link GStreamer...
+	target_include_directories(FAudio PRIVATE
+		${GST_INCLUDE_DIRS}
+		${GSTAUDIO_INCLUDE_DIRS}
+		${GSTAPP_INCLUDE_DIRS}
 	)
-
-	# Include/Link FFmpeg...
-	target_include_directories(FAudio PRIVATE ${FFmpeg_INCLUDE_DIRS})
-	target_link_libraries(FAudio PRIVATE ${FFmpeg_LIBRARIES})
-
-	# Install FFmpeg for MinGW target
-	if(INSTALL_MINGW_DEPENDENCIES)
-		install_shared_libs(FILES ${FFmpeg_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-	endif()
-endif(FFMPEG)
+	target_link_libraries(FAudio PRIVATE
+            PkgConfig::GST
+            PkgConfig::GSTAUDIO
+            PkgConfig::GSTAPP
+        )
+endif(GSTREAMER)
 
 # Dump source voices to RIFF WAVE files
 if(DUMP_VOICES)
