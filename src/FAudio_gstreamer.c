@@ -285,14 +285,14 @@ static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer
 	return gstreamer->blockSizes[block] != (size_t) -1;
 }
 
-static void FAudio_INTERNAL_DecodeGSTREAMER(
+static uint32_t FAudio_INTERNAL_DecodeGSTREAMER(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
 	uint32_t samples
 ) {
 	size_t byteOffset, siz, totalSize, maxBytes;
-	uint32_t curBlock, curBufferOffset;
+	uint32_t curBlock, curBufferOffset, origSamples = samples;
 	uint32_t i;
 	uint8_t *convertCache;
 	int error = 0;
@@ -414,6 +414,8 @@ done:
 	}
 
 	LOG_FUNC_EXIT(voice->audio)
+
+	return origSamples - samples;
 }
 
 void FAudio_GSTREAMER_end_buffer(FAudioSourceVoice *pSourceVoice)

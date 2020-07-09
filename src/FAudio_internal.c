@@ -399,7 +399,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		);
 
 		/* Decode... */
-		voice->src.decode(
+		endRead = voice->src.decode(
 			voice,
 			buffer,
 			voice->audio->decodeCache + (
@@ -1517,7 +1517,7 @@ const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64] =
 
 /* PCM Decoding */
 
-void FAudio_INTERNAL_DecodePCM8(
+uint32_t FAudio_INTERNAL_DecodePCM8(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1532,9 +1532,10 @@ void FAudio_INTERNAL_DecodePCM8(
 		samples * voice->src.format->nChannels
 	);
 	LOG_FUNC_EXIT(voice->audio)
+	return samples;
 }
 
-void FAudio_INTERNAL_DecodePCM16(
+uint32_t FAudio_INTERNAL_DecodePCM16(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1549,9 +1550,10 @@ void FAudio_INTERNAL_DecodePCM16(
 		samples * voice->src.format->nChannels
 	);
 	LOG_FUNC_EXIT(voice->audio)
+	return samples;
 }
 
-void FAudio_INTERNAL_DecodePCM24(
+uint32_t FAudio_INTERNAL_DecodePCM24(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1576,9 +1578,10 @@ void FAudio_INTERNAL_DecodePCM24(
 	}
 
 	LOG_FUNC_EXIT(voice->audio)
+	return samples;
 }
 
-void FAudio_INTERNAL_DecodePCM32(
+uint32_t FAudio_INTERNAL_DecodePCM32(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1593,9 +1596,10 @@ void FAudio_INTERNAL_DecodePCM32(
 		samples * voice->src.format->nChannels
 	);
 	LOG_FUNC_EXIT(voice->audio)
+	return samples;
 }
 
-void FAudio_INTERNAL_DecodePCM32F(
+uint32_t FAudio_INTERNAL_DecodePCM32F(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1610,6 +1614,7 @@ void FAudio_INTERNAL_DecodePCM32F(
 		sizeof(float) * samples * voice->src.format->nChannels
 	);
 	LOG_FUNC_EXIT(voice->audio)
+	return samples;
 }
 
 /* MSADPCM Decoding */
@@ -1762,7 +1767,7 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 
 #undef READ
 
-void FAudio_INTERNAL_DecodeMonoMSADPCM(
+uint32_t FAudio_INTERNAL_DecodeMonoMSADPCM(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1811,9 +1816,10 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 		midOffset = 0;
 	}
 	LOG_FUNC_EXIT(voice->audio)
+	return done;
 }
 
-void FAudio_INTERNAL_DecodeStereoMSADPCM(
+uint32_t FAudio_INTERNAL_DecodeStereoMSADPCM(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1862,11 +1868,12 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		midOffset = 0;
 	}
 	LOG_FUNC_EXIT(voice->audio)
+	return done;
 }
 
 /* Fallback WMA decoder, get ready for spam! */
 
-void FAudio_INTERNAL_DecodeWMAERROR(
+uint32_t FAudio_INTERNAL_DecodeWMAERROR(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
 	float *decodeCache,
@@ -1876,6 +1883,7 @@ void FAudio_INTERNAL_DecodeWMAERROR(
 	LOG_ERROR(voice->audio, "%s", "WMA IS NOT SUPPORTED IN THIS BUILD!")
 	FAudio_zero(decodeCache, samples * voice->src.format->nChannels * sizeof(float));
 	LOG_FUNC_EXIT(voice->audio)
+	return samples;
 }
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */

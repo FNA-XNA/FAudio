@@ -229,7 +229,7 @@ struct FAudioBufferEntry
 	FAudioBufferEntry *next;
 };
 
-typedef void (FAUDIOCALL * FAudioDecodeCallback)(
+typedef uint32_t (FAUDIOCALL * FAudioDecodeCallback)(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,	/* Buffer to decode */
 	float *decodeCache,	/* Decode into here */
@@ -688,7 +688,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 /* Decoders */
 
 #define DECODE_FUNC(type) \
-	extern void FAudio_INTERNAL_Decode##type( \
+	extern uint32_t FAudio_INTERNAL_Decode##type( \
 		FAudioVoice *voice, \
 		FAudioBuffer *buffer, \
 		float *decodeCache, \
