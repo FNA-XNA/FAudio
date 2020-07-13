@@ -150,14 +150,7 @@ static inline void DspDelay_Destroy(DspDelay *filter, FAudioFreeFunc pFree)
 
 static inline float DspComb_FeedbackFromRT60(DspDelay *delay, float rt60_ms)
 {
-	float exponent;
-
-	if (rt60_ms == 0)
-	{
-		return 0;
-	}
-
-	exponent = (
+	float exponent = (
 		(-3.0f * delay->delay * 1000.0f) /
 		(delay->sampleRate * rt60_ms)
 	);
@@ -685,7 +678,7 @@ static inline void DspReverb_SetParameters(
 			);
 			comb->comb_feedback_gain = DspComb_FeedbackFromRT60(
 				&comb->comb_delay,
-				params->DecayTime * 1000.0f
+				FAudio_max(params->DecayTime, FAUDIOFX_REVERB_MIN_DECAY_TIME) * 1000.0f
 			);
 
 			/* High/Low shelving */
