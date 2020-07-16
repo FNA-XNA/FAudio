@@ -296,7 +296,7 @@ FAUDIOAPI void ReverbConvertI3DL2ToNative(
 FAUDIOAPI void ReverbConvertI3DL2ToNative9(
 	const FAudioFXReverbI3DL2Parameters *pI3DL2,
 	FAudioFXReverbParameters9 *pNative,
-	uint8_t sevenDotOneReverb
+	int32_t sevenDotOneReverb
 );
 
 #ifdef __cplusplus
