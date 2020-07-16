@@ -755,6 +755,36 @@ static inline void DspReverb_SetParameters(
 	reverb->dry_ratio = 1.0f - reverb->wet_ratio;
 }
 
+static inline void DspReverb_SetParameters9(
+	DspReverb *reverb,
+	FAudioFXReverbParameters9 *params
+) {
+	FAudioFXReverbParameters oldParams;
+	oldParams.WetDryMix = params->WetDryMix;
+	oldParams.ReflectionsDelay = params->ReflectionsDelay;
+	oldParams.ReverbDelay = params->ReverbDelay;
+	oldParams.RearDelay = params->RearDelay;
+	oldParams.PositionLeft = params->PositionLeft;
+	oldParams.PositionRight = params->PositionRight;
+	oldParams.PositionMatrixLeft = params->PositionMatrixLeft;
+	oldParams.PositionMatrixRight = params->PositionMatrixRight;
+	oldParams.EarlyDiffusion = params->EarlyDiffusion;
+	oldParams.LateDiffusion = params->LateDiffusion;
+	oldParams.LowEQGain = params->LowEQGain;
+	oldParams.LowEQCutoff = params->LowEQCutoff;
+	oldParams.HighEQGain = params->HighEQGain;
+	oldParams.HighEQCutoff = params->HighEQCutoff;
+	oldParams.RoomFilterFreq = params->RoomFilterFreq;
+	oldParams.RoomFilterMain = params->RoomFilterMain;
+	oldParams.RoomFilterHF = params->RoomFilterHF;
+	oldParams.ReflectionsGain = params->ReflectionsGain;
+	oldParams.ReverbGain = params->ReverbGain;
+	oldParams.DecayTime = params->DecayTime;
+	oldParams.Density = params->Density;
+	oldParams.RoomSize = params->RoomSize;
+	DspReverb_SetParameters(reverb, &oldParams);
+}
+
 static inline float DspReverb_INTERNAL_ProcessEarly(
 	DspReverb *reverb,
 	float sample_in
@@ -1041,6 +1071,7 @@ typedef struct FAudioFXReverb
 	uint16_t inBlockAlign;
 	uint16_t outBlockAlign;
 
+	uint8_t apiVersion;
 	DspReverb reverb;
 } FAudioFXReverb;
 
@@ -1356,7 +1387,17 @@ void FAudioFXReverb_Process(
 	/* Update parameters  */
 	if (update_params)
 	{
-		DspReverb_SetParameters(&fapo->reverb, params);
+		if (fapo->apiVersion == 9)
+		{
+			DspReverb_SetParameters9(
+				&fapo->reverb,
+				(FAudioFXReverbParameters9*) params
+			);
+		}
+		else
+		{
+			DspReverb_SetParameters(&fapo->reverb, params);
+		}
 	}
 
 	/* Run reverb effect */
@@ -1435,7 +1476,7 @@ void FAudioFXReverb_Free(void* fapo)
 	reverb->base.pFree(fapo);
 }
 
-/* Public API */
+/* Public API (Version 7) */
 
 uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags)
 {
@@ -1483,6 +1524,7 @@ uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 
 	/* Allocate... */
 	FAudioFXReverb *result = (FAudioFXReverb*) customMalloc(sizeof(FAudioFXReverb));
+	result->apiVersion = 7;
 	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAudioFXReverbParameters) * 3
 	);
@@ -1544,6 +1586,188 @@ void ReverbConvertI3DL2ToNative(
 	float reverbDelay;
 
 	pNative->RearDelay = FAUDIOFX_REVERB_DEFAULT_REAR_DELAY;
+	pNative->PositionLeft = FAUDIOFX_REVERB_DEFAULT_POSITION;
+	pNative->PositionRight = FAUDIOFX_REVERB_DEFAULT_POSITION;
+	pNative->PositionMatrixLeft = FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX;
+	pNative->PositionMatrixRight = FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX;
+	pNative->RoomSize = FAUDIOFX_REVERB_DEFAULT_ROOM_SIZE;
+	pNative->LowEQCutoff = 4;
+	pNative->HighEQCutoff = 6;
+
+	pNative->RoomFilterMain = (float) pI3DL2->Room / 100.0f;
+	pNative->RoomFilterHF = (float) pI3DL2->RoomHF / 100.0f;
+
+	if (pI3DL2->DecayHFRatio >= 1.0f)
+	{
+		int32_t index = (int32_t) (-4.0 * FAudio_log10(pI3DL2->DecayHFRatio));
+		if (index < -8)
+		{
+			index = -8;
+		}
+		pNative->LowEQGain = (uint8_t) ((index < 0) ? index + 8 : 8);
+		pNative->HighEQGain = 8;
+		pNative->DecayTime = pI3DL2->DecayTime * pI3DL2->DecayHFRatio;
+	}
+	else
+	{
+		int32_t index = (int32_t) (4.0 * FAudio_log10(pI3DL2->DecayHFRatio));
+		if (index < -8)
+		{
+			index = -8;
+		}
+		pNative->LowEQGain = 8;
+		pNative->HighEQGain = (uint8_t) ((index < 0) ? index + 8 : 8);
+		pNative->DecayTime = pI3DL2->DecayTime;
+	}
+
+	reflectionsDelay = pI3DL2->ReflectionsDelay * 1000.0f;
+	if (reflectionsDelay >= FAUDIOFX_REVERB_MAX_REFLECTIONS_DELAY)
+	{
+		reflectionsDelay = (float) (FAUDIOFX_REVERB_MAX_REFLECTIONS_DELAY - 1);
+	}
+	else if (reflectionsDelay <= 1)
+	{
+		reflectionsDelay = 1;
+	}
+	pNative->ReflectionsDelay = (uint32_t) reflectionsDelay;
+
+	reverbDelay = pI3DL2->ReverbDelay * 1000.0f;
+	if (reverbDelay >= FAUDIOFX_REVERB_MAX_REVERB_DELAY)
+	{
+		reverbDelay = (float) (FAUDIOFX_REVERB_MAX_REVERB_DELAY - 1);
+	}
+	pNative->ReverbDelay = (uint8_t) reverbDelay;
+
+	pNative->ReflectionsGain = pI3DL2->Reflections / 100.0f;
+	pNative->ReverbGain = pI3DL2->Reverb / 100.0f;
+	pNative->EarlyDiffusion = (uint8_t) (15.0f * pI3DL2->Diffusion / 100.0f);
+	pNative->LateDiffusion = pNative->EarlyDiffusion;
+	pNative->Density = pI3DL2->Density;
+	pNative->RoomFilterFreq = pI3DL2->HFReference;
+
+	pNative->WetDryMix = pI3DL2->WetDryMix;
+}
+
+/* Public API (Version 9) */
+
+uint32_t FAudioCreateReverb9(FAPO** ppApo, uint32_t Flags)
+{
+	return FAudioCreateReverb9WithCustomAllocatorEXT(
+		ppApo,
+		Flags,
+		FAudio_malloc,
+		FAudio_free,
+		FAudio_realloc
+	);
+}
+
+uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+) {
+	const FAudioFXReverbParameters9 fxdefault =
+	{
+		FAUDIOFX_REVERB_DEFAULT_WET_DRY_MIX,
+		FAUDIOFX_REVERB_DEFAULT_REFLECTIONS_DELAY,
+		FAUDIOFX_REVERB_DEFAULT_REVERB_DELAY,
+		FAUDIOFX_REVERB_DEFAULT_REAR_DELAY, /* FIXME: 7POINT1? */
+		FAUDIOFX_REVERB_DEFAULT_7POINT1_SIDE_DELAY,
+		FAUDIOFX_REVERB_DEFAULT_POSITION,
+		FAUDIOFX_REVERB_DEFAULT_POSITION,
+		FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX,
+		FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX,
+		FAUDIOFX_REVERB_DEFAULT_EARLY_DIFFUSION,
+		FAUDIOFX_REVERB_DEFAULT_LATE_DIFFUSION,
+		FAUDIOFX_REVERB_DEFAULT_LOW_EQ_GAIN,
+		FAUDIOFX_REVERB_DEFAULT_LOW_EQ_CUTOFF,
+		FAUDIOFX_REVERB_DEFAULT_HIGH_EQ_GAIN,
+		FAUDIOFX_REVERB_DEFAULT_HIGH_EQ_CUTOFF,
+		FAUDIOFX_REVERB_DEFAULT_ROOM_FILTER_FREQ,
+		FAUDIOFX_REVERB_DEFAULT_ROOM_FILTER_MAIN,
+		FAUDIOFX_REVERB_DEFAULT_ROOM_FILTER_HF,
+		FAUDIOFX_REVERB_DEFAULT_REFLECTIONS_GAIN,
+		FAUDIOFX_REVERB_DEFAULT_REVERB_GAIN,
+		FAUDIOFX_REVERB_DEFAULT_DECAY_TIME,
+		FAUDIOFX_REVERB_DEFAULT_DENSITY,
+		FAUDIOFX_REVERB_DEFAULT_ROOM_SIZE
+	};
+
+	/* Allocate... */
+	FAudioFXReverb *result = (FAudioFXReverb*) customMalloc(sizeof(FAudioFXReverb));
+	result->apiVersion = 9;
+	uint8_t *params = (uint8_t*) customMalloc(
+		sizeof(FAudioFXReverbParameters9) * 3
+	);
+	#define INITPARAMS(offset) \
+		FAudio_memcpy( \
+			params + sizeof(FAudioFXReverbParameters9) * offset, \
+			&fxdefault, \
+			sizeof(FAudioFXReverbParameters9) \
+		);
+	INITPARAMS(0)
+	INITPARAMS(1)
+	INITPARAMS(2)
+	#undef INITPARAMS
+
+	/* Initialize... */
+	FAudio_memcpy(
+		&ReverbProperties.clsid,
+		&FAudioFX_CLSID_AudioReverb,
+		sizeof(FAudioGUID)
+	);
+	CreateFAPOBaseWithCustomAllocatorEXT(
+		&result->base,
+		&ReverbProperties,
+		params,
+		sizeof(FAudioFXReverbParameters9),
+		0,
+		customMalloc,
+		customFree,
+		customRealloc
+	);
+
+	result->inChannels = 0;
+	result->outChannels = 0;
+	result->sampleRate = 0;
+	FAudio_zero(&result->reverb, sizeof(DspReverb));
+
+	/* Function table... */
+	#define ASSIGN_VT(name) \
+		result->base.base.name = (name##Func) FAudioFXReverb_##name;
+	ASSIGN_VT(LockForProcess);
+	ASSIGN_VT(IsInputFormatSupported);
+	ASSIGN_VT(IsOutputFormatSupported);
+	ASSIGN_VT(Initialize);
+	ASSIGN_VT(Reset);
+	ASSIGN_VT(Process);
+	result->base.Destructor = FAudioFXReverb_Free;
+	#undef ASSIGN_VT
+
+	/* Finally. */
+	*ppApo = &result->base.base;
+	return 0;
+}
+
+void ReverbConvertI3DL2ToNative9(
+	const FAudioFXReverbI3DL2Parameters *pI3DL2,
+	FAudioFXReverbParameters9 *pNative,
+	uint8_t sevenDotOneReverb
+) {
+	float reflectionsDelay;
+	float reverbDelay;
+
+	if (sevenDotOneReverb)
+	{
+		pNative->RearDelay = FAUDIOFX_REVERB_DEFAULT_7POINT1_REAR_DELAY;
+	}
+	else
+	{
+		pNative->RearDelay = FAUDIOFX_REVERB_DEFAULT_REAR_DELAY;
+	}
+	pNative->SideDelay = FAUDIOFX_REVERB_DEFAULT_7POINT1_SIDE_DELAY;
 	pNative->PositionLeft = FAUDIOFX_REVERB_DEFAULT_POSITION;
 	pNative->PositionRight = FAUDIOFX_REVERB_DEFAULT_POSITION;
 	pNative->PositionMatrixLeft = FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX;

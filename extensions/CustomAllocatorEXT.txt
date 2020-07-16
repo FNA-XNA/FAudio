@@ -59,6 +59,14 @@ FAUDIOAPI uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 	FAudioReallocFunc customRealloc
 );
 
+FAUDIOAPI uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
 FAPOAPI void CreateFAPOBaseWithCustomAllocatorEXT(
 	FAPOBase *fapo,
 	const FAPORegistrationProperties *pRegistrationProperties,

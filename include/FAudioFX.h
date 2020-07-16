@@ -82,6 +82,33 @@ typedef struct FAudioFXReverbParameters
 	float RoomSize;
 } FAudioFXReverbParameters;
 
+typedef struct FAudioFXReverbParameters9
+{
+	float WetDryMix;
+	uint32_t ReflectionsDelay;
+	uint8_t ReverbDelay;
+	uint8_t RearDelay;
+	uint8_t SideDelay;
+	uint8_t PositionLeft;
+	uint8_t PositionRight;
+	uint8_t PositionMatrixLeft;
+	uint8_t PositionMatrixRight;
+	uint8_t EarlyDiffusion;
+	uint8_t LateDiffusion;
+	uint8_t LowEQGain;
+	uint8_t LowEQCutoff;
+	uint8_t HighEQGain;
+	uint8_t HighEQCutoff;
+	float RoomFilterFreq;
+	float RoomFilterMain;
+	float RoomFilterHF;
+	float ReflectionsGain;
+	float ReverbGain;
+	float DecayTime;
+	float Density;
+	float RoomSize;
+} FAudioFXReverbParameters9;
+
 typedef struct FAudioFXReverbI3DL2Parameters
 {
 	float WetDryMix;
@@ -112,6 +139,8 @@ typedef struct FAudioFXReverbI3DL2Parameters
 #define FAUDIOFX_REVERB_MIN_REFLECTIONS_DELAY	0
 #define FAUDIOFX_REVERB_MIN_REVERB_DELAY	0
 #define FAUDIOFX_REVERB_MIN_REAR_DELAY		0
+#define FAUDIOFX_REVERB_MIN_7POINT1_SIDE_DELAY	0
+#define FAUDIOFX_REVERB_MIN_7POINT1_REAR_DELAY	0
 #define FAUDIOFX_REVERB_MIN_POSITION		0
 #define FAUDIOFX_REVERB_MIN_DIFFUSION		0
 #define FAUDIOFX_REVERB_MIN_LOW_EQ_GAIN		0
@@ -131,6 +160,8 @@ typedef struct FAudioFXReverbI3DL2Parameters
 #define FAUDIOFX_REVERB_MAX_REFLECTIONS_DELAY	300
 #define FAUDIOFX_REVERB_MAX_REVERB_DELAY	85
 #define FAUDIOFX_REVERB_MAX_REAR_DELAY		5
+#define FAUDIOFX_REVERB_MAX_7POINT1_SIDE_DELAY	5
+#define FAUDIOFX_REVERB_MAX_7POINT1_REAR_DELAY	20
 #define FAUDIOFX_REVERB_MAX_POSITION		30
 #define FAUDIOFX_REVERB_MAX_DIFFUSION		15
 #define FAUDIOFX_REVERB_MAX_LOW_EQ_GAIN		12
@@ -149,6 +180,8 @@ typedef struct FAudioFXReverbI3DL2Parameters
 #define FAUDIOFX_REVERB_DEFAULT_REFLECTIONS_DELAY	5
 #define FAUDIOFX_REVERB_DEFAULT_REVERB_DELAY		5
 #define FAUDIOFX_REVERB_DEFAULT_REAR_DELAY		5
+#define FAUDIOFX_REVERB_DEFAULT_7POINT1_SIDE_DELAY	5
+#define FAUDIOFX_REVERB_DEFAULT_7POINT1_REAR_DELAY	20
 #define FAUDIOFX_REVERB_DEFAULT_POSITION		6
 #define FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX		27
 #define FAUDIOFX_REVERB_DEFAULT_EARLY_DIFFUSION		8
@@ -231,6 +264,7 @@ typedef struct FAudioFXReverbI3DL2Parameters
 
 FAUDIOAPI uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags);
 FAUDIOAPI uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags);
+FAUDIOAPI uint32_t FAudioCreateReverb9(FAPO** ppApo, uint32_t Flags);
 
 /* See "extensions/CustomAllocatorEXT.txt" for more information. */
 FAUDIOAPI uint32_t FAudioCreateVolumeMeterWithCustomAllocatorEXT(
@@ -247,10 +281,22 @@ FAUDIOAPI uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 );
+FAUDIOAPI uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
 
 FAUDIOAPI void ReverbConvertI3DL2ToNative(
 	const FAudioFXReverbI3DL2Parameters *pI3DL2,
 	FAudioFXReverbParameters *pNative
+);
+FAUDIOAPI void ReverbConvertI3DL2ToNative9(
+	const FAudioFXReverbI3DL2Parameters *pI3DL2,
+	FAudioFXReverbParameters9 *pNative,
+	uint8_t sevenDotOneReverb
 );
 
 #ifdef __cplusplus
