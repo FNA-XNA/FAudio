@@ -1996,13 +1996,11 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	float *pMatrixCoefficients
 ) {
 	uint32_t i;
-	float *mtxDst, *mtxSrc;
+	float *mtxDst, *mtxSrc, *mtxTmp = NULL;
 	if (pWave == NULL)
 	{
 		return 1;
 	}
-
-	FAudio_PlatformLockMutex(pWave->parentBank->parentEngine->apiLock);
 
 	/* There seems to be this weird feature in XACT where the channel count
 	 * can be completely wrong and it'll go to the right place.
@@ -2013,7 +2011,12 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	 */
 	if (uSrcChannelCount == 1 && pWave->srcChannels == 2)
 	{
-		mtxDst = pMatrixCoefficients + ((uDstChannelCount - 1) * 2);
+		mtxTmp = (float*) FAudio_alloca(
+			sizeof(float) *
+			pWave->srcChannels *
+			uDstChannelCount
+		);
+		mtxDst = mtxTmp + ((uDstChannelCount - 1) * 2);
 		mtxSrc = pMatrixCoefficients + (uDstChannelCount - 1);
 		for (i = 0; i < uDstChannelCount; i += 1)
 		{
@@ -2023,10 +2026,16 @@ uint32_t FACTWave_SetMatrixCoefficients(
 			mtxSrc -= 1;
 		}
 		uSrcChannelCount = 2;
+		pMatrixCoefficients = mtxTmp;
 	}
 	else if (uSrcChannelCount == 2 && pWave->srcChannels == 1)
 	{
-		mtxDst = pMatrixCoefficients;
+		mtxTmp = (float*) FAudio_alloca(
+			sizeof(float) *
+			pWave->srcChannels *
+			uDstChannelCount
+		);
+		mtxDst = mtxTmp;
 		mtxSrc = pMatrixCoefficients;
 		for (i = 0; i < uDstChannelCount; i += 1)
 		{
@@ -2035,7 +2044,10 @@ uint32_t FACTWave_SetMatrixCoefficients(
 			mtxSrc += 2;
 		}
 		uSrcChannelCount = 1;
+		pMatrixCoefficients = mtxTmp;
 	}
+
+	FAudio_PlatformLockMutex(pWave->parentBank->parentEngine->apiLock);
 
 	FAudioVoice_SetOutputMatrix(
 		pWave->voice,
@@ -2047,6 +2059,10 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	);
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
+	if (mtxTmp != NULL)
+	{
+		FAudio_dealloca(mtxTmp);
+	}
 	return 0;
 }
 
