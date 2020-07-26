@@ -2016,14 +2016,14 @@ uint32_t FACTWave_SetMatrixCoefficients(
 			pWave->srcChannels *
 			uDstChannelCount
 		);
-		mtxDst = mtxTmp + ((uDstChannelCount - 1) * 2);
-		mtxSrc = pMatrixCoefficients + (uDstChannelCount - 1);
+		mtxDst = mtxTmp;
+		mtxSrc = pMatrixCoefficients;
 		for (i = 0; i < uDstChannelCount; i += 1)
 		{
 			mtxDst[0] = *mtxSrc;
 			mtxDst[1] = *mtxSrc;
-			mtxDst -= 2;
-			mtxSrc -= 1;
+			mtxDst += 2;
+			mtxSrc += 1;
 		}
 		uSrcChannelCount = 2;
 		pMatrixCoefficients = mtxTmp;
