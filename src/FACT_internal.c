@@ -965,7 +965,7 @@ float FACT_INTERNAL_CalculateRPC(
 		return rpc->points[rpc->pointCount - 1].y;
 	}
 
-	/* Something between points... TODO: Non-linear curves */
+	/* Something between points */
 	result = 0.0f;
 	for (i = 0; i < rpc->pointCount - 1; i += 1)
 	{
@@ -973,6 +973,14 @@ float FACT_INTERNAL_CalculateRPC(
 		result = rpc->points[i].y;
 		if (var >= rpc->points[i].x && var <= rpc->points[i + 1].x)
 		{
+			/* TODO: Non-linear curves! Check rpc->points[i].type!
+			 * 0 - Linear
+			 * 1 - "Fast", a logarithmic curve?
+			 * 2 - "Slow", an exponential curve?
+			 * 3 - "SinCos", looks like log if higher/exp if lower?
+			 * flibit absolutely does not know math, he is useless!
+			 */
+
 			/* y += mx */
 			result +=
 				((rpc->points[i + 1].y - rpc->points[i].y) /
