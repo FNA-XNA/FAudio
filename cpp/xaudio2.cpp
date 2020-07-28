@@ -376,7 +376,7 @@ static FAudioEffectChain *wrap_effect_chain(const XAUDIO2_EFFECT_CHAIN *x_chain)
 	{
 		f_chain->pEffectDescriptors[i].InitialState = x_chain->pEffectDescriptors[i].InitialState;
 		f_chain->pEffectDescriptors[i].OutputChannels =
-			x_chain->pEffectDescriptors[i].OutputChannel;
+			x_chain->pEffectDescriptors[i].OutputChannels;
 		f_chain->pEffectDescriptors[i].pEffect =
 			wrap_xapo_effect(x_chain->pEffectDescriptors[i].pEffect);
 	}
