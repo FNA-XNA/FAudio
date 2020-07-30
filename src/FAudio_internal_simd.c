@@ -49,9 +49,9 @@
 	/* AArch64 guarantees NEON. */
 	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
 #elif __MACOSX__
-	/* Some build systems may need to specify this. Also, macOS ARM? Sigh */
-	#ifndef __SSE2__
-	#error macOS does not have SSE2? Bad compiler? They actually moved to ARM?!
+	/* Some build systems may need to specify this. */
+	#if !defined(__SSE2__) && !defined(__ARM_NEON__)
+	#error macOS does not have SSE2/NEON? Bad compiler?
 	#endif
 
 	/* Mac OS X/Intel guarantees SSE2. */
