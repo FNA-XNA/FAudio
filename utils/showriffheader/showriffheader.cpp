@@ -6,24 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <array>
 
-std::array<uint8_t, 2> fill_char_buffer(const uint16_t x)
-{
-	std::array<uint8_t, 2> buf;
-	buf[0] = static_cast<uint8_t> (x >>  8);
-	buf[1] = static_cast<uint8_t> (x >>  0);
-	return buf;
-}
-std::array<uint8_t, 4> fill_char_buffer(const uint32_t x)
-{
-	std::array<uint8_t, 4> buf;
-	buf[0] = static_cast<uint8_t> (x >> 24);
-	buf[1] = static_cast<uint8_t> (x >> 16);
-	buf[2] = static_cast<uint8_t> (x >>  8);
-	buf[3] = static_cast<uint8_t> (x >>  0);
-	return buf;
-}
 char printable_char (char c)
 {
 	return (std::isprint(c) ? c : ' ');
@@ -48,7 +31,9 @@ std::string uint8_to_charstr(const uint8_t x)
 }
 std::string uint16_to_charstr(const uint16_t x)
 {
-	std::array<uint8_t, 2> buf = fill_char_buffer(x);
+	uint8_t buf[2];
+	buf[0] = static_cast<uint8_t> (x >>  8);
+	buf[1] = static_cast<uint8_t> (x >>  0);
 	std::stringstream ss;
 	ss << "|"
 	   << printable_char(static_cast<char>(buf[1]))
@@ -70,7 +55,11 @@ std::string uint16_to_charstr(const uint16_t x)
 }
 std::string uint32_to_charstr(const uint32_t x)
 {
-	std::array<uint8_t, 4> buf = fill_char_buffer(x);
+	uint8_t buf[4];
+	buf[0] = static_cast<uint8_t> (x >> 24);
+	buf[1] = static_cast<uint8_t> (x >> 16);
+	buf[2] = static_cast<uint8_t> (x >>  8);
+	buf[3] = static_cast<uint8_t> (x >>  0);
 	std::stringstream ss;
 	ss << "|"
 	   << printable_char(static_cast<char>(buf[3]))
@@ -96,6 +85,28 @@ std::string uint32_to_charstr(const uint32_t x)
 	   << "|";
 	return ss.str();
 }
+
+const char* audio_format_str(const uint16_t format)
+{
+	if (format == FAUDIO_FORMAT_PCM)              //      1
+		return "FAUDIO_FORMAT_PCM";
+	if (format == FAUDIO_FORMAT_MSADPCM)          //      2
+		return "FAUDIO_FORMAT_MSADPCM";
+	if (format == FAUDIO_FORMAT_IEEE_FLOAT)       //      3
+		return "FAUDIO_FORMAT_IEEE_FLOAT";
+	if (format == FAUDIO_FORMAT_WMAUDIO2)         // 0x0161
+		return "FAUDIO_FORMAT_WMAUDIO2";
+	if (format == FAUDIO_FORMAT_WMAUDIO3)         // 0x0162
+		return "FAUDIO_FORMAT_WMAUDIO3";
+	if (format == FAUDIO_FORMAT_WMAUDIO_LOSSLESS) // 0x0163
+		return "FAUDIO_FORMAT_WMAUDIO_LOSSLESS";
+	if (format == FAUDIO_FORMAT_XMAUDIO2)         // 0x0166
+		return "FAUDIO_FORMAT_XMAUDIO2";
+	if (format == FAUDIO_FORMAT_EXTENSIBLE)       // 0xFFE
+		return "FAUDIO_FORMAT_";
+	return "FAUDIO_FORMAT_UNKNOWN";
+}
+
 /* based on https://docs.microsoft.com/en-us/windows/desktop/xaudio2/how-to--load-audio-data-files-in-xaudio2 */
 #define fourccRIFF *((uint32_t *) "RIFF")
 #define fourccDATA *((uint32_t *) "data")
@@ -103,6 +114,55 @@ std::string uint32_to_charstr(const uint32_t x)
 #define fourccWAVE *((uint32_t *) "WAVE")
 #define fourccXWMA *((uint32_t *) "XWMA")
 #define fourccDPDS *((uint32_t *) "dpds")
+
+void print_sub_chunk(FILE *hFile, uint32_t chunkID, uint32_t dwChunkPosition)
+{ /* data sub-chunk - 8 bytes + data */
+	uint32_t chunkSize;
+	if (fread(&chunkID, sizeof(uint32_t), 1, hFile) < 1)
+	{
+		if (feof(hFile))
+		{
+			std::cout << "reached end of file at: " << dwChunkPosition << std::endl;
+			return;
+		}
+		throw std::runtime_error("can't read chunkID");
+	}
+	dwChunkPosition += sizeof (uint32_t);
+	if (chunkID == fourccDATA)
+	{
+		std::cout << "data chunk position: " << dwChunkPosition - sizeof(uint32_t) << std::endl;
+		std::cout << "data:             "
+				  << uint32_to_charstr(chunkID) << std::endl;
+		if (fread(&chunkSize, sizeof(uint32_t), 1, hFile) < 1)
+			throw std::runtime_error("can't read chunkSize");
+		dwChunkPosition += sizeof (uint32_t);
+		std::cout << "data chunkSize:   "
+				  << uint32_to_charstr(chunkSize) << std::endl;
+		// skip the rest
+		fseek(hFile, chunkSize, SEEK_CUR);
+		dwChunkPosition += chunkSize;
+	}
+	else if (chunkID == fourccDPDS)
+	{
+		std::cout << "dpds chunk position: " << dwChunkPosition - sizeof(uint32_t) << std::endl;
+		std::cout << "dpds:             "
+				  << uint32_to_charstr(chunkID) << std::endl;
+		if (fread(&chunkSize, sizeof(uint32_t), 1, hFile) < 1)
+			throw std::runtime_error("can't read chunkSize");
+		dwChunkPosition += sizeof (uint32_t);
+		std::cout << "dpds chunkSize:   "
+				  << uint32_to_charstr(chunkSize) << std::endl;
+		// skip the rest
+		fseek(hFile, chunkSize, SEEK_CUR);
+		dwChunkPosition += chunkSize;
+	}
+	else
+	{
+		std::cout << "unknown chunkID at position: " << dwChunkPosition - sizeof(uint32_t) << std::endl;
+		std::cout << "unhandled chunk:  "
+				  << uint32_to_charstr(chunkID) << std::endl;
+	}
+}
 
 uint32_t load_data(const char *filename)
 {
@@ -172,26 +232,6 @@ uint32_t load_data(const char *filename)
 		if (fread(&audio_format, sizeof(uint16_t), 1, hFile) < 1)
 			throw std::runtime_error("can't read fmt  AudioFormat");
 		dwChunkPosition += sizeof (uint16_t);
-		auto audio_format_str = [](const uint16_t format)
-		{
-			if (format == FAUDIO_FORMAT_PCM)              //      1
-				return "FAUDIO_FORMAT_PCM";
-			if (format == FAUDIO_FORMAT_MSADPCM)          //      2
-				return "FAUDIO_FORMAT_MSADPCM";
-			if (format == FAUDIO_FORMAT_IEEE_FLOAT)       //      3
-				return "FAUDIO_FORMAT_IEEE_FLOAT";
-			if (format == FAUDIO_FORMAT_WMAUDIO2)         // 0x0161
-				return "FAUDIO_FORMAT_WMAUDIO2";
-			if (format == FAUDIO_FORMAT_WMAUDIO3)         // 0x0162
-				return "FAUDIO_FORMAT_WMAUDIO3";
-			if (format == FAUDIO_FORMAT_WMAUDIO_LOSSLESS) // 0x0163
-				return "FAUDIO_FORMAT_WMAUDIO_LOSSLESS";
-			if (format == FAUDIO_FORMAT_XMAUDIO2)         // 0x0166
-				return "FAUDIO_FORMAT_XMAUDIO2";
-			if (format == FAUDIO_FORMAT_EXTENSIBLE)       // 0xFFE
-				return "FAUDIO_FORMAT_";
-			return "FAUDIO_FORMAT_UNKNOWN";
-		};
 		std::cout << "fmt AudioFormat:  "
 				  << uint16_to_charstr(audio_format)
 				  << " " << audio_format_str(audio_format) << std::endl;
@@ -293,58 +333,10 @@ uint32_t load_data(const char *filename)
 	}
 	// ignore data until we find sub-chunk data
 
-	auto print_sub_chunk = [&]()
-	{ /* data sub-chunk - 8 bytes + data */
-		uint32_t chunkSize;
-		if (fread(&chunkID, sizeof(uint32_t), 1, hFile) < 1)
-		{
-			if (feof(hFile))
-			{
-				std::cout << "reached end of file at: " << dwChunkPosition << std::endl;
-				return;
-			}
-			throw std::runtime_error("can't read chunkID");
-		}
-		dwChunkPosition += sizeof (uint32_t);
-		if (chunkID == fourccDATA)
-		{
-			std::cout << "data chunk position: " << dwChunkPosition - sizeof(uint32_t) << std::endl;
-			std::cout << "data:             "
-					  << uint32_to_charstr(chunkID) << std::endl;
-			if (fread(&chunkSize, sizeof(uint32_t), 1, hFile) < 1)
-				throw std::runtime_error("can't read chunkSize");
-			dwChunkPosition += sizeof (uint32_t);
-			std::cout << "data chunkSize:   "
-					  << uint32_to_charstr(chunkSize) << std::endl;
-			// skip the rest
-			fseek(hFile, chunkSize, SEEK_CUR);
-			dwChunkPosition += chunkSize;
-		}
-		else if (chunkID == fourccDPDS)
-		{
-			std::cout << "dpds chunk position: " << dwChunkPosition - sizeof(uint32_t) << std::endl;
-			std::cout << "dpds:             "
-					  << uint32_to_charstr(chunkID) << std::endl;
-			if (fread(&chunkSize, sizeof(uint32_t), 1, hFile) < 1)
-				throw std::runtime_error("can't read chunkSize");
-			dwChunkPosition += sizeof (uint32_t);
-			std::cout << "dpds chunkSize:   "
-					  << uint32_to_charstr(chunkSize) << std::endl;
-			// skip the rest
-			fseek(hFile, chunkSize, SEEK_CUR);
-			dwChunkPosition += chunkSize;
-		}
-		else
-		{
-			std::cout << "unknown chunkID at position: " << dwChunkPosition - sizeof(uint32_t) << std::endl;
-			std::cout << "unhandled chunk:  "
-					  << uint32_to_charstr(chunkID) << std::endl;
-		}
-	};
 	if (!feof(hFile))
-		print_sub_chunk();
+		print_sub_chunk(hFile, chunkID, dwChunkPosition);
 	if (!feof(hFile))
-		print_sub_chunk();
+		print_sub_chunk(hFile, chunkID, dwChunkPosition);
 
 	return 0;
 }
