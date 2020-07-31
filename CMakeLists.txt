@@ -200,7 +200,9 @@ endif()
 # utils/ Folder
 if(BUILD_UTILS)
 	enable_language(CXX)
-
+	set(CMAKE_CXX_STANDARD 11)
+	set(CMAKE_CXX_EXTENSIONS OFF)
+  
 	# Shared ImGui Framework
 	add_library(uicommon STATIC
 		utils/uicommon/FAudioUI_main.cpp
