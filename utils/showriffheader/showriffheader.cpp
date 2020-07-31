@@ -115,7 +115,7 @@ const char* audio_format_str(const uint16_t format)
 #define fourccXWMA *((uint32_t *) "XWMA")
 #define fourccDPDS *((uint32_t *) "dpds")
 
-void print_sub_chunk(FILE *hFile, uint32_t chunkID, uint32_t dwChunkPosition)
+void print_sub_chunk(FILE *hFile, uint32_t &chunkID, uint32_t &dwChunkPosition)
 { /* data sub-chunk - 8 bytes + data */
 	uint32_t chunkSize;
 	if (fread(&chunkID, sizeof(uint32_t), 1, hFile) < 1)
