@@ -783,12 +783,42 @@ public static class FAudio
 		public float RoomSize;
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAudioFXReverbParameters9
+	{
+		public float WetDryMix;
+		public uint ReflectionsDelay;
+		public byte ReverbDelay;
+		public byte RearDelay;
+		public byte SideDelay;
+		public byte PositionLeft;
+		public byte PositionRight;
+		public byte PositionMatrixLeft;
+		public byte PositionMatrixRight;
+		public byte EarlyDiffusion;
+		public byte LateDiffusion;
+		public byte LowEQGain;
+		public byte LowEQCutoff;
+		public byte HighEQGain;
+		public byte HighEQCutoff;
+		public float RoomFilterFreq;
+		public float RoomFilterMain;
+		public float RoomFilterHF;
+		public float ReflectionsGain;
+		public float ReverbGain;
+		public float DecayTime;
+		public float Density;
+		public float RoomSize;
+	}
+
 	/* Constants */
 
 	public const float FAUDIOFX_REVERB_DEFAULT_WET_DRY_MIX =	100.0f;
 	public const uint FAUDIOFX_REVERB_DEFAULT_REFLECTIONS_DELAY =	5;
 	public const byte FAUDIOFX_REVERB_DEFAULT_REVERB_DELAY =	5;
 	public const byte FAUDIOFX_REVERB_DEFAULT_REAR_DELAY =		5;
+	public const byte FAUDIOFX_REVERB_DEFAULT_7POINT1_SIDE_DELAY =	5;
+	public const byte FAUDIOFX_REVERB_DEFAULT_7POINT1_REAR_DELAY =	20;
 	public const byte FAUDIOFX_REVERB_DEFAULT_POSITION =		6;
 	public const byte FAUDIOFX_REVERB_DEFAULT_POSITION_MATRIX =	27;
 	public const byte FAUDIOFX_REVERB_DEFAULT_EARLY_DIFFUSION =	8;
@@ -810,6 +840,9 @@ public static class FAudio
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudioCreateReverb(out IntPtr ppApo, uint Flags);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateReverb9(out IntPtr ppApo, uint Flags);
 
 	#endregion
 
