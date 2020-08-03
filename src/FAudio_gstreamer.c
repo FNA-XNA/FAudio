@@ -425,6 +425,9 @@ void FAudio_GSTREAMER_end_buffer(FAudioSourceVoice *pSourceVoice)
 	pSourceVoice->audio->pFree(gstreamer->blockSizes);
 	gstreamer->blockSizes = NULL;
 
+	gstreamer->curBlock = ~0u;
+	gstreamer->prevBlock = ~0u;
+
 	LOG_FUNC_EXIT(pSourceVoice->audio)
 }
 
