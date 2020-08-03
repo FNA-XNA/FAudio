@@ -504,7 +504,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	{
 		LOG_ERROR(
 			pSourceVoice->audio,
-			"Unable to create gstreamer decodebin; is %u-bit gst-plugins-base installed?",
+			"Unable to create gstreamer decodebin; is %zu-bit gst-plugins-base installed?",
 			sizeof(void *) * 8
 		)
 		goto free_without_bin;
@@ -519,7 +519,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	{
 		LOG_ERROR(
 			pSourceVoice->audio,
-			"Unable to create gstreamer audioresample; is %u-bit gst-plugins-base installed?",
+			"Unable to create gstreamer audioresample; is %zu-bit gst-plugins-base installed?",
 			sizeof(void *) * 8
 		)
 		goto free_without_bin;
@@ -530,7 +530,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	{
 		LOG_ERROR(
 			pSourceVoice->audio,
-			"Unable to create gstreamer audioconvert; is %u-bit gst-plugins-base installed?",
+			"Unable to create gstreamer audioconvert; is %zu-bit gst-plugins-base installed?",
 			sizeof(void *) * 8
 		)
 		goto free_without_bin;
@@ -541,7 +541,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	{
 		LOG_ERROR(
 			pSourceVoice->audio,
-			"Unable to create gstreamer appsink; is %u-bit gst-plugins-base installed?",
+			"Unable to create gstreamer appsink; is %zu-bit gst-plugins-base installed?",
 			sizeof(void *) * 8
 		)
 		goto free_without_bin;
