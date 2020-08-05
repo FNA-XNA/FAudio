@@ -660,12 +660,10 @@ void FAudio_OPERATIONSET_QueueExitLoop(
 	FAudioSourceVoice *voice,
 	uint32_t OperationSet
 ) {
-	FAudio_OPERATIONSET_Operation *op;
-
 	FAudio_PlatformLockMutex(voice->audio->operationLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->operationLock)
 
-	op = QueueOperation(
+	QueueOperation(
 		voice,
 		FAUDIOOP_EXITLOOP,
 		OperationSet
