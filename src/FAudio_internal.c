@@ -382,10 +382,16 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			if (	voice->src.callback != NULL &&
 				voice->src.callback->OnBufferStart != NULL	)
 			{
+				FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+				LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 				voice->src.callback->OnBufferStart(
 					voice->src.callback,
 					buffer->pContext
 				);
+
+				FAudio_PlatformLockMutex(voice->audio->sourceLock);
+				LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 			}
 		}
 
@@ -435,10 +441,16 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				if (	voice->src.callback != NULL &&
 					voice->src.callback->OnLoopEnd != NULL	)
 				{
+					FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+					LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 					voice->src.callback->OnLoopEnd(
 						voice->src.callback,
 						buffer->pContext
 					);
+
+					FAudio_PlatformLockMutex(voice->audio->sourceLock);
+					LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 				}
 			}
 			else
@@ -491,6 +503,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				/* Callbacks */
 				if (voice->src.callback != NULL)
 				{
+					FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+					LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 					if (voice->src.callback->OnBufferEnd != NULL)
 					{
 						voice->src.callback->OnBufferEnd(
@@ -520,6 +535,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 							buffer->pContext
 						);
 					}
+
+					FAudio_PlatformLockMutex(voice->audio->sourceLock);
+					LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 				}
 
 				voice->audio->pFree(toDelete);
@@ -770,10 +788,16 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassStart != NULL	)
 	{
+		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 		voice->src.callback->OnVoiceProcessingPassStart(
 			voice->src.callback,
 			FAudio_INTERNAL_GetBytesRequested(voice, (uint32_t) toDecode)
 		);
+
+		FAudio_PlatformLockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 	}
 
 	/* Nothing to do? */
@@ -781,6 +805,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 		if (	voice->src.callback != NULL &&
 			voice->src.callback->OnVoiceProcessingPassEnd != NULL)
 		{
@@ -788,6 +816,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 				voice->src.callback
 			);
 		}
+
+		FAudio_PlatformLockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
 		LOG_FUNC_EXIT(voice->audio)
 		return;
 	}
@@ -806,9 +838,15 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
 	{
+		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 		voice->src.callback->OnVoiceProcessingPassEnd(
 			voice->src.callback
 		);
+
+		FAudio_PlatformLockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 	}
 
 	/* Nothing to resample? */
@@ -1134,10 +1172,16 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 
 		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
 		{
+			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
 			voice->src.callback->OnBufferEnd(
 				voice->src.callback,
 				entry->buffer.pContext
 			);
+
+			FAudio_PlatformLockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 		}
 		voice->audio->pFree(entry);
 	}
@@ -1208,8 +1252,6 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	while (list != NULL)
 	{
 		audio->processingSource = (FAudioSourceVoice*) list->entry;
-		FAudio_PlatformUnlockMutex(audio->sourceLock);
-		LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
 
 		FAudio_INTERNAL_FlushPendingBuffers(audio->processingSource);
 		if (audio->processingSource->src.active)
@@ -1218,8 +1260,6 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 			FAudio_INTERNAL_FlushPendingBuffers(audio->processingSource);
 		}
 
-		FAudio_PlatformLockMutex(audio->sourceLock);
-		LOG_MUTEX_LOCK(audio, audio->sourceLock)
 		list = list->next;
 	}
 	audio->processingSource = NULL;
