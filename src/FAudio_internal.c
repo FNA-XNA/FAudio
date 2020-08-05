@@ -1362,6 +1362,8 @@ void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output)
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t samples)
 {
 	LOG_FUNC_ENTER(audio)
+	FAudio_PlatformLockMutex(audio->sourceLock);
+	LOG_MUTEX_LOCK(audio, audio->sourceLock)
 	if (samples > audio->decodeSamples)
 	{
 		audio->decodeSamples = samples;
@@ -1370,12 +1372,16 @@ void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t samples)
 			sizeof(float) * audio->decodeSamples
 		);
 	}
+	FAudio_PlatformUnlockMutex(audio->sourceLock);
+	LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
 	LOG_FUNC_EXIT(audio)
 }
 
 void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 {
 	LOG_FUNC_ENTER(audio)
+	FAudio_PlatformLockMutex(audio->sourceLock);
+	LOG_MUTEX_LOCK(audio, audio->sourceLock)
 	if (samples > audio->resampleSamples)
 	{
 		audio->resampleSamples = samples;
@@ -1384,6 +1390,8 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 			sizeof(float) * audio->resampleSamples
 		);
 	}
+	FAudio_PlatformUnlockMutex(audio->sourceLock);
+	LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
 	LOG_FUNC_EXIT(audio)
 }
 
