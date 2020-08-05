@@ -636,6 +636,20 @@ static inline void FAudio_INTERNAL_FilterVoice(
 	LOG_FUNC_EXIT(audio)
 }
 
+static void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples)
+{
+	LOG_FUNC_ENTER(audio)
+	if (samples > audio->effectChainSamples)
+	{
+		audio->effectChainSamples = samples;
+		audio->effectChainCache = (float*) audio->pRealloc(
+			audio->effectChainCache,
+			sizeof(float) * audio->effectChainSamples
+		);
+	}
+	LOG_FUNC_EXIT(audio)
+}
+
 static inline float *FAudio_INTERNAL_ProcessEffectChain(
 	FAudioVoice *voice,
 	float *buffer,
@@ -1392,20 +1406,6 @@ void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t samples)
 	}
 	FAudio_PlatformUnlockMutex(audio->sourceLock);
 	LOG_MUTEX_UNLOCK(audio, audio->sourceLock)
-	LOG_FUNC_EXIT(audio)
-}
-
-void FAudio_INTERNAL_ResizeEffectChainCache(FAudio *audio, uint32_t samples)
-{
-	LOG_FUNC_ENTER(audio)
-	if (samples > audio->effectChainSamples)
-	{
-		audio->effectChainSamples = samples;
-		audio->effectChainCache = (float*) audio->pRealloc(
-			audio->effectChainCache,
-			sizeof(float) * audio->effectChainSamples
-		);
-	}
 	LOG_FUNC_EXIT(audio)
 }
 
