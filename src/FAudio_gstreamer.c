@@ -291,9 +291,8 @@ static void FAudio_INTERNAL_DecodeGSTREAMER(
 	float *decodeCache,
 	uint32_t samples
 ) {
-	size_t byteOffset, siz, totalSize, maxBytes;
+	size_t byteOffset, siz, maxBytes;
 	uint32_t curBlock, curBufferOffset;
-	uint32_t i;
 	uint8_t *convertCache;
 	int error = 0;
 	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
@@ -361,6 +360,7 @@ decode:
 	}
 	else
 	{
+		convertCache = NULL;
 		FAudio_assert(0 && "Somehow got an undecoded curBlock!");
 	}
 
@@ -624,6 +624,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	}
 	else
 	{
+		extradata = NULL;
 		FAudio_assert(0 && "Unrecognized WMA format!");
 	}
 	codec_data = gst_buffer_new_and_alloc(codec_data_size);
