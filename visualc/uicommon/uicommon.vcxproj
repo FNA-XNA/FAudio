@@ -69,6 +69,7 @@
     <ClCompile Include="..\..\utils\uicommon\imgui.cpp" />
     <ClCompile Include="..\..\utils\uicommon\imgui_demo.cpp" />
     <ClCompile Include="..\..\utils\uicommon\imgui_draw.cpp" />
+    <ClCompile Include="..\..\utils\uicommon\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\utils\uicommon\glfuncs.h" />
