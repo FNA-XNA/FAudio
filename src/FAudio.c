@@ -1873,7 +1873,7 @@ uint32_t FAudioVoice_SetOutputMatrix(
 	const float *pLevelMatrix,
 	uint32_t OperationSet
 ) {
-	uint32_t i;
+	uint32_t i, result = 0;
 	LOG_API_ENTER(voice->audio)
 
 	if (OperationSet != FAUDIO_COMMIT_NOW && voice->audio->active)
@@ -1914,22 +1914,53 @@ uint32_t FAudioVoice_SetOutputMatrix(
 			(void*) voice,
 			(void*) pDestinationVoice
 		)
-		FAudio_PlatformUnlockMutex(voice->sendLock);
-		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-		LOG_API_EXIT(voice->audio)
-		return FAUDIO_E_INVALID_CALL;
+		result = FAUDIO_E_INVALID_CALL;
+		goto end;
 	}
 
 	/* Verify the Source/Destination channel count */
-	FAudio_assert(SourceChannels == voice->outputChannels);
+	if (SourceChannels != voice->outputChannels)
+	{
+		LOG_ERROR(
+			voice->audio,
+			"SourceChannels not equal to voice channel count: %p %d %d",
+			(void*) voice,
+			SourceChannels,
+			voice->outputChannels
+		)
+		result = FAUDIO_E_INVALID_CALL;
+		goto end;
+	}
 
 	if (pDestinationVoice->type == FAUDIO_VOICE_MASTER)
 	{
-		FAudio_assert(DestinationChannels == pDestinationVoice->master.inputChannels);
+		if (DestinationChannels != pDestinationVoice->master.inputChannels)
+		{
+			LOG_ERROR(
+				voice->audio,
+				"DestinationChannels not equal to master channel count: %p %d %d",
+				(void*) pDestinationVoice,
+				DestinationChannels,
+				pDestinationVoice->master.inputChannels
+			)
+			result = FAUDIO_E_INVALID_CALL;
+			goto end;
+		}
 	}
 	else
 	{
-		FAudio_assert(DestinationChannels == pDestinationVoice->mix.inputChannels);
+		if (DestinationChannels != pDestinationVoice->mix.inputChannels)
+		{
+			LOG_ERROR(
+				voice->audio,
+				"DestinationChannels not equal to submix channel count: %p %d %d",
+				(void*) pDestinationVoice,
+				DestinationChannels,
+				pDestinationVoice->mix.inputChannels
+			)
+			result = FAUDIO_E_INVALID_CALL;
+			goto end;
+		}
 	}
 
 	/* Set the matrix values, finally */
@@ -1939,10 +1970,11 @@ uint32_t FAudioVoice_SetOutputMatrix(
 		sizeof(float) * SourceChannels * DestinationChannels
 	);
 
+end:
 	FAudio_PlatformUnlockMutex(voice->sendLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 	LOG_API_EXIT(voice->audio)
-	return 0;
+	return result;
 }
 
 void FAudioVoice_GetOutputMatrix(
