@@ -1524,10 +1524,10 @@ uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 
 	/* Allocate... */
 	FAudioFXReverb *result = (FAudioFXReverb*) customMalloc(sizeof(FAudioFXReverb));
-	result->apiVersion = 7;
 	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAudioFXReverbParameters) * 3
 	);
+	result->apiVersion = 7;
 	#define INITPARAMS(offset) \
 		FAudio_memcpy( \
 			params + sizeof(FAudioFXReverbParameters) * offset, \
@@ -1697,10 +1697,10 @@ uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
 
 	/* Allocate... */
 	FAudioFXReverb *result = (FAudioFXReverb*) customMalloc(sizeof(FAudioFXReverb));
-	result->apiVersion = 9;
 	uint8_t *params = (uint8_t*) customMalloc(
 		sizeof(FAudioFXReverbParameters9) * 3
 	);
+	result->apiVersion = 9;
 	#define INITPARAMS(offset) \
 		FAudio_memcpy( \
 			params + sizeof(FAudioFXReverbParameters9) * offset, \
