@@ -879,6 +879,7 @@ uint16_t FACTSoundBank_GetCueIndex(
 	}
 
 	FAudio_PlatformLockMutex(pSoundBank->parentEngine->apiLock);
+	if (pSoundBank->cueNames != NULL)
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
 		if (FAudio_strcmp(szFriendlyName, pSoundBank->cueNames[i]) == 0)
@@ -922,11 +923,18 @@ uint32_t FACTSoundBank_GetCueProperties(
 
 	FAudio_PlatformLockMutex(pSoundBank->parentEngine->apiLock);
 
-	FAudio_strlcpy(
-		pProperties->friendlyName,
-		pSoundBank->cueNames[nCueIndex],
-		0xFF
-	);
+	if (pSoundBank->cueNames == NULL)
+	{
+		FAudio_zero(pProperties->friendlyName, 0xFF);
+	}
+	else
+	{
+		FAudio_strlcpy(
+			pProperties->friendlyName,
+			pSoundBank->cueNames[nCueIndex],
+			0xFF
+		);
+	}
 	if (!(pSoundBank->cues[nCueIndex].flags & 0x04))
 	{
 		for (i = 0; i < pSoundBank->variationCount; i += 1)
@@ -1284,11 +1292,14 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	pSoundBank->parentEngine->pFree(pSoundBank->transitionCodes);
 
 	/* Cue Name data */
-	for (i = 0; i < pSoundBank->cueCount; i += 1)
+	if (pSoundBank->cueNames != NULL)
 	{
-		pSoundBank->parentEngine->pFree(pSoundBank->cueNames[i]);
+		for (i = 0; i < pSoundBank->cueCount; i += 1)
+		{
+			pSoundBank->parentEngine->pFree(pSoundBank->cueNames[i]);
+		}
+		pSoundBank->parentEngine->pFree(pSoundBank->cueNames);
 	}
-	pSoundBank->parentEngine->pFree(pSoundBank->cueNames);
 
 	/* Finally. */
 	if (pSoundBank->notifyOnDestroy || pSoundBank->parentEngine->notifications & NOTIFY_SOUNDBANKDESTROY)

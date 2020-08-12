@@ -2478,9 +2478,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	/* Last modified, unused */
 	ptr += 8;
 
-	/* Windows == 1, Xbox == 3 */
+	/* Windows == 1, Xbox == 3. 0 is unknown, probably old content */
 	platform = read_u8(&ptr, se);
-	if (	platform != 1 &&
+	if (	platform != 0 &&
+		platform != 1 &&
 		platform != 3	)
 	{
 		return -1; /* TODO: WRONG PLATFORM */
@@ -2885,25 +2886,38 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	}
 
 	/* Cue Hash data? No idea what this is... */
-	FAudio_assert((ptr - start) == cueHashOffset);
-	ptr += 2 * cueTotalAlign;
+	if (cueHashOffset != -1)
+	{
+		FAudio_assert((ptr - start) == cueHashOffset);
+		ptr += 2 * cueTotalAlign;
+	}
 
 	/* Cue Name Index data */
-	FAudio_assert((ptr - start) == cueNameIndexOffset);
-	ptr += 6 * sb->cueCount; /* FIXME: index as assert value? */
+	if (cueNameIndexOffset != -1)
+	{
+		FAudio_assert((ptr - start) == cueNameIndexOffset);
+		ptr += 6 * sb->cueCount; /* FIXME: index as assert value? */
+	}
 
 	/* Cue Name data */
-	FAudio_assert((ptr - start) == cueNameOffset);
-	sb->cueNames = (char**) pEngine->pMalloc(
-		sizeof(char*) *
-		sb->cueCount
-	);
-	for (i = 0; i < sb->cueCount; i += 1)
+	if (cueNameOffset != -1)
 	{
-		memsize = FAudio_strlen((char*) ptr) + 1;
-		sb->cueNames[i] = (char*) pEngine->pMalloc(memsize);
-		FAudio_memcpy(sb->cueNames[i], ptr, memsize);
-		ptr += memsize;
+		FAudio_assert((ptr - start) == cueNameOffset);
+		sb->cueNames = (char**) pEngine->pMalloc(
+			sizeof(char*) *
+			sb->cueCount
+		);
+		for (i = 0; i < sb->cueCount; i += 1)
+		{
+			memsize = FAudio_strlen((char*) ptr) + 1;
+			sb->cueNames[i] = (char*) pEngine->pMalloc(memsize);
+			FAudio_memcpy(sb->cueNames[i], ptr, memsize);
+			ptr += memsize;
+		}
+	}
+	else
+	{
+		sb->cueNames = NULL;
 	}
 
 	/* Add to the Engine SoundBank list */

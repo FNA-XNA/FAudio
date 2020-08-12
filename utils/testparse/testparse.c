@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 			"\t\tFade-out (ms): %d\n"
 			"\t\tMax Instance Behavior: %d\n",
 			i,
-			sb->cueNames[i],
+			(sb->cueNames != NULL) ? sb->cueNames[i] : "NONAME",
 			sb->cues[i].flags,
 			sb->cues[i].sbCode,
 			sb->cues[i].transitionOffset,
