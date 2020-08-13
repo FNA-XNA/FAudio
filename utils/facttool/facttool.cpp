@@ -488,49 +488,60 @@ void FAudioTool_Update()
 		/* Cues */
 		if (ImGui::CollapsingHeader("Cues"))
 		for (uint16_t j = 0; j < soundBanks[i]->cueCount; j += 1)
-		if (ImGui::TreeNode(soundBanks[i]->cueNames[j]))
 		{
-			char playText[64];
-			SDL_snprintf(playText, 64, "Play %s", soundBanks[i]->cueNames[j]);
-			if (ImGui::Button(playText))
+			char nameText[255];
+			if (soundBanks[i]->cueNames != NULL)
 			{
-				FACTSoundBank_Play(
-					soundBanks[i],
-					j,
-					0,
-					0,
-					NULL
-				);
+				SDL_snprintf(nameText, sizeof(nameText), "%s", soundBanks[i]->cueNames[j]);
 			}
-			ImGui::Text(
-				"Flags: %X",
-				soundBanks[i]->cues[j].flags
-			);
-			ImGui::Text(
-				"Sound/Variation Code: %d",
-				soundBanks[i]->cues[j].sbCode
-			);
-			ImGui::Text(
-				"Transition Offset: %d",
-				soundBanks[i]->cues[j].transitionOffset
-			);
-			ImGui::Text(
-				"Instance Limit: %d",
-				soundBanks[i]->cues[j].instanceLimit
-			);
-			ImGui::Text(
-				"Fade-in (ms): %d",
-				soundBanks[i]->cues[j].fadeInMS
-			);
-			ImGui::Text(
-				"Fade-out (ms): %d",
-				soundBanks[i]->cues[j].fadeOutMS
-			);
-			ImGui::Text(
-				"Max Instance Behavior: %d",
-				soundBanks[i]->cues[j].maxInstanceBehavior
-			);
-			ImGui::TreePop();
+			else
+			{
+				SDL_snprintf(nameText, sizeof(nameText), "%s-%d\n", soundBanks[i]->name, j);
+			}
+			if (ImGui::TreeNode(nameText))
+			{
+				char playText[64];
+				SDL_snprintf(playText, 64, "Play %s", nameText);
+				if (ImGui::Button(playText))
+				{
+					FACTSoundBank_Play(
+						soundBanks[i],
+						j,
+						0,
+						0,
+						NULL
+					);
+				}
+				ImGui::Text(
+					"Flags: %X",
+					soundBanks[i]->cues[j].flags
+				);
+				ImGui::Text(
+					"Sound/Variation Code: %d",
+					soundBanks[i]->cues[j].sbCode
+				);
+				ImGui::Text(
+					"Transition Offset: %d",
+					soundBanks[i]->cues[j].transitionOffset
+				);
+				ImGui::Text(
+					"Instance Limit: %d",
+					soundBanks[i]->cues[j].instanceLimit
+				);
+				ImGui::Text(
+					"Fade-in (ms): %d",
+					soundBanks[i]->cues[j].fadeInMS
+				);
+				ImGui::Text(
+					"Fade-out (ms): %d",
+					soundBanks[i]->cues[j].fadeOutMS
+				);
+				ImGui::Text(
+					"Max Instance Behavior: %d",
+					soundBanks[i]->cues[j].maxInstanceBehavior
+				);
+				ImGui::TreePop();
+			}
 		}
 
 		/* Sounds */
