@@ -27,33 +27,10 @@
 #include <FACT_internal.h> /* DO NOT INCLUDE THIS IN REAL CODE! */
 #include <SDL.h>
 
-int main(int argc, char **argv)
+static void print_soundbank(FACTAudioEngine *engine, uint8_t *buf, size_t len)
 {
-	FACTAudioEngine *engine;
 	FACTSoundBank *sb;
-	FACTWaveBank *wb;
-	FACTRuntimeParameters params;
-	uint8_t *buf;
-	size_t len;
 	uint32_t i, j, k, l;
-
-	/* We need an AudioEngine, SoundBank and WaveBank! */
-	if (argc < 4)
-	{
-		return 0;
-	}
-
-	/* Parse the AudioEngine */
-	buf = (uint8_t*) SDL_LoadFile(argv[1], &len);
-	SDL_memset(&params, '\0', sizeof(params));
-	params.pGlobalSettingsBuffer = buf;
-	params.globalSettingsBufferSize = len;
-	FACTCreateEngine(0, &engine);
-	FACTAudioEngine_Initialize(engine, &params);
-	SDL_free(buf);
-
-	/* Parse the SoundBank */
-	buf = (uint8_t*) SDL_LoadFile(argv[2], &len);
 	FACTAudioEngine_CreateSoundBank(
 		engine,
 		buf,
@@ -62,114 +39,6 @@ int main(int argc, char **argv)
 		0,
 		&sb
 	);
-	SDL_free(buf);
-
-	/* Parse the WaveBank, do NOT free this memory yet! */
-	buf = (uint8_t*) SDL_LoadFile(argv[3], &len);
-	FACTAudioEngine_CreateInMemoryWaveBank(
-		engine,
-		buf,
-		len,
-		0,
-		0,
-		&wb
-	);
-
-	/* Print AudioEngine information */
-	printf("AudioEngine:\n");
-	for (i = 0; i < engine->categoryCount; i += 1)
-	{
-		printf(
-			"\tCategory %d, \"%s\":\n"
-			"\t\tMax Instances: %d\n"
-			"\t\tFade-in (ms): %d\n"
-			"\t\tFade-out (ms): %d\n"
-			"\t\tInstance Behavior: %X\n"
-			"\t\tParent Category Index: %d\n"
-			"\t\tBase Volume: %f\n"
-			"\t\tVisibility: %X\n",
-			i,
-			engine->categoryNames[i],
-			engine->categories[i].instanceLimit,
-			engine->categories[i].fadeInMS,
-			engine->categories[i].fadeOutMS,
-			engine->categories[i].maxInstanceBehavior,
-			engine->categories[i].parentCategory,
-			engine->categories[i].volume,
-			engine->categories[i].visibility
-		);
-	}
-	for (i = 0; i < engine->variableCount; i += 1)
-	{
-		printf(
-			"\tVariable %d, \"%s\":\n"
-			"\t\tAccessibility: %X\n"
-			"\t\tInitial Value: %f\n"
-			"\t\tMin Value: %f\n"
-			"\t\tMax Value: %f\n",
-			i,
-			engine->variableNames[i],
-			engine->variables[i].accessibility,
-			engine->variables[i].initialValue,
-			engine->variables[i].minValue,
-			engine->variables[i].maxValue
-		);
-	}
-	for (i = 0; i < engine->rpcCount; i += 1)
-	{
-		printf(
-			"\tRPC %d, Code %d:\n"
-			"\t\tVariable Index: %d\n"
-			"\t\tParameter: %d\n"
-			"\t\tPoint Count: %d\n",
-			i,
-			engine->rpcCodes[i],
-			engine->rpcs[i].variable,
-			engine->rpcs[i].parameter,
-			engine->rpcs[i].pointCount
-		);
-		for (j = 0; j < engine->rpcs[i].pointCount; j += 1)
-		{
-			printf(
-				"\t\t\tPoint %d:\n"
-				"\t\t\t\tCoordinate: (%f, %f)\n"
-				"\t\t\t\tType: %d\n",
-				j,
-				engine->rpcs[i].points[j].x,
-				engine->rpcs[i].points[j].y,
-				engine->rpcs[i].points[j].type
-			);
-		}
-	}
-	for (i = 0; i < engine->dspPresetCount; i += 1)
-	{
-		printf(
-			"\tDSP Preset %d, Code %d:\n"
-			"\t\tAccessibility: %X\n"
-			"\t\tParameter Count: %d\n",
-			i,
-			engine->dspPresetCodes[i],
-			engine->dspPresets[i].accessibility,
-			engine->dspPresets[i].parameterCount
-		);
-		for (j = 0; j < engine->dspPresets[i].parameterCount; j += 1)
-		{
-			printf(
-				"\t\t\tParameter %d:\n"
-				"\t\t\t\tInitial Value: %f\n"
-				"\t\t\t\tMin Value: %f\n"
-				"\t\t\t\tMax Value: %f\n"
-				"\t\t\t\tUnknown u16: %d\n",
-				j,
-				engine->dspPresets[i].parameters[j].value,
-				engine->dspPresets[i].parameters[j].minVal,
-				engine->dspPresets[i].parameters[j].maxVal,
-				engine->dspPresets[i].parameters[j].unknown
-			);
-		}
-	}
-
-	/* Print SoundBank information */
 	printf("SoundBank \"%s\"\n", sb->name);
 	printf("\tWaveBank Dependencies:\n");
 	for (i = 0; i < sb->wavebankCount; i += 1)
@@ -500,8 +369,21 @@ int main(int argc, char **argv)
 			);
 		}
 	}
+	FACTSoundBank_Destroy(sb);
+}
 
-	/* Print WaveBank information */
+static void print_wavebank(FACTAudioEngine *engine, uint8_t *buf, size_t len)
+{
+	FACTWaveBank *wb;
+	uint32_t i, j;
+	FACTAudioEngine_CreateInMemoryWaveBank(
+		engine,
+		buf,
+		len,
+		0,
+		0,
+		&wb
+	);
 	printf("WaveBank \"%s\"\n", wb->name);
 	for (i = 0; i < wb->entryCount; i += 1)
 	{
@@ -546,11 +428,150 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+	FACTWaveBank_Destroy(wb);
+}
+
+int main(int argc, char **argv)
+{
+	FACTAudioEngine *engine;
+	FACTRuntimeParameters params;
+	uint8_t *buf;
+	size_t len;
+	uint32_t i, j;
+
+	/* We need an AudioEngine, SoundBank and WaveBank! */
+	if (argc < 2)
+	{
+		return 0;
+	}
+
+	/* Parse the AudioEngine */
+	buf = (uint8_t*) SDL_LoadFile(argv[1], &len);
+	SDL_memset(&params, '\0', sizeof(params));
+	params.pGlobalSettingsBuffer = buf;
+	params.globalSettingsBufferSize = len;
+	FACTCreateEngine(0, &engine);
+	FACTAudioEngine_Initialize(engine, &params);
+	SDL_free(buf);
+
+	/* Print AudioEngine information */
+	printf("AudioEngine:\n");
+	for (i = 0; i < engine->categoryCount; i += 1)
+	{
+		printf(
+			"\tCategory %d, \"%s\":\n"
+			"\t\tMax Instances: %d\n"
+			"\t\tFade-in (ms): %d\n"
+			"\t\tFade-out (ms): %d\n"
+			"\t\tInstance Behavior: %X\n"
+			"\t\tParent Category Index: %d\n"
+			"\t\tBase Volume: %f\n"
+			"\t\tVisibility: %X\n",
+			i,
+			engine->categoryNames[i],
+			engine->categories[i].instanceLimit,
+			engine->categories[i].fadeInMS,
+			engine->categories[i].fadeOutMS,
+			engine->categories[i].maxInstanceBehavior,
+			engine->categories[i].parentCategory,
+			engine->categories[i].volume,
+			engine->categories[i].visibility
+		);
+	}
+	for (i = 0; i < engine->variableCount; i += 1)
+	{
+		printf(
+			"\tVariable %d, \"%s\":\n"
+			"\t\tAccessibility: %X\n"
+			"\t\tInitial Value: %f\n"
+			"\t\tMin Value: %f\n"
+			"\t\tMax Value: %f\n",
+			i,
+			engine->variableNames[i],
+			engine->variables[i].accessibility,
+			engine->variables[i].initialValue,
+			engine->variables[i].minValue,
+			engine->variables[i].maxValue
+		);
+	}
+	for (i = 0; i < engine->rpcCount; i += 1)
+	{
+		printf(
+			"\tRPC %d, Code %d:\n"
+			"\t\tVariable Index: %d\n"
+			"\t\tParameter: %d\n"
+			"\t\tPoint Count: %d\n",
+			i,
+			engine->rpcCodes[i],
+			engine->rpcs[i].variable,
+			engine->rpcs[i].parameter,
+			engine->rpcs[i].pointCount
+		);
+		for (j = 0; j < engine->rpcs[i].pointCount; j += 1)
+		{
+			printf(
+				"\t\t\tPoint %d:\n"
+				"\t\t\t\tCoordinate: (%f, %f)\n"
+				"\t\t\t\tType: %d\n",
+				j,
+				engine->rpcs[i].points[j].x,
+				engine->rpcs[i].points[j].y,
+				engine->rpcs[i].points[j].type
+			);
+		}
+	}
+	for (i = 0; i < engine->dspPresetCount; i += 1)
+	{
+		printf(
+			"\tDSP Preset %d, Code %d:\n"
+			"\t\tAccessibility: %X\n"
+			"\t\tParameter Count: %d\n",
+			i,
+			engine->dspPresetCodes[i],
+			engine->dspPresets[i].accessibility,
+			engine->dspPresets[i].parameterCount
+		);
+		for (j = 0; j < engine->dspPresets[i].parameterCount; j += 1)
+		{
+			printf(
+				"\t\t\tParameter %d:\n"
+				"\t\t\t\tInitial Value: %f\n"
+				"\t\t\t\tMin Value: %f\n"
+				"\t\t\t\tMax Value: %f\n"
+				"\t\t\t\tUnknown u16: %d\n",
+				j,
+				engine->dspPresets[i].parameters[j].value,
+				engine->dspPresets[i].parameters[j].minVal,
+				engine->dspPresets[i].parameters[j].maxVal,
+				engine->dspPresets[i].parameters[j].unknown
+			);
+		}
+	}
+
+	/* Print SoundBank/WaveBank information */
+	for (i = 2; i < argc; i += 1)
+	{
+		buf = (uint8_t*) SDL_LoadFile(argv[i], &len);
+		if (buf == NULL || len < 4)
+		{
+			printf("%s invalid input!\n", argv[i]);
+		}
+		else if (*((uint32_t*) buf) == 0x4B424453)
+		{
+			print_soundbank(engine, buf, len);
+		}
+		else if (*((uint32_t*) buf) == 0x444E4257)
+		{
+			print_wavebank(engine, buf, len);
+		}
+		else
+		{
+			printf("%s not an XACT file!\n", argv[i]);
+		}
+		SDL_free(buf);
+	}
 
 	/* Clean up. We out. */
-	FACTWaveBank_Destroy(wb);
-	SDL_free(buf);
-	FACTSoundBank_Destroy(sb);
 	FACTAudioEngine_ShutDown(engine);
 
 	return 0;
