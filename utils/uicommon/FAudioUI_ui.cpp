@@ -197,6 +197,10 @@ uint8_t UI_Update(
 
 	/* Time update */
 	io.DeltaTime = deltaTime;
+	if (io.DeltaTime == 0.0f)
+	{
+		io.DeltaTime = 0.01f;
+	}
 
 	/* Input updates not done via UI_Submit*() */
 	io.MousePos = ImVec2((float) mx, (float) my);
