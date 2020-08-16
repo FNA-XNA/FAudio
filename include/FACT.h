@@ -556,7 +556,7 @@ FACTAPI uint32_t FACTAudioEngine_PrepareStreamingWave(
 	FACTStreamingParameters streamingParams,
 	uint32_t dwAlignment,
 	uint32_t *pdwSeekTable, /* Optional! */
-	uint8_t *pbWaveData,
+	uint8_t *pbWaveData, /* ABI bug, do not use! */
 	uint32_t dwPlayOffset,
 	uint8_t nLoopCount,
 	FACTWave **ppWave
