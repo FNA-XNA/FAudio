@@ -401,6 +401,7 @@ struct FAudioVoice
 	FAudioFilterState **sendFilterState;
 	struct
 	{
+		FAPOBufferFlags state;
 		uint32_t count;
 		FAudioEffectDescriptor *desc;
 		void **parameters;

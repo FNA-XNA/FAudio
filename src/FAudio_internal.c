@@ -732,6 +732,9 @@ static inline float *FAudio_INTERNAL_ProcessEffectChain(
 
 	*samples = dstParams.ValidFrameCount;
 
+	/* Save the output buffer-flags so the mixer-function can determine when it's save to stop processing the effect chain */
+	voice->effects.state = dstParams.BufferFlags;
+
 	LOG_FUNC_EXIT(voice->audio)
 	return (float*) dstParams.pBuffer;
 }
@@ -819,6 +822,18 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+		if (voice->effects.count > 0 && voice->effects.state != FAPO_BUFFER_SILENT)
+		{
+			/* do not stop while the effect chain generates a non-silent buffer */
+			mixed = voice->src.resampleSamples;
+			FAudio_zero(
+				voice->audio->resampleCache,
+				mixed * voice->src.format->nChannels * sizeof(float)
+			);
+			finalSamples = voice->audio->resampleCache;
+			goto sendwork;
+		}
 
 		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
@@ -1416,6 +1431,7 @@ void FAudio_INTERNAL_AllocEffectChain(
 	uint32_t i;
 
 	LOG_FUNC_ENTER(voice->audio)
+	voice->effects.state = FAPO_BUFFER_VALID;
 	voice->effects.count = pEffectChain->EffectCount;
 	if (voice->effects.count == 0)
 	{
