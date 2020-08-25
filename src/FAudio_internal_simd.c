@@ -1277,6 +1277,49 @@ void FAudio_INTERNAL_Amplify_NEON(
 #endif /* HAVE_NEON_INTRINSICS */
 
 /* SECTION 4: Mixer Functions */
+static int FAudio_MixerCanFastpath(
+	uint32_t srcChans,
+	uint32_t dstChans,
+	float baseVolume,
+	float *restrict channelVolume,
+	float *restrict coefficients
+) {
+	uint32_t i, j;
+	if (srcChans != dstChans)
+	{
+		return 0;
+	}
+	if (baseVolume != 1.f)
+	{
+		return 0;
+	}
+	for (i = 0; i < srcChans; ++i)
+	{
+		if (channelVolume[i] != 1.f)
+		{
+			return 0;
+		}
+		/* identity matrix can fastpath */
+		for (j = 0; j < dstChans; ++j)
+		{
+			if (i == j)
+			{
+				if (coefficients[i * srcChans + j] != 1.f)
+				{
+					return 0;
+				}
+			}
+			else
+			{
+				if (coefficients[i * srcChans + j] != 0.f)
+				{
+					return 0;
+				}
+			}
+		}
+	}
+	return 1;
+}
 
 void FAudio_INTERNAL_Mix_Generic_Scalar(
 	uint32_t toMix,
@@ -1289,6 +1332,11 @@ void FAudio_INTERNAL_Mix_Generic_Scalar(
 	float *restrict coefficients
 ) {
 	uint32_t i, co, ci;
+	if (FAudio_MixerCanFastpath(srcChans, dstChans, baseVolume, channelVolume, coefficients))
+	{
+		FAudio_memcpy(dst, src, sizeof(float) * toMix * srcChans);
+		return;
+	}
 	for (i = 0; i < toMix; i += 1, src += srcChans, dst += dstChans)
 	for (co = 0; co < dstChans; co += 1)
 	{
@@ -1316,6 +1364,11 @@ void FAudio_INTERNAL_Mix_1in_1out_Scalar(
 ) {
 	uint32_t i;
 	float totalVolume = baseVolume * channelVolume[0] * coefficients[0];
+	if (totalVolume == 1.f)
+	{
+		FAudio_memcpy(dst, src, sizeof(float) * toMix);
+		return;
+	}
 	for (i = 0; i < toMix; i += 1, src += 1, dst += 1)
 	{
 		/* Base source data, combined with the coefficients */
@@ -1436,8 +1489,14 @@ void FAudio_INTERNAL_Mix_2in_2out_Scalar(
 	float *restrict coefficients
 ) {
 	uint32_t i;
-	float totalVolumeL = baseVolume * channelVolume[0];
-	float totalVolumeR = baseVolume * channelVolume[1];
+	float totalVolumeL, totalVolumeR;
+	if (FAudio_MixerCanFastpath(2, 2, baseVolume, channelVolume, coefficients))
+	{
+		FAudio_memcpy(dst, src, sizeof(float) * toMix * 2);
+		return;
+	}
+	totalVolumeL = baseVolume * channelVolume[0];
+	totalVolumeR = baseVolume * channelVolume[1];
 	for (i = 0; i < toMix; i += 1, src += 2, dst += 2)
 	{
 		/* Base source data... */
