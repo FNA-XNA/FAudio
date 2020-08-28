@@ -1300,6 +1300,50 @@ void FAudio_INTERNAL_Mix_Generic_Scalar(
 	}
 }
 
+#if HAVE_SSE2_INTRINSICS
+/* SSE horizontal add by Peter Cordes, CC-BY-SA.
+ * From https://stackoverflow.com/a/35270026 */
+static inline float FAudio_simd_hadd(__m128 v)
+{
+	__m128 shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1));
+	__m128 sums = _mm_add_ps(v, shuf);
+	shuf = _mm_movehl_ps(shuf, sums);
+	sums = _mm_add_ss(sums, shuf);
+	return _mm_cvtss_f32(sums);
+}
+
+void FAudio_INTERNAL_Mix_Generic_SSE2(
+	uint32_t toMix,
+	uint32_t srcChans,
+	uint32_t dstChans,
+	float *restrict src,
+	float *restrict dst,
+	float *restrict coefficients
+) {
+	uint32_t i, co, ci;
+	for (i = 0; i < toMix; i += 1, src += srcChans, dst += dstChans)
+	for (co = 0; co < dstChans; co += 1)
+	{
+		for (ci = 0; srcChans - ci >= 4; ci += 4)
+		{
+			/* do SIMD */
+			const __m128 vols = _mm_loadu_ps(&coefficients[co * srcChans + ci]);
+			const __m128 dat = _mm_loadu_ps(&src[ci]);
+			dst[co] += FAudio_simd_hadd(_mm_mul_ps(dat, vols));
+		}
+
+		for (; ci < srcChans; ci += 1)
+		{
+			/* do scalar */
+			dst[co] += (
+				src[ci] *
+				coefficients[co * srcChans + ci]
+			);
+		}
+	}
+}
+#endif /* HAVE_SSE2_INTRINSICS */
+
 void FAudio_INTERNAL_Mix_1in_1out_Scalar(
 	uint32_t toMix,
 	uint32_t UNUSED1,
@@ -1526,6 +1570,8 @@ void (*FAudio_INTERNAL_Amplify)(
 	float volume
 );
 
+FAudioMixCallback FAudio_INTERNAL_Mix_Generic;
+
 void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 {
 #if HAVE_SSE2_INTRINSICS
@@ -1537,6 +1583,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_SSE2;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_SSE2;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_SSE2;
+		FAudio_INTERNAL_Mix_Generic = FAudio_INTERNAL_Mix_Generic_SSE2;
 		return;
 	}
 #endif
@@ -1549,6 +1596,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_NEON;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_NEON;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_NEON;
+		FAudio_INTERNAL_Mix_Generic = FAudio_INTERNAL_Mix_Generic_Scalar;
 		return;
 	}
 #endif
@@ -1559,6 +1607,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 	FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_Scalar;
 	FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_Scalar;
 	FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_Scalar;
+	FAudio_INTERNAL_Mix_Generic = FAudio_INTERNAL_Mix_Generic_Scalar;
 #else
 	FAudio_assert(0 && "Need converter functions!");
 #endif
