@@ -249,10 +249,8 @@ typedef void (FAUDIOCALL * FAudioMixCallback)(
 	uint32_t toMix,
 	uint32_t srcChans,
 	uint32_t dstChans,
-	float baseVolume,
 	float *restrict srcData,
 	float *restrict dstData,
-	float *restrict channelVolume,
 	float *restrict coefficients
 );
 
@@ -396,6 +394,7 @@ struct FAudioVoice
 
 	FAudioVoiceSends sends;
 	float **sendCoefficients;
+	float **mixCoefficients;
 	FAudioMixCallback *sendMix;
 	FAudioFilterParameters *sendFilter;
 	FAudioFilterState **sendFilterState;
@@ -666,10 +665,8 @@ extern void (*FAudio_INTERNAL_Amplify)(
 		uint32_t toMix, \
 		uint32_t srcChans, \
 		uint32_t dstChans, \
-		float baseVolume, \
 		float *restrict srcData, \
 		float *restrict dstData, \
-		float *restrict channelVolume, \
 		float *restrict coefficients \
 	);
 MIX_FUNC(Generic)
