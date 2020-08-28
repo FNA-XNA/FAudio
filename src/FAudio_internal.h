@@ -660,6 +660,8 @@ extern void (*FAudio_INTERNAL_Amplify)(
 	float volume
 );
 
+extern FAudioMixCallback FAudio_INTERNAL_Mix_Generic;
+
 #define MIX_FUNC(type) \
 	extern void FAudio_INTERNAL_Mix_##type##_Scalar( \
 		uint32_t toMix, \
