@@ -117,6 +117,16 @@ void FAudio_PlatformInit(
 		changes = SDL_AUDIO_ALLOW_SAMPLES_CHANGE;
 	}
 
+	/* FIXME: SDL bug!
+	 * <INSERT INFORMED COMMENT ABOUT THE BUG>
+	 *
+	 * https://bugzilla.libsdl.org/show_bug.cgi?id=5136
+	 */
+	if (SDL_strcmp(SDL_GetCurrentAudioDriver(), "emscripten") == 0)
+	{
+		want.samples = 512;
+	}
+
 	/* Open the device (or at least try to) */
 iosretry:
 	device = SDL_OpenAudioDevice(
