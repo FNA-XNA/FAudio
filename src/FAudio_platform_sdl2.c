@@ -75,6 +75,7 @@ void FAudio_PlatformInit(
 ) {
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
+	const char *driver;
 	int changes = 0;
 
 	FAudio_assert(mixFormat != NULL);
@@ -111,10 +112,31 @@ void FAudio_PlatformInit(
 	 * size and allow SDL to set the quantum size back to normal.
 	 * -flibit
 	 */
-	if (SDL_strcmp(SDL_GetCurrentAudioDriver(), "pulseaudio") == 0)
+	driver = SDL_GetCurrentAudioDriver();
+	if (SDL_strcmp(driver, "pulseaudio") == 0)
 	{
 		want.samples *= 2;
 		changes = SDL_AUDIO_ALLOW_SAMPLES_CHANGE;
+	}
+
+	/* FIXME: SDL bug!
+	 * The most common backends support varying samples values, but many
+	 * require a power-of-two value, which XAudio2 is not a fan of.
+	 * Normally SDL creates an intermediary stream to handle this, but this
+	 * has not been written yet:
+	 * https://bugzilla.libsdl.org/show_bug.cgi?id=5136
+	 * -flibit
+	 */
+	else if (	SDL_strcmp(driver, "emscripten") == 0 ||
+			SDL_strcmp(driver, "dsp") == 0	)
+	{
+		want.samples -= 1;
+		want.samples |= want.samples >> 1;
+		want.samples |= want.samples >> 2;
+		want.samples |= want.samples >> 4;
+		want.samples |= want.samples >> 8;
+		want.samples |= want.samples >> 16;
+		want.samples += 1;
 	}
 
 	/* Open the device (or at least try to) */
