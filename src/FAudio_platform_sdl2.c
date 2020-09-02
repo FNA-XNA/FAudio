@@ -137,6 +137,11 @@ void FAudio_PlatformInit(
 		want.samples |= want.samples >> 8;
 		want.samples |= want.samples >> 16;
 		want.samples += 1;
+		SDL_Log(
+			"Forcing FAudio quantum to a power-of-two.\n"
+			"You don't actually want this, it's technically a bug:\n"
+			"https://bugzilla.libsdl.org/show_bug.cgi?id=5136"
+		);
 	}
 
 	/* Open the device (or at least try to) */
