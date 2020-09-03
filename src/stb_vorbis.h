@@ -936,6 +936,9 @@ static void *make_block_array(void *mem, int count, int size)
    return p;
 }
 
+// FIXME: https://github.com/nothings/stb/pull/1005 -flibit
+static char zeromalloc = 0;
+
 static void *setup_malloc(vorb *f, int sz)
 {
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
@@ -946,13 +949,14 @@ static void *setup_malloc(vorb *f, int sz)
       f->setup_offset += sz;
       return p;
    }
-   return sz ? malloc(sz) : NULL;
+   return sz ? malloc(sz) : &zeromalloc;
 }
 
 static void setup_free(vorb *f, void *p)
 {
    if (f->alloc.alloc_buffer) return; // do nothing; setup mem is a stack
-   free(p);
+   if (p != &zeromalloc)
+      free(p);
 }
 
 static void *setup_temp_malloc(vorb *f, int sz)
