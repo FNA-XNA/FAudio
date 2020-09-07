@@ -1413,7 +1413,9 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	}
 
 	if (!pWaveBank->streaming)
+	{
 		FAudio_close(pWaveBank->io);
+	}
 
 	if (pWaveBank->packetBuffer != NULL)
 	{
