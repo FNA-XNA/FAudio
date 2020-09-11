@@ -576,6 +576,18 @@ uint32_t FACTAudioEngine_RegisterNotification(
 			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
 		}
 	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVESTOP)
+	{
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications |= NOTIFY_WAVESTOP;
+			pEngine->wave_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVESTOP notification!");
+		}
+	}
 	else
 	{
 		FAudio_assert(0 && "TODO: Unimplemented notification!");
@@ -645,6 +657,18 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 		{
 			pNotificationDescription->pWave->notifyOnDestroy = 0;
 			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
+		}
+	}
+	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVESTOP)
+	{
+		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
+		{
+			pEngine->notifications &= ~NOTIFY_WAVESTOP;
+			pEngine->wave_context = pNotificationDescription->pvContext;
+		}
+		else
+		{
+			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVESTOP notification!");
 		}
 	}
 	else
