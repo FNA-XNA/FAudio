@@ -99,6 +99,7 @@ typedef enum FACTNoticationsFlags
 	NOTIFY_SOUNDBANKDESTROY  = 0x0002,
 	NOTIFY_WAVEBANKDESTROY   = 0x0004,
 	NOTIFY_WAVEDESTROY       = 0x0008,
+	NOTIFY_WAVESTOP          = 0x0010,
 } FACTNoticationsFlags;
 
 /* Internal SoundBank Types */
