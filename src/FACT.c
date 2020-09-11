@@ -1937,6 +1937,18 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 		FAudioSourceVoice_ExitLoop(pWave->voice, 0);
 	}
 
+	if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVESTOP)
+	{
+		FACTNotification note;
+		note.type = FACTNOTIFICATIONTYPE_WAVESTOP;
+		note.wave.pWave = pWave;
+		if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVESTOP)
+		{
+			note.pvContext = pWave->parentBank->parentEngine->wave_context;
+		}
+		pWave->parentBank->parentEngine->notificationCallback(&note);
+	}
+
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
 	return 0;
 }
