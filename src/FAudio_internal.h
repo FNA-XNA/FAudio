@@ -493,7 +493,6 @@ void FAudio_INTERNAL_InsertSubmixSorted(
 );
 void FAudio_INTERNAL_UpdateEngine(FAudio *audio, float *output);
 void FAudio_INTERNAL_ResizeDecodeCache(FAudio *audio, uint32_t size);
-void FAudio_INTERNAL_ResizeResampleCache(FAudio *audio, uint32_t size);
 void FAudio_INTERNAL_AllocEffectChain(
 	FAudioVoice *voice,
 	const FAudioEffectChain *pEffectChain
