@@ -2830,20 +2830,16 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 		voice->sends.pSends[0].pOutputVoice->master.inputSampleRate :
 		voice->sends.pSends[0].pOutputVoice->mix.inputSampleRate;
 
-	FAudio_PlatformUnlockMutex(voice->sendLock);
-	LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
-	/* Resize resample cache */
 	newResampleSamples = (uint32_t) (FAudio_ceil(
 		(double) voice->audio->updateSize *
 		(double) outSampleRate /
 		(double) voice->audio->master->master.inputSampleRate
 	));
-	FAudio_INTERNAL_ResizeResampleCache(
-		voice->audio,
-		newResampleSamples * voice->src.format->nChannels
-	);
 	voice->src.resampleSamples = newResampleSamples;
+
+	FAudio_PlatformUnlockMutex(voice->sendLock);
+	LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
 	LOG_API_EXIT(voice->audio)
 	return 0;
 }
