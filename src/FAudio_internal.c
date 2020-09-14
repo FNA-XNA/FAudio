@@ -792,9 +792,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		voice->src.resampleFreq = voice->src.freqRatio * voice->src.format->nSamplesPerSec;
 	}
 
-	FAudio_PlatformUnlockMutex(voice->sendLock);
-	LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
 	if (voice->src.active == 2)
 	{
 		/* We're just playing tails, skip all buffer stuff */
@@ -825,6 +822,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassStart != NULL	)
 	{
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
 		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
@@ -835,6 +835,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 		FAudio_PlatformLockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
+		FAudio_PlatformLockMutex(voice->sendLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 	}
 
 	/* Nothing to do? */
@@ -858,6 +861,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 			finalSamples = voice->audio->resampleCache;
 			goto sendwork;
 		}
+
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 
 		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
@@ -891,6 +897,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
 	{
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
 		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
@@ -900,6 +909,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 		FAudio_PlatformLockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
+		FAudio_PlatformLockMutex(voice->sendLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 	}
 
 	/* Nothing to resample? */
@@ -907,6 +919,10 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
 		LOG_FUNC_EXIT(voice->audio)
 		return;
 	}
@@ -976,8 +992,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	mixed = (uint32_t) toResample;
 
 sendwork:
-	FAudio_PlatformLockMutex(voice->sendLock);
-	LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 
 	/* Nowhere to send it? Just skip the rest...*/
 	if (voice->sends.SendCount == 0)
