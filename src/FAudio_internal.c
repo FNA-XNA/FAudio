@@ -815,9 +815,6 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	/* ... fixed to int, truncating extra fraction from rounding. */
 	toDecode >>= FIXED_PRECISION;
 
-	FAudio_PlatformLockMutex(voice->src.bufferLock);
-	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-
 	/* First voice callback */
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassStart != NULL	)
@@ -839,6 +836,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 		FAudio_PlatformLockMutex(voice->sendLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 	}
+
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
+	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
 	/* Nothing to do? */
 	if (voice->src.bufferList == NULL)
@@ -897,6 +897,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	if (	voice->src.callback != NULL &&
 		voice->src.callback->OnVoiceProcessingPassEnd != NULL)
 	{
+		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
 		FAudio_PlatformUnlockMutex(voice->sendLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 
@@ -912,6 +915,9 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 
 		FAudio_PlatformLockMutex(voice->sendLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
+
+		FAudio_PlatformLockMutex(voice->src.bufferLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 	}
 
 	/* Nothing to resample? */
