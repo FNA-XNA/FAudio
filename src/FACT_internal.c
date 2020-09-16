@@ -2484,7 +2484,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		platform != 1 &&
 		platform != 3	)
 	{
-		return -1; /* TODO: WRONG PLATFORM */
+		return -4; /* TODO: WRONG PLATFORM */
 	}
 
 	sb = (FACTSoundBank*) pEngine->pMalloc(sizeof(FACTSoundBank));
