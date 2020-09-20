@@ -1991,7 +1991,13 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 	uint8_t *ptr = (uint8_t*) pParams->pGlobalSettingsBuffer;
 	uint8_t *start = ptr;
-	
+
+	/* FIXME: Should be recorded so we can return the correct error */
+	if (!pParams->pGlobalSettingsBuffer)
+	{
+		return 0;
+	}
+
 	uint8_t se = 0; /* Swap Endian */
 	uint32_t magic = read_u32(&ptr, 0);
 	se = magic == 0x58475346;
