@@ -101,20 +101,6 @@ typedef void (FACTCALL * FACTNotificationCallback)(
 	const FACTNotification *pNotification
 );
 
-typedef struct FACTRuntimeParameters
-{
-	uint32_t lookAheadTime;
-	void *pGlobalSettingsBuffer;
-	uint32_t globalSettingsBufferSize;
-	uint32_t globalSettingsFlags;
-	uint32_t globalSettingsAllocAttributes;
-	FACTFileIOCallbacks fileIOCallbacks;
-	FACTNotificationCallback fnNotificationCallback;
-	int16_t *pRendererID; /* Win32 wchar_t* */
-	FAudio *pXAudio2;
-	FAudioMasteringVoice *pMasteringVoice;
-} FACTRuntimeParameters;
-
 typedef struct FACTStreamingParameters
 {
 	void *file;
@@ -144,6 +130,20 @@ typedef enum FACTWaveBankSegIdx
 } FACTWaveBankSegIdx;
 
 #pragma pack(push, 1)
+
+typedef struct FACTRuntimeParameters
+{
+	uint32_t lookAheadTime;
+	void *pGlobalSettingsBuffer;
+	uint32_t globalSettingsBufferSize;
+	uint32_t globalSettingsFlags;
+	uint32_t globalSettingsAllocAttributes;
+	FACTFileIOCallbacks fileIOCallbacks;
+	FACTNotificationCallback fnNotificationCallback;
+	int16_t *pRendererID; /* Win32 wchar_t* */
+	FAudio *pXAudio2;
+	FAudioMasteringVoice *pMasteringVoice;
+} FACTRuntimeParameters;
 
 typedef struct FACTWaveBankRegion
 {
