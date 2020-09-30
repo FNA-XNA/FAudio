@@ -1993,7 +1993,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	uint8_t *start = ptr;
 
 	/* FIXME: Should be recorded so we can return the correct error */
-	if (!pParams->pGlobalSettingsBuffer)
+	if (!pParams->pGlobalSettingsBuffer || pParams->globalSettingsBufferSize == 0)
 	{
 		return 0;
 	}
