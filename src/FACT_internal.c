@@ -1986,6 +1986,8 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count;
 	uint8_t version, tool;
+	uint8_t se;
+	uint32_t magic;
 	size_t memsize;
 	uint16_t i, j;
 
@@ -1998,9 +2000,8 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		return 0;
 	}
 
-	uint8_t se = 0; /* Swap Endian */
-	uint32_t magic = read_u32(&ptr, 0);
-	se = magic == 0x58475346;
+	magic = read_u32(&ptr, 0);
+	se = magic == 0x58475346; /* Swap Endian */
 	if (magic != 0x46534758 && magic != 0x58475346) /* 'XGSF' */
 	{
 		return -1; /* TODO: NOT XACT FILE */
