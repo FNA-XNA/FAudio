@@ -101,6 +101,7 @@ typedef void (FACTCALL * FACTNotificationCallback)(
 	const FACTNotification *pNotification
 );
 
+/* FIXME: ABI bug! This should be pack(1) explicitly. Do not memcpy this! */
 typedef struct FACTRuntimeParameters
 {
 	uint32_t lookAheadTime;
