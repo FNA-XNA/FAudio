@@ -1400,6 +1400,12 @@ uint32_t FAudioVoice_SetEffectChain(
 			dstFmt.Format.nBlockAlign = dstFmt.Format.nChannels * (dstFmt.Format.wBitsPerSample / 8);
 			dstFmt.Format.nAvgBytesPerSec = dstFmt.Format.nSamplesPerSec * dstFmt.Format.nBlockAlign;
 
+			/* FIXME: This error needs to be found _before_ we start
+			 * shredding the voice's state. This function is highly
+			 * destructive so any errors need to be found at the
+			 * beginning, not in the middle! We can't undo this!
+			 * -flibit
+			 */
 			if (fapo->LockForProcess(fapo, 1, &srcLockParams, 1, &dstLockParams))
 			{
 				LOG_ERROR(
