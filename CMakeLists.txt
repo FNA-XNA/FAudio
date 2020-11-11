@@ -142,9 +142,9 @@ if(GSTREAMER)
 
 	# Find GStreamer
 	find_package(PkgConfig)
-	pkg_check_modules(GST REQUIRED IMPORTED_TARGET gstreamer-1.0)
-	pkg_check_modules(GSTAUDIO REQUIRED IMPORTED_TARGET gstreamer-audio-1.0)
-	pkg_check_modules(GSTAPP REQUIRED IMPORTED_TARGET gstreamer-app-1.0)
+	pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.9.2)
+	pkg_check_modules(GSTAUDIO REQUIRED gstreamer-audio-1.0>=1.9.2)
+	pkg_check_modules(GSTAPP REQUIRED gstreamer-app-1.0>=1.9.2)
 
 	# Include/Link GStreamer...
 	target_include_directories(FAudio PRIVATE
@@ -153,9 +153,9 @@ if(GSTREAMER)
 		${GSTAPP_INCLUDE_DIRS}
 	)
 	target_link_libraries(FAudio PRIVATE
-            PkgConfig::GST
-            PkgConfig::GSTAUDIO
-            PkgConfig::GSTAPP
+            ${GST_LDFLAGS}
+            ${GSTAUDIO_LDFLAGS}
+            ${GSTAPP_LDFLAGS}
         )
 endif(GSTREAMER)
 
