@@ -441,6 +441,20 @@ install(
 	ARCHIVE DESTINATION ${FAudio_INSTALL_LIBDIR}
 )
 
+# Generate a pkgconfig file
+include(cmake/JoinPaths.cmake)
+join_paths(FAUDIO_PKGCONF_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
+join_paths(FAUDIO_PKGCONF_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
+configure_file(
+	"${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}.pc.in"
+	${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.pc
+	@ONLY
+)
+install(
+	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}.pc
+	DESTINATION ${FAudio_INSTALL_LIBDIR}/pkgconfig
+)
+
 # Generate cmake-config file, install CMake files
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
