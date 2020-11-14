@@ -542,6 +542,22 @@ static void test_simple_streaming(IXAudio2 *xa)
     XA2CALL_V(UnregisterForCallbacks, &ecb);
 }
 
+static const GUID DATAFORMAT_SUBTYPE_PCM = {
+    0x01,
+    0x00,
+    0x10,
+    {
+        0x80,
+        0x00,
+        0x00,
+        0xAA,
+        0x00,
+        0x38,
+        0x9B,
+        0x71
+    }
+};
+
 static UINT32 test_DeviceDetails(IXAudio27 *xa)
 {
     HRESULT hr;
@@ -557,6 +573,21 @@ static UINT32 test_DeviceDetails(IXAudio27 *xa)
     for(i = 0; i < count; ++i){
         hr = IXAudio27_GetDeviceDetails(xa, i, &dd);
         ok(hr == S_OK, "GetDeviceDetails failed: %08x\n", hr);
+
+        ok(!memcmp(&dd.OutputFormat.SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(GUID)),
+                "Expected SubFormat of device at index %u to be MFAudioFormat_PCM. "
+                "Got {%8.8x-%4.4x-%4.4x-%2.2x%2.2x-%2.2x%2.2x%2.2x%2.2x%2.2x%2.2x}.\n", i,
+                dd.OutputFormat.SubFormat.Data1,
+                dd.OutputFormat.SubFormat.Data2,
+                dd.OutputFormat.SubFormat.Data3,
+                dd.OutputFormat.SubFormat.Data4[0],
+                dd.OutputFormat.SubFormat.Data4[1],
+                dd.OutputFormat.SubFormat.Data4[2],
+                dd.OutputFormat.SubFormat.Data4[3],
+                dd.OutputFormat.SubFormat.Data4[4],
+                dd.OutputFormat.SubFormat.Data4[5],
+                dd.OutputFormat.SubFormat.Data4[6],
+                dd.OutputFormat.SubFormat.Data4[7]);
 
         if(i == 0)
             ok(dd.Role == GlobalDefaultDevice, "Got wrong role for index 0: 0x%x\n", dd.Role);
