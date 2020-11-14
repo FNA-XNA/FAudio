@@ -768,7 +768,8 @@ static inline uint32_t GetMask(uint16_t channels)
 static inline void WriteWaveFormatExtensible(
 	FAudioWaveFormatExtensible *fmt,
 	int channels,
-	int samplerate
+	int samplerate,
+	const FAudioGUID *subformat
 ) {
 	FAudio_assert(fmt != NULL);
 	fmt->Format.wBitsPerSample = 32;
@@ -786,7 +787,7 @@ static inline void WriteWaveFormatExtensible(
 	fmt->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
 	fmt->Samples.wValidBitsPerSample = 32;
 	fmt->dwChannelMask = GetMask(fmt->Format.nChannels);
-	FAudio_memcpy(&fmt->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
+	FAudio_memcpy(&fmt->SubFormat, subformat, sizeof(FAudioGUID));
 }
 
 /* Resampling */
