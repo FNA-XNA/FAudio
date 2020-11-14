@@ -697,7 +697,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	WriteWaveFormatExtensible(
 		&audio->mixFormat,
 		audio->master->outputChannels,
-		audio->master->master.inputSampleRate
+		audio->master->master.inputSampleRate,
+		&DATAFORMAT_SUBTYPE_IEEE_FLOAT
 	);
 
 	/* Platform Device */
