@@ -542,7 +542,7 @@ static void test_simple_streaming(IXAudio2 *xa)
     XA2CALL_V(UnregisterForCallbacks, &ecb);
 }
 
-static const GUID DATAFORMAT_SUBTYPE_PCM = {
+FAudioGUID DATAFORMAT_SUBTYPE_PCM = {
     0x01,
     0x00,
     0x10,
@@ -574,7 +574,7 @@ static UINT32 test_DeviceDetails(IXAudio27 *xa)
         hr = IXAudio27_GetDeviceDetails(xa, i, &dd);
         ok(hr == S_OK, "GetDeviceDetails failed: %08x\n", hr);
 
-        ok(!memcmp(&dd.OutputFormat.SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(GUID)),
+        ok(!memcmp(&dd.OutputFormat.SubFormat, &DATAFORMAT_SUBTYPE_PCM, sizeof(FAudioGUID)),
                 "Expected SubFormat of device at index %u to be MFAudioFormat_PCM. "
                 "Got {%8.8x-%4.4x-%4.4x-%2.2x%2.2x-%2.2x%2.2x%2.2x%2.2x%2.2x%2.2x}.\n", i,
                 dd.OutputFormat.SubFormat.Data1,
