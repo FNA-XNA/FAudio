@@ -179,8 +179,12 @@ iosretry:
 	}
 
 	/* Write up the received format for the engine */
-	WriteWaveFormatExtensible(mixFormat, have.channels, have.freq,
-		&DATAFORMAT_SUBTYPE_IEEE_FLOAT);
+	WriteWaveFormatExtensible(
+		mixFormat,
+		have.channels,
+		have.freq,
+		&DATAFORMAT_SUBTYPE_IEEE_FLOAT
+	);
 	*updateSize = have.samples;
 
 	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
@@ -261,8 +265,12 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	{
 		channels = 2;
 	}
-	WriteWaveFormatExtensible(&details->OutputFormat, channels, rate,
-		&DATAFORMAT_SUBTYPE_PCM);
+	WriteWaveFormatExtensible(
+		&details->OutputFormat,
+		channels,
+		rate,
+		&DATAFORMAT_SUBTYPE_PCM
+	);
 	return 0;
 }
 
