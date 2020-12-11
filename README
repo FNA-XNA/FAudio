@@ -15,7 +15,8 @@ library via FAudio#, which you can find in the 'csharp/' directory.
 
 Dependencies
 ------------
-FAudio depends solely on SDL2. FAudio never explicitly uses the C runtime.
+FAudio depends solely on SDL 2.0.9 or newer.
+FAudio never explicitly uses the C runtime.
 
 Building FAudio
 ---------------
