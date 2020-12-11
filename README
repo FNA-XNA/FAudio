@@ -15,7 +15,7 @@ library via FAudio#, which you can find in the 'csharp/' directory.
 
 Dependencies
 ------------
-FAudio depends solely on SDL 2.0.9+ (Ubuntu 20.04+, Debian 10+, Fedora 30+)
+FAudio depends solely on SDL 2.0.9 or newer.
 FAudio never explicitly uses the C runtime.
 
 Building FAudio
