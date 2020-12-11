@@ -28,6 +28,11 @@
 
 #include <SDL.h>
 
+#if SDL_VERSION_ATLEAST(2, 0, 9)
+#else
+#error "SDL version older than 2.0.9"
+#endif /* SDL_VERSION_ATLEAST */
+
 /* Mixer Thread */
 
 static void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
