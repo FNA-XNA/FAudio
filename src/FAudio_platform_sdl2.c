@@ -28,10 +28,9 @@
 
 #include <SDL.h>
 
-#if SDL_VERSION_ATLEAST(2, 0, 9)
-#else
+#if !SDL_VERSION_ATLEAST(2, 0, 9)
 #error "SDL version older than 2.0.9"
-#endif /* SDL_VERSION_ATLEAST */
+#endif /* !SDL_VERSION_ATLEAST */
 
 /* Mixer Thread */
 
