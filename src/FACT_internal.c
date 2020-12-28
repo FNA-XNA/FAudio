@@ -59,29 +59,6 @@ static inline int FACT_INTERNAL_SupportedWBContent(uint16_t version)
 
 /* Helper Functions */
 
-#define SWAP_16(x) \
-	((x >> 8)	& 0x00FF) | \
-	((x << 8)	& 0xFF00)
-#define DOSWAP_16(x) x = SWAP_16(x)
-
-#define SWAP_32(x) \
-	((x >> 24)	& 0x000000FF) | \
-	((x >> 8)	& 0x0000FF00) | \
-	((x << 8)	& 0x00FF0000) | \
-	((x << 24)	& 0xFF000000)
-#define DOSWAP_32(x) x = SWAP_32(x)
-
-#define SWAP_64(x) \
-	((x >> 32)	& 0x00000000000000FF) | \
-	((x >> 24)	& 0x000000000000FF00) | \
-	((x >> 16)	& 0x0000000000FF0000) | \
-	((x >> 8)	& 0x00000000FF000000) | \
-	((x << 8)	& 0x000000FF00000000) | \
-	((x << 16)	& 0x0000FF0000000000) | \
-	((x << 24)	& 0x00FF000000000000) | \
-	((x << 32)	& 0xFF00000000000000)
-#define DOSWAP_64(x) x = SWAP_32(x)
-
 static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 {
 	return (float) FAudio_pow(10.0, decibel / 2000.0);
@@ -1939,20 +1916,32 @@ int32_t FACTCALL FACT_INTERNAL_DefaultGetOverlappedResult(
 
 /* Parsing functions */
 
-#define READ_FUNC(type, size, suffix, swapped) \
+#define READ_FUNC(type, size, bitsize, suffix) \
 	static inline type read_##suffix(uint8_t **ptr, const uint8_t swapendian) \
 	{ \
 		type result = *((type*) *ptr); \
 		*ptr += size; \
-		return swapendian ? (swapped) : result; \
+		return swapendian ? \
+			FAudio_swap##bitsize##BE(result) : \
+			FAudio_swap##bitsize##LE(result); \
 	}
 
-READ_FUNC(uint8_t, 1, u8, result)
-READ_FUNC(uint16_t, 2, u16, SWAP_16(result))
-READ_FUNC(uint32_t, 4, u32, SWAP_32(result))
-READ_FUNC(int16_t, 2, s16, SWAP_16(result))
-READ_FUNC(int32_t, 4, s32, SWAP_32(result))
-READ_FUNC(float, 4, f32, result)
+static inline uint8_t read_u8(uint8_t **ptr, const uint8_t swapendian)
+{
+	uint8_t result = *((uint8_t*) *ptr);
+	*ptr += 1;
+	return result;
+}
+READ_FUNC(uint16_t, 2, 16, u16)
+READ_FUNC(uint32_t, 4, 32, u32)
+READ_FUNC(int16_t, 2, 16, s16)
+READ_FUNC(int32_t, 4, 32, s32)
+static inline float read_f32(uint8_t **ptr, const uint8_t swapendian)
+{
+	float result = *((float*) *ptr);
+	*ptr += 4;
+	return result;
+}
 
 #undef READ_FUNC
 
@@ -2990,6 +2979,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			size \
 		); \
 		SEEKCUR(size)
+
+	#define DOSWAP_16(x) x = FAudio_swap16BE(x)
+	#define DOSWAP_32(x) x = FAudio_swap32BE(x)
+	#define DOSWAP_64(x) x = FAudio_swap64BE(x)
 
 	fileOffset = offset;
 	READ(&header, sizeof(header))
