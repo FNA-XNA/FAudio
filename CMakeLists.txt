@@ -137,6 +137,9 @@ endif()
 
 # GStreamer Support
 if(GSTREAMER)
+	# Requires for gstreamer in the pkgconfig file
+	set(FAUDIO_GSTREAMER_DEPS " gstreamer-app-1.0 gstreamer-audio-1.0")
+
 	# Add the extra definition...
 	target_compile_definitions(FAudio PRIVATE HAVE_GSTREAMER=1)
 
@@ -157,6 +160,8 @@ if(GSTREAMER)
             ${GSTAUDIO_LDFLAGS}
             ${GSTAPP_LDFLAGS}
         )
+else()
+	set(FAUDIO_GSTREAMER_DEPS "")
 endif(GSTREAMER)
 
 # Dump source voices to RIFF WAVE files
