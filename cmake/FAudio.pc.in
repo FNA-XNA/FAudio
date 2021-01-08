@@ -9,4 +9,5 @@ Description: Accuracy-focused XAudio reimplementation for open platforms
 Version: @LIB_VERSION@
 
 Libs: -L${libdir} -l@PROJECT_NAME@
+Requires:@FAUDIO_GSTREAMER_DEPS@
 Cflags: -I${includedir}
