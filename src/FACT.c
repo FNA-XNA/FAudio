@@ -534,7 +534,7 @@ uint32_t FACTAudioEngine_RegisterNotification(
 			} \
 			else \
 			{ \
-				FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_##nt notification!"); \
+				FAudio_assert(0 && "TODO: "#nt" notification!"); \
 			} \
 		}
 
@@ -657,7 +657,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 			} \
 			else \
 			{ \
-				FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_##nt notification!"); \
+				FAudio_assert(0 && "TODO: "#nt" notification!"); \
 			} \
 		}
 
