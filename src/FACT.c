@@ -524,42 +524,25 @@ uint32_t FACTAudioEngine_RegisterNotification(
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
-	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEPREPARED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_CUEPREPARED;
-			pEngine->cue_context = pNotificationDescription->pvContext;
+	#define HANDLE_PERSIST(nt) \
+		if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_##nt) \
+		{ \
+			if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST) \
+			{ \
+				pEngine->notifications |= NOTIFY_##nt; \
+				PERSIST_ACTION \
+			} \
+			else \
+			{ \
+				FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_##nt notification!"); \
+			} \
 		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_CUEPREPARED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEPLAY)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_CUEPLAY;
-			pEngine->cue_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_CUEPLAY notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUESTOP)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_CUESTOP;
-			pEngine->cue_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_CUESTOP notification!");
-		}
-	}
+
+	/* Cues */
+	#define PERSIST_ACTION pEngine->cue_context = pNotificationDescription->pvContext;
+	HANDLE_PERSIST(CUEPREPARED)
+	else HANDLE_PERSIST(CUEPLAY)
+	else HANDLE_PERSIST(CUESTOP)
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
@@ -573,18 +556,14 @@ uint32_t FACTAudioEngine_RegisterNotification(
 			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
 		}
 	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_MARKER)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_MARKER;
-			pEngine->cue_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_MARKER notification!");
-		}
-	}
+	#undef PERSIST_ACTION
+
+	/* Markers */
+	#define PERSIST_ACTION
+	else HANDLE_PERSIST(MARKER)
+	#undef PERSIST_ACTION
+
+	/* SoundBank/WaveBank Destruction */
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
@@ -611,98 +590,21 @@ uint32_t FACTAudioEngine_RegisterNotification(
 			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_LOCALVARIABLECHANGED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_LOCALVARIABLECHANGED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_LOCALVARIABLECHANGED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_GLOBALVARIABLECHANGED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_GLOBALVARIABLECHANGED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_GLOBALVARIABLECHANGED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_GUICONNECTED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_GUICONNECTED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_GUICONNECTED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_GUIDISCONNECTED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_GUIDISCONNECTED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_GUIDISCONNECTED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEPREPARED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_WAVEPREPARED;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVEPREPARED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEPLAY)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_WAVEPLAY;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVEPLAY notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVESTOP)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_WAVESTOP;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVESTOP notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVELOOPED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_WAVELOOPED;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVELOOPED notification!");
-		}
-	}
+
+	/* Variables, Auditioning Tool */
+	#define PERSIST_ACTION
+	else HANDLE_PERSIST(LOCALVARIABLECHANGED)
+	else HANDLE_PERSIST(GLOBALVARIABLECHANGED)
+	else HANDLE_PERSIST(GUICONNECTED)
+	else HANDLE_PERSIST(GUIDISCONNECTED)
+	#undef PERSIST_ACTION
+
+	/* Waves */
+	#define PERSIST_ACTION pEngine->wave_context = pNotificationDescription->pvContext;
+	else HANDLE_PERSIST(WAVEPREPARED)
+	else HANDLE_PERSIST(WAVEPLAY)
+	else HANDLE_PERSIST(WAVESTOP)
+	else HANDLE_PERSIST(WAVELOOPED)
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
@@ -716,22 +618,20 @@ uint32_t FACTAudioEngine_RegisterNotification(
 			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
 		}
 	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKPREPARED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications |= NOTIFY_WAVEBANKPREPARED;
-			pEngine->wb_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVEBANKPREPARED notification!");
-		}
-	}
+	#undef PERSIST_ACTION
+
+	/* WaveBanks */
+	#define PERSIST_ACTION pEngine->wb_context = pNotificationDescription->pvContext;
+	else HANDLE_PERSIST(WAVEBANKPREPARED)
+	#undef PERSIST_ACTION
+
+	/* Anything else? */
 	else
 	{
 		FAudio_assert(0 && "TODO: Unimplemented notification!");
 	}
+
+	#undef HANDLE_PERSIST
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return 0;
@@ -747,42 +647,25 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
-	if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEPREPARED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_CUEPREPARED;
-			pEngine->cue_context = pNotificationDescription->pvContext;
+	#define HANDLE_PERSIST(nt) \
+		if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_##nt) \
+		{ \
+			if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST) \
+			{ \
+				pEngine->notifications &= ~NOTIFY_##nt; \
+				PERSIST_ACTION \
+			} \
+			else \
+			{ \
+				FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_##nt notification!"); \
+			} \
 		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_CUEPREPARED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEPLAY)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_CUEPLAY;
-			pEngine->cue_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_CUEPLAY notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUESTOP)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_CUESTOP;
-			pEngine->cue_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_CUESTOP notification!");
-		}
-	}
+
+	/* Cues */
+	#define PERSIST_ACTION pEngine->cue_context = pNotificationDescription->pvContext;
+	HANDLE_PERSIST(CUEPREPARED)
+	else HANDLE_PERSIST(CUEPLAY)
+	else HANDLE_PERSIST(CUESTOP)
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_CUEDESTROYED)
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
@@ -796,17 +679,14 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
 		}
 	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_MARKER)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_MARKER;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_MARKER notification!");
-		}
-	}
+	#undef PERSIST_ACTION
+
+	/* Markers */
+	#define PERSIST_ACTION
+	else HANDLE_PERSIST(MARKER)
+	#undef PERSIST_ACTION
+
+	/* SoundBank/WaveBank Destruction */
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
@@ -833,98 +713,21 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_LOCALVARIABLECHANGED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_LOCALVARIABLECHANGED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_LOCALVARIABLECHANGED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_GLOBALVARIABLECHANGED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_GLOBALVARIABLECHANGED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_GLOBALVARIABLECHANGED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_GUICONNECTED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_GUICONNECTED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_GUICONNECTED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_GUIDISCONNECTED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_GUIDISCONNECTED;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_GUIDISCONNECTED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEPREPARED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_WAVEPREPARED;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVEPREPARED notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEPLAY)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_WAVEPLAY;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVEPLAY notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVESTOP)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_WAVESTOP;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVESTOP notification!");
-		}
-	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVELOOPED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_WAVELOOPED;
-			pEngine->wave_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVELOOPED notification!");
-		}
-	}
+
+	/* Variables, Auditioning Tool */
+	#define PERSIST_ACTION
+	else HANDLE_PERSIST(LOCALVARIABLECHANGED)
+	else HANDLE_PERSIST(GLOBALVARIABLECHANGED)
+	else HANDLE_PERSIST(GUICONNECTED)
+	else HANDLE_PERSIST(GUIDISCONNECTED)
+	#undef PERSIST_ACTION
+
+	/* Waves */
+	#define PERSIST_ACTION pEngine->wave_context = pNotificationDescription->pvContext;
+	else HANDLE_PERSIST(WAVEPREPARED)
+	else HANDLE_PERSIST(WAVEPLAY)
+	else HANDLE_PERSIST(WAVESTOP)
+	else HANDLE_PERSIST(WAVELOOPED)
 	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEDESTROYED)
 	{
 		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
@@ -938,22 +741,20 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
 		}
 	}
-	else if (pNotificationDescription->type == FACTNOTIFICATIONTYPE_WAVEBANKPREPARED)
-	{
-		if (pNotificationDescription->flags & FACT_FLAG_NOTIFICATION_PERSIST)
-		{
-			pEngine->notifications &= ~NOTIFY_WAVEBANKPREPARED;
-			pEngine->wb_context = pNotificationDescription->pvContext;
-		}
-		else
-		{
-			FAudio_assert(0 && "TODO: FACTNOTIFICATIONTYPE_WAVEBANKPREPARED notification!");
-		}
-	}
+	#undef PERSIST_ACTION
+
+	/* WaveBanks */
+	#define PERSIST_ACTION pEngine->wb_context = pNotificationDescription->pvContext;
+	else HANDLE_PERSIST(WAVEBANKPREPARED)
+	#undef PERSIST_ACTION
+
+	/* Anything else? */
 	else
 	{
 		FAudio_assert(0 && "TODO: Unimplemented notification!");
 	}
+
+	#undef HANDLE_PERSIST
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return 0;
