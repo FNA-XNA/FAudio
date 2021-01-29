@@ -585,6 +585,8 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS);
 
+void FACT_INTERNAL_SendCueNotification(FACTCue *cue, FACTNoticationsFlags flag, uint8_t type);
+
 /* RPC Helper Functions */
 
 FACTRPC* FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code);
