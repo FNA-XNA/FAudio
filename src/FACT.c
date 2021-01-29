@@ -2320,6 +2320,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				FACT_STATE_STOPPING |
 				FACT_STATE_PAUSED
 			);
+
+			FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
+
 			FAudio_PlatformUnlockMutex(
 				pCue->parentBank->parentEngine->apiLock
 			);
