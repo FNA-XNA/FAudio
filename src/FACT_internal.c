@@ -2204,6 +2204,12 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	pEngine->wb_context = NULL;
 	pEngine->wave_context = NULL;
 
+	/* Store this pointer in case we're asked to free it */
+	if (pParams->globalSettingsFlags & FACT_FLAG_MANAGEDATA)
+	{
+		pEngine->settings = pParams->pGlobalSettingsBuffer;
+	}
+
 	/* Finally. */
 	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	return 0;

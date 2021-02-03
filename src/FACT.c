@@ -89,6 +89,10 @@ uint32_t FACTAudioEngine_Release(FACTAudioEngine *pEngine)
 	FAudio_PlatformDestroyMutex(pEngine->wbLock);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	FAudio_PlatformDestroyMutex(pEngine->apiLock);
+	if (pEngine->settings != NULL)
+	{
+		pEngine->pFree(pEngine->settings);
+	}
 	pEngine->pFree(pEngine);
 	FAudio_PlatformRelease();
 	return 0;

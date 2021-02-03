@@ -440,6 +440,9 @@ struct FACTAudioEngine
 	void *sb_context;
 	void *wb_context;
 	void *wave_context;
+
+	/* Settings handle */
+	void *settings;
 };
 
 struct FACTSoundBank
