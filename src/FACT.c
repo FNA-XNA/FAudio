@@ -2421,6 +2421,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FACT_STATE_STOPPED |
 		FACT_STATE_PREPARED
 	);
+
+	FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUEPLAY, FACTNOTIFICATIONTYPE_CUEPLAY);
+
 	pCue->start = FAudio_timems();
 
 	/* If it's a simple wave, just play it! */
