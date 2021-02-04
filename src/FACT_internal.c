@@ -2983,6 +2983,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t fileOffset;
 	uint8_t *packetBuffer = NULL;
 	uint32_t packetBufferLen = 0;
+	uint8_t *pcm;
 
 	#define SEEKSET(loc) \
 		fileOffset = offset + loc;
@@ -3147,7 +3148,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				wb->entries[i].Format.wFormatTag == 0x0 &&
 				wb->entries[i].Format.wBitsPerSample == 1	)
 			{
-				uint8_t *pcm = FAudio_memptr(
+				pcm = FAudio_memptr(
 					(FAudioIOStream*) wb->io,
 					wb->entries[i].PlayRegion.dwOffset
 				);
