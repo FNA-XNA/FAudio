@@ -3140,6 +3140,24 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			}
 			wb->entries[i].PlayRegion.dwOffset +=
 				header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYWAVEDATA].dwOffset;
+
+			/* If it's in-memory big-endian PCM, swap! */
+			if (	se &&
+				!wb->streaming &&
+				wb->entries[i].Format.wFormatTag == 0x0 &&
+				wb->entries[i].Format.wBitsPerSample == 1	)
+			{
+				uint8_t *pcm = FAudio_memptr(
+					(FAudioIOStream*) wb->io,
+					wb->entries[i].PlayRegion.dwOffset
+				);
+				for (j = 0; j < wb->entries[i].PlayRegion.dwLength; j += 2)
+				{
+					const uint8_t pcmSwap = pcm[j];
+					pcm[j] = pcm[j + 1];
+					pcm[j + 1] = pcmSwap;
+				}
+			}
 		}
 
 		/* FIXME: This is a bit hacky. */
