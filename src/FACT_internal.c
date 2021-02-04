@@ -38,12 +38,14 @@
 
 #define FACT_CONTENT_VERSION_3_4 45
 #define FACT_CONTENT_VERSION_3_1 44
+#define FACT_CONTENT_VERSION_3_0 43
 
 static inline int FACT_INTERNAL_SupportedContent(uint16_t version)
 {
 	return (	version == FACT_CONTENT_VERSION ||
 			version == FACT_CONTENT_VERSION_3_4 ||
-			version == FACT_CONTENT_VERSION_3_1	);
+			version == FACT_CONTENT_VERSION_3_1 ||
+			version == FACT_CONTENT_VERSION_3_0	);
 }
 
 #define WAVEBANK_HEADER_VERSION		44
@@ -2435,7 +2437,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	FACTSoundBank **ppSoundBank
 ) {
 	FACTSoundBank *sb;
-	uint16_t	cueSimpleCount,
+	uint16_t	contentVersion,
+			cueSimpleCount,
 			cueComplexCount,
 			cueTotalAlign;
 	int32_t	cueSimpleOffset,
@@ -2463,7 +2466,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		return -1; /* TODO: NOT XACT FILE */
 	}
 
-	if (!FACT_INTERNAL_SupportedContent(read_u16(&ptr, se)))
+	contentVersion = read_u16(&ptr, se);
+	if (!FACT_INTERNAL_SupportedContent(contentVersion))
 	{
 		return -2;
 	}
@@ -2606,8 +2610,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				loc.rpcCodeCount = read_u8(&ptr); \
 				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
 				loc.rpcCodes = (uint32_t*) pEngine->pMalloc(memsize); \
-				FAudio_memcpy(loc.rpcCodes, ptr, memsize); \
-				ptr += memsize;
+				for (j = 0; j < loc.rpcCodeCount; j += 1) \
+				{ \
+					loc.rpcCodes[j] = read_u32(&ptr, se); \
+				} \
 
 			/* Sound has attached RPCs */
 			if (sb->sounds[i].flags & 0x02)
@@ -2662,8 +2668,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->sounds[i].dspCodeCount = read_u8(&ptr);
 			memsize = sizeof(uint32_t) * sb->sounds[i].dspCodeCount;
 			sb->sounds[i].dspCodes = (uint32_t*) pEngine->pMalloc(memsize);
-			FAudio_memcpy(sb->sounds[i].dspCodes, ptr, memsize);
-			ptr += memsize;
+			for (j = 0; j < sb->sounds[i].dspCodeCount; j += 1)
+			{
+				sb->sounds[i].dspCodes[j] = read_u32(&ptr, se);
+			}
 		}
 		else
 		{
@@ -2679,6 +2687,15 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				sb->sounds[i].tracks[j].volume = read_volbyte(&ptr);
 
 				sb->sounds[i].tracks[j].code = read_u32(&ptr, se);
+
+				if (contentVersion == FACT_CONTENT_VERSION_3_0)
+				{
+					/* 3.0 doesn't have track filter data */
+					sb->sounds[i].tracks[j].filter = 0xFF;
+					sb->sounds[i].tracks[j].qfactor = 0;
+					sb->sounds[i].tracks[j].frequency = 0;
+					continue;
+				}
 
 				sb->sounds[i].tracks[j].filter = read_u8(&ptr);
 				if (sb->sounds[i].tracks[j].filter & 0x01)
