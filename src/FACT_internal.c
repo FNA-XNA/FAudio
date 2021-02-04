@@ -2983,7 +2983,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t fileOffset;
 	uint8_t *packetBuffer = NULL;
 	uint32_t packetBufferLen = 0;
-	uint8_t *pcm;
+	uint16_t *pcm;
 
 	#define SEEKSET(loc) \
 		fileOffset = offset + loc;
@@ -3148,15 +3148,13 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				wb->entries[i].Format.wFormatTag == 0x0 &&
 				wb->entries[i].Format.wBitsPerSample == 1	)
 			{
-				pcm = FAudio_memptr(
+				pcm = (uint16_t*) FAudio_memptr(
 					(FAudioIOStream*) wb->io,
 					wb->entries[i].PlayRegion.dwOffset
 				);
-				for (j = 0; j < wb->entries[i].PlayRegion.dwLength; j += 2)
+				for (j = 0; j < wb->entries[i].PlayRegion.dwLength; j += 2, pcm += 1)
 				{
-					const uint8_t pcmSwap = pcm[j];
-					pcm[j] = pcm[j + 1];
-					pcm[j + 1] = pcmSwap;
+					DOSWAP_16(*pcm);
 				}
 			}
 		}
