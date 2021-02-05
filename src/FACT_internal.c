@@ -837,7 +837,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	return 1;
 }
 
-void FACT_INTERNAL_send_cue_notification(FACTCue *cue, FACTNoticationsFlags flag, uint8_t type)
+void FACT_INTERNAL_SendCueNotification(FACTCue *cue, FACTNoticationsFlags flag, uint8_t type)
 {
     if (cue->parentBank->parentEngine->notifications & flag)
     {
