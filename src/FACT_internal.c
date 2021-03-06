@@ -2470,7 +2470,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		soundOffset;
 	uint8_t platform;
 	size_t memsize;
-	uint16_t i, j, cur, tool;
+	uint16_t i, j, k, cur, tool;
 	uint8_t *ptrBookmark;
 
 	uint8_t *ptr = (uint8_t*) pvBuffer;
@@ -2628,9 +2628,9 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				loc.rpcCodeCount = read_u8(&ptr); \
 				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
 				loc.rpcCodes = (uint32_t*) pEngine->pMalloc(memsize); \
-				for (j = 0; j < loc.rpcCodeCount; j += 1) \
+				for (k = 0; k < loc.rpcCodeCount; k += 1) \
 				{ \
-					loc.rpcCodes[j] = read_u32(&ptr, se); \
+					loc.rpcCodes[k] = read_u32(&ptr, se); \
 				} \
 
 			/* Sound has attached RPCs */
