@@ -221,13 +221,9 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 ) {
 	const char *name, *envvar;
 	int channels, rate;
-	SDL_AudioSpec spec;
-	uint32_t devcount, i;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
-
-	devcount = FAudio_PlatformGetDeviceCount();
-	if (index >= devcount)
+	if (index >= FAudio_PlatformGetDeviceCount())
 	{
 		return FAUDIO_E_INVALID_CALL;
 	}
@@ -262,117 +258,17 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 		sizeof(details->DisplayName)
 	);
 
-	/* Environment variables take precedence over all possible values */
+	/* TODO: SDL_GetAudioDeviceSpec! */
 	envvar = SDL_getenv("SDL_AUDIO_FREQUENCY");
-	if (envvar != NULL)
-	{
-		rate = SDL_atoi(envvar);
-	}
-	else
-	{
-		rate = 0;
-	}
-	envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
-	if (envvar != NULL)
-	{
-		channels = SDL_atoi(envvar);
-	}
-	else
-	{
-		channels = 0;
-	}
-
-#if SDL_VERSION_ATLEAST(2, 0, 15)
-	if (index == 0)
-	{
-		/* Okay, so go grab something from the liquor cabinet and get
-		 * ready, because this loop is a bit of a trip:
-		 *
-		 * We can't get the spec for the default device, because in
-		 * audio land a "default device" is a completely foreign idea,
-		 * some APIs support it but in reality you just have to pass
-		 * NULL as a driver string and the sound server figures out the
-		 * rest. In some psychotic universe the device can even be a
-		 * network address. No, seriously.
-		 *
-		 * So what do we do? Well, at least in my experience shipping
-		 * for the PC, the easiest thing to do is assume that the
-		 * highest spec in the list is what you should target, even if
-		 * it turns out that's not the default at the time you create
-		 * your device.
-		 *
-		 * Consider a laptop that has built-in stereo speakers, but is
-		 * connected to a home theater system with 5.1 audio. It may be
-		 * the case that the stereo audio is active, but the user may
-		 * at some point move audio to 5.1, at which point the server
-		 * will simply move the endpoint from underneath us and move our
-		 * output stream to the new device. At that point, you _really_
-		 * want to already be pushing out 5.1, because if not the user
-		 * will be stuck recreating the whole program, which on many
-		 * platforms is an instant cert failure. The tradeoff is that
-		 * you're potentially downmixing a 5.1 stream to stereo, which
-		 * is a bit wasteful, but presumably the hardware can handle it
-		 * if they were able to use a 5.1 system to begin with.
-		 *
-		 * So, we just aim for the highest channel count on the system.
-		 * We also do this with sample rate to a lesser degree; we try
-		 * to use a single device spec at a time, so it may be that
-		 * the sample rate you get isn't the highest from the list if
-		 * another device had a higher channel count.
-		 *
-		 * Lastly, if you set SDL_AUDIO_CHANNELS but not
-		 * SDL_AUDIO_FREQUENCY, we don't bother checking for a sample
-		 * rate, we fall through to the hardcoded value at the bottom of
-		 * this function.
-		 *
-		 * I'm so tired.
-		 *
-		 * -flibit
-		 */
-		if (channels <= 0)
-		{
-			const uint8_t setRate = (rate <= 0);
-			devcount -= 1; /* Subtracting the default index */
-			for (i = 0; i < devcount; i += 1)
-			{
-				SDL_GetAudioDeviceSpec(i, 0, &spec);
-				if (spec.channels > channels)
-				{
-					channels = spec.channels;
-					if (setRate)
-					{
-						/* May be 0! That's okay! */
-						rate = spec.freq;
-					}
-				}
-			}
-		}
-	}
-	else
-	{
-		SDL_GetAudioDeviceSpec(index - 1, 0, &spec);
-		if ((spec.freq > 0) && (rate <= 0))
-		{
-			rate = spec.freq;
-		}
-		if ((spec.channels > 0) && (channels <= 0))
-		{
-			channels = spec.channels;
-		}
-	}
-#endif /* SDL >= 2.0.15 */
-
-	/* If we make it all the way here with no format, hardcode a sane one */
-	if (rate <= 0)
+	if (!envvar || ((rate = SDL_atoi(envvar)) == 0))
 	{
 		rate = 48000;
 	}
-	if (channels <= 0)
+	envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
+	if (!envvar || ((channels = SDL_atoi(envvar)) == 0))
 	{
 		channels = 2;
 	}
-
-	/* Write the format, finally. */
 	WriteWaveFormatExtensible(
 		&details->OutputFormat,
 		channels,
