@@ -974,21 +974,44 @@ float FACT_INTERNAL_CalculateRPC(
 		result = rpc->points[i].y;
 		if (var >= rpc->points[i].x && var <= rpc->points[i + 1].x)
 		{
-			/* TODO: Non-linear curves! Check rpc->points[i].type!
-			 * 0 - Linear
-			 * 1 - "Fast", a logarithmic curve?
-			 * 2 - "Slow", an exponential curve?
-			 * 3 - "SinCos", looks like log if higher/exp if lower?
-			 * flibit absolutely does not know math, he is useless!
+			/* FIXME: With the exception of Linear, all of these
+			 * functions are total nonsense I made up that vaguely
+			 * approximates the graphs you see in the XACT tool.
+			 * I mean, look at SinCos, it doesn't even use sin/cos!
+			 * -flibit
 			 */
+			const float maxX = rpc->points[i + 1].x - rpc->points[i].x;
+			const float maxY = rpc->points[i + 1].y - rpc->points[i].y;
+			const float deltaX = (var - rpc->points[i].x);
+			if (rpc->points[i].type == 0) /* Linear */
+			{
+				result += (maxY / maxX) * deltaX;
+			}
+			else if (rpc->points[i].type == 1) /* Fast */
+			{
+				/* log10 is just for convenience, log2 would be better */
+				result += FAudio_log10(((deltaX / maxX) * 9.0f) + 1.0f) * maxY;
+			}
+			else if (rpc->points[i].type == 2) /* Slow */
+			{
+				result += (FAudio_pow(2.0, deltaX / maxX) - 1.0f) * maxY;
+			}
+			else if (rpc->points[i].type == 3) /* SinCos */
+			{
+				if (maxY > 0.0f)
+				{
+					result += FAudio_log10(((deltaX / maxX) * 9.0f) + 1.0f) * maxY;
+				}
+				else
+				{
+					result += (FAudio_pow(2.0, deltaX / maxX) - 1.0f) * maxY;
+				}
+			}
+			else
+			{
+				FAudio_assert(0 && "Unrecognized curve type!");
+			}
 
-			/* y += mx */
-			result +=
-				((rpc->points[i + 1].y - rpc->points[i].y) /
-				(rpc->points[i + 1].x - rpc->points[i].x)) *
-					(var - rpc->points[i].x);
-
-			/* Pre-algebra, rockin'! */
 			break;
 		}
 	}
