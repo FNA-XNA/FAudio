@@ -1034,11 +1034,10 @@ void FACT_INTERNAL_UpdateRPCs(
 
 	if (codeCount > 0)
 	{
-		/* Do NOT overwrite Frequency! */
+		/* Do NOT overwrite Frequency/QFactor! */
 		data->rpcVolume = 0.0f;
 		data->rpcPitch = 0.0f;
 		data->rpcReverbSend = 0.0f;
-		data->rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		for (i = 0; i < codeCount; i += 1)
 		{
 			rpc = FACT_INTERNAL_GetRPC(
@@ -1102,8 +1101,8 @@ void FACT_INTERNAL_UpdateRPCs(
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERQFACTOR)
 			{
-				/* TODO: How do we combine these? */
-				data->rpcFilterQFactor += 1.0f / rpcResult;
+				/* Yes, just overwrite... */
+				data->rpcFilterQFactor = 1.0f / rpcResult;
 			}
 			else
 			{
@@ -1480,6 +1479,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 
 	/* RPC updates */
 	sound->rpcData.rpcFilterFreq = -1.0f;
+	sound->rpcData.rpcFilterQFactor = -1.0f;
 	FACT_INTERNAL_UpdateRPCs(
 		sound->parentCue,
 		sound->sound->rpcCodeCount,
@@ -1491,6 +1491,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 	for (i = 0; i < sound->sound->trackCount; i += 1)
 	{
 		sound->tracks[i].rpcData.rpcFilterFreq = sound->rpcData.rpcFilterFreq;
+		sound->tracks[i].rpcData.rpcFilterQFactor = sound->rpcData.rpcFilterQFactor;
 		FACT_INTERNAL_UpdateRPCs(
 			sound->parentCue,
 			sound->sound->tracks[i].rpcCodeCount,
@@ -1592,11 +1593,14 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 			{
 				filterParams.Frequency = sound->tracks[i].activeWave.baseFrequency;
 			}
-			filterParams.OneOverQ = (
-				sound->tracks[i].activeWave.baseQFactor +
-				sound->rpcData.rpcFilterQFactor +
-				sound->tracks[i].rpcData.rpcFilterQFactor
-			) / 3.0f; /* FIXME: How do we combine QFactor params? */
+			if (sound->tracks[i].rpcData.rpcFilterQFactor >= 0.0f)
+			{
+				filterParams.OneOverQ = sound->tracks[i].rpcData.rpcFilterQFactor;
+			}
+			else
+			{
+				filterParams.OneOverQ = sound->tracks[i].activeWave.baseQFactor;
+			}
 			FAudioVoice_SetFilterParameters(
 				sound->tracks[i].activeWave.wave->voice,
 				&filterParams,
