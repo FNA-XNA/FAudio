@@ -429,12 +429,7 @@ void FACT_INTERNAL_GetNextWave(
 	}
 	else
 	{
-		/* FIXME: How is track->qfactor translated? Oh great, it's
-		 * another stupid byte that gets translated to a float somehow:
-		 * 2.0 in XACT -> 6 in data
-		 * 10.0 in XACT -> 31 in data
-		 */
-		trackInst->upcomingWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+		trackInst->upcomingWave.baseQFactor = 1.0f / (track->qfactor / 3.0f);
 		trackInst->upcomingWave.baseFrequency = track->frequency / 20000.0f;
 	}
 
