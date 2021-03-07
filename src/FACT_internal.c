@@ -908,6 +908,8 @@ void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
 	sound->fadeType = 2; /* Out */
 	sound->fadeStart = FAudio_timems();
 	sound->fadeTarget = fadeOutMS;
+
+	sound->parentCue->state |= FACT_STATE_STOPPING;
 }
 
 void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS)
@@ -922,6 +924,8 @@ void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS)
 	sound->fadeType = 3; /* Release RPC */
 	sound->fadeStart = FAudio_timems();
 	sound->fadeTarget = releaseMS;
+
+	sound->parentCue->state |= FACT_STATE_STOPPING;
 }
 
 /* RPC Helper Functions */
@@ -1236,8 +1240,11 @@ void FACT_INTERNAL_ActivateEvent(
 						sound->parentCue->maxRpcReleaseTime
 					);
 				}
-
-				sound->parentCue->state |= FACT_STATE_STOPPING;
+				else
+				{
+					/* Pretty sure this doesn't happen, but just in case? */
+					sound->parentCue->state |= FACT_STATE_STOPPING;
+				}
 			}
 		}
 

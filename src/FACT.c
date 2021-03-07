@@ -2522,8 +2522,11 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 				pCue->maxRpcReleaseTime
 			);
 		}
-
-		pCue->state |= FACT_STATE_STOPPING;
+		else
+		{
+			/* Pretty sure this doesn't happen, but just in case? */
+			pCue->state |= FACT_STATE_STOPPING;
+		}
 	}
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
