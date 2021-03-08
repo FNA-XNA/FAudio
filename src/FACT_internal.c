@@ -974,37 +974,32 @@ float FACT_INTERNAL_CalculateRPC(
 		result = rpc->points[i].y;
 		if (var >= rpc->points[i].x && var <= rpc->points[i + 1].x)
 		{
-			/* FIXME: With the exception of Linear, all of these
-			 * functions are total nonsense I made up that vaguely
-			 * approximates the graphs you see in the XACT tool.
-			 * I mean, look at SinCos, it doesn't even use sin/cos!
-			 * -flibit
-			 */
 			const float maxX = rpc->points[i + 1].x - rpc->points[i].x;
 			const float maxY = rpc->points[i + 1].y - rpc->points[i].y;
 			const float deltaX = (var - rpc->points[i].x);
+			const float deltaXNormalized = deltaX / maxX;
+
 			if (rpc->points[i].type == 0) /* Linear */
 			{
-				result += (maxY / maxX) * deltaX;
+				result += maxY * deltaXNormalized;
 			}
 			else if (rpc->points[i].type == 1) /* Fast */
 			{
-				/* log10 is just for convenience, log2 would be better */
-				result += FAudio_log10(((deltaX / maxX) * 9.0f) + 1.0f) * maxY;
+				result += maxY * (1.0f - FAudio_pow(1.0f - FAudio_pow(deltaXNormalized, 1.0f / 1.5f), 1.5f));
 			}
 			else if (rpc->points[i].type == 2) /* Slow */
 			{
-				result += (FAudio_pow(2.0, deltaX / maxX) - 1.0f) * maxY;
+				result += maxY * (1.0f - FAudio_pow(1.0f - FAudio_pow(deltaXNormalized, 1.5f), 1.0f / 1.5f));
 			}
 			else if (rpc->points[i].type == 3) /* SinCos */
 			{
 				if (maxY > 0.0f)
 				{
-					result += FAudio_log10(((deltaX / maxX) * 9.0f) + 1.0f) * maxY;
+					result += maxY * (1.0f - FAudio_pow(1.0f - FAudio_sqrtf(deltaXNormalized), 2.0f));
 				}
 				else
 				{
-					result += (FAudio_pow(2.0, deltaX / maxX) - 1.0f) * maxY;
+					result += maxY * (1.0f - FAudio_sqrtf(1.0f - FAudio_pow(deltaXNormalized, 2.0f)));
 				}
 			}
 			else
