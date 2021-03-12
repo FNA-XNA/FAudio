@@ -884,15 +884,6 @@ sendwork:
 	FAudio_PlatformLockMutex(voice->sendLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 
-	/* Nowhere to send it? Just skip the rest...*/
-	if (voice->sends.SendCount == 0)
-	{
-		FAudio_PlatformUnlockMutex(voice->sendLock);
-		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-		LOG_FUNC_EXIT(voice->audio)
-		return;
-	}
-
 	/* Filters */
 	if (voice->flags & FAUDIO_VOICE_USEFILTER)
 	{
@@ -934,6 +925,15 @@ sendwork:
 	}
 	FAudio_PlatformUnlockMutex(voice->effectLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->effectLock)
+
+	/* Nowhere to send it? Just skip the rest...*/
+	if (voice->sends.SendCount == 0)
+	{
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+		LOG_FUNC_EXIT(voice->audio)
+		return;
+	}
 
 	/* Send float cache to sends */
 	FAudio_PlatformLockMutex(voice->volumeLock);
@@ -997,12 +997,6 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	FAudio_PlatformLockMutex(voice->sendLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 
-	/* Nothing to do? */
-	if (voice->sends.SendCount == 0)
-	{
-		goto end;
-	}
-
 	/* Resample */
 	if (voice->mix.resampleStep == FIXED_ONE)
 	{
@@ -1064,6 +1058,12 @@ static void FAudio_INTERNAL_MixSubmix(FAudioSubmixVoice *voice)
 	}
 	FAudio_PlatformUnlockMutex(voice->effectLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->effectLock)
+
+	/* Nothing more to do? */
+	if (voice->sends.SendCount == 0)
+	{
+		goto end;
+	}
 
 	/* Send float cache to sends */
 	FAudio_PlatformLockMutex(voice->volumeLock);
