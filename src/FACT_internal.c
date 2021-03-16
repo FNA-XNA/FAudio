@@ -2497,6 +2497,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		cueHashOffset,
 		cueNameIndexOffset,
 		soundOffset;
+	uint32_t entryCountAndFlags;
 	uint8_t platform;
 	size_t memsize;
 	uint16_t i, j, k, cur, tool;
@@ -2848,8 +2849,9 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
 		sb->variationCodes[i] = (uint32_t) (ptr - start);
-		sb->variations[i].entryCount = read_u16(&ptr, se);
-		sb->variations[i].flags = (read_u16(&ptr, se) >> 3) & 0x07;
+		entryCountAndFlags = read_u32(&ptr, se);
+		sb->variations[i].entryCount = entryCountAndFlags & 0xFFFF;
+		sb->variations[i].flags = (entryCountAndFlags >> (16 + 3)) & 0x07;
 		ptr += 2; /* Unknown value */
 		sb->variations[i].variable = read_s16(&ptr, se);
 		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
