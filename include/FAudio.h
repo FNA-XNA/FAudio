@@ -186,22 +186,6 @@ typedef struct FAudioADPCMWaveFormat
 	#endif
 } FAudioADPCMWaveFormat;
 
-typedef struct FAudioXMA2WaveFormat
-{
-	FAudioWaveFormatEx wfx;
-	uint16_t wNumStreams;
-	uint32_t dwChannelMask;
-	uint32_t dwSamplesEncoded;
-	uint32_t dwBytesPerBlock;
-	uint32_t dwPlayBegin;
-	uint32_t dwPlayLength;
-	uint32_t dwLoopBegin;
-	uint32_t dwLoopLength;
-	uint8_t  bLoopCount;
-	uint8_t  bEncoderVersion;
-	uint16_t wBlockCount;
-} FAudioXMA2WaveFormat;
-
 typedef struct FAudioDeviceDetails
 {
 	int16_t DeviceID[256]; /* Win32 wchar_t */
@@ -327,6 +311,25 @@ typedef struct FAudioDebugConfiguration
 } FAudioDebugConfiguration;
 
 #pragma pack(pop)
+
+/* This ISN'T packed. Strictly speaking it wouldn't have mattered anyway but eh.
+ * See https://github.com/microsoft/DirectXTK/issues/256
+ */
+typedef struct FAudioXMA2WaveFormatEx
+{
+	FAudioWaveFormatEx wfx;
+	uint16_t wNumStreams;
+	uint32_t dwChannelMask;
+	uint32_t dwSamplesEncoded;
+	uint32_t dwBytesPerBlock;
+	uint32_t dwPlayBegin;
+	uint32_t dwPlayLength;
+	uint32_t dwLoopBegin;
+	uint32_t dwLoopLength;
+	uint8_t  bLoopCount;
+	uint8_t  bEncoderVersion;
+	uint16_t wBlockCount;
+} FAudioXMA2WaveFormat;
 
 /* Constants */
 

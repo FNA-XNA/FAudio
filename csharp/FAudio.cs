@@ -176,8 +176,7 @@ public static class FAudio
 		 */
 	}
 
-	[StructLayout(LayoutKind.Sequential, Pack = 1)]
-	public struct FAudioXMA2WaveFormat
+	public struct FAudioXMA2WaveFormatEx
 	{
 		public FAudioWaveFormatEx wfx;
 		public ushort wNumStreams;
