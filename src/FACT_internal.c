@@ -3275,6 +3275,24 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 					DOSWAP_32(wb->seekTables[i].entries[j]);
 				}
 			}
+
+			/* XMA2 seek tables use sample indices, not byte indices.
+			 * Pretty much everything under the sun expects byte indices.
+			 * Let's convert the seek table. WHAT CAN GO WRONG?
+			 * CTRL+F "XMA2 seek tables" in FACT.c if one must change this.
+			 * -ade
+			 */
+			if (wb->entries[i].Format.wFormatTag == 0x1)
+			{
+				for (j = 0; j < wb->seekTables[i].entryCount; j += 1)
+				{
+					wb->seekTables[i].entries[j] = (
+						wb->seekTables[i].entries[j] *
+						wb->entries[i].Format.nChannels *
+						((8 << wb->entries[i].Format.wBitsPerSample) / 8)
+					);
+				}
+			}
 		}
 	}
 	else

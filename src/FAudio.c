@@ -46,6 +46,7 @@
 MAKE_SUBFORMAT_GUID(PCM, 1);
 MAKE_SUBFORMAT_GUID(ADPCM, 2);
 MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
+/* FIXME: Is this still necessary? XMAUDIO2 is now separate from Extensible as it holds extra data. */
 MAKE_SUBFORMAT_GUID(XMAUDIO2, FAUDIO_FORMAT_XMAUDIO2);
 MAKE_SUBFORMAT_GUID(WMAUDIO2, FAUDIO_FORMAT_WMAUDIO2);
 MAKE_SUBFORMAT_GUID(WMAUDIO3, FAUDIO_FORMAT_WMAUDIO3);
@@ -258,7 +259,7 @@ void FAudio_UnregisterForCallbacks(
 uint32_t FAudio_CreateSourceVoice(
 	FAudio *audio,
 	FAudioSourceVoice **ppSourceVoice,
-	const FAudioWaveFormatEx *pSourceFormat,
+	const FAudioAnyWaveFormat *pSourceFormat,
 	uint32_t Flags,
 	float MaxFrequencyRatio,
 	FAudioVoiceCallback *pCallback,
@@ -293,7 +294,6 @@ uint32_t FAudio_CreateSourceVoice(
 
 	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT ||
-		pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2 ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2	)
 	{
 		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) audio->pMalloc(
@@ -316,10 +316,6 @@ uint32_t FAudio_CreateSourceVoice(
 		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
 		{
 			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
-		}
-		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
-		{
-			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_XMAUDIO2, sizeof(FAudioGUID));
 		}
 		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
 		{
@@ -353,6 +349,31 @@ uint32_t FAudio_CreateSourceVoice(
 		fmtex->wSamplesPerBlock = ((
 			fmtex->wfx.nBlockAlign / fmtex->wfx.nChannels
 		) - 6) * 2;
+		(*ppSourceVoice)->src.format = &fmtex->wfx;
+	}
+	else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
+	{
+		FAudioXMA2WaveFormat *fmtex = (FAudioXMA2WaveFormat*) audio->pMalloc(
+			sizeof(FAudioXMA2WaveFormat)
+		);
+
+		/* Copy what we can, ideally the sizes match! */
+		size_t cbSize = sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize;
+		FAudio_memcpy(
+			fmtex,
+			pSourceFormat,
+			FAudio_min(cbSize, sizeof(FAudioXMA2WaveFormat))
+		);
+		if (cbSize < sizeof(FAudioXMA2WaveFormat))
+		{
+			FAudio_zero(
+				((uint8_t*) fmtex) + cbSize,
+				sizeof(FAudioADPCMWaveFormat) - cbSize
+			);
+		}
+
+		/* Does XAudio2 validate this input?! */
+		fmtex->wfx.cbSize = sizeof(FAudioXMA2WaveFormat) - sizeof(FAudioWaveFormatEx);
 		(*ppSourceVoice)->src.format = &fmtex->wfx;
 	}
 	else
@@ -429,8 +450,7 @@ uint32_t FAudio_CreateSourceVoice(
 		}
 		else if (	COMPARE_GUID(WMAUDIO2) ||
 				COMPARE_GUID(WMAUDIO3) ||
-				COMPARE_GUID(WMAUDIO_LOSSLESS) ||
-				COMPARE_GUID(XMAUDIO2)	)
+				COMPARE_GUID(WMAUDIO_LOSSLESS)	)
 		{
 #ifdef HAVE_GSTREAMER
 			if (FAudio_GSTREAMER_init(*ppSourceVoice, fmtex->SubFormat.Data1) != 0)
@@ -447,6 +467,18 @@ uint32_t FAudio_CreateSourceVoice(
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
 		}
 		#undef COMPARE_GUID
+	}
+	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
+	{
+#ifdef HAVE_GSTREAMER
+		if (FAudio_GSTREAMER_init(*ppSourceVoice, FAUDIO_FORMAT_XMAUDIO2) != 0)
+		{
+			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
+		}
+#else
+		FAudio_assert(0 && "XMA2 is not supported!");
+		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
+#endif /* HAVE_GSTREAMER */
 	}
 	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
@@ -2450,6 +2482,11 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 				fmtex->wfx.nBlockAlign *
 				fmtex->wSamplesPerBlock
 			) - playBegin;
+		}
+		else if (voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
+		{
+			FAudioXMA2WaveFormat *fmtex = (FAudioXMA2WaveFormat*) voice->src.format;
+			playLength = fmtex->dwSamplesEncoded - playBegin;
 		}
 		else if (pBufferWMA != NULL)
 		{
