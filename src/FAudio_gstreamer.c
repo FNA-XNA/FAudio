@@ -586,9 +586,9 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	GSTTYPE(WMAUDIO3, "audio/x-wma", "wmaversion", 3)
 	GSTTYPE(WMAUDIO_LOSSLESS, "audio/x-wma", "wmaversion", 4)
 #ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
-		GSTTYPE(XMAUDIO2, FAudio_GSTREAMER_XMA2_Mimetype, "xmaversion", 2)
+	GSTTYPE(XMAUDIO2, FAudio_GSTREAMER_XMA2_Mimetype, "xmaversion", 2)
 #else
-		GSTTYPE(XMAUDIO2, "audio/x-xma", "xmaversion", 2)
+	GSTTYPE(XMAUDIO2, "audio/x-xma", "xmaversion", 2)
 #endif
 	#undef GSTTYPE
 	default:
