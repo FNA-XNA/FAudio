@@ -193,19 +193,6 @@ public static class FAudio
 		public ushort wBlockCount;
 	};
 
-	[StructLayout(LayoutKind.Explicit)]
-	public struct FAudioAnyWaveFormat
-	{
-		[FieldOffset(0)]
-		public FAudioWaveFormatEx wfx;
-		[FieldOffset(0)]
-		public FAudioWaveFormatExtensible wfex;
-		[FieldOffset(0)]
-		public FAudioADPCMWaveFormat wfadpcm;
-		[FieldOffset(0)]
-		public FAudioXMA2WaveFormat wfxma2;
-	}
-
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public unsafe struct FAudioDeviceDetails
 	{
@@ -439,7 +426,7 @@ public static class FAudio
 	public static extern uint FAudio_CreateSourceVoice(
 		IntPtr audio, /* FAudio* */
 		out IntPtr ppSourceVoice, /* FAudioSourceVoice** */
-		ref FAudioAnyWaveFormat pSourceFormat,
+		IntPtr pSourceFormat, /* FAudioWaveFormatEx* */
 		uint Flags,
 		float MaxFrequencyRatio,
 		IntPtr pCallback, /* FAudioVoiceCallback* */

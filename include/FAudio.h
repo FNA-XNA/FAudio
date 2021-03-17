@@ -186,9 +186,6 @@ typedef struct FAudioADPCMWaveFormat
 	#endif
 } FAudioADPCMWaveFormat;
 
-/* See DirectXTK, MIT-licensed:
- * https://github.com/microsoft/DirectXTK/blob/6b395cc7f4203ddae40314433f79c6da92fa7f08/XWBTool/xwbtool.cpp#L67
- */
 typedef struct FAudioXMA2WaveFormat
 {
 	FAudioWaveFormatEx wfx;
@@ -204,15 +201,6 @@ typedef struct FAudioXMA2WaveFormat
 	uint8_t  bEncoderVersion;
 	uint16_t wBlockCount;
 } FAudioXMA2WaveFormat;
-
-typedef union FAudioAnyWaveFormat
-{
-	FAudioWaveFormatEx;
-	FAudioWaveFormatEx wfx;
-	FAudioWaveFormatExtensible wfex;
-	FAudioADPCMWaveFormat wfadpcm;
-	FAudioXMA2WaveFormat wfxma2;
-} FAudioAnyWaveFormat;
 
 typedef struct FAudioDeviceDetails
 {
@@ -617,7 +605,7 @@ FAUDIOAPI void FAudio_UnregisterForCallbacks(
 FAUDIOAPI uint32_t FAudio_CreateSourceVoice(
 	FAudio *audio,
 	FAudioSourceVoice **ppSourceVoice,
-	const FAudioAnyWaveFormat *pSourceFormat,
+	const FAudioWaveFormatEx *pSourceFormat,
 	uint32_t Flags,
 	float MaxFrequencyRatio,
 	FAudioVoiceCallback *pCallback,

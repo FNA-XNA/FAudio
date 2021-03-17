@@ -1640,9 +1640,9 @@ uint32_t FACTWaveBank_GetWaveProperties(
 			((entry->Format.wBlockAlign + 16) * 2)
 		);
 	}
-	else if (entry->Format.wFormatTag == 0x1)
+	else
 	{
-		FAudio_assert(0 && "FACTWaveBank_GetWaveProperties XMAUDIO2 codepath unfinished");
+		FAudio_assert(0 && "Unrecognized wFormatTag!");
 	}
 
 	pWaveProperties->loopRegion = entry->LoopRegion;
@@ -1664,7 +1664,12 @@ uint32_t FACTWaveBank_Prepare(
 	FAudioBufferWMA bufferWMA;
 	FAudioVoiceSends sends;
 	FAudioSendDescriptor send;
-	FAudioAnyWaveFormat format;
+	union
+	{
+		FAudioWaveFormatEx pcm;
+		FAudioADPCMWaveFormat adpcm;
+		FAudioXMA2WaveFormat xma2;
+	} format;
 	FACTWaveBankEntry *entry;
 	FACTSeekTable *seek;
 	if (pWaveBank == NULL)
@@ -1711,15 +1716,15 @@ uint32_t FACTWaveBank_Prepare(
 	send.pOutputVoice = pWaveBank->parentEngine->master;
 	sends.SendCount = 1;
 	sends.pSends = &send;
-	format.wfx.nChannels = entry->Format.nChannels;
-	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
+	format.pcm.nChannels = entry->Format.nChannels;
+	format.pcm.nSamplesPerSec = entry->Format.nSamplesPerSec;
 	if (entry->Format.wFormatTag == 0x0)
 	{
-		format.wfx.wFormatTag = FAUDIO_FORMAT_PCM;
-		format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
-		format.wfx.nBlockAlign = format.wfx.nChannels * format.wfx.wBitsPerSample / 8;
-		format.wfx.nAvgBytesPerSec = format.wfx.nBlockAlign * format.wfx.nSamplesPerSec;
-		format.wfx.cbSize = 0;
+		format.pcm.wFormatTag = FAUDIO_FORMAT_PCM;
+		format.pcm.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
+		format.pcm.nBlockAlign = format.pcm.nChannels * format.pcm.wBitsPerSample / 8;
+		format.pcm.nAvgBytesPerSec = format.pcm.nBlockAlign * format.pcm.nSamplesPerSec;
+		format.pcm.cbSize = 0;
 	}
 	else if (entry->Format.wFormatTag == 0x1)
 	{
@@ -1753,39 +1758,39 @@ uint32_t FACTWaveBank_Prepare(
 		FAudio_assert(entry->Format.wBitsPerSample != 0);
 
 		seek = &pWaveBank->seekTables[nWaveIndex];
-		format.wfx.wFormatTag = FAUDIO_FORMAT_XMAUDIO2;
-		format.wfx.wBitsPerSample = 16;
-		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
-		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
-		format.wfx.cbSize = (
+		format.pcm.wFormatTag = FAUDIO_FORMAT_XMAUDIO2;
+		format.pcm.wBitsPerSample = 16;
+		format.pcm.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
+		format.pcm.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
+		format.pcm.cbSize = (
 			sizeof(FAudioXMA2WaveFormat) -
 			sizeof(FAudioWaveFormatEx)
 		);
-		format.wfxma2.wNumStreams = (format.wfx.nChannels + 1) / 2;
-		format.wfxma2.dwChannelMask = format.wfx.nChannels > 1 ? 0xFFFFFFFF >> (32 - format.wfx.nChannels) : 0;
-		format.wfxma2.dwSamplesEncoded = seek->entries[seek->entryCount - 1] / format.wfx.nChannels / format.wfx.wBitsPerSample / 8;
-		format.wfxma2.dwBytesPerBlock = (uint16_t) FAudio_ceil(
+		format.xma2.wNumStreams = (format.pcm.nChannels + 1) / 2;
+		format.xma2.dwChannelMask = format.pcm.nChannels > 1 ? 0xFFFFFFFF >> (32 - format.pcm.nChannels) : 0;
+		format.xma2.dwSamplesEncoded = seek->entries[seek->entryCount - 1] / format.pcm.nChannels / format.pcm.wBitsPerSample / 8;
+		format.xma2.dwBytesPerBlock = (uint16_t) FAudio_ceil(
 			(double) entry->PlayRegion.dwLength /
 			(double) seek->entryCount /
 			2048.0
 		) * 2048;
-		format.wfxma2.dwPlayBegin = format.wfxma2.dwLoopBegin = 0;
-		format.wfxma2.dwPlayLength = format.wfxma2.dwLoopLength = format.wfxma2.dwSamplesEncoded;
-		format.wfxma2.bLoopCount = 0;
-		format.wfxma2.bEncoderVersion = 4;
-		format.wfxma2.wBlockCount = seek->entryCount;
+		format.xma2.dwPlayBegin = format.xma2.dwLoopBegin = 0;
+		format.xma2.dwPlayLength = format.xma2.dwLoopLength = format.xma2.dwSamplesEncoded;
+		format.xma2.bLoopCount = 0;
+		format.xma2.bEncoderVersion = 4;
+		format.xma2.wBlockCount = seek->entryCount;
 	}
 	else if (entry->Format.wFormatTag == 0x2)
 	{
-		format.wfx.wFormatTag = FAUDIO_FORMAT_MSADPCM;
-		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
-		format.wfx.wBitsPerSample = 16;
-		format.wfx.cbSize = (
+		format.pcm.wFormatTag = FAUDIO_FORMAT_MSADPCM;
+		format.pcm.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.pcm.nChannels;
+		format.pcm.wBitsPerSample = 16;
+		format.pcm.cbSize = (
 			sizeof(FAudioADPCMWaveFormat) -
 			sizeof(FAudioWaveFormatEx)
 		);
-		format.wfadpcm.wSamplesPerBlock = (
-			((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2
+		format.adpcm.wSamplesPerBlock = (
+			((format.pcm.nBlockAlign / format.pcm.nChannels) - 6) * 2
 		);
 	}
 	else if (entry->Format.wFormatTag == 0x3)
@@ -1793,11 +1798,11 @@ uint32_t FACTWaveBank_Prepare(
 		/* Apparently this is used to detect WMA Pro...? */
 		FAudio_assert(entry->Format.wBitsPerSample == 0);
 
-		format.wfx.wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
-		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
-		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
-		format.wfx.wBitsPerSample = 16;
-		format.wfx.cbSize = 0;
+		format.pcm.wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
+		format.pcm.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
+		format.pcm.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
+		format.pcm.wBitsPerSample = 16;
+		format.pcm.cbSize = 0;
 	}
 	else
 	{
@@ -1813,7 +1818,7 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->callback.callback.OnVoiceProcessingPassEnd = NULL;
 	(*ppWave)->callback.callback.OnVoiceProcessingPassStart = NULL;
 	(*ppWave)->callback.wave = *ppWave;
-	(*ppWave)->srcChannels = format.wfx.nChannels;
+	(*ppWave)->srcChannels = format.pcm.nChannels;
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
@@ -1827,19 +1832,19 @@ uint32_t FACTWaveBank_Prepare(
 	if (pWaveBank->streaming)
 	{
 		/* Init stream cache info */
-		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
+		if (format.pcm.wFormatTag == FAUDIO_FORMAT_PCM)
 		{
 			(*ppWave)->streamSize = (
-				format.wfx.nSamplesPerSec *
-				format.wfx.nBlockAlign
+				format.pcm.nSamplesPerSec *
+				format.pcm.nBlockAlign
 			);
 		}
-		else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
+		else if (format.pcm.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 		{
 			(*ppWave)->streamSize = (
-				format.wfx.nSamplesPerSec /
-				format.wfadpcm.wSamplesPerBlock *
-				format.wfx.nBlockAlign
+				format.pcm.nSamplesPerSec /
+				format.adpcm.wSamplesPerBlock *
+				format.pcm.nBlockAlign
 			);
 		}
 		else
@@ -1884,8 +1889,8 @@ uint32_t FACTWaveBank_Prepare(
 			buffer.LoopCount = nLoopCount;
 		}
 		buffer.pContext = NULL;
-		if (	format.wfx.wFormatTag == FAUDIO_FORMAT_WMAUDIO2 ||
-			format.wfx.wFormatTag == FAUDIO_FORMAT_XMAUDIO2	)
+		if (	format.pcm.wFormatTag == FAUDIO_FORMAT_WMAUDIO2 ||
+			format.pcm.wFormatTag == FAUDIO_FORMAT_XMAUDIO2	)
 		{
 			bufferWMA.pDecodedPacketCumulativeBytes =
 				pWaveBank->seekTables[nWaveIndex].entries;

@@ -474,11 +474,16 @@ static void FAudio_GSTREAMER_NewDecodebinPad(GstElement *decodebin,
  * As for this being a possible leak: using gstreamer is a static endeavour elsewhere already~
  * -ade
  */
-static const char* FAudio_GSTREAMER_XMA2_Mimetype = NULL;
-static GstElementFactory* FAudio_GSTREAMER_XMA2_DecoderFactory = NULL;
-static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(GstElement *decodebin,
-		GstPad *pad, GstCaps *caps, gpointer user)
-{
+/* #define FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR */
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
+static const char *FAudio_GSTREAMER_XMA2_Mimetype = NULL;
+static GstElementFactory *FAudio_GSTREAMER_XMA2_DecoderFactory = NULL;
+static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(
+	GstElement *decodebin,
+	GstPad *pad,
+	GstCaps *caps,
+	gpointer user
+) {
 	FAudio *audio = user;
 	GValueArray *result;
 	gchar *capsText;
@@ -512,13 +517,14 @@ static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(GstElement 
 	g_value_unset(&val);
 	return result;
 }
+#endif
 
 
 uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 {
 	FAudioGSTREAMER *result;
 	GstElement *decoder = NULL, *converter = NULL;
-	const GList* tmpls;
+	const GList *tmpls;
 	GstStaticPadTemplate *tmpl;
 	GstCaps *caps;
 	const char *mimetype;
@@ -542,6 +548,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		gst_init(NULL, NULL);
 	}
 
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
 	if (type == FAUDIO_FORMAT_XMAUDIO2 && !FAudio_GSTREAMER_XMA2_Mimetype)
 	{
 		/* Old versions ship with unknown/unknown as the sink caps mimetype.
@@ -568,6 +575,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 			}
 		}
 	}
+#endif
 
 	/* Match the format with the codec */
 	switch (type)
@@ -577,7 +585,11 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	GSTTYPE(WMAUDIO2, "audio/x-wma", "wmaversion", 2)
 	GSTTYPE(WMAUDIO3, "audio/x-wma", "wmaversion", 3)
 	GSTTYPE(WMAUDIO_LOSSLESS, "audio/x-wma", "wmaversion", 4)
-	GSTTYPE(XMAUDIO2, FAudio_GSTREAMER_XMA2_Mimetype, "xmaversion", 2)
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
+		GSTTYPE(XMAUDIO2, FAudio_GSTREAMER_XMA2_Mimetype, "xmaversion", 2)
+#else
+		GSTTYPE(XMAUDIO2, "audio/x-xma", "xmaversion", 2)
+#endif
 	#undef GSTTYPE
 	default:
 		LOG_ERROR(
@@ -609,10 +621,12 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		goto free_without_bin;
 	}
 
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
 	if (type == FAUDIO_FORMAT_XMAUDIO2 && FAudio_GSTREAMER_XMA2_DecoderFactory)
 	{
 		g_signal_connect(decoder, "autoplug-factories", G_CALLBACK(FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories), pSourceVoice->audio);
 	}
+#endif
 	g_signal_connect(decoder, "pad-added", G_CALLBACK(FAudio_GSTREAMER_NewDecodebinPad), result);
 
 	result->srcpad = gst_pad_new(NULL, GST_PAD_SRC);
@@ -710,7 +724,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	result->blockAlign = (uint32_t) pSourceVoice->src.format->nBlockAlign;
 	if (type == FAUDIO_FORMAT_WMAUDIO3)
 	{
-		const FAudioWaveFormatExtensible* wfx =
+		const FAudioWaveFormatExtensible *wfx =
 			(FAudioWaveFormatExtensible*)pSourceVoice->src.format;
 		extradata = (uint8_t*)&wfx->Samples;
 		codec_data_size = pSourceVoice->src.format->cbSize;
@@ -725,9 +739,9 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	}
 	else if (type == FAUDIO_FORMAT_XMAUDIO2)
 	{
-		const FAudioXMA2WaveFormat* wfx =
-			(FAudioXMA2WaveFormat*)pSourceVoice->src.format;
-		extradata = (uint8_t*)&wfx->wNumStreams;
+		const FAudioXMA2WaveFormat *wfx =
+			(FAudioXMA2WaveFormat*) pSourceVoice->src.format;
+		extradata = (uint8_t*) &wfx->wNumStreams;
 		codec_data_size = pSourceVoice->src.format->cbSize;
 		result->blockAlign = wfx->dwBytesPerBlock;
 	}
@@ -741,13 +755,13 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	gst_buffer_fill(codec_data, 0, extradata, codec_data_size);
 	caps = gst_caps_new_simple(
 		mimetype,
-		versiontype, G_TYPE_INT, version,
-		"bitrate", G_TYPE_INT, pSourceVoice->src.format->nAvgBytesPerSec * 8,
-		"channels", G_TYPE_INT, pSourceVoice->src.format->nChannels,
-		"rate", G_TYPE_INT, pSourceVoice->src.format->nSamplesPerSec,
-		"block_align", G_TYPE_INT, result->blockAlign,
-		"depth", G_TYPE_INT, pSourceVoice->src.format->wBitsPerSample,
-		"codec_data", GST_TYPE_BUFFER, codec_data,
+		versiontype,	G_TYPE_INT, version,
+		"bitrate",	G_TYPE_INT, pSourceVoice->src.format->nAvgBytesPerSec * 8,
+		"channels",	G_TYPE_INT, pSourceVoice->src.format->nChannels,
+		"rate",		G_TYPE_INT, pSourceVoice->src.format->nSamplesPerSec,
+		"block_align",	G_TYPE_INT, result->blockAlign,
+		"depth",	G_TYPE_INT, pSourceVoice->src.format->wBitsPerSample,
+		"codec_data",	GST_TYPE_BUFFER, codec_data,
 		NULL
 	);
 	event = gst_event_new_caps(caps);

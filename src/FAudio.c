@@ -46,7 +46,6 @@
 MAKE_SUBFORMAT_GUID(PCM, 1);
 MAKE_SUBFORMAT_GUID(ADPCM, 2);
 MAKE_SUBFORMAT_GUID(IEEE_FLOAT, 3);
-/* FIXME: Is this still necessary? XMAUDIO2 is now separate from Extensible as it holds extra data. */
 MAKE_SUBFORMAT_GUID(XMAUDIO2, FAUDIO_FORMAT_XMAUDIO2);
 MAKE_SUBFORMAT_GUID(WMAUDIO2, FAUDIO_FORMAT_WMAUDIO2);
 MAKE_SUBFORMAT_GUID(WMAUDIO3, FAUDIO_FORMAT_WMAUDIO3);
@@ -259,7 +258,7 @@ void FAudio_UnregisterForCallbacks(
 uint32_t FAudio_CreateSourceVoice(
 	FAudio *audio,
 	FAudioSourceVoice **ppSourceVoice,
-	const FAudioAnyWaveFormat *pSourceFormat,
+	const FAudioWaveFormatEx *pSourceFormat,
 	uint32_t Flags,
 	float MaxFrequencyRatio,
 	FAudioVoiceCallback *pCallback,
