@@ -45,6 +45,8 @@ typedef struct FAudioGSTREAMER
 	uint32_t curBlock, prevBlock;
 	size_t *blockSizes;
 	uint32_t blockAlign;
+	uint32_t blockCount;
+	size_t maxBytes;
 } FAudioGSTREAMER;
 
 #define SIZE_FROM_DST(sample) \
@@ -320,7 +322,7 @@ static void FAudio_INTERNAL_DecodeGSTREAMER(
 
 	if (!gstreamer->blockSizes)
 	{
-		size_t sz = voice->src.bufferList->bufferWMA.PacketCount * sizeof(*gstreamer->blockSizes);
+		size_t sz = gstreamer->blockCount * sizeof(*gstreamer->blockSizes);
 		gstreamer->blockSizes = (size_t *) voice->audio->pMalloc(sz);
 		memset(gstreamer->blockSizes, 0xff, sz);
 	}
@@ -330,8 +332,8 @@ decode:
 	byteOffset = SIZE_FROM_DST(curBufferOffset);
 
 	/* the last block size can truncate the length of the buffer */
-	maxBytes = SIZE_SRC_TO_DST(voice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[voice->src.bufferList->bufferWMA.PacketCount - 1]);
-	for (curBlock = 0; curBlock < voice->src.bufferList->bufferWMA.PacketCount; curBlock += 1)
+	maxBytes = SIZE_SRC_TO_DST(gstreamer->maxBytes);
+	for (curBlock = 0; curBlock < gstreamer->blockCount; curBlock += 1)
 	{
 		/* decode to get real size */
 		if (gstreamer->blockSizes[curBlock] == (size_t)-1)
@@ -363,7 +365,7 @@ decode:
 			break;
 	}
 
-	if (curBlock >= voice->src.bufferList->bufferWMA.PacketCount || maxBytes == 0)
+	if (curBlock >= gstreamer->blockCount || maxBytes == 0)
 	{
 		goto done;
 	}
@@ -423,7 +425,7 @@ done:
 	if (samples > 0)
 	{
 		if (	!error &&
-			curBlock < voice->src.bufferList->bufferWMA.PacketCount - 1 &&
+			curBlock < gstreamer->blockCount - 1 &&
 			maxBytes != 0	)
 		{
 			goto decode;
@@ -728,6 +730,8 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 			(FAudioWaveFormatExtensible*)pSourceVoice->src.format;
 		extradata = (uint8_t*)&wfx->Samples;
 		codec_data_size = pSourceVoice->src.format->cbSize;
+		result->blockCount = pSourceVoice->src.bufferList->bufferWMA.PacketCount;
+		result->maxBytes = pSourceVoice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[result->blockCount - 1];
 	}
 	else if (type == FAUDIO_FORMAT_WMAUDIO2)
 	{
@@ -736,6 +740,8 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 
 		extradata = fakeextradata;
 		codec_data_size = sizeof(fakeextradata);
+		result->blockCount = pSourceVoice->src.bufferList->bufferWMA.PacketCount;
+		result->maxBytes = pSourceVoice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[result->blockCount - 1];
 	}
 	else if (type == FAUDIO_FORMAT_XMAUDIO2)
 	{
@@ -744,6 +750,12 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		extradata = (uint8_t*) &wfx->wNumStreams;
 		codec_data_size = pSourceVoice->src.format->cbSize;
 		result->blockAlign = wfx->dwBytesPerBlock;
+		result->blockCount = wfx->wBlockCount;
+		result->maxBytes = (
+			(size_t) wfx->dwSamplesEncoded *
+			pSourceVoice->src.format->nChannels *
+			(pSourceVoice->src.format->wBitsPerSample / 8)
+		);
 	}
 	else
 	{

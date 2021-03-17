@@ -1888,8 +1888,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	buffer.pContext = NULL;
 
 	/* Submit, finally. */
-	if (	entry->Format.wFormatTag == 0x1 ||
-		entry->Format.wFormatTag == 0x3	)
+	if (entry->Format.wFormatTag == 0x1)
 	{
 		bufferWMA.pDecodedPacketCumulativeBytes =
 			c->wave->parentBank->seekTables[c->wave->index].entries;
@@ -3273,24 +3272,6 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 				for (j = 0; j < wb->seekTables[i].entryCount; j += 1)
 				{
 					DOSWAP_32(wb->seekTables[i].entries[j]);
-				}
-			}
-
-			/* XMA2 seek tables use sample indices, not byte indices.
-			 * Pretty much everything under the sun expects byte indices.
-			 * Let's convert the seek table. WHAT CAN GO WRONG?
-			 * CTRL+F "XMA2 seek tables" in FACT.c if one must change this.
-			 * -ade
-			 */
-			if (wb->entries[i].Format.wFormatTag == 0x1)
-			{
-				for (j = 0; j < wb->seekTables[i].entryCount; j += 1)
-				{
-					wb->seekTables[i].entries[j] = (
-						wb->seekTables[i].entries[j] *
-						wb->entries[i].Format.nChannels *
-						((8 << wb->entries[i].Format.wBitsPerSample) / 8)
-					);
 				}
 			}
 		}

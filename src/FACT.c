@@ -1741,9 +1741,6 @@ uint32_t FACTWaveBank_Prepare(
 		 *
 		 * dwSamplesEncoded is usually close to dwPlayLength but not always (if ever?) equal. Let's assume equality.
 		 * The XMA2 seek table uses sample indices as opposed to WMA's byte index seek table.
-		 * The last entry matches the length accurately enough and we can just use that.
-		 * BUT everything else expects the seek table to be byte index based!
-		 * CTRL+F "XMA2 seek tables" in FACT_internal.c for more information.
 		 *
 		 * nBlockAlign uses aWMABlockAlign given the entire WMA Pro thing BUT it's expected to be the block size for decoding.
 		 * The XMA2 block size MUST be a multiple of 2048 BUT entry->PlayRegion.dwLength / seek->entryCount doesn't respect that.
@@ -1768,7 +1765,7 @@ uint32_t FACTWaveBank_Prepare(
 		);
 		format.xma2.wNumStreams = (format.pcm.nChannels + 1) / 2;
 		format.xma2.dwChannelMask = format.pcm.nChannels > 1 ? 0xFFFFFFFF >> (32 - format.pcm.nChannels) : 0;
-		format.xma2.dwSamplesEncoded = seek->entries[seek->entryCount - 1] / format.pcm.nChannels / format.pcm.wBitsPerSample / 8;
+		format.xma2.dwSamplesEncoded = seek->entries[seek->entryCount - 1];
 		format.xma2.dwBytesPerBlock = (uint16_t) FAudio_ceil(
 			(double) entry->PlayRegion.dwLength /
 			(double) seek->entryCount /
@@ -1889,8 +1886,7 @@ uint32_t FACTWaveBank_Prepare(
 			buffer.LoopCount = nLoopCount;
 		}
 		buffer.pContext = NULL;
-		if (	format.pcm.wFormatTag == FAUDIO_FORMAT_WMAUDIO2 ||
-			format.pcm.wFormatTag == FAUDIO_FORMAT_XMAUDIO2	)
+		if (format.pcm.wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
 		{
 			bufferWMA.pDecodedPacketCumulativeBytes =
 				pWaveBank->seekTables[nWaveIndex].entries;

@@ -2453,8 +2453,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 #ifdef HAVE_GSTREAMER
-	FAudio_assert(	(voice->src.gstreamer != NULL && pBufferWMA != NULL) ||
-			(voice->src.gstreamer == NULL && pBufferWMA == NULL)	);
+	FAudio_assert(	(voice->src.gstreamer != NULL && (pBufferWMA != NULL || voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)) ||
+			(voice->src.gstreamer == NULL && (pBufferWMA == NULL && voice->src.format->wFormatTag != FAUDIO_FORMAT_XMAUDIO2))	);
 #endif /* HAVE_GSTREAMER */
 
 	/* Start off with whatever they just sent us... */
@@ -2503,7 +2503,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		}
 	}
 
-	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL)
+	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL && voice->src.format->wFormatTag != FAUDIO_FORMAT_XMAUDIO2)
 	{
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
 		if (loopBegin >= (playBegin + playLength))
@@ -2545,7 +2545,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 			pBuffer->AudioBytes / voice->src.format->nBlockAlign
 		) * voice->src.format->nBlockAlign;
 	}
-	else if (pBufferWMA != NULL)
+	else if (pBufferWMA != NULL || voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
 	{
 		/* WMA only supports looping the whole buffer */
 		loopBegin = 0;
