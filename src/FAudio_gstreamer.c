@@ -727,8 +727,8 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	if (type == FAUDIO_FORMAT_WMAUDIO3)
 	{
 		const FAudioWaveFormatExtensible *wfx =
-			(FAudioWaveFormatExtensible*)pSourceVoice->src.format;
-		extradata = (uint8_t*)&wfx->Samples;
+			(FAudioWaveFormatExtensible*) pSourceVoice->src.format;
+		extradata = (uint8_t*) &wfx->Samples;
 		codec_data_size = pSourceVoice->src.format->cbSize;
 		result->blockCount = pSourceVoice->src.bufferList->bufferWMA.PacketCount;
 		result->maxBytes = pSourceVoice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[result->blockCount - 1];
