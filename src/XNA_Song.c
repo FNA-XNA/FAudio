@@ -70,6 +70,7 @@
 #define SEEK_END FAUDIO_SEEK_END
 #define EOF FAUDIO_EOF
 #define fopen(path, mode) FAudio_fopen(path)
+#define fopen_s(io, path, mode) (!(*io = FAudio_fopen(path)))
 #define fclose(io) FAudio_close(io)
 #define fread(dst, size, count, io) io->read(io->data, dst, size, count)
 #define fseek(io, offset, whence) io->seek(io->data, offset, whence)
