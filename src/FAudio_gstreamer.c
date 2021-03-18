@@ -262,7 +262,7 @@ static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer
 	uint8_t *tmpBuf;
 	size_t tmpLen;
 
-	if (gstreamer->curBlock != ~0u && block != gstreamer->curBlock && block != gstreamer->curBlock + 1)
+	if (gstreamer->curBlock != ~0u && block != gstreamer->curBlock + 1)
 	{
 		/* XAudio2 allows looping back to start of XMA buffers, but nothing else */
 		if (block != 0)
@@ -435,9 +435,7 @@ done:
 	/* If the cache isn't filled yet, keep decoding! */
 	if (samples > 0)
 	{
-		if (	!error &&
-			curBlock < blockCount - 1 &&
-			availableBytes != 0	)
+		if (!error && curBlock < blockCount - 1)
 		{
 			goto decode;
 		}
