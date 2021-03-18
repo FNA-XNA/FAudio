@@ -1819,7 +1819,7 @@ uint32_t FACTWaveBank_Prepare(
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
-		&format,
+		&format.pcm,
 		FAUDIO_VOICE_USEFILTER, /* FIXME: Can this be optional? */
 		4.0f,
 		(FAudioVoiceCallback*) &(*ppWave)->callback,
