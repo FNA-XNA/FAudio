@@ -44,6 +44,9 @@ typedef struct FAudioGSTREAMER
 	size_t convertCacheLen, prevConvertCacheLen;
 	uint32_t curBlock, prevBlock;
 	size_t *blockSizes;
+	uint32_t blockAlign;
+	uint32_t blockCount;
+	size_t maxBytes;
 } FAudioGSTREAMER;
 
 #define SIZE_FROM_DST(sample) \
@@ -127,7 +130,7 @@ static int FAudio_GSTREAMER_CheckForBusErrors(FAudioVoice *voice)
 static size_t FAudio_GSTREAMER_FillConvertCache(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	size_t maxBytes
+	size_t availableBytes
 ) {
 	GstBuffer *src, *dst;
 	GstSample *sample;
@@ -139,21 +142,39 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 	LOG_FUNC_ENTER(voice->audio)
 
 	/* Write current block to input buffer, push to pipeline */
+
+	clipStartBytes = (
+		(size_t) voice->src.gstreamer->blockAlign *
+		voice->src.gstreamer->curBlock
+	);
+	toCopyBytes = voice->src.gstreamer->blockAlign;
+	clipEndBytes = clipStartBytes + toCopyBytes;
+	if (buffer->AudioBytes < clipEndBytes)
+	{
+		/* XMA2 assets can ship with undersized ends.
+		 * If your first instinct is to "pad with 0xFF, that's what game data trails with,"
+		 * sorry to disappoint but it inserts extra silence in loops.
+		 * Instead, push an undersized buffer and pray that the decoder handles it properly.
+		 * At the time of writing, it's FFmpeg, and it's handling it well.
+		 * For everything else, uh, let's assume the same. If you're reading this: sorry.
+		 * -ade
+		 */
+		toCopyBytes = buffer->AudioBytes - clipStartBytes;
+	}
+	clipStartBytes += (size_t) buffer->pAudioData;
+
 	src = gst_buffer_new_allocate(
 		NULL,
-		voice->src.format->nBlockAlign,
+		toCopyBytes,
 		NULL
 	);
 
 	if (	gst_buffer_fill(
 			src,
 			0,
-			buffer->pAudioData + (
-				voice->src.format->nBlockAlign *
-				voice->src.gstreamer->curBlock
-			),
-			voice->src.format->nBlockAlign
-		) != voice->src.format->nBlockAlign	)
+			(gconstpointer*) clipStartBytes,
+			toCopyBytes
+		) != toCopyBytes	)
 	{
 		LOG_ERROR(
 			voice->audio,
@@ -207,7 +228,7 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 			clipEndBytes = 0;
 		}
 
-		toCopyBytes = FAudio_min(info.size - (clipStartBytes + clipEndBytes), maxBytes - pulled);
+		toCopyBytes = FAudio_min(info.size - (clipStartBytes + clipEndBytes), availableBytes - pulled);
 
 		if (voice->src.gstreamer->convertCacheLen < pulled + toCopyBytes)
 		{
@@ -235,7 +256,7 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 	return pulled;
 }
 
-static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, uint32_t block, size_t maxBytes)
+static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, uint32_t block, size_t availableBytes)
 {
 	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
 	uint8_t *tmpBuf;
@@ -279,7 +300,7 @@ static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer
 	gstreamer->blockSizes[block] = FAudio_GSTREAMER_FillConvertCache(
 		voice,
 		buffer,
-		maxBytes
+		availableBytes
 	);
 
 	return gstreamer->blockSizes[block] != (size_t) -1;
@@ -291,17 +312,28 @@ static void FAudio_INTERNAL_DecodeGSTREAMER(
 	float *decodeCache,
 	uint32_t samples
 ) {
-	size_t byteOffset, siz, maxBytes;
+	size_t byteOffset, siz, availableBytes, blockCount, maxBytes;
 	uint32_t curBlock, curBufferOffset;
 	uint8_t *convertCache;
 	int error = 0;
 	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
 
+	if (gstreamer->blockCount != 0)
+	{
+		blockCount = gstreamer->blockCount;
+		maxBytes = gstreamer->maxBytes;
+	}
+	else
+	{
+		blockCount = voice->src.bufferList->bufferWMA.PacketCount;
+		maxBytes = voice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[blockCount - 1];
+	}
+
 	LOG_FUNC_ENTER(voice->audio)
 
 	if (!gstreamer->blockSizes)
 	{
-		size_t sz = voice->src.bufferList->bufferWMA.PacketCount * sizeof(*gstreamer->blockSizes);
+		size_t sz = blockCount * sizeof(*gstreamer->blockSizes);
 		gstreamer->blockSizes = (size_t *) voice->audio->pMalloc(sz);
 		memset(gstreamer->blockSizes, 0xff, sz);
 	}
@@ -311,13 +343,13 @@ decode:
 	byteOffset = SIZE_FROM_DST(curBufferOffset);
 
 	/* the last block size can truncate the length of the buffer */
-	maxBytes = SIZE_SRC_TO_DST(voice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[voice->src.bufferList->bufferWMA.PacketCount - 1]);
-	for (curBlock = 0; curBlock < voice->src.bufferList->bufferWMA.PacketCount; curBlock += 1)
+	availableBytes = SIZE_SRC_TO_DST(maxBytes);
+	for (curBlock = 0; curBlock < blockCount; curBlock += 1)
 	{
 		/* decode to get real size */
 		if (gstreamer->blockSizes[curBlock] == (size_t)-1)
 		{
-			if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, maxBytes))
+			if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, availableBytes))
 			{
 				error = 1;
 				goto done;
@@ -329,7 +361,7 @@ decode:
 			/* ensure curBlock is decoded in either slot */
 			if (gstreamer->curBlock != curBlock && gstreamer->prevBlock != curBlock)
 			{
-				if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, maxBytes))
+				if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, availableBytes))
 				{
 					error = 1;
 					goto done;
@@ -339,12 +371,12 @@ decode:
 		}
 
 		byteOffset -= gstreamer->blockSizes[curBlock];
-		maxBytes -= gstreamer->blockSizes[curBlock];
-		if(maxBytes == 0)
+		availableBytes -= gstreamer->blockSizes[curBlock];
+		if (availableBytes == 0)
 			break;
 	}
 
-	if (curBlock >= voice->src.bufferList->bufferWMA.PacketCount || maxBytes == 0)
+	if (curBlock >= blockCount || availableBytes == 0)
 	{
 		goto done;
 	}
@@ -403,8 +435,7 @@ done:
 	/* If the cache isn't filled yet, keep decoding! */
 	if (samples > 0)
 	{
-		if (	!error &&
-			curBlock < voice->src.bufferList->bufferWMA.PacketCount - 1	)
+		if (!error && curBlock < blockCount - 1)
 		{
 			goto decode;
 		}
@@ -449,11 +480,66 @@ static void FAudio_GSTREAMER_NewDecodebinPad(GstElement *decodebin,
 	gst_object_unref(ac_sink);
 }
 
+/* XMA2 doesn't have a recognized mimetype and so far only libav's avdec_xma2 exists for XMA2.
+ * Things can change and as of writing this patch, things are actively changing.
+ * As for this being a possible leak: using gstreamer is a static endeavour elsewhere already~
+ * -ade
+ */
+/* #define FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR */
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
+static const char *FAudio_GSTREAMER_XMA2_Mimetype = NULL;
+static GstElementFactory *FAudio_GSTREAMER_XMA2_DecoderFactory = NULL;
+static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(
+	GstElement *decodebin,
+	GstPad *pad,
+	GstCaps *caps,
+	gpointer user
+) {
+	FAudio *audio = user;
+	GValueArray *result;
+	gchar *capsText;
+
+	if (!gst_structure_has_name(gst_caps_get_structure(caps, 0), FAudio_GSTREAMER_XMA2_Mimetype))
+	{
+		capsText = gst_caps_to_string(caps);
+		LOG_ERROR(
+			audio,
+			"Expected %s (XMA2) caps not %s",
+			FAudio_GSTREAMER_XMA2_Mimetype,
+			capsText
+		)
+		g_free(capsText);
+		/*
+		 * From the docs:
+		 *
+		 * If this function returns NULL, @pad will be exposed as a final caps.
+		 *
+		 * If this function returns an empty array, the pad will be considered as
+		 * having an unhandled type media type.
+		 */
+		return g_value_array_new(0);
+	}
+
+	result = g_value_array_new(1);
+	GValue val = G_VALUE_INIT;
+	g_value_init(&val, G_TYPE_OBJECT);
+	g_value_set_object(&val, FAudio_GSTREAMER_XMA2_DecoderFactory);
+	g_value_array_append(result, &val);
+	g_value_unset(&val);
+	return result;
+}
+#endif
+
+
 uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 {
 	FAudioGSTREAMER *result;
 	GstElement *decoder = NULL, *converter = NULL;
+	const GList *tmpls;
+	GstStaticPadTemplate *tmpl;
 	GstCaps *caps;
+	const char *mimetype;
+	const char *versiontype;
 	int version;
 	GstBuffer *codec_data;
 	size_t codec_data_size;
@@ -473,15 +559,48 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		gst_init(NULL, NULL);
 	}
 
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
+	if (type == FAUDIO_FORMAT_XMAUDIO2 && !FAudio_GSTREAMER_XMA2_Mimetype)
+	{
+		/* Old versions ship with unknown/unknown as the sink caps mimetype.
+		 * A patch has been submitted (and merged!) to expose avdec_xma2 as audio/x-xma with xmaversion 2:
+		 * https://gitlab.freedesktop.org/gstreamer/gst-libav/-/merge_requests/124
+		 * For now, try to find avdec_xma2 if it's found, match the mimetype on the fly.
+		 * This should also take future alternative XMA2 decoders into account if avdec_xma2 is missing.
+		 * -ade
+		 */
+		FAudio_GSTREAMER_XMA2_Mimetype = "audio/x-xma";
+		FAudio_GSTREAMER_XMA2_DecoderFactory = gst_element_factory_find("avdec_xma2");
+		if (FAudio_GSTREAMER_XMA2_DecoderFactory)
+		{
+			for (tmpls = gst_element_factory_get_static_pad_templates(FAudio_GSTREAMER_XMA2_DecoderFactory); tmpls; tmpls = tmpls->next)
+			{
+				tmpl = (GstStaticPadTemplate*) tmpls->data;
+				if (tmpl->direction == GST_PAD_SINK)
+				{
+					caps = gst_static_pad_template_get_caps(tmpl);
+					FAudio_GSTREAMER_XMA2_Mimetype = gst_structure_get_name(gst_caps_get_structure(caps, 0));
+					gst_caps_unref(caps);
+					break;
+				}
+			}
+		}
+	}
+#endif
+
 	/* Match the format with the codec */
 	switch (type)
 	{
-	#define GSTTYPE(fmt, ver) \
-		case FAUDIO_FORMAT_##fmt: version = ver; break;
-	GSTTYPE(WMAUDIO2, 2)
-	GSTTYPE(WMAUDIO3, 3)
-	GSTTYPE(WMAUDIO_LOSSLESS, 4)
-	/* FIXME: XMA2 */
+	#define GSTTYPE(fmt, mt, vt, ver) \
+		case FAUDIO_FORMAT_##fmt: mimetype = mt; versiontype = vt; version = ver; break;
+	GSTTYPE(WMAUDIO2, "audio/x-wma", "wmaversion", 2)
+	GSTTYPE(WMAUDIO3, "audio/x-wma", "wmaversion", 3)
+	GSTTYPE(WMAUDIO_LOSSLESS, "audio/x-wma", "wmaversion", 4)
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
+	GSTTYPE(XMAUDIO2, FAudio_GSTREAMER_XMA2_Mimetype, "xmaversion", 2)
+#else
+	GSTTYPE(XMAUDIO2, "audio/x-xma", "xmaversion", 2)
+#endif
 	#undef GSTTYPE
 	default:
 		LOG_ERROR(
@@ -513,6 +632,12 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		goto free_without_bin;
 	}
 
+#ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
+	if (type == FAUDIO_FORMAT_XMAUDIO2 && FAudio_GSTREAMER_XMA2_DecoderFactory)
+	{
+		g_signal_connect(decoder, "autoplug-factories", G_CALLBACK(FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories), pSourceVoice->audio);
+	}
+#endif
 	g_signal_connect(decoder, "pad-added", G_CALLBACK(FAudio_GSTREAMER_NewDecodebinPad), result);
 
 	result->srcpad = gst_pad_new(NULL, GST_PAD_SRC);
@@ -607,12 +732,14 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	gst_pad_push_event(result->srcpad, event);
 
 	/* Prepare the input format */
+	result->blockAlign = (uint32_t) pSourceVoice->src.format->nBlockAlign;
 	if (type == FAUDIO_FORMAT_WMAUDIO3)
 	{
 		const FAudioWaveFormatExtensible *wfx =
 			(FAudioWaveFormatExtensible*) pSourceVoice->src.format;
 		extradata = (uint8_t*) &wfx->Samples;
 		codec_data_size = pSourceVoice->src.format->cbSize;
+		/* bufferList (and thus bufferWMA) can't be accessed yet. */
 	}
 	else if (type == FAUDIO_FORMAT_WMAUDIO2)
 	{
@@ -621,21 +748,38 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 
 		extradata = fakeextradata;
 		codec_data_size = sizeof(fakeextradata);
+		/* bufferList (and thus bufferWMA) can't be accessed yet. */
+	}
+	else if (type == FAUDIO_FORMAT_XMAUDIO2)
+	{
+		const FAudioXMA2WaveFormat *wfx =
+			(FAudioXMA2WaveFormat*) pSourceVoice->src.format;
+		extradata = (uint8_t*) &wfx->wNumStreams;
+		codec_data_size = pSourceVoice->src.format->cbSize;
+		/* XMA2 block size >= 16-bit limit and it doesn't come with bufferWMA. */
+		result->blockAlign = wfx->dwBytesPerBlock;
+		result->blockCount = wfx->wBlockCount;
+		result->maxBytes = (
+			(size_t) wfx->dwSamplesEncoded *
+			pSourceVoice->src.format->nChannels *
+			(pSourceVoice->src.format->wBitsPerSample / 8)
+		);
 	}
 	else
 	{
 		extradata = NULL;
+		codec_data_size = 0;
 		FAudio_assert(0 && "Unrecognized WMA format!");
 	}
 	codec_data = gst_buffer_new_and_alloc(codec_data_size);
 	gst_buffer_fill(codec_data, 0, extradata, codec_data_size);
 	caps = gst_caps_new_simple(
-		"audio/x-wma",
-		"wmaversion",	G_TYPE_INT, version,
+		mimetype,
+		versiontype,	G_TYPE_INT, version,
 		"bitrate",	G_TYPE_INT, pSourceVoice->src.format->nAvgBytesPerSec * 8,
 		"channels",	G_TYPE_INT, pSourceVoice->src.format->nChannels,
 		"rate",		G_TYPE_INT, pSourceVoice->src.format->nSamplesPerSec,
-		"block_align",	G_TYPE_INT, pSourceVoice->src.format->nBlockAlign,
+		"block_align",	G_TYPE_INT, result->blockAlign,
 		"depth",	G_TYPE_INT, pSourceVoice->src.format->wBitsPerSample,
 		"codec_data",	GST_TYPE_BUFFER, codec_data,
 		NULL

@@ -176,6 +176,22 @@ public static class FAudio
 		 */
 	}
 
+	public struct FAudioXMA2WaveFormatEx
+	{
+		public FAudioWaveFormatEx wfx;
+		public ushort wNumStreams;
+		public uint dwChannelMask;
+		public uint dwSamplesEncoded;
+		public uint dwBytesPerBlock;
+		public uint dwPlayBegin;
+		public uint dwPlayLength;
+		public uint dwLoopBegin;
+		public uint dwLoopLength;
+		public byte bLoopCount;
+		public byte bEncoderVersion;
+		public ushort wBlockCount;
+	};
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public unsafe struct FAudioDeviceDetails
 	{
@@ -406,6 +422,18 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudio_CreateSourceVoice(
+		IntPtr audio, /* FAudio* */
+		out IntPtr ppSourceVoice, /* FAudioSourceVoice** */
+		IntPtr pSourceFormat, /* FAudioWaveFormatEx* */
+		uint Flags,
+		float MaxFrequencyRatio,
+		IntPtr pCallback, /* FAudioVoiceCallback* */
+		IntPtr pSendList, /* FAudioVoiceSends* */
+		IntPtr pEffectChain /* FAudioEffectChain* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudio_CreateSubmixVoice(
 		IntPtr audio, /* FAudio* */
 		out IntPtr ppSubmixVoice, /* FAudioSubmixVoice** */
@@ -623,6 +651,13 @@ public static class FAudio
 		IntPtr voice, /* FAudioSourceVoice* */
 		ref FAudioBuffer pBuffer,
 		IntPtr pBufferWMA /* const FAudioBufferWMA* */
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioSourceVoice_SubmitSourceBuffer(
+		IntPtr voice, /* FAudioSourceVoice* */
+		ref FAudioBuffer pBuffer,
+		ref FAudioBufferWMA pBufferWMA
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]

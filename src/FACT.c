@@ -1640,6 +1640,10 @@ uint32_t FACTWaveBank_GetWaveProperties(
 			((entry->Format.wBlockAlign + 16) * 2)
 		);
 	}
+	else
+	{
+		FAudio_assert(0 && "Unrecognized wFormatTag!");
+	}
 
 	pWaveProperties->loopRegion = entry->LoopRegion;
 	pWaveProperties->streaming = pWaveBank->streaming;
@@ -1660,8 +1664,14 @@ uint32_t FACTWaveBank_Prepare(
 	FAudioBufferWMA bufferWMA;
 	FAudioVoiceSends sends;
 	FAudioSendDescriptor send;
-	FAudioADPCMWaveFormat format;
+	union
+	{
+		FAudioWaveFormatEx pcm;
+		FAudioADPCMWaveFormat adpcm;
+		FAudioXMA2WaveFormat xma2;
+	} format;
 	FACTWaveBankEntry *entry;
+	FACTSeekTable *seek;
 	if (pWaveBank == NULL)
 	{
 		*ppWave = NULL;
@@ -1706,38 +1716,78 @@ uint32_t FACTWaveBank_Prepare(
 	send.pOutputVoice = pWaveBank->parentEngine->master;
 	sends.SendCount = 1;
 	sends.pSends = &send;
-	format.wfx.nChannels = entry->Format.nChannels;
-	format.wfx.nSamplesPerSec = entry->Format.nSamplesPerSec;
+	format.pcm.nChannels = entry->Format.nChannels;
+	format.pcm.nSamplesPerSec = entry->Format.nSamplesPerSec;
 	if (entry->Format.wFormatTag == 0x0)
 	{
-		format.wfx.wFormatTag = FAUDIO_FORMAT_PCM;
-		format.wfx.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
-		format.wfx.nBlockAlign = format.wfx.nChannels * format.wfx.wBitsPerSample / 8;
-		format.wfx.nAvgBytesPerSec = format.wfx.nBlockAlign * format.wfx.nSamplesPerSec;
-		format.wfx.cbSize = 0;
+		format.pcm.wFormatTag = FAUDIO_FORMAT_PCM;
+		format.pcm.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
+		format.pcm.nBlockAlign = format.pcm.nChannels * format.pcm.wBitsPerSample / 8;
+		format.pcm.nAvgBytesPerSec = format.pcm.nBlockAlign * format.pcm.nSamplesPerSec;
+		format.pcm.cbSize = 0;
 	}
 	else if (entry->Format.wFormatTag == 0x1)
 	{
-		/* XMA2 is quite similar to WMA Pro. */
+		/* XMA2 is quite similar to WMA Pro... is what everyone thought.
+		 * What a great way to start this comment.
+		 *
+		 * Let's reconstruct the extra data because who knows what decoder we're dealing with in <present year>.
+		 * It's also a good exercise in understanding XMA2 metadata and feeding blocks into the decoder properly.
+		 * At the time of writing this patch, it's FFmpeg via gstreamer which doesn't even respect most of this.
+		 * ... which means: good luck to whoever ends up finding inaccuracies here in the future!
+		 *
+		 * dwLoopLength seems to match dwPlayLength in everything I've seen that had bLoopCount == 0.
+		 * dwLoopBegin can be > 0 even with bLoopCount == 0 because why not. Let's ignore that.
+		 *
+		 * dwSamplesEncoded is usually close to dwPlayLength but not always (if ever?) equal. Let's assume equality.
+		 * The XMA2 seek table uses sample indices as opposed to WMA's byte index seek table.
+		 *
+		 * nBlockAlign uses aWMABlockAlign given the entire WMA Pro thing BUT it's expected to be the block size for decoding.
+		 * The XMA2 block size MUST be a multiple of 2048 BUT entry->PlayRegion.dwLength / seek->entryCount doesn't respect that.
+		 * And even when correctly guesstimating the block size, we sometimes end up with block sizes >= 64k BYTES. nBlockAlign IS 16-BIT!
+		 * Scrap nBlockAlign. I've given up and made all FAudio gstreamer functions use dwBytesPerBlock if available.
+		 * Still though, if we don't want FAudio_INTERNAL_DecodeGSTREAMER to hang, the total data length must match (see SoundEffect.cs in FNA).
+		 * As such, we round up when guessing the block size, feed GStreamer with zeroes^Wundersized blocks and hope for the best.
+		 *
+		 * This is FUN.
+		 * -ade
+		 */
 		FAudio_assert(entry->Format.wBitsPerSample != 0);
 
-		format.wfx.wFormatTag = FAUDIO_FORMAT_XMAUDIO2;
-		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
-		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
-		format.wfx.wBitsPerSample = 16;
-		format.wfx.cbSize = 0;
+		seek = &pWaveBank->seekTables[nWaveIndex];
+		format.pcm.wFormatTag = FAUDIO_FORMAT_XMAUDIO2;
+		format.pcm.wBitsPerSample = 16;
+		format.pcm.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
+		format.pcm.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
+		format.pcm.cbSize = (
+			sizeof(FAudioXMA2WaveFormat) -
+			sizeof(FAudioWaveFormatEx)
+		);
+		format.xma2.wNumStreams = (format.pcm.nChannels + 1) / 2;
+		format.xma2.dwChannelMask = format.pcm.nChannels > 1 ? 0xFFFFFFFF >> (32 - format.pcm.nChannels) : 0;
+		format.xma2.dwSamplesEncoded = seek->entries[seek->entryCount - 1];
+		format.xma2.dwBytesPerBlock = (uint16_t) FAudio_ceil(
+			(double) entry->PlayRegion.dwLength /
+			(double) seek->entryCount /
+			2048.0
+		) * 2048;
+		format.xma2.dwPlayBegin = format.xma2.dwLoopBegin = 0;
+		format.xma2.dwPlayLength = format.xma2.dwLoopLength = format.xma2.dwSamplesEncoded;
+		format.xma2.bLoopCount = 0;
+		format.xma2.bEncoderVersion = 4;
+		format.xma2.wBlockCount = seek->entryCount;
 	}
 	else if (entry->Format.wFormatTag == 0x2)
 	{
-		format.wfx.wFormatTag = FAUDIO_FORMAT_MSADPCM;
-		format.wfx.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.wfx.nChannels;
-		format.wfx.wBitsPerSample = 16;
-		format.wfx.cbSize = (
+		format.pcm.wFormatTag = FAUDIO_FORMAT_MSADPCM;
+		format.pcm.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.pcm.nChannels;
+		format.pcm.wBitsPerSample = 16;
+		format.pcm.cbSize = (
 			sizeof(FAudioADPCMWaveFormat) -
 			sizeof(FAudioWaveFormatEx)
 		);
-		format.wSamplesPerBlock = (
-			((format.wfx.nBlockAlign / format.wfx.nChannels) - 6) * 2
+		format.adpcm.wSamplesPerBlock = (
+			((format.pcm.nBlockAlign / format.pcm.nChannels) - 6) * 2
 		);
 	}
 	else if (entry->Format.wFormatTag == 0x3)
@@ -1745,11 +1795,11 @@ uint32_t FACTWaveBank_Prepare(
 		/* Apparently this is used to detect WMA Pro...? */
 		FAudio_assert(entry->Format.wBitsPerSample == 0);
 
-		format.wfx.wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
-		format.wfx.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
-		format.wfx.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
-		format.wfx.wBitsPerSample = 16;
-		format.wfx.cbSize = 0;
+		format.pcm.wFormatTag = FAUDIO_FORMAT_WMAUDIO2;
+		format.pcm.nAvgBytesPerSec = aWMAAvgBytesPerSec[entry->Format.wBlockAlign >> 5];
+		format.pcm.nBlockAlign = aWMABlockAlign[entry->Format.wBlockAlign & 0x1F];
+		format.pcm.wBitsPerSample = 16;
+		format.pcm.cbSize = 0;
 	}
 	else
 	{
@@ -1765,11 +1815,11 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->callback.callback.OnVoiceProcessingPassEnd = NULL;
 	(*ppWave)->callback.callback.OnVoiceProcessingPassStart = NULL;
 	(*ppWave)->callback.wave = *ppWave;
-	(*ppWave)->srcChannels = format.wfx.nChannels;
+	(*ppWave)->srcChannels = format.pcm.nChannels;
 	FAudio_CreateSourceVoice(
 		pWaveBank->parentEngine->audio,
 		&(*ppWave)->voice,
-		&format.wfx,
+		&format,
 		FAUDIO_VOICE_USEFILTER, /* FIXME: Can this be optional? */
 		4.0f,
 		(FAudioVoiceCallback*) &(*ppWave)->callback,
@@ -1779,19 +1829,19 @@ uint32_t FACTWaveBank_Prepare(
 	if (pWaveBank->streaming)
 	{
 		/* Init stream cache info */
-		if (format.wfx.wFormatTag == FAUDIO_FORMAT_PCM)
+		if (format.pcm.wFormatTag == FAUDIO_FORMAT_PCM)
 		{
 			(*ppWave)->streamSize = (
-				format.wfx.nSamplesPerSec *
-				format.wfx.nBlockAlign
+				format.pcm.nSamplesPerSec *
+				format.pcm.nBlockAlign
 			);
 		}
-		else if (format.wfx.wFormatTag == FAUDIO_FORMAT_MSADPCM)
+		else if (format.pcm.wFormatTag == FAUDIO_FORMAT_MSADPCM)
 		{
 			(*ppWave)->streamSize = (
-				format.wfx.nSamplesPerSec /
-				format.wSamplesPerBlock *
-				format.wfx.nBlockAlign
+				format.pcm.nSamplesPerSec /
+				format.adpcm.wSamplesPerBlock *
+				format.pcm.nBlockAlign
 			);
 		}
 		else
@@ -1836,8 +1886,7 @@ uint32_t FACTWaveBank_Prepare(
 			buffer.LoopCount = nLoopCount;
 		}
 		buffer.pContext = NULL;
-		if (	format.wfx.wFormatTag == FAUDIO_FORMAT_WMAUDIO2 ||
-			format.wfx.wFormatTag == FAUDIO_FORMAT_XMAUDIO2	)
+		if (format.pcm.wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
 		{
 			bufferWMA.pDecodedPacketCumulativeBytes =
 				pWaveBank->seekTables[nWaveIndex].entries;

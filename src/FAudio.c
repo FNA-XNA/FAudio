@@ -293,7 +293,6 @@ uint32_t FAudio_CreateSourceVoice(
 
 	if (	pSourceFormat->wFormatTag == FAUDIO_FORMAT_PCM ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT ||
-		pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2 ||
 		pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2	)
 	{
 		FAudioWaveFormatExtensible *fmtex = (FAudioWaveFormatExtensible*) audio->pMalloc(
@@ -316,10 +315,6 @@ uint32_t FAudio_CreateSourceVoice(
 		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT)
 		{
 			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(FAudioGUID));
-		}
-		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
-		{
-			FAudio_memcpy(&fmtex->SubFormat, &DATAFORMAT_SUBTYPE_XMAUDIO2, sizeof(FAudioGUID));
 		}
 		else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_WMAUDIO2)
 		{
@@ -353,6 +348,31 @@ uint32_t FAudio_CreateSourceVoice(
 		fmtex->wSamplesPerBlock = ((
 			fmtex->wfx.nBlockAlign / fmtex->wfx.nChannels
 		) - 6) * 2;
+		(*ppSourceVoice)->src.format = &fmtex->wfx;
+	}
+	else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
+	{
+		FAudioXMA2WaveFormat *fmtex = (FAudioXMA2WaveFormat*) audio->pMalloc(
+			sizeof(FAudioXMA2WaveFormat)
+		);
+
+		/* Copy what we can, ideally the sizes match! */
+		size_t cbSize = sizeof(FAudioWaveFormatEx) + pSourceFormat->cbSize;
+		FAudio_memcpy(
+			fmtex,
+			pSourceFormat,
+			FAudio_min(cbSize, sizeof(FAudioXMA2WaveFormat))
+		);
+		if (cbSize < sizeof(FAudioXMA2WaveFormat))
+		{
+			FAudio_zero(
+				((uint8_t*) fmtex) + cbSize,
+				sizeof(FAudioADPCMWaveFormat) - cbSize
+			);
+		}
+
+		/* Does XAudio2 validate this input?! */
+		fmtex->wfx.cbSize = sizeof(FAudioXMA2WaveFormat) - sizeof(FAudioWaveFormatEx);
 		(*ppSourceVoice)->src.format = &fmtex->wfx;
 	}
 	else
@@ -429,8 +449,7 @@ uint32_t FAudio_CreateSourceVoice(
 		}
 		else if (	COMPARE_GUID(WMAUDIO2) ||
 				COMPARE_GUID(WMAUDIO3) ||
-				COMPARE_GUID(WMAUDIO_LOSSLESS) ||
-				COMPARE_GUID(XMAUDIO2)	)
+				COMPARE_GUID(WMAUDIO_LOSSLESS)	)
 		{
 #ifdef HAVE_GSTREAMER
 			if (FAudio_GSTREAMER_init(*ppSourceVoice, fmtex->SubFormat.Data1) != 0)
@@ -447,6 +466,18 @@ uint32_t FAudio_CreateSourceVoice(
 			FAudio_assert(0 && "Unsupported WAVEFORMATEXTENSIBLE subtype!");
 		}
 		#undef COMPARE_GUID
+	}
+	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
+	{
+#ifdef HAVE_GSTREAMER
+		if (FAudio_GSTREAMER_init(*ppSourceVoice, FAUDIO_FORMAT_XMAUDIO2) != 0)
+		{
+			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
+		}
+#else
+		FAudio_assert(0 && "XMA2 is not supported!");
+		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
+#endif /* HAVE_GSTREAMER */
 	}
 	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)
 	{
@@ -2422,8 +2453,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 #ifdef HAVE_GSTREAMER
-	FAudio_assert(	(voice->src.gstreamer != NULL && pBufferWMA != NULL) ||
-			(voice->src.gstreamer == NULL && pBufferWMA == NULL)	);
+	FAudio_assert(	(voice->src.gstreamer != NULL && (pBufferWMA != NULL || voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)) ||
+			(voice->src.gstreamer == NULL && (pBufferWMA == NULL && voice->src.format->wFormatTag != FAUDIO_FORMAT_XMAUDIO2))	);
 #endif /* HAVE_GSTREAMER */
 
 	/* Start off with whatever they just sent us... */
@@ -2451,6 +2482,11 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 				fmtex->wSamplesPerBlock
 			) - playBegin;
 		}
+		else if (voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
+		{
+			FAudioXMA2WaveFormat *fmtex = (FAudioXMA2WaveFormat*) voice->src.format;
+			playLength = fmtex->dwSamplesEncoded - playBegin;
+		}
 		else if (pBufferWMA != NULL)
 		{
 			playLength = (
@@ -2467,7 +2503,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		}
 	}
 
-	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL)
+	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL && voice->src.format->wFormatTag != FAUDIO_FORMAT_XMAUDIO2)
 	{
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
 		if (loopBegin >= (playBegin + playLength))
@@ -2509,7 +2545,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 			pBuffer->AudioBytes / voice->src.format->nBlockAlign
 		) * voice->src.format->nBlockAlign;
 	}
-	else if (pBufferWMA != NULL)
+	else if (pBufferWMA != NULL || voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
 	{
 		/* WMA only supports looping the whole buffer */
 		loopBegin = 0;
