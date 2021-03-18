@@ -130,7 +130,7 @@ static int FAudio_GSTREAMER_CheckForBusErrors(FAudioVoice *voice)
 static size_t FAudio_GSTREAMER_FillConvertCache(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	size_t maxBytes
+	size_t availableBytes
 ) {
 	GstBuffer *src, *dst;
 	GstSample *sample;
@@ -228,7 +228,7 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 			clipEndBytes = 0;
 		}
 
-		toCopyBytes = FAudio_min(info.size - (clipStartBytes + clipEndBytes), maxBytes - pulled);
+		toCopyBytes = FAudio_min(info.size - (clipStartBytes + clipEndBytes), availableBytes - pulled);
 
 		if (voice->src.gstreamer->convertCacheLen < pulled + toCopyBytes)
 		{
@@ -256,7 +256,7 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 	return pulled;
 }
 
-static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, uint32_t block, size_t maxBytes)
+static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, uint32_t block, size_t availableBytes)
 {
 	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
 	uint8_t *tmpBuf;
@@ -300,7 +300,7 @@ static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer
 	gstreamer->blockSizes[block] = FAudio_GSTREAMER_FillConvertCache(
 		voice,
 		buffer,
-		maxBytes
+		availableBytes
 	);
 
 	return gstreamer->blockSizes[block] != (size_t) -1;
@@ -312,17 +312,28 @@ static void FAudio_INTERNAL_DecodeGSTREAMER(
 	float *decodeCache,
 	uint32_t samples
 ) {
-	size_t byteOffset, siz, maxBytes;
+	size_t byteOffset, siz, availableBytes, blockCount, maxBytes;
 	uint32_t curBlock, curBufferOffset;
 	uint8_t *convertCache;
 	int error = 0;
 	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
 
+	if (gstreamer->blockCount != 0)
+	{
+		blockCount = gstreamer->blockCount;
+		maxBytes = gstreamer->maxBytes;
+	}
+	else
+	{
+		blockCount = voice->src.bufferList->bufferWMA.PacketCount;
+		maxBytes = voice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[blockCount - 1];
+	}
+
 	LOG_FUNC_ENTER(voice->audio)
 
 	if (!gstreamer->blockSizes)
 	{
-		size_t sz = gstreamer->blockCount * sizeof(*gstreamer->blockSizes);
+		size_t sz = blockCount * sizeof(*gstreamer->blockSizes);
 		gstreamer->blockSizes = (size_t *) voice->audio->pMalloc(sz);
 		memset(gstreamer->blockSizes, 0xff, sz);
 	}
@@ -332,13 +343,13 @@ decode:
 	byteOffset = SIZE_FROM_DST(curBufferOffset);
 
 	/* the last block size can truncate the length of the buffer */
-	maxBytes = SIZE_SRC_TO_DST(gstreamer->maxBytes);
-	for (curBlock = 0; curBlock < gstreamer->blockCount; curBlock += 1)
+	availableBytes = SIZE_SRC_TO_DST(maxBytes);
+	for (curBlock = 0; curBlock < blockCount; curBlock += 1)
 	{
 		/* decode to get real size */
 		if (gstreamer->blockSizes[curBlock] == (size_t)-1)
 		{
-			if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, maxBytes))
+			if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, availableBytes))
 			{
 				error = 1;
 				goto done;
@@ -350,7 +361,7 @@ decode:
 			/* ensure curBlock is decoded in either slot */
 			if (gstreamer->curBlock != curBlock && gstreamer->prevBlock != curBlock)
 			{
-				if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, maxBytes))
+				if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, availableBytes))
 				{
 					error = 1;
 					goto done;
@@ -360,12 +371,12 @@ decode:
 		}
 
 		byteOffset -= gstreamer->blockSizes[curBlock];
-		maxBytes -= gstreamer->blockSizes[curBlock];
-		if(maxBytes == 0)
+		availableBytes -= gstreamer->blockSizes[curBlock];
+		if (availableBytes == 0)
 			break;
 	}
 
-	if (curBlock >= gstreamer->blockCount || maxBytes == 0)
+	if (curBlock >= blockCount || availableBytes == 0)
 	{
 		goto done;
 	}
@@ -425,8 +436,8 @@ done:
 	if (samples > 0)
 	{
 		if (	!error &&
-			curBlock < gstreamer->blockCount - 1 &&
-			maxBytes != 0	)
+			curBlock < blockCount - 1 &&
+			availableBytes != 0	)
 		{
 			goto decode;
 		}
@@ -730,8 +741,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 			(FAudioWaveFormatExtensible*) pSourceVoice->src.format;
 		extradata = (uint8_t*) &wfx->Samples;
 		codec_data_size = pSourceVoice->src.format->cbSize;
-		result->blockCount = pSourceVoice->src.bufferList->bufferWMA.PacketCount;
-		result->maxBytes = pSourceVoice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[result->blockCount - 1];
+		/* bufferList (and thus bufferWMA) can't be accessed yet. */
 	}
 	else if (type == FAUDIO_FORMAT_WMAUDIO2)
 	{
@@ -740,8 +750,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 
 		extradata = fakeextradata;
 		codec_data_size = sizeof(fakeextradata);
-		result->blockCount = pSourceVoice->src.bufferList->bufferWMA.PacketCount;
-		result->maxBytes = pSourceVoice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[result->blockCount - 1];
+		/* bufferList (and thus bufferWMA) can't be accessed yet. */
 	}
 	else if (type == FAUDIO_FORMAT_XMAUDIO2)
 	{
@@ -749,6 +758,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 			(FAudioXMA2WaveFormat*) pSourceVoice->src.format;
 		extradata = (uint8_t*) &wfx->wNumStreams;
 		codec_data_size = pSourceVoice->src.format->cbSize;
+		/* XMA2 block size >= 16-bit limit and it doesn't come with bufferWMA. */
 		result->blockAlign = wfx->dwBytesPerBlock;
 		result->blockCount = wfx->wBlockCount;
 		result->maxBytes = (
