@@ -2498,6 +2498,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		cueNameIndexOffset,
 		soundOffset;
 	uint32_t entryCountAndFlags;
+	uint16_t filterData;
 	uint8_t platform;
 	size_t memsize;
 	uint16_t i, j, k, cur, tool;
@@ -2745,19 +2746,18 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 					continue;
 				}
 
-				sb->sounds[i].tracks[j].filter = read_u8(&ptr);
-				if (sb->sounds[i].tracks[j].filter & 0x01)
+				filterData = read_u16(&ptr, se);
+				if (filterData & 0x0001)
 				{
 					sb->sounds[i].tracks[j].filter =
-						(sb->sounds[i].tracks[j].filter >> 1) & 0x02;
+						(filterData >> 1) & 0x02;
 				}
 				else
 				{
 					/* Huh...? */
 					sb->sounds[i].tracks[j].filter = 0xFF;
 				}
-
-				sb->sounds[i].tracks[j].qfactor = read_u8(&ptr);
+				sb->sounds[i].tracks[j].qfactor = (filterData >> 8) & 0xFF;
 				sb->sounds[i].tracks[j].frequency = read_u16(&ptr, se);
 			}
 
