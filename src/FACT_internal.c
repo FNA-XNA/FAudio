@@ -1888,7 +1888,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	buffer.pContext = NULL;
 
 	/* Submit, finally. */
-	if (entry->Format.wFormatTag == 0x1)
+	if (entry->Format.wFormatTag == 0x3)
 	{
 		bufferWMA.pDecodedPacketCumulativeBytes =
 			c->wave->parentBank->seekTables[c->wave->index].entries;
