@@ -2179,7 +2179,8 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		{
 			pEngine->dspPresetCodes[i] = (uint32_t) (ptr - start);
 			pEngine->dspPresets[i].accessibility = read_u8(&ptr);
-			pEngine->dspPresets[i].parameterCount = read_u32(&ptr, se);
+			pEngine->dspPresets[i].parameterCount = read_u16(&ptr, se);
+			ptr += 2; /* Unknown value */
 			pEngine->dspPresets[i].parameters = (FACTDSPParameter*) pEngine->pMalloc(
 				sizeof(FACTDSPParameter) *
 				pEngine->dspPresets[i].parameterCount
@@ -2320,8 +2321,9 @@ void FACT_INTERNAL_ParseTrackEvents(
 			track->events[i].wave.angle = read_u16(ptr, se);
 
 			/* Track Variation */
-			track->events[i].wave.complex.trackCount = read_u16(ptr, se);
-			track->events[i].wave.complex.variation = read_u16(ptr, se);
+			evtInfo = read_u32(ptr, se);
+			track->events[i].wave.complex.trackCount = evtInfo & 0xFFFF;
+			track->events[i].wave.complex.variation = (evtInfo >> 16) & 0xFFFF;
 			*ptr += 4; /* Unknown values */
 			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
@@ -2392,8 +2394,9 @@ void FACT_INTERNAL_ParseTrackEvents(
 			track->events[i].wave.variationFlags = read_u16(ptr, se);
 
 			/* Track Variation */
-			track->events[i].wave.complex.trackCount = read_u16(ptr, se);
-			track->events[i].wave.complex.variation = read_u16(ptr, se);
+			evtInfo = read_u32(ptr, se);
+			track->events[i].wave.complex.trackCount = evtInfo & 0xFFFF;
+			track->events[i].wave.complex.variation = (evtInfo >> 16) & 0xFFFF;
 			*ptr += 4; /* Unknown values */
 			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
