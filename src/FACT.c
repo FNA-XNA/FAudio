@@ -1851,7 +1851,7 @@ uint32_t FACTWaveBank_Prepare(
 
 			/* XACT does NOT support loop subregions for these formats */
 			FAudio_assert(entry->LoopRegion.dwStartSample == 0);
-			FAudio_assert(entry->LoopRegion.dwTotalSamples == entry->Duration);
+			FAudio_assert(entry->LoopRegion.dwTotalSamples == 0 || entry->LoopRegion.dwTotalSamples == entry->Duration);
 		}
 		(*ppWave)->streamCache = (uint8_t*) pWaveBank->parentEngine->pMalloc(
 			(*ppWave)->streamSize
