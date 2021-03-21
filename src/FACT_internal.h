@@ -89,7 +89,7 @@ typedef struct FACTDSPParameter
 typedef struct FACTDSPPreset
 {
 	uint8_t accessibility;
-	uint32_t parameterCount;
+	uint16_t parameterCount;
 	FACTDSPParameter *parameters;
 } FACTDSPPreset;
 
