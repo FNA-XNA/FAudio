@@ -10,4 +10,4 @@ Version: @LIB_VERSION@
 
 Libs: -L${libdir} -l@PROJECT_NAME@
 Requires:@FAUDIO_GSTREAMER_DEPS@
-Cflags: -I${includedir}
+Cflags: -I${includedir} @PLATFORM_CFLAGS@

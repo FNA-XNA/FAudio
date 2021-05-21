@@ -9,6 +9,7 @@ option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 if(WIN32)
 option(BUILD_CPP "Build cpp/ folder (COM wrapper for XAudio2)" OFF)
+option(PLATFORM_WIN32 "Enable native Win32 platform instead of SDL2" OFF)
 endif()
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
@@ -98,10 +99,21 @@ add_library(FAudio
 	src/FAudio_internal_simd.c
 	src/FAudio_operationset.c
 	src/FAudio_platform_sdl2.c
+	src/FAudio_platform_win32.c
 	# Optional source files
 	src/XNA_Song.c
 	src/FAudio_gstreamer.c
 )
+
+if(PLATFORM_WIN32)
+	target_link_libraries(FAudio PRIVATE -ldxguid -luuid -lwinmm -lole32 -ladvapi32 -luser32)
+	target_compile_definitions(FAudio PUBLIC FAUDIO_WIN32_PLATFORM)
+	set(PLATFORM_CFLAGS "-DFAUDIO_WIN32_PLATFORM")
+	set(GSTREAMER OFF)
+	set(XNASONG OFF)
+else()
+	set(PLATFORM_CFLAGS)
+endif()
 
 # Only disable DebugConfiguration in release builds
 if(NOT FORCE_ENABLE_DEBUGCONFIGURATION)
@@ -170,7 +182,9 @@ if(DUMP_VOICES)
 endif()
 
 # SDL2 Dependency
-if (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
+if (PLATFORM_WIN32)
+	message(STATUS "not using SDL2")
+elseif (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
 	message(STATUS "using pre-defined SDL2 variables SDL2_INCLUDE_DIRS and SDL2_LIBRARIES")
 	target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")
 	target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})

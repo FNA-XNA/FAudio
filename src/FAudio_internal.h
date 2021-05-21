@@ -28,7 +28,7 @@
 #include "FAPOBase.h"
 #include <stdarg.h>
 
-#ifdef FAUDIO_UNKNOWN_PLATFORM
+#ifdef FAUDIO_WIN32_PLATFORM
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,11 +36,14 @@
 #include <assert.h>
 #include <inttypes.h>
 
+#include <windef.h>
+#include <winbase.h>
+
 #define FAudio_malloc malloc
 #define FAudio_realloc realloc
 #define FAudio_free free
-#define FAudio_alloca(x) alloca(uint8_t, x)
-#define FAudio_dealloca(x) dealloca(x)
+#define FAudio_alloca(x) alloca(x)
+#define FAudio_dealloca(x) (void)(x)
 #define FAudio_zero(ptr, size) memset(ptr, '\0', size)
 #define FAudio_memset(ptr, val, size) memset(ptr, val, size)
 #define FAudio_memcpy(dst, src, size) memcpy(dst, src, size)
@@ -49,7 +52,7 @@
 
 #define FAudio_strlen(ptr) strlen(ptr)
 #define FAudio_strcmp(str1, str2) strcmp(str1, str2)
-#define FAudio_strlcpy(ptr1, ptr2, size) strlcpy(ptr1, ptr2, size)
+#define FAudio_strlcpy(ptr1, ptr2, size) lstrcpynA(ptr1, ptr2, size);
 
 #define FAudio_pow(x, y) pow(x, y)
 #define FAudio_log(x) log(x)
@@ -76,10 +79,11 @@
 #define FAudio_assert assert
 #define FAudio_snprintf snprintf
 #define FAudio_vsnprintf vsnprintf
-#define FAudio_Log(msg) fprintf(stderr, "%s\n", msg)
 #define FAudio_getenv getenv
 #define FAudio_PRIu64 PRIu64
 #define FAudio_PRIx64 PRIx64
+
+extern void FAudio_Log(char const *msg);
 
 /* FIXME: Assuming little-endian! */
 #define FAudio_swap16LE(x) (x)
