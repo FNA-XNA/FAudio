@@ -5,6 +5,7 @@ project(FAudio C)
 
 # Options
 option(GSTREAMER "Enable GStreamer support (WMA, XMA)" OFF)
+option(PLATFORM_CALLBACKS "Enable Platform callbacks instead of SDL2" OFF)
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 if(WIN32)
@@ -98,10 +99,18 @@ add_library(FAudio
 	src/FAudio_internal_simd.c
 	src/FAudio_operationset.c
 	src/FAudio_platform_sdl2.c
+	src/FAudio_platform_custom.c
 	# Optional source files
 	src/XNA_Song.c
 	src/FAudio_gstreamer.c
 )
+
+if(PLATFORM_CALLBACKS)
+	target_compile_definitions(FAudio PUBLIC FAUDIO_PLATFORM_CALLBACKS)
+	set(PLATFORM_CALLBACKS_CFLAGS "-DFAUDIO_PLATFORM_CALLBACKS")
+else()
+	set(PLATFORM_CALLBACKS_CFLAGS)
+endif()
 
 # Only disable DebugConfiguration in release builds
 if(NOT FORCE_ENABLE_DEBUGCONFIGURATION)
@@ -170,7 +179,9 @@ if(DUMP_VOICES)
 endif()
 
 # SDL2 Dependency
-if (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
+if (PLATFORM_CALLBACKS)
+	message(STATUS "not using SDL2")
+elseif (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
 	message(STATUS "using pre-defined SDL2 variables SDL2_INCLUDE_DIRS and SDL2_LIBRARIES")
 	target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")
 	target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})

@@ -28,19 +28,20 @@
 #include "FAPOBase.h"
 #include <stdarg.h>
 
-#ifdef FAUDIO_UNKNOWN_PLATFORM
+#ifdef FAUDIO_PLATFORM_CALLBACKS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <alloca.h>
 
 #define FAudio_malloc malloc
 #define FAudio_realloc realloc
 #define FAudio_free free
-#define FAudio_alloca(x) alloca(uint8_t, x)
-#define FAudio_dealloca(x) dealloca(x)
+#define FAudio_alloca(x) alloca(x)
+#define FAudio_dealloca(x) (void)(x)
 #define FAudio_zero(ptr, size) memset(ptr, '\0', size)
 #define FAudio_memset(ptr, val, size) memset(ptr, val, size)
 #define FAudio_memcpy(dst, src, size) memcpy(dst, src, size)
@@ -49,7 +50,7 @@
 
 #define FAudio_strlen(ptr) strlen(ptr)
 #define FAudio_strcmp(str1, str2) strcmp(str1, str2)
-#define FAudio_strlcpy(ptr1, ptr2, size) strlcpy(ptr1, ptr2, size)
+#define FAudio_strlcpy(ptr1, ptr2, size) do { strncpy(ptr1, ptr2, size); ptr1[size - 1] = 0; } while(0)
 
 #define FAudio_pow(x, y) pow(x, y)
 #define FAudio_log(x) log(x)
@@ -202,18 +203,6 @@
 #if defined(__cplusplus) && !defined(restrict)
 #define restrict
 #endif
-
-/* Threading Types */
-
-typedef void* FAudioThread;
-typedef void* FAudioMutex;
-typedef int32_t (FAUDIOCALL * FAudioThreadFunc)(void* data);
-typedef enum FAudioThreadPriority
-{
-	FAUDIO_THREAD_PRIORITY_LOW,
-	FAUDIO_THREAD_PRIORITY_NORMAL,
-	FAUDIO_THREAD_PRIORITY_HIGH,
-} FAudioThreadPriority;
 
 /* Linked Lists */
 

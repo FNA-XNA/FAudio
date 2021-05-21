@@ -26,6 +26,7 @@
 
 #include "FAudio_internal.h"
 
+#ifndef FAUDIO_PLATFORM_CALLBACKS
 #include <SDL.h>
 
 #if !SDL_VERSION_ATLEAST(2, 0, 9)
@@ -511,6 +512,7 @@ void FAudio_close_out(FAudioIOStreamOut *io)
 	FAudio_free(io);
 }
 #endif /* FAUDIO_DUMP_VOICES */
+#endif
 
 /* UTF8->UTF16 Conversion, taken from PhysicsFS */
 

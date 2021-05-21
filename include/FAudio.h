@@ -1313,6 +1313,65 @@ FAUDIOAPI FAudioIOStream* FAudio_memopen(void *mem, int len);
 FAUDIOAPI uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset);
 FAUDIOAPI void FAudio_close(FAudioIOStream *io);
 
+/* FAudio Platform API */
+
+/* Threading Types */
+
+typedef void* FAudioThread;
+typedef void* FAudioMutex;
+typedef int32_t (FAUDIOCALL * FAudioThreadFunc)(void* data);
+typedef enum FAudioThreadPriority
+{
+	FAUDIO_THREAD_PRIORITY_LOW,
+	FAUDIO_THREAD_PRIORITY_NORMAL,
+	FAUDIO_THREAD_PRIORITY_HIGH,
+} FAudioThreadPriority;
+
+typedef void (FAUDIOCALL *FAudioPlatformCallback)(void *, char *stream, int len);
+
+typedef struct FAudioPlatform
+{
+	int (FAUDIOCALL *pHasSSE2)(void);
+	int (FAUDIOCALL *pHasNEON)(void);
+
+	void (FAUDIOCALL *pPlatformAddRef)(void);
+	void (FAUDIOCALL *pPlatformRelease)(void);
+	void (FAUDIOCALL *pPlatformInit)(
+		FAudio *audio,
+		uint32_t flags,
+		uint32_t deviceIndex,
+		FAudioWaveFormatExtensible *mixFormat,
+		uint32_t *updateSize,
+		FAudioPlatformCallback callback,
+		void** platformDevice
+	);
+	void (FAUDIOCALL *pPlatformQuit)(void *platformDevice);
+	void (FAUDIOCALL *psleep)(uint32_t ms);
+	uint32_t (FAUDIOCALL *ptimems)(void);
+
+	FAudioMutex (FAUDIOCALL *pCreateMutex)(void);
+	void (FAUDIOCALL *pLockMutex)(FAudioMutex mutex);
+	void (FAUDIOCALL *pUnlockMutex)(FAudioMutex mutex);
+	void (FAUDIOCALL *pDestroyMutex)(FAudioMutex mutex);
+
+	FAudioThread (FAUDIOCALL *pCreateThread)(
+		FAudioThreadFunc func,
+		const char *name,
+		void* data
+	);
+	uint64_t (FAUDIOCALL *pGetThreadID)(void);
+	void (FAUDIOCALL *pThreadPriority)(FAudioThreadPriority priority);
+	void (FAUDIOCALL *pWaitThread)(FAudioThread thread, int32_t *retval);
+
+	uint32_t (FAUDIOCALL *pGetDeviceCount)(void);
+	uint32_t (FAUDIOCALL *pGetDeviceDetails)(
+		uint32_t index,
+		FAudioDeviceDetails *details
+	);
+} FAudioPlatform;
+
+FAUDIOAPI void FAudio_SetPlatform(const FAudioPlatform *platform);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
