@@ -66,6 +66,30 @@ static inline float FACT_INTERNAL_CalculateAmplitudeRatio(float decibel)
 	return (float) FAudio_pow(10.0, decibel / 2000.0);
 }
 
+static inline float FACT_INTERNAL_CalculateFilterFrequency(
+	float desiredFrequency,
+	uint32_t sampleRate
+) {
+	/* This is needed to convert linear frequencies to the value
+	 * FAudio_INTERNAL_FilterVoice expects, in order for it to actually
+	 * filter at the correct frequency.
+	 *
+	 * The formula is...
+	 *
+	 * (2 * sin(pi * (desired filter cutoff frequency) / sampleRate))
+	 *
+	 * ... but it behaves badly as the filter frequency gets too high as a
+	 * fraction of the sample rate, hence the mins.
+	 *
+	 * -@Woflox
+	 */
+	float freq = 2 * FAudio_sin(
+		F3DAUDIO_PI *
+		FAudio_min(desiredFrequency / sampleRate, 0.5f)
+	);
+	return FAudio_min(freq, 1.0f);
+}
+
 static inline void FACT_INTERNAL_ReadFile(
 	FACTReadFileCallback pReadFile,
 	FACTGetOverlappedResultCallback pGetOverlappedResult,
@@ -390,12 +414,17 @@ void FACT_INTERNAL_GetNextWave(
 	{
 		const float rngQFactor = 1.0f / (
 			FACT_INTERNAL_rng() *
-			(evt->wave.maxQFactor - evt->wave.minQFactor)
+			(evt->wave.maxQFactor - evt->wave.minQFactor) +
+			evt->wave.minQFactor
 		);
-		const float rngFrequency = (
-			FACT_INTERNAL_rng() *
-			(evt->wave.maxFrequency - evt->wave.minFrequency)
-		) / 20000.0f;
+		const float rngFrequency = FACT_INTERNAL_CalculateFilterFrequency(
+			(
+				FACT_INTERNAL_rng() *
+				(evt->wave.maxFrequency - evt->wave.minFrequency) +
+				evt->wave.minFrequency
+			),
+			cue->parentBank->parentEngine->audio->master->master.inputSampleRate
+		);
 		if (trackInst->activeWave.wave != NULL)
 		{
 			/* Variation on Loop */
@@ -430,7 +459,10 @@ void FACT_INTERNAL_GetNextWave(
 	else
 	{
 		trackInst->upcomingWave.baseQFactor = 1.0f / (track->qfactor / 3.0f);
-		trackInst->upcomingWave.baseFrequency = track->frequency / 20000.0f;
+		trackInst->upcomingWave.baseFrequency = FACT_INTERNAL_CalculateFilterFrequency(
+			track->frequency,
+			cue->parentBank->parentEngine->audio->master->master.inputSampleRate
+		);
 	}
 
 	/* Try to change loop counter at the very end */
@@ -1092,7 +1124,10 @@ void FACT_INTERNAL_UpdateRPCs(
 			else if (rpc->parameter == RPC_PARAMETER_FILTERFREQUENCY)
 			{
 				/* Yes, just overwrite... */
-				data->rpcFilterFreq = rpcResult / 20000.0f;
+				data->rpcFilterFreq = FACT_INTERNAL_CalculateFilterFrequency(
+					rpcResult,
+					engine->audio->master->master.inputSampleRate
+				);
 			}
 			else if (rpc->parameter == RPC_PARAMETER_FILTERQFACTOR)
 			{
