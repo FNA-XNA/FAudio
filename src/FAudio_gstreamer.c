@@ -33,7 +33,7 @@
 #include <gst/audio/audio.h>
 #include <gst/app/gstappsink.h>
 
-typedef struct FAudioGSTREAMER
+typedef struct FAudioWMADEC
 {
 	GstPad *srcpad;
 	GstElement *pipeline;
@@ -47,7 +47,7 @@ typedef struct FAudioGSTREAMER
 	uint32_t blockAlign;
 	uint32_t blockCount;
 	size_t maxBytes;
-} FAudioGSTREAMER;
+} FAudioWMADEC;
 
 #define SIZE_FROM_DST(sample) \
 	((sample) * voice->src.format->nChannels * sizeof(float))
@@ -64,23 +64,23 @@ typedef struct FAudioGSTREAMER
 #define SIZE_DST_TO_SRC(len) \
 	((len) / (sizeof(float) / (voice->src.format->wBitsPerSample / 8)))
 
-static int FAudio_GSTREAMER_RestartDecoder(FAudioGSTREAMER *gstreamer)
+static int FAudio_GSTREAMER_RestartDecoder(FAudioWMADEC *wmadec)
 {
 	GstEvent *event;
 
 	event = gst_event_new_flush_start();
-	gst_pad_push_event(gstreamer->srcpad, event);
+	gst_pad_push_event(wmadec->srcpad, event);
 
 	event = gst_event_new_flush_stop(TRUE);
-	gst_pad_push_event(gstreamer->srcpad, event);
+	gst_pad_push_event(wmadec->srcpad, event);
 
-	event = gst_event_new_segment(&gstreamer->segment);
-	gst_pad_push_event(gstreamer->srcpad, event);
+	event = gst_event_new_segment(&wmadec->segment);
+	gst_pad_push_event(wmadec->srcpad, event);
 
-	gstreamer->curBlock = ~0u;
-	gstreamer->prevBlock = ~0u;
+	wmadec->curBlock = ~0u;
+	wmadec->prevBlock = ~0u;
 
-	if (gst_element_set_state(gstreamer->pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE)
+	if (gst_element_set_state(wmadec->pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE)
 	{
 		return 0;
 	}
@@ -96,7 +96,7 @@ static int FAudio_GSTREAMER_CheckForBusErrors(FAudioVoice *voice)
 	gchar *debug_info = NULL;
 	int ret = 0;
 
-	bus = gst_pipeline_get_bus(GST_PIPELINE(voice->src.gstreamer->pipeline));
+	bus = gst_pipeline_get_bus(GST_PIPELINE(voice->src.wmadec->pipeline));
 
 	while((msg = gst_bus_pop_filtered(bus, GST_MESSAGE_ERROR)))
 	{
@@ -144,10 +144,10 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 	/* Write current block to input buffer, push to pipeline */
 
 	clipStartBytes = (
-		(size_t) voice->src.gstreamer->blockAlign *
-		voice->src.gstreamer->curBlock
+		(size_t) voice->src.wmadec->blockAlign *
+		voice->src.wmadec->curBlock
 	);
-	toCopyBytes = voice->src.gstreamer->blockAlign;
+	toCopyBytes = voice->src.wmadec->blockAlign;
 	clipEndBytes = clipStartBytes + toCopyBytes;
 	if (buffer->AudioBytes < clipEndBytes)
 	{
@@ -185,7 +185,7 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 		return (size_t) -1;
 	}
 
-	push_ret = gst_pad_push(voice->src.gstreamer->srcpad, src);
+	push_ret = gst_pad_push(voice->src.wmadec->srcpad, src);
 	if(	push_ret != GST_FLOW_OK &&
 		push_ret != GST_FLOW_EOS	)
 	{
@@ -203,7 +203,7 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 	{
 		/* Pull frames one into cache */
 		sample = gst_app_sink_try_pull_sample(
-			GST_APP_SINK(voice->src.gstreamer->dst),
+			GST_APP_SINK(voice->src.wmadec->dst),
 			0
 		);
 
@@ -230,17 +230,17 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 
 		toCopyBytes = FAudio_min(info.size - (clipStartBytes + clipEndBytes), availableBytes - pulled);
 
-		if (voice->src.gstreamer->convertCacheLen < pulled + toCopyBytes)
+		if (voice->src.wmadec->convertCacheLen < pulled + toCopyBytes)
 		{
-			voice->src.gstreamer->convertCacheLen = pulled + toCopyBytes;
-			voice->src.gstreamer->convertCache = (uint8_t*) voice->audio->pRealloc(
-				voice->src.gstreamer->convertCache,
+			voice->src.wmadec->convertCacheLen = pulled + toCopyBytes;
+			voice->src.wmadec->convertCache = (uint8_t*) voice->audio->pRealloc(
+				voice->src.wmadec->convertCache,
 				pulled + toCopyBytes
 			);
 		}
 
 
-		FAudio_memcpy(voice->src.gstreamer->convertCache + pulled,
+		FAudio_memcpy(voice->src.wmadec->convertCache + pulled,
 			info.data + clipStartBytes,
 			toCopyBytes
 		);
@@ -256,13 +256,13 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 	return pulled;
 }
 
-static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, uint32_t block, size_t availableBytes)
+static int FAudio_WMADEC_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, uint32_t block, size_t availableBytes)
 {
-	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
+	FAudioWMADEC *wmadec = voice->src.wmadec;
 	uint8_t *tmpBuf;
 	size_t tmpLen;
 
-	if (gstreamer->curBlock != ~0u && block != gstreamer->curBlock + 1)
+	if (wmadec->curBlock != ~0u && block != wmadec->curBlock + 1)
 	{
 		/* XAudio2 allows looping back to start of XMA buffers, but nothing else */
 		if (block != 0)
@@ -272,11 +272,11 @@ static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer
 				"for voice %p, out of sequence block: %u (cur: %d)\n",
 				voice,
 				block,
-				gstreamer->curBlock
+				wmadec->curBlock
 			);
 		}
 		FAudio_assert(block == 0);
-		if (!FAudio_GSTREAMER_RestartDecoder(gstreamer))
+		if (!FAudio_GSTREAMER_RestartDecoder(wmadec))
 		{
 			LOG_WARNING(
 				voice->audio,
@@ -287,23 +287,23 @@ static int FAudio_GSTREAMER_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer
 	}
 
 	/* store previous block to allow for minor rewinds (FAudio quirk) */
-	tmpBuf = gstreamer->prevConvertCache;
-	tmpLen = gstreamer->prevConvertCacheLen;
-	gstreamer->prevConvertCache = gstreamer->convertCache;
-	gstreamer->prevConvertCacheLen = gstreamer->convertCacheLen;
-	gstreamer->convertCache = tmpBuf;
-	gstreamer->convertCacheLen = tmpLen;
+	tmpBuf = wmadec->prevConvertCache;
+	tmpLen = wmadec->prevConvertCacheLen;
+	wmadec->prevConvertCache = wmadec->convertCache;
+	wmadec->prevConvertCacheLen = wmadec->convertCacheLen;
+	wmadec->convertCache = tmpBuf;
+	wmadec->convertCacheLen = tmpLen;
 
-	gstreamer->prevBlock = gstreamer->curBlock;
-	gstreamer->curBlock = block;
+	wmadec->prevBlock = wmadec->curBlock;
+	wmadec->curBlock = block;
 
-	gstreamer->blockSizes[block] = FAudio_GSTREAMER_FillConvertCache(
+	wmadec->blockSizes[block] = FAudio_GSTREAMER_FillConvertCache(
 		voice,
 		buffer,
 		availableBytes
 	);
 
-	return gstreamer->blockSizes[block] != (size_t) -1;
+	return wmadec->blockSizes[block] != (size_t) -1;
 }
 
 static void FAudio_INTERNAL_DecodeGSTREAMER(
@@ -316,12 +316,12 @@ static void FAudio_INTERNAL_DecodeGSTREAMER(
 	uint32_t curBlock, curBufferOffset;
 	uint8_t *convertCache;
 	int error = 0;
-	FAudioGSTREAMER *gstreamer = voice->src.gstreamer;
+	FAudioWMADEC *wmadec = voice->src.wmadec;
 
-	if (gstreamer->blockCount != 0)
+	if (wmadec->blockCount != 0)
 	{
-		blockCount = gstreamer->blockCount;
-		maxBytes = gstreamer->maxBytes;
+		blockCount = wmadec->blockCount;
+		maxBytes = wmadec->maxBytes;
 	}
 	else
 	{
@@ -331,11 +331,11 @@ static void FAudio_INTERNAL_DecodeGSTREAMER(
 
 	LOG_FUNC_ENTER(voice->audio)
 
-	if (!gstreamer->blockSizes)
+	if (!wmadec->blockSizes)
 	{
-		size_t sz = blockCount * sizeof(*gstreamer->blockSizes);
-		gstreamer->blockSizes = (size_t *) voice->audio->pMalloc(sz);
-		memset(gstreamer->blockSizes, 0xff, sz);
+		size_t sz = blockCount * sizeof(*wmadec->blockSizes);
+		wmadec->blockSizes = (size_t *) voice->audio->pMalloc(sz);
+		memset(wmadec->blockSizes, 0xff, sz);
 	}
 
 	curBufferOffset = voice->src.curBufferOffset;
@@ -347,21 +347,21 @@ decode:
 	for (curBlock = 0; curBlock < blockCount; curBlock += 1)
 	{
 		/* decode to get real size */
-		if (gstreamer->blockSizes[curBlock] == (size_t)-1)
+		if (wmadec->blockSizes[curBlock] == (size_t)-1)
 		{
-			if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, availableBytes))
+			if (!FAudio_WMADEC_DecodeBlock(voice, buffer, curBlock, availableBytes))
 			{
 				error = 1;
 				goto done;
 			}
 		}
 
-		if (gstreamer->blockSizes[curBlock] > byteOffset)
+		if (wmadec->blockSizes[curBlock] > byteOffset)
 		{
 			/* ensure curBlock is decoded in either slot */
-			if (gstreamer->curBlock != curBlock && gstreamer->prevBlock != curBlock)
+			if (wmadec->curBlock != curBlock && wmadec->prevBlock != curBlock)
 			{
-				if (!FAudio_GSTREAMER_DecodeBlock(voice, buffer, curBlock, availableBytes))
+				if (!FAudio_WMADEC_DecodeBlock(voice, buffer, curBlock, availableBytes))
 				{
 					error = 1;
 					goto done;
@@ -370,8 +370,8 @@ decode:
 			break;
 		}
 
-		byteOffset -= gstreamer->blockSizes[curBlock];
-		availableBytes -= gstreamer->blockSizes[curBlock];
+		byteOffset -= wmadec->blockSizes[curBlock];
+		availableBytes -= wmadec->blockSizes[curBlock];
 		if (availableBytes == 0)
 			break;
 	}
@@ -382,13 +382,13 @@ decode:
 	}
 
 	/* If we're in a different block from last time, decode! */
-	if (curBlock == gstreamer->curBlock)
+	if (curBlock == wmadec->curBlock)
 	{
-		convertCache = gstreamer->convertCache;
+		convertCache = wmadec->convertCache;
 	}
-	else if (curBlock == gstreamer->prevBlock)
+	else if (curBlock == wmadec->prevBlock)
 	{
-		convertCache = gstreamer->prevConvertCache;
+		convertCache = wmadec->prevConvertCache;
 	}
 	else
 	{
@@ -397,7 +397,7 @@ decode:
 	}
 
 	/* Copy to decodeCache, finally. */
-	siz = FAudio_min(SIZE_FROM_DST(samples), gstreamer->blockSizes[curBlock] - byteOffset);
+	siz = FAudio_min(SIZE_FROM_DST(samples), wmadec->blockSizes[curBlock] - byteOffset);
 	if (convertCache)
 	{
 		FAudio_memcpy(
@@ -447,28 +447,28 @@ done:
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-void FAudio_GSTREAMER_end_buffer(FAudioSourceVoice *pSourceVoice)
+void FAudio_WMADEC_end_buffer(FAudioSourceVoice *pSourceVoice)
 {
-	FAudioGSTREAMER *gstreamer = pSourceVoice->src.gstreamer;
+	FAudioWMADEC *wmadec = pSourceVoice->src.wmadec;
 
 	LOG_FUNC_ENTER(pSourceVoice->audio)
 
-	pSourceVoice->audio->pFree(gstreamer->blockSizes);
-	gstreamer->blockSizes = NULL;
+	pSourceVoice->audio->pFree(wmadec->blockSizes);
+	wmadec->blockSizes = NULL;
 
-	gstreamer->curBlock = ~0u;
-	gstreamer->prevBlock = ~0u;
+	wmadec->curBlock = ~0u;
+	wmadec->prevBlock = ~0u;
 
 	LOG_FUNC_EXIT(pSourceVoice->audio)
 }
 
-static void FAudio_GSTREAMER_NewDecodebinPad(GstElement *decodebin,
+static void FAudio_WMADEC_NewDecodebinPad(GstElement *decodebin,
 		GstPad *pad, gpointer user)
 {
-	FAudioGSTREAMER *gstreamer = user;
+	FAudioWMADEC *wmadec = user;
 	GstPad *ac_sink;
 
-	ac_sink = gst_element_get_static_pad(gstreamer->resampler, "sink");
+	ac_sink = gst_element_get_static_pad(wmadec->resampler, "sink");
 	if (GST_PAD_IS_LINKED(ac_sink))
 	{
 		gst_object_unref(ac_sink);
@@ -487,9 +487,9 @@ static void FAudio_GSTREAMER_NewDecodebinPad(GstElement *decodebin,
  */
 /* #define FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR */
 #ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
-static const char *FAudio_GSTREAMER_XMA2_Mimetype = NULL;
-static GstElementFactory *FAudio_GSTREAMER_XMA2_DecoderFactory = NULL;
-static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(
+static const char *FAudio_WMADEC_XMA2_Mimetype = NULL;
+static GstElementFactory *FAudio_WMADEC_XMA2_DecoderFactory = NULL;
+static GValueArray *FAudio_WMADEC_XMA2_DecodebinAutoplugFactories(
 	GstElement *decodebin,
 	GstPad *pad,
 	GstCaps *caps,
@@ -499,13 +499,13 @@ static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(
 	GValueArray *result;
 	gchar *capsText;
 
-	if (!gst_structure_has_name(gst_caps_get_structure(caps, 0), FAudio_GSTREAMER_XMA2_Mimetype))
+	if (!gst_structure_has_name(gst_caps_get_structure(caps, 0), FAudio_WMADEC_XMA2_Mimetype))
 	{
 		capsText = gst_caps_to_string(caps);
 		LOG_ERROR(
 			audio,
 			"Expected %s (XMA2) caps not %s",
-			FAudio_GSTREAMER_XMA2_Mimetype,
+			FAudio_WMADEC_XMA2_Mimetype,
 			capsText
 		)
 		g_free(capsText);
@@ -523,7 +523,7 @@ static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(
 	result = g_value_array_new(1);
 	GValue val = G_VALUE_INIT;
 	g_value_init(&val, G_TYPE_OBJECT);
-	g_value_set_object(&val, FAudio_GSTREAMER_XMA2_DecoderFactory);
+	g_value_set_object(&val, FAudio_WMADEC_XMA2_DecoderFactory);
 	g_value_array_append(result, &val);
 	g_value_unset(&val);
 	return result;
@@ -531,9 +531,9 @@ static GValueArray *FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories(
 #endif
 
 
-uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
+uint32_t FAudio_WMADEC_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 {
-	FAudioGSTREAMER *result;
+	FAudioWMADEC *result;
 	GstElement *decoder = NULL, *converter = NULL;
 	const GList *tmpls;
 	GstStaticPadTemplate *tmpl;
@@ -560,7 +560,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	}
 
 #ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
-	if (type == FAUDIO_FORMAT_XMAUDIO2 && !FAudio_GSTREAMER_XMA2_Mimetype)
+	if (type == FAUDIO_FORMAT_XMAUDIO2 && !FAudio_WMADEC_XMA2_Mimetype)
 	{
 		/* Old versions ship with unknown/unknown as the sink caps mimetype.
 		 * A patch has been submitted (and merged!) to expose avdec_xma2 as audio/x-xma with xmaversion 2:
@@ -569,17 +569,17 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		 * This should also take future alternative XMA2 decoders into account if avdec_xma2 is missing.
 		 * -ade
 		 */
-		FAudio_GSTREAMER_XMA2_Mimetype = "audio/x-xma";
-		FAudio_GSTREAMER_XMA2_DecoderFactory = gst_element_factory_find("avdec_xma2");
-		if (FAudio_GSTREAMER_XMA2_DecoderFactory)
+		FAudio_WMADEC_XMA2_Mimetype = "audio/x-xma";
+		FAudio_WMADEC_XMA2_DecoderFactory = gst_element_factory_find("avdec_xma2");
+		if (FAudio_WMADEC_XMA2_DecoderFactory)
 		{
-			for (tmpls = gst_element_factory_get_static_pad_templates(FAudio_GSTREAMER_XMA2_DecoderFactory); tmpls; tmpls = tmpls->next)
+			for (tmpls = gst_element_factory_get_static_pad_templates(FAudio_WMADEC_XMA2_DecoderFactory); tmpls; tmpls = tmpls->next)
 			{
 				tmpl = (GstStaticPadTemplate*) tmpls->data;
 				if (tmpl->direction == GST_PAD_SINK)
 				{
 					caps = gst_static_pad_template_get_caps(tmpl);
-					FAudio_GSTREAMER_XMA2_Mimetype = gst_structure_get_name(gst_caps_get_structure(caps, 0));
+					FAudio_WMADEC_XMA2_Mimetype = gst_structure_get_name(gst_caps_get_structure(caps, 0));
 					gst_caps_unref(caps);
 					break;
 				}
@@ -597,7 +597,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	GSTTYPE(WMAUDIO3, "audio/x-wma", "wmaversion", 3)
 	GSTTYPE(WMAUDIO_LOSSLESS, "audio/x-wma", "wmaversion", 4)
 #ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
-	GSTTYPE(XMAUDIO2, FAudio_GSTREAMER_XMA2_Mimetype, "xmaversion", 2)
+	GSTTYPE(XMAUDIO2, FAudio_WMADEC_XMA2_Mimetype, "xmaversion", 2)
 #else
 	GSTTYPE(XMAUDIO2, "audio/x-xma", "xmaversion", 2)
 #endif
@@ -616,8 +616,8 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	 * Note that we're not assigning names, since many pipelines will exist
 	 * at the same time (one per source voice).
 	 */
-	result = (FAudioGSTREAMER*) pSourceVoice->audio->pMalloc(sizeof(FAudioGSTREAMER));
-	FAudio_zero(result, sizeof(FAudioGSTREAMER));
+	result = (FAudioWMADEC*) pSourceVoice->audio->pMalloc(sizeof(FAudioWMADEC));
+	FAudio_zero(result, sizeof(FAudioWMADEC));
 
 	result->pipeline = gst_pipeline_new(NULL);
 
@@ -633,12 +633,12 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	}
 
 #ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
-	if (type == FAUDIO_FORMAT_XMAUDIO2 && FAudio_GSTREAMER_XMA2_DecoderFactory)
+	if (type == FAUDIO_FORMAT_XMAUDIO2 && FAudio_WMADEC_XMA2_DecoderFactory)
 	{
-		g_signal_connect(decoder, "autoplug-factories", G_CALLBACK(FAudio_GSTREAMER_XMA2_DecodebinAutoplugFactories), pSourceVoice->audio);
+		g_signal_connect(decoder, "autoplug-factories", G_CALLBACK(FAudio_WMADEC_XMA2_DecodebinAutoplugFactories), pSourceVoice->audio);
 	}
 #endif
-	g_signal_connect(decoder, "pad-added", G_CALLBACK(FAudio_GSTREAMER_NewDecodebinPad), result);
+	g_signal_connect(decoder, "pad-added", G_CALLBACK(FAudio_WMADEC_NewDecodebinPad), result);
 
 	result->srcpad = gst_pad_new(NULL, GST_PAD_SRC);
 
@@ -814,7 +814,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 		goto free_with_bin;
 	}
 
-	pSourceVoice->src.gstreamer = result;
+	pSourceVoice->src.wmadec = result;
 	pSourceVoice->src.decode = FAudio_INTERNAL_DecodeGSTREAMER;
 
 	if (FAudio_GSTREAMER_CheckForBusErrors(pSourceVoice))
@@ -825,7 +825,7 @@ uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 			"Got a bus error after creation!"
 		)
 
-		pSourceVoice->src.gstreamer = NULL;
+		pSourceVoice->src.wmadec = NULL;
 		pSourceVoice->src.decode = NULL;
 
 		goto free_with_bin;
@@ -871,17 +871,17 @@ free_with_bin:
 	return FAUDIO_E_UNSUPPORTED_FORMAT;
 }
 
-void FAudio_GSTREAMER_free(FAudioSourceVoice *voice)
+void FAudio_WMADEC_free(FAudioSourceVoice *voice)
 {
 	LOG_FUNC_ENTER(voice->audio)
-	gst_element_set_state(voice->src.gstreamer->pipeline, GST_STATE_NULL);
-	gst_object_unref(voice->src.gstreamer->pipeline);
-	gst_object_unref(voice->src.gstreamer->srcpad);
-	voice->audio->pFree(voice->src.gstreamer->convertCache);
-	voice->audio->pFree(voice->src.gstreamer->prevConvertCache);
-	voice->audio->pFree(voice->src.gstreamer->blockSizes);
-	voice->audio->pFree(voice->src.gstreamer);
-	voice->src.gstreamer = NULL;
+	gst_element_set_state(voice->src.wmadec->pipeline, GST_STATE_NULL);
+	gst_object_unref(voice->src.wmadec->pipeline);
+	gst_object_unref(voice->src.wmadec->srcpad);
+	voice->audio->pFree(voice->src.wmadec->convertCache);
+	voice->audio->pFree(voice->src.wmadec->prevConvertCache);
+	voice->audio->pFree(voice->src.wmadec->blockSizes);
+	voice->audio->pFree(voice->src.wmadec);
+	voice->src.wmadec = NULL;
 	LOG_FUNC_EXIT(voice->audio)
 }
 
