@@ -108,6 +108,7 @@ add_library(FAudio
 if(PLATFORM_WIN32)
 	target_link_libraries(FAudio PRIVATE -ldxguid -luuid -lwinmm -lole32 -ladvapi32 -luser32 -lmfplat -lmfreadwrite -lmfuuid -lpropsys)
 	target_compile_definitions(FAudio PUBLIC FAUDIO_WIN32_PLATFORM)
+	target_compile_definitions(FAudio PRIVATE HAVE_WMADEC=1)
 	set(PLATFORM_CFLAGS "-DFAUDIO_WIN32_PLATFORM")
 	set(GSTREAMER OFF)
 	set(XNASONG OFF)
