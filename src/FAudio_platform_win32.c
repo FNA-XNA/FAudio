@@ -30,6 +30,10 @@
 
 #define COBJMACROS
 #include <windows.h>
+#include <mfidl.h>
+#include <mfapi.h>
+#include <mfreadwrite.h>
+#include <propvarutil.h>
 
 #include <initguid.h>
 #include <audioclient.h>
@@ -662,6 +666,326 @@ void FAudio_close(FAudioIOStream *io)
 	io->close(io->data);
 	FAudio_PlatformDestroyMutex((FAudioMutex) io->lock);
 	FAudio_free(io);
+}
+
+/* XNA Song implementation over Win32 MF */
+
+static FAudioWaveFormatEx activeSongFormat;
+IMFSourceReader *activeSong;
+static uint8_t *songBuffer;
+static SIZE_T songBufferSize;
+
+static float songVolume = 1.0f;
+static FAudio *songAudio = NULL;
+static FAudioMasteringVoice *songMaster = NULL;
+
+static FAudioSourceVoice *songVoice = NULL;
+static FAudioVoiceCallback callbacks;
+
+/* Internal Functions */
+
+static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
+{
+	IMFMediaBuffer *media_buffer;
+	FAudioBuffer buffer;
+	IMFSample *sample;
+	HRESULT hr;
+	DWORD flags, buffer_size = 0;
+	BYTE *buffer_ptr;
+
+	LOG_FUNC_ENTER(songAudio);
+
+	FAudio_memset(&buffer, 0, sizeof(buffer));
+
+	hr = IMFSourceReader_ReadSample(
+		activeSong,
+		MF_SOURCE_READER_FIRST_AUDIO_STREAM,
+		0,
+		NULL,
+		&flags,
+		NULL,
+		&sample
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to read audio sample!");
+
+	if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
+	{
+		buffer.Flags = FAUDIO_END_OF_STREAM;
+	}
+	else
+	{
+		hr = IMFSample_ConvertToContiguousBuffer(
+			sample,
+			&media_buffer
+		);
+		FAudio_assert(!FAILED(hr) && "Failed to get sample buffer!");
+
+		hr = IMFMediaBuffer_Lock(
+			media_buffer,
+			&buffer_ptr,
+			NULL,
+			&buffer_size
+		);
+		FAudio_assert(!FAILED(hr) && "Failed to lock buffer bytes!");
+
+		if (songBufferSize < buffer_size)
+		{
+			songBufferSize = buffer_size;
+			songBuffer = FAudio_realloc(songBuffer, songBufferSize);
+			FAudio_assert(songBuffer != NULL && "Failed to allocate song buffer!");
+		}
+		FAudio_memcpy(songBuffer, buffer_ptr, buffer_size);
+
+		hr = IMFMediaBuffer_Unlock(media_buffer);
+		FAudio_assert(!FAILED(hr) && "Failed to unlock buffer bytes!");
+
+		IMFMediaBuffer_Release(media_buffer);
+		IMFSample_Release(sample);
+	}
+
+	if (buffer_size > 0)
+	{
+		buffer.AudioBytes = buffer_size;
+		buffer.pAudioData = songBuffer;
+		buffer.PlayBegin = 0;
+		buffer.PlayLength = buffer_size / activeSongFormat.nBlockAlign;
+		buffer.LoopBegin = 0;
+		buffer.LoopLength = 0;
+		buffer.LoopCount = 0;
+		buffer.pContext = NULL;
+		FAudioSourceVoice_SubmitSourceBuffer(
+			songVoice,
+			&buffer,
+			NULL
+		);
+	}
+
+	LOG_FUNC_EXIT(songAudio);
+}
+
+static void XNA_SongKill()
+{
+	if (songVoice != NULL)
+	{
+		FAudioSourceVoice_Stop(songVoice, 0, 0);
+		FAudioVoice_DestroyVoice(songVoice);
+		songVoice = NULL;
+	}
+	if (activeSong)
+	{
+		IMFSourceReader_Release(activeSong);
+		activeSong = NULL;
+	}
+	FAudio_free(songBuffer);
+	songBuffer = NULL;
+	songBufferSize = 0;
+}
+
+/* "Public" API */
+
+FAUDIOAPI void XNA_SongInit()
+{
+	HRESULT hr;
+
+	hr = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+	FAudio_assert(!FAILED(hr) && "Failed to initialize Media Foundation!");
+
+	FAudioCreate(&songAudio, 0, FAUDIO_DEFAULT_PROCESSOR);
+	FAudio_CreateMasteringVoice(
+		songAudio,
+		&songMaster,
+		FAUDIO_DEFAULT_CHANNELS,
+		FAUDIO_DEFAULT_SAMPLERATE,
+		0,
+		0,
+		NULL
+	);
+}
+
+FAUDIOAPI void XNA_SongQuit()
+{
+	XNA_SongKill();
+	FAudioVoice_DestroyVoice(songMaster);
+	FAudio_Release(songAudio);
+        MFShutdown();
+}
+
+FAUDIOAPI float XNA_PlaySong(const char *name)
+{
+	IMFAttributes *attributes = NULL;
+	IMFMediaType *media_type = NULL;
+	UINT32 channels, samplerate;
+	UINT64 duration;
+	PROPVARIANT var;
+	HRESULT hr;
+	WCHAR filename_w[MAX_PATH];
+
+	LOG_FUNC_ENTER(songAudio);
+	LOG_INFO(songAudio, "name %s\n", name);
+	XNA_SongKill();
+
+	MultiByteToWideChar(CP_UTF8, 0, name, -1, filename_w, MAX_PATH);
+
+	hr = MFCreateAttributes(&attributes, 1);
+	FAudio_assert(!FAILED(hr) && "Failed to create attributes!");
+	hr = MFCreateSourceReaderFromURL(
+		filename_w,
+		attributes,
+		&activeSong
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to create source reader!");
+	IMFAttributes_Release(attributes);
+
+	hr = MFCreateMediaType(&media_type);
+	FAudio_assert(!FAILED(hr) && "Failed to create media type!");
+	hr = IMFMediaType_SetGUID(
+		media_type,
+		&MF_MT_MAJOR_TYPE,
+		&MFMediaType_Audio
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to set major type!");
+	hr = IMFMediaType_SetGUID(
+		media_type,
+		&MF_MT_SUBTYPE,
+		&MFAudioFormat_Float
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to set sub type!");
+	hr = IMFSourceReader_SetCurrentMediaType(
+		activeSong,
+		MF_SOURCE_READER_FIRST_AUDIO_STREAM,
+		NULL,
+		media_type
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to set source media type!");
+	hr = IMFSourceReader_SetStreamSelection(
+		activeSong,
+		MF_SOURCE_READER_FIRST_AUDIO_STREAM,
+		TRUE
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to select source stream!");
+	IMFMediaType_Release(media_type);
+
+	hr = IMFSourceReader_GetCurrentMediaType(
+		activeSong,
+		MF_SOURCE_READER_FIRST_AUDIO_STREAM,
+		&media_type
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to get current media type!");
+	hr = IMFMediaType_GetUINT32(
+		media_type,
+		&MF_MT_AUDIO_NUM_CHANNELS,
+		&channels
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to get channel count!");
+	hr = IMFMediaType_GetUINT32(
+		media_type,
+		&MF_MT_AUDIO_SAMPLES_PER_SECOND,
+		&samplerate
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to get sample rate!");
+	IMFMediaType_Release(media_type);
+
+	hr = IMFSourceReader_GetPresentationAttribute(
+		activeSong,
+		MF_SOURCE_READER_MEDIASOURCE,
+		&MF_PD_DURATION,
+		&var
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to get song duration!");
+        hr = PropVariantToInt64(&var, &duration);
+	FAudio_assert(!FAILED(hr) && "Failed to get song duration!");
+        PropVariantClear(&var);
+
+	activeSongFormat.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
+	activeSongFormat.nChannels = channels;
+	activeSongFormat.nSamplesPerSec = samplerate;
+	activeSongFormat.wBitsPerSample = sizeof(float) * 8;
+	activeSongFormat.nBlockAlign = activeSongFormat.nChannels * activeSongFormat.wBitsPerSample / 8;
+	activeSongFormat.nAvgBytesPerSec = activeSongFormat.nSamplesPerSec * activeSongFormat.nBlockAlign;
+	activeSongFormat.cbSize = 0;
+
+	/* Init voice */
+	FAudio_zero(&callbacks, sizeof(FAudioVoiceCallback));
+	callbacks.OnBufferEnd = XNA_SongSubmitBuffer;
+	FAudio_CreateSourceVoice(
+		songAudio,
+		&songVoice,
+		&activeSongFormat,
+		0,
+		1.0f, /* No pitch shifting here! */
+		&callbacks,
+		NULL,
+		NULL
+	);
+	FAudioVoice_SetVolume(songVoice, songVolume, 0);
+	XNA_SongSubmitBuffer(NULL, NULL);
+
+	/* Finally. */
+	FAudioSourceVoice_Start(songVoice, 0, 0);
+	LOG_FUNC_EXIT(songAudio);
+	return duration / 10000000.;
+}
+
+FAUDIOAPI void XNA_PauseSong()
+{
+	if (songVoice == NULL)
+	{
+		return;
+	}
+	FAudioSourceVoice_Stop(songVoice, 0, 0);
+}
+
+FAUDIOAPI void XNA_ResumeSong()
+{
+	if (songVoice == NULL)
+	{
+		return;
+	}
+	FAudioSourceVoice_Start(songVoice, 0, 0);
+}
+
+FAUDIOAPI void XNA_StopSong()
+{
+	XNA_SongKill();
+}
+
+FAUDIOAPI void XNA_SetSongVolume(float volume)
+{
+	songVolume = volume;
+	if (songVoice != NULL)
+	{
+		FAudioVoice_SetVolume(songVoice, songVolume, 0);
+	}
+}
+
+FAUDIOAPI uint32_t XNA_GetSongEnded()
+{
+	FAudioVoiceState state;
+	if (songVoice == NULL || activeSong == NULL)
+	{
+		return 1;
+	}
+	FAudioSourceVoice_GetState(songVoice, &state, 0);
+	return state.BuffersQueued == 0;
+}
+
+FAUDIOAPI void XNA_EnableVisualization(uint32_t enable)
+{
+	/* TODO: Enable/Disable FAPO effect */
+}
+
+FAUDIOAPI uint32_t XNA_VisualizationEnabled()
+{
+	/* TODO: Query FAPO effect enabled */
+	return 0;
+}
+
+FAUDIOAPI void XNA_GetSongVisualizationData(
+	float *frequencies,
+	float *samples,
+	uint32_t count
+) {
+	/* TODO: Visualization FAPO that reads in Song samples, FFT analysis */
 }
 
 #else
