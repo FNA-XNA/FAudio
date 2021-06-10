@@ -153,7 +153,7 @@ if(GSTREAMER)
 	set(FAUDIO_GSTREAMER_DEPS " gstreamer-app-1.0 gstreamer-audio-1.0")
 
 	# Add the extra definition...
-	target_compile_definitions(FAudio PRIVATE HAVE_GSTREAMER=1)
+	target_compile_definitions(FAudio PRIVATE HAVE_WMADEC=1 HAVE_GSTREAMER=1)
 
 	# Find GStreamer
 	find_package(PkgConfig)

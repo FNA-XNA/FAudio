@@ -468,10 +468,10 @@ struct FAudioVoice
 			uint64_t curBufferOffsetDec;
 			uint32_t curBufferOffset;
 
-			/* GStreamer */
-#ifdef HAVE_GSTREAMER
-			struct FAudioGSTREAMER *gstreamer;
-#endif /* HAVE_GSTREAMER*/
+			/* WMA decoding */
+#ifdef HAVE_WMADEC
+			struct FAudioWMADEC *wmadec;
+#endif /* HAVE_WMADEC*/
 
 			/* Read-only */
 			float maxFreqRatio;
@@ -736,13 +736,13 @@ DECODE_FUNC(StereoMSADPCM)
 DECODE_FUNC(WMAERROR)
 #undef DECODE_FUNC
 
-/* GStreamer */
+/* WMA decoding */
 
-#ifdef HAVE_GSTREAMER
-uint32_t FAudio_GSTREAMER_init(FAudioSourceVoice *pSourceVoice, uint32_t type);
-void FAudio_GSTREAMER_free(FAudioSourceVoice *voice);
-void FAudio_GSTREAMER_end_buffer(FAudioSourceVoice *voice);
-#endif /* HAVE_GSTREAMER */
+#ifdef HAVE_WMADEC
+uint32_t FAudio_WMADEC_init(FAudioSourceVoice *pSourceVoice, uint32_t type);
+void FAudio_WMADEC_free(FAudioSourceVoice *voice);
+void FAudio_WMADEC_end_buffer(FAudioSourceVoice *voice);
+#endif /* HAVE_WMADEC */
 
 /* Platform Functions */
 
