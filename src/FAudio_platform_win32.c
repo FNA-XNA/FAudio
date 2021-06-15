@@ -392,10 +392,8 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	hr = IMMDevice_GetId(device, &str);
 	FAudio_assert(!FAILED(hr) && "Failed to get audio endpoint id!");
 
-	FAudio_memcpy(details->DeviceID, str, 0xff * sizeof(WCHAR));
-	details->DeviceID[0xff] = 0;
-	FAudio_memcpy(details->DisplayName, str, 0xff * sizeof(WCHAR));
-	details->DisplayName[0xff] = 0;
+	lstrcpynW(details->DeviceID, str, ARRAYSIZE(details->DeviceID) - 1);
+	lstrcpynW(details->DisplayName, str, ARRAYSIZE(details->DisplayName) - 1);
 	CoTaskMemFree(str);
 
 	hr = IMMDevice_Activate(
