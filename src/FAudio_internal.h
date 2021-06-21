@@ -52,7 +52,7 @@
 
 #define FAudio_strlen(ptr) strlen(ptr)
 #define FAudio_strcmp(str1, str2) strcmp(str1, str2)
-#define FAudio_strlcpy(ptr1, ptr2, size) lstrcpynA(ptr1, ptr2, size);
+#define FAudio_strlcpy(ptr1, ptr2, size) lstrcpynA(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) pow(x, y)
 #define FAudio_log(x) log(x)

@@ -75,8 +75,7 @@ static HRESULT FAudio_FillAudioClientBuffer(
 	IAudioRenderClient *client,
 	UINT frames,
 	UINT padding
-)
-{
+) {
 	HRESULT hr = S_OK;
 	BYTE *buffer;
 
@@ -162,8 +161,7 @@ void FAudio_PlatformInit(
 	FAudioWaveFormatExtensible *mixFormat,
 	uint32_t *updateSize,
 	void** platformDevice
-)
-{
+) {
 	struct FAudioAudioClientThreadArgs *args;
 	struct FAudioWin32PlatformData *data;
 	REFERENCE_TIME duration;
@@ -364,8 +362,7 @@ uint32_t FAudio_PlatformGetDeviceCount(void)
 uint32_t FAudio_PlatformGetDeviceDetails(
 		uint32_t index,
 		FAudioDeviceDetails *details
-)
-{
+) {
 	WAVEFORMATEXTENSIBLE *ext;
 	WAVEFORMATEX *format;
 	IAudioClient *client;
@@ -487,8 +484,7 @@ FAudioThread FAudio_PlatformCreateThread(
 	FAudioThreadFunc func,
 	const char *name,
 	void* data
-)
-{
+) {
 	struct FAudioThreadArgs *args;
 
 	if (!(args = FAudio_malloc(sizeof(*args)))) return NULL;
@@ -532,8 +528,7 @@ static size_t FAUDIOCALL FAudio_FILE_read(
 	void *dst,
 	size_t size,
 	size_t count
-)
-{
+) {
 	if (!data) return 0;
 	return fread(dst, size, count, data);
 }
@@ -542,8 +537,7 @@ static int64_t FAUDIOCALL FAudio_FILE_seek(
 	void *data,
 	int64_t offset,
 	int whence
-)
-{
+) {
 	if (!data) return -1;
 	fseek(data, offset, whence);
 	return ftell(data);
@@ -584,8 +578,7 @@ static size_t FAUDIOCALL FAudio_mem_read(
 	void *dst,
 	size_t size,
 	size_t count
-)
-{
+) {
 	struct FAudio_mem *io = data;
 	size_t len = size * count;
 
@@ -602,8 +595,7 @@ static int64_t FAUDIOCALL FAudio_mem_seek(
 	void *data,
 	int64_t offset,
 	int whence
-)
-{
+) {
 	struct FAudio_mem *io = data;
 	if (!data) return -1;
 
