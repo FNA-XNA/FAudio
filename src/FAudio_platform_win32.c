@@ -360,8 +360,8 @@ uint32_t FAudio_PlatformGetDeviceCount(void)
 }
 
 uint32_t FAudio_PlatformGetDeviceDetails(
-		uint32_t index,
-		FAudioDeviceDetails *details
+	uint32_t index,
+	FAudioDeviceDetails *details
 ) {
 	WAVEFORMATEXTENSIBLE *ext;
 	WAVEFORMATEX *format;
