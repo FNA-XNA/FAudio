@@ -311,7 +311,7 @@ F3DAUDIOAPI uint8_t F3DAudioCheckCalculateParams(
 	uint32_t Flags,
 	F3DAUDIO_DSP_SETTINGS *pDSPSettings
 ) {
-	uint32_t i, ChannelCount;
+	uint32_t i;
 
 	POINTER_CHECK(Instance);
 	POINTER_CHECK(pListener);
@@ -345,11 +345,6 @@ F3DAUDIOAPI uint8_t F3DAudioCheckCalculateParams(
 		);
 	}
 
-	ChannelCount = SPEAKERCOUNT(Instance);
-	PARAM_CHECK(
-		pDSPSettings->DstChannelCount == ChannelCount,
-		"Invalid channel count, DSP settings and speaker configuration must agree"
-	);
 	PARAM_CHECK(
 		pDSPSettings->SrcChannelCount == pEmitter->ChannelCount,
 		"Invalid channel count, DSP settings and emitter must agree"
