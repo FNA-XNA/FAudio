@@ -1330,7 +1330,7 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 	hr = IMFMediaType_SetUINT32(
 		media_type,
 		&MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
-		wfx->Format.nAvgBytesPerSec * 8
+		wfx->Format.nAvgBytesPerSec
 	);
 	FAudio_assert(!FAILED(hr) && "Failed set input bytes per sample!");
 	hr = IMFMediaType_SetUINT32(
