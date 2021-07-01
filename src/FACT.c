@@ -1600,8 +1600,24 @@ uint16_t FACTWaveBank_GetWaveIndex(
 	FACTWaveBank *pWaveBank,
 	const char *szFriendlyName
 ) {
-	FAudio_assert(0 && "WaveBank name tables are not supported!");
-	return 0;
+	uint16_t i;
+	if (pWaveBank == NULL || pWaveBank->waveBankNames == NULL)
+	{
+		return FACTINDEX_INVALID;
+	}
+
+	FAudio_PlatformLockMutex(pWaveBank->parentEngine->apiLock);
+	for (i = 0; i < pWaveBank->entryCount; i += 1)
+	{
+		if (FAudio_strcmp(szFriendlyName, pWaveBank->waveBankNames[i]) == 0)
+		{
+			FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
+			return i;
+		}
+	}
+	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
+
+	return FACTINDEX_INVALID;
 }
 
 uint32_t FACTWaveBank_GetWaveProperties(
@@ -1619,11 +1635,14 @@ uint32_t FACTWaveBank_GetWaveProperties(
 
 	entry = &pWaveBank->entries[nWaveIndex];
 
-	/* FIXME: Name tables! -flibit */
-	FAudio_zero(
-		pWaveProperties->friendlyName,
-		sizeof(pWaveProperties->friendlyName)
-	);
+	if (pWaveBank->waveBankNames)
+	{
+		FAudio_memcpy(pWaveProperties->friendlyName, pWaveBank->waveBankNames[nWaveIndex], sizeof(pWaveProperties->friendlyName));
+	}
+	else
+	{
+		FAudio_zero(pWaveProperties->friendlyName, sizeof(pWaveProperties->friendlyName));
+	}
 
 	pWaveProperties->format = entry->Format;
 	pWaveProperties->durationInSamples = entry->PlayRegion.dwLength;

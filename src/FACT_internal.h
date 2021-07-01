@@ -490,6 +490,7 @@ struct FACTWaveBank
 	FACTWaveBankEntry *entries;
 	uint32_t *entryRefs;
 	FACTSeekTable *seekTables;
+	char **waveBankNames;
 
 	/* I/O information */
 	uint32_t packetSize;
