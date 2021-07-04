@@ -1545,6 +1545,11 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	}
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
 
+	if (pWaveBank->waveBankNames != NULL)
+	{
+		pWaveBank->parentEngine->pFree(pWaveBank->waveBankNames);
+	}
+
 	mutex = pWaveBank->parentEngine->apiLock;
 	pWaveBank->parentEngine->pFree(pWaveBank);
 	FAudio_PlatformUnlockMutex(mutex);
