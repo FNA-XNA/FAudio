@@ -3319,6 +3319,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		wb->seekTables = NULL;
 	}
 
+	/* WaveBank Entry Names */
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_ENTRYNAMES)
 	{
 		SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYNAMES].dwOffset)
