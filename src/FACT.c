@@ -1601,15 +1601,17 @@ uint16_t FACTWaveBank_GetWaveIndex(
 	const char *szFriendlyName
 ) {
 	uint16_t i;
+	char *curName;
 	if (pWaveBank == NULL || pWaveBank->waveBankNames == NULL)
 	{
 		return FACTINDEX_INVALID;
 	}
 
 	FAudio_PlatformLockMutex(pWaveBank->parentEngine->apiLock);
-	for (i = 0; i < pWaveBank->entryCount; i += 1)
+	curName = pWaveBank->waveBankNames;
+	for (i = 0; i < pWaveBank->entryCount; i += 1, curName += 64)
 	{
-		if (FAudio_strcmp(szFriendlyName, pWaveBank->waveBankNames[i]) == 0)
+		if (FAudio_strncmp(szFriendlyName, curName, 64) == 0)
 		{
 			FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
 			return i;
@@ -1637,11 +1639,18 @@ uint32_t FACTWaveBank_GetWaveProperties(
 
 	if (pWaveBank->waveBankNames)
 	{
-		FAudio_memcpy(pWaveProperties->friendlyName, pWaveBank->waveBankNames[nWaveIndex], sizeof(pWaveProperties->friendlyName));
+		FAudio_memcpy(
+			pWaveProperties->friendlyName,
+			&pWaveBank->waveBankNames[nWaveIndex * 64],
+			sizeof(pWaveProperties->friendlyName)
+		);
 	}
 	else
 	{
-		FAudio_zero(pWaveProperties->friendlyName, sizeof(pWaveProperties->friendlyName));
+		FAudio_zero(
+			pWaveProperties->friendlyName,
+			sizeof(pWaveProperties->friendlyName)
+		);
 	}
 
 	pWaveProperties->format = entry->Format;

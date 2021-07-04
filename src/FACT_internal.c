@@ -3322,19 +3322,8 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	if (wbinfo.dwFlags & FACT_WAVEBANK_FLAGS_ENTRYNAMES)
 	{
 		SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYNAMES].dwOffset)
-		wb->waveBankNames = (char**) pEngine->pMalloc(
-			sizeof(char*) *
-			wbinfo.dwEntryCount
-			);
-		for (i = 0; i < wbinfo.dwEntryCount; i += 1)
-		{
-			char szWaveBankName[64];
-
-			READ(szWaveBankName, sizeof(szWaveBankName));
-			memsize = FAudio_strlen(szWaveBankName) + 1;
-			wb->waveBankNames[i] = (char*) pEngine->pMalloc(memsize);
-			FAudio_memcpy(wb->waveBankNames[i], szWaveBankName, memsize);
-		}
+		wb->waveBankNames = (char*) pEngine->pMalloc(64 * wbinfo.dwEntryCount);
+		READ(wb->waveBankNames, 64 * wbinfo.dwEntryCount);
 	}
 
 	/* Add to the Engine WaveBank list */
