@@ -189,7 +189,7 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[0].fadeInMS = 0;
 		pEngine->categories[0].fadeOutMS = 0;
 		pEngine->categories[0].maxInstanceBehavior = 0;
-		pEngine->categories[0].parentCategory = 0xFFFF;
+		pEngine->categories[0].parentCategory = -1;
 		pEngine->categories[0].volume = 1.0f;
 		pEngine->categories[0].visibility = 1;
 		pEngine->categories[0].instanceCount = 0;
