@@ -167,13 +167,69 @@ uint32_t FACTAudioEngine_Initialize(
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
-	/* Parse the file */
-	parseRet = FACT_INTERNAL_ParseAudioEngine(pEngine, pParams);
-	if (parseRet != 0)
+	if (!pParams->pGlobalSettingsBuffer || pParams->globalSettingsBufferSize == 0)
 	{
-		FAudio_PlatformUnlockMutex(pEngine->apiLock);
-		return parseRet;
+		/* No file? Just go with a safe default. (Also why are you using XACT) */
+		pEngine->categoryCount = 1;
+		pEngine->variableCount = 0;
+		pEngine->rpcCount = 0;
+		pEngine->dspPresetCount = 0;
+		pEngine->dspParameterCount = 0;
+
+		pEngine->categories = (FACTAudioCategory*) pEngine->pMalloc(
+			sizeof(FACTAudioCategory) * pEngine->categoryCount
+		);
+		pEngine->categoryNames = (char**) pEngine->pMalloc(
+			sizeof(char*) * pEngine->categoryCount
+		);
+
+		pEngine->categoryNames[0] = pEngine->pMalloc(7);
+		FAudio_strlcpy(pEngine->categoryNames[0], "Global", 7);
+		pEngine->categories[0].instanceLimit = 255;
+		pEngine->categories[0].fadeInMS = 0;
+		pEngine->categories[0].fadeOutMS = 0;
+		pEngine->categories[0].maxInstanceBehavior = 0;
+		pEngine->categories[0].parentCategory = 0xFFFF;
+		pEngine->categories[0].volume = 1.0f;
+		pEngine->categories[0].visibility = 1;
+		pEngine->categories[0].instanceCount = 0;
+		pEngine->categories[0].currentVolume = 1.0f;
+
+		pEngine->categoryNames[1] = pEngine->pMalloc(8);
+		FAudio_strlcpy(pEngine->categoryNames[1], "Default", 8);
+		pEngine->categories[1].instanceLimit = 255;
+		pEngine->categories[1].fadeInMS = 0;
+		pEngine->categories[1].fadeOutMS = 0;
+		pEngine->categories[1].maxInstanceBehavior = 0;
+		pEngine->categories[1].parentCategory = 0;
+		pEngine->categories[1].volume = 1.0f;
+		pEngine->categories[1].visibility = 1;
+		pEngine->categories[1].instanceCount = 0;
+		pEngine->categories[1].currentVolume = 1.0f;
+
+		pEngine->variables = NULL;
+		pEngine->variableNames = NULL;
+		pEngine->globalVariableValues = NULL;
+		pEngine->rpcs = NULL;
+		pEngine->dspPresets = NULL;
 	}
+	else
+	{
+		/* Parse the file */
+		parseRet = FACT_INTERNAL_ParseAudioEngine(pEngine, pParams);
+		if (parseRet != 0)
+		{
+			FAudio_PlatformUnlockMutex(pEngine->apiLock);
+			return parseRet;
+		}
+	}
+
+	/* Peristent Notifications */
+	pEngine->notifications = 0;
+	pEngine->cue_context = NULL;
+	pEngine->sb_context = NULL;
+	pEngine->wb_context = NULL;
+	pEngine->wave_context = NULL;
 
 	/* Assign the callbacks */
 	pEngine->notificationCallback = pParams->fnNotificationCallback;

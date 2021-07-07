@@ -2066,12 +2066,6 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	uint8_t *ptr = (uint8_t*) pParams->pGlobalSettingsBuffer;
 	uint8_t *start = ptr;
 
-	/* FIXME: Should be recorded so we can return the correct error */
-	if (!pParams->pGlobalSettingsBuffer || pParams->globalSettingsBufferSize == 0)
-	{
-		return 0;
-	}
-
 	magic = read_u32(&ptr, 0);
 	se = magic == 0x58475346; /* Swap Endian */
 	if (magic != 0x46534758 && magic != 0x58475346) /* 'XGSF' */
@@ -2280,13 +2274,6 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		FAudio_memcpy(pEngine->variableNames[i], ptr, memsize);
 		ptr += memsize;
 	}
-
-	/* Peristent Notifications */
-	pEngine->notifications = 0;
-	pEngine->cue_context = NULL;
-	pEngine->sb_context = NULL;
-	pEngine->wb_context = NULL;
-	pEngine->wave_context = NULL;
 
 	/* Store this pointer in case we're asked to free it */
 	if (pParams->globalSettingsFlags & FACT_FLAG_MANAGEDATA)
