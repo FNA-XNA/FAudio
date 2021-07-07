@@ -170,7 +170,7 @@ uint32_t FACTAudioEngine_Initialize(
 	if (!pParams->pGlobalSettingsBuffer || pParams->globalSettingsBufferSize == 0)
 	{
 		/* No file? Just go with a safe default. (Also why are you using XACT) */
-		pEngine->categoryCount = 1;
+		pEngine->categoryCount = 2;
 		pEngine->variableCount = 0;
 		pEngine->rpcCount = 0;
 		pEngine->dspPresetCount = 0;
