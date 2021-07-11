@@ -170,7 +170,7 @@ uint32_t FACTAudioEngine_Initialize(
 	if (!pParams->pGlobalSettingsBuffer || pParams->globalSettingsBufferSize == 0)
 	{
 		/* No file? Just go with a safe default. (Also why are you using XACT) */
-		pEngine->categoryCount = 2;
+		pEngine->categoryCount = 3;
 		pEngine->variableCount = 0;
 		pEngine->rpcCount = 0;
 		pEngine->dspPresetCount = 0;
@@ -206,6 +206,18 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[1].visibility = 1;
 		pEngine->categories[1].instanceCount = 0;
 		pEngine->categories[1].currentVolume = 1.0f;
+
+		pEngine->categoryNames[2] = pEngine->pMalloc(6);
+		FAudio_strlcpy(pEngine->categoryNames[2], "Music", 6);
+		pEngine->categories[2].instanceLimit = 255;
+		pEngine->categories[2].fadeInMS = 0;
+		pEngine->categories[2].fadeOutMS = 0;
+		pEngine->categories[2].maxInstanceBehavior = 0;
+		pEngine->categories[2].parentCategory = 0;
+		pEngine->categories[2].volume = 1.0f;
+		pEngine->categories[2].visibility = 1;
+		pEngine->categories[2].instanceCount = 0;
+		pEngine->categories[2].currentVolume = 1.0f;
 
 		pEngine->variables = NULL;
 		pEngine->variableNames = NULL;
