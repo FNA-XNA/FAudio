@@ -479,11 +479,11 @@ install(
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
 	cmake/config.cmake.in
-	${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}-config.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}Config.cmake
 	INSTALL_DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 install(
-	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}-config.cmake
+	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}Config.cmake
 	DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 install(
