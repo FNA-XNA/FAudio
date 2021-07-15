@@ -477,13 +477,66 @@ static float APF_OUT_DELAYS[REVERB_COUNT_APF_OUT] =
 	7.73f
 };
 
-static const float STEREO_SPREAD[4] =
+typedef enum FAudio_ChannelPositionFlags
 {
-	0.0f,
-	0.5216f,
-	0.0f,
-	0.5216f
-};
+	Position_Left = 0x1,
+	Position_Right = 0x2,
+	Position_Center = 0x4,
+	Position_Rear = 0x8,
+} FAudio_ChannelPositionFlags;
+
+static FAudio_ChannelPositionFlags FAudio_GetChannelPositionFlags(int32_t total_channels, int32_t channel)
+{
+	switch (total_channels)
+	{
+		case 1:
+			return Position_Center;
+
+		case 2:
+			return (channel == 0) ? Position_Left : Position_Right;
+
+		case 4:
+			switch (channel)
+			{
+				case 0:
+					return Position_Left;
+				case 1:
+					return Position_Right;
+				case 2:
+					return Position_Left | Position_Rear;
+				case 3:
+					return Position_Right | Position_Rear;
+			}
+
+		case 5:
+			switch (channel)
+			{
+				case 0:
+					return Position_Left;
+				case 1:
+					return Position_Right;
+				case 2:
+					return Position_Center;
+				case 3:
+					return Position_Left | Position_Rear;
+				case 4:
+					return Position_Right | Position_Rear;
+			}
+
+		default:
+			FAudio_assert(0 && "Unsupported channel count");
+			break;
+	}
+
+	/* shouldn't happen, but default to left speaker */
+	return Position_Left;
+}
+
+float FAudio_GetStereoSpreadDelayMS(int32_t total_channels, int32_t channel)
+{
+	FAudio_ChannelPositionFlags flags = FAudio_GetChannelPositionFlags(total_channels, channel);
+	return (flags & Position_Right) ? 0.5216f : 0.0f;
+}
 
 typedef struct DspReverbChannel
 {
@@ -503,7 +556,7 @@ typedef struct DspReverb
 	int32_t in_channels;
 	int32_t out_channels;
 	int32_t reverb_channels;
-	DspReverbChannel channel[4];
+	DspReverbChannel channel[5];
 
 	float early_gain;
 	float reverb_gain;
@@ -521,7 +574,7 @@ static inline void DspReverb_Create(
 ) {
 	int32_t i, c;
 
-	FAudio_assert(in_channels == 1 || in_channels == 2);
+	FAudio_assert(in_channels == 1 || in_channels == 2 || in_channels == 6);
 	FAudio_assert(out_channels == 1 || out_channels == 2 || out_channels == 6);
 
 	FAudio_zero(reverb, sizeof(DspReverb));
@@ -538,7 +591,14 @@ static inline void DspReverb_Create(
 		);
 	}
 
-	reverb->reverb_channels = (out_channels == 6) ? 4 : out_channels;
+	if (out_channels == 6)
+	{
+		reverb->reverb_channels = (in_channels == 6) ? 5 : 4;
+	}
+	else
+	{
+		reverb->reverb_channels = out_channels;
+	}
 
 	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
@@ -554,7 +614,7 @@ static inline void DspReverb_Create(
 			DspCombShelving_Initialize(
 				&reverb->channel[c].lpf_comb[i],
 				sampleRate,
-				COMB_DELAYS[i] + STEREO_SPREAD[c],
+				COMB_DELAYS[i] + FAudio_GetStereoSpreadDelayMS(reverb->reverb_channels, c),
 				500,
 				500,
 				-6,
@@ -569,7 +629,7 @@ static inline void DspReverb_Create(
 			DspAllPass_Initialize(
 				&reverb->channel[c].apf_out[i],
 				sampleRate,
-				APF_OUT_DELAYS[i] + STEREO_SPREAD[c],
+				APF_OUT_DELAYS[i] + FAudio_GetStereoSpreadDelayMS(reverb->reverb_channels, c),
 				0.5f,
 				pMalloc
 			);
@@ -634,13 +694,6 @@ static inline void DspReverb_SetParameters(
 	FAudioFXReverbParameters *params
 ) {
 	float early_diffusion, late_diffusion;
-	float channel_delay[4] =
-	{
-		0.0f,
-		0.0f,
-		params->RearDelay,
-		params->RearDelay
-	};
 	DspCombShelving *comb;
 	int32_t i, c;
 
@@ -662,9 +715,14 @@ static inline void DspReverb_SetParameters(
 	/* Reverberation */
 	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
+		float channel_delay =
+			(FAudio_GetChannelPositionFlags(reverb->reverb_channels, c) & Position_Rear) ?
+			params->RearDelay :
+			0.0f;
+
 		DspDelay_Change(
 			&reverb->channel[c].reverb_delay,
-			(float) params->ReverbDelay + channel_delay[c]
+			(float) params->ReverbDelay + channel_delay
 		);
 
 		for (i = 0; i < REVERB_COUNT_COMB; i += 1)
@@ -674,7 +732,7 @@ static inline void DspReverb_SetParameters(
 			/* Set decay time of comb filter */
 			DspDelay_Change(
 				&comb->comb_delay,
-				COMB_DELAYS[i] + STEREO_SPREAD[c]
+				COMB_DELAYS[i] + FAudio_GetStereoSpreadDelayMS(reverb->reverb_channels, c)
 			);
 			comb->comb_feedback_gain = DspComb_FeedbackFromRT60(
 				&comb->comb_delay,
@@ -709,11 +767,14 @@ static inline void DspReverb_SetParameters(
 
 	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
+		FAudio_ChannelPositionFlags position = FAudio_GetChannelPositionFlags(reverb->reverb_channels, c);
+		float gain;
+
 		for (i = 0; i < REVERB_COUNT_APF_OUT; i += 1)
 		{
 			DspAllPass_Change(
 				&reverb->channel[c].apf_out[i],
-				APF_OUT_DELAYS[i] + STEREO_SPREAD[c],
+				APF_OUT_DELAYS[i] + FAudio_GetStereoSpreadDelayMS(reverb->reverb_channels, c),
 				late_diffusion
 			);
 		}
@@ -726,24 +787,39 @@ static inline void DspReverb_SetParameters(
 			params->RoomFilterMain + params->RoomFilterHF
 		);
 
-		reverb->channel[c].gain = 1.5f - (
-			((c % 2 == 0 ?
-				params->PositionMatrixLeft :
-				params->PositionMatrixRight
-			) / 27.0f) * 0.5f
-		);
-		if (c >= 2)
+		if (position & Position_Left)
+		{
+			gain = params->PositionMatrixLeft;
+		}
+		else if (position & Position_Right)
+		{
+			gain = params->PositionMatrixRight;
+		}
+		else /*if (position & Position_Center) */
+		{
+			gain = (params->PositionMatrixLeft + params->PositionMatrixRight) / 2.0f;
+		}
+		reverb->channel[c].gain = 1.5f - (gain / 27.0f) * 0.5f;
+
+		if (position & Position_Rear)
 		{
 			/* Rear-channel Attenuation */
 			reverb->channel[c].gain *= 0.75f;
 		}
 
-		reverb->channel[c].early_gain = 1.2f - (
-			((c % 2 == 0 ?
-				params->PositionLeft :
-				params->PositionRight
-			) / 6.0f) * 0.2f
-		);
+		if (position & Position_Left)
+		{
+			gain = params->PositionLeft;
+		}
+		else if (position & Position_Right)
+		{
+			gain = params->PositionRight;
+		}
+		else /*if (position & Position_Center) */
+		{
+			gain = (params->PositionLeft + params->PositionRight) / 2.0f;
+		}
+		reverb->channel[c].early_gain = 1.2f - (gain / 6.0f) * 0.2f;
 		reverb->channel[c].early_gain = (
 			reverb->channel[c].early_gain *
 			reverb->early_gain
@@ -1015,6 +1091,52 @@ static inline float DspReverb_INTERNAL_Process_2_to_5p1(
 	return squared_sum;
 }
 
+static inline float DspReverb_INTERNAL_Process_5p1_to_5p1(
+	DspReverb *reverb,
+	float *restrict samples_in,
+	float *restrict samples_out,
+	size_t sample_count
+) {
+	const float *in_end = samples_in + sample_count;
+	float in, in_ratio, early, late[5];
+	float squared_sum = 0;
+	int32_t c;
+
+	while (samples_in < in_end)
+	{
+		/* Input - Combine non-LFE channels into 1 */
+		in = (samples_in[0] + samples_in[1] + samples_in[2] +
+				samples_in[4] + samples_in[5]) / 5.0f;
+		in_ratio = in * reverb->dry_ratio;
+
+		/* Early Reflections */
+		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
+
+		/* Reverberation with Wet/Dry Mix */
+		for (c = 0; c < 5; c += 1)
+		{
+			late[c] = (DspReverb_INTERNAL_ProcessChannel(
+				reverb,
+				&reverb->channel[c],
+				early
+			) * reverb->wet_ratio) + in_ratio;
+			squared_sum += late[c] * late[c];
+		}
+
+		/* Output */
+		*samples_out++ = late[0];	/* Front Left */
+		*samples_out++ = late[1];	/* Front Right */
+		*samples_out++ = late[2];	/* Center */
+		*samples_out++ = samples_in[3];	/* LFE, pass through */
+		*samples_out++ = late[3];	/* Rear Left */
+		*samples_out++ = late[4];	/* Rear Right */
+
+		samples_in += 6;
+	}
+
+	return squared_sum;
+}
+
 #undef OUTPUT_SAMPLE
 
 /* Reverb FAPO Implementation */
@@ -1148,7 +1270,8 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 	else if (pOutputFormat->nChannels == 6)
 	{
 		if (	pRequestedInputFormat->nChannels != 1 &&
-			pRequestedInputFormat->nChannels != 2	)
+			pRequestedInputFormat->nChannels != 2 &&
+			pRequestedInputFormat->nChannels != 6	)
 		{
 			SET_SUPPORTED_FIELD(nChannels, 1);
 		}
@@ -1196,6 +1319,13 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	{
 		if (	pRequestedOutputFormat->nChannels != pInputFormat->nChannels &&
 			pRequestedOutputFormat->nChannels != 6)
+		{
+			SET_SUPPORTED_FIELD(nChannels, pInputFormat->nChannels);
+		}
+	}
+	else if (pInputFormat->nChannels == 6)
+	{
+		if (pRequestedOutputFormat->nChannels != 6)
 		{
 			SET_SUPPORTED_FIELD(nChannels, pInputFormat->nChannels);
 		}
@@ -1252,7 +1382,9 @@ uint32_t FAudioFXReverb_LockForProcess(
 			 pOutputLockedParameters->pFormat->nChannels == 6)) ||
 		(pInputLockedParameters->pFormat->nChannels == 2 &&
 			(pOutputLockedParameters->pFormat->nChannels == 2 ||
-			 pOutputLockedParameters->pFormat->nChannels == 6))))
+			 pOutputLockedParameters->pFormat->nChannels == 6)) ||
+		(pInputLockedParameters->pFormat->nChannels == 6 &&
+			pOutputLockedParameters->pFormat->nChannels == 6)))
 	{
 		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
@@ -1295,7 +1427,7 @@ static inline void FAudioFXReverb_CopyBuffer(
 		return;
 	}
 	
-	/* 1 -> 1 or 2 -> 2 */
+	/* equal channel count */
 	if (fapo->inBlockAlign == fapo->outBlockAlign)
 	{
 		FAudio_memcpy(
@@ -1421,9 +1553,13 @@ void FAudioFXReverb_Process(
 			{
 				total = PROCESS(1, 5p1);
 			}
-			else
+			else if (fapo->reverb.in_channels == 2)
 			{
 				total = PROCESS(2, 5p1);
+			}
+			else /* 5.1 */
+			{
+				total = PROCESS(5p1, 5p1);
 			}
 			break;
 	}
