@@ -503,7 +503,7 @@ typedef struct DspReverb
 	int32_t in_channels;
 	int32_t out_channels;
 	int32_t reverb_channels;
-	DspReverbChannel channel[4];
+	DspReverbChannel channel[5];
 
 	float early_gain;
 	float reverb_gain;
@@ -521,7 +521,7 @@ static inline void DspReverb_Create(
 ) {
 	int32_t i, c;
 
-	FAudio_assert(in_channels == 1 || in_channels == 2);
+	FAudio_assert(in_channels == 1 || in_channels == 2 || in_channels == 6);
 	FAudio_assert(out_channels == 1 || out_channels == 2 || out_channels == 6);
 
 	FAudio_zero(reverb, sizeof(DspReverb));
@@ -538,7 +538,14 @@ static inline void DspReverb_Create(
 		);
 	}
 
-	reverb->reverb_channels = (out_channels == 6) ? 4 : out_channels;
+	if (out_channels == 6)
+	{
+		reverb->reverb_channels = (in_channels == 6) ? 5 : 4;
+	}
+	else
+	{
+		reverb->reverb_channels = out_channels;
+	}
 
 	for (c = 0; c < reverb->reverb_channels; c += 1)
 	{
@@ -1015,6 +1022,52 @@ static inline float DspReverb_INTERNAL_Process_2_to_5p1(
 	return squared_sum;
 }
 
+static inline float DspReverb_INTERNAL_Process_5p1_to_5p1(
+	DspReverb *reverb,
+	float *restrict samples_in,
+	float *restrict samples_out,
+	size_t sample_count
+) {
+	const float *in_end = samples_in + sample_count;
+	float in, in_ratio, early, late[5];
+	float squared_sum = 0;
+	int32_t c;
+
+	while (samples_in < in_end)
+	{
+		/* Input - Combine non-LFE channels into 1 */
+		in = (samples_in[0] + samples_in[1] + samples_in[2] +
+				samples_in[4] + samples_in[5]) / 5.0f;
+		in_ratio = in * reverb->dry_ratio;
+
+		/* Early Reflections */
+		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
+
+		/* Reverberation with Wet/Dry Mix */
+		for (c = 0; c < 5; c += 1)
+		{
+			late[c] = (DspReverb_INTERNAL_ProcessChannel(
+				reverb,
+				&reverb->channel[c],
+				early
+			) * reverb->wet_ratio) + in_ratio;
+			squared_sum += late[c] * late[c];
+		}
+
+		/* Output */
+		*samples_out++ = late[0];	/* Front Left */
+		*samples_out++ = late[1];	/* Front Right */
+		*samples_out++ = late[2];	/* Center */
+		*samples_out++ = samples_in[3];	/* LFE, pass through */
+		*samples_out++ = late[3];	/* Rear Left */
+		*samples_out++ = late[4];	/* Rear Right */
+
+		samples_in += 6;
+	}
+
+	return squared_sum;
+}
+
 #undef OUTPUT_SAMPLE
 
 /* Reverb FAPO Implementation */
@@ -1148,7 +1201,8 @@ uint32_t FAudioFXReverb_IsInputFormatSupported(
 	else if (pOutputFormat->nChannels == 6)
 	{
 		if (	pRequestedInputFormat->nChannels != 1 &&
-			pRequestedInputFormat->nChannels != 2	)
+			pRequestedInputFormat->nChannels != 2 &&
+			pRequestedInputFormat->nChannels != 6	)
 		{
 			SET_SUPPORTED_FIELD(nChannels, 1);
 		}
@@ -1196,6 +1250,13 @@ uint32_t FAudioFXReverb_IsOutputFormatSupported(
 	{
 		if (	pRequestedOutputFormat->nChannels != pInputFormat->nChannels &&
 			pRequestedOutputFormat->nChannels != 6)
+		{
+			SET_SUPPORTED_FIELD(nChannels, pInputFormat->nChannels);
+		}
+	}
+	else if (pInputFormat->nChannels == 6)
+	{
+		if (pRequestedOutputFormat->nChannels != 6)
 		{
 			SET_SUPPORTED_FIELD(nChannels, pInputFormat->nChannels);
 		}
@@ -1252,7 +1313,9 @@ uint32_t FAudioFXReverb_LockForProcess(
 			 pOutputLockedParameters->pFormat->nChannels == 6)) ||
 		(pInputLockedParameters->pFormat->nChannels == 2 &&
 			(pOutputLockedParameters->pFormat->nChannels == 2 ||
-			 pOutputLockedParameters->pFormat->nChannels == 6))))
+			 pOutputLockedParameters->pFormat->nChannels == 6)) ||
+		(pInputLockedParameters->pFormat->nChannels == 6 &&
+			pOutputLockedParameters->pFormat->nChannels == 6)))
 	{
 		return FAPO_E_FORMAT_UNSUPPORTED;
 	}
@@ -1295,7 +1358,7 @@ static inline void FAudioFXReverb_CopyBuffer(
 		return;
 	}
 	
-	/* 1 -> 1 or 2 -> 2 */
+	/* equal channel count */
 	if (fapo->inBlockAlign == fapo->outBlockAlign)
 	{
 		FAudio_memcpy(
@@ -1421,9 +1484,13 @@ void FAudioFXReverb_Process(
 			{
 				total = PROCESS(1, 5p1);
 			}
-			else
+			else if (fapo->reverb.in_channels == 2)
 			{
 				total = PROCESS(2, 5p1);
+			}
+			else /* 5.1 */
+			{
+				total = PROCESS(5p1, 5p1);
 			}
 			break;
 	}
