@@ -53,8 +53,6 @@ typedef struct FAudioWMADEC
 	((sample) * voice->src.format->nChannels * sizeof(float))
 #define SIZE_FROM_SRC(sample) \
 	((sample) * voice->src.format->nChannels * (voice->src.format->wBitsPerSample / 8))
-#define SIZE_FROM_DST(sample) \
-	((sample) * voice->src.format->nChannels * sizeof(float))
 #define SAMPLES_FROM_SRC(len) \
 	((len) / voice->src.format->nChannels / (voice->src.format->wBitsPerSample / 8))
 #define SAMPLES_FROM_DST(len) \
