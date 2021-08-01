@@ -79,7 +79,7 @@ public static class FAudio
 
 	public const uint FAUDIO_ABI_VERSION =		 0;
 	public const uint FAUDIO_MAJOR_VERSION =	21;
-	public const uint FAUDIO_MINOR_VERSION =	 7;
+	public const uint FAUDIO_MINOR_VERSION =	 8;
 	public const uint FAUDIO_PATCH_VERSION =	 0;
 
 	public const uint FAUDIO_COMPILED_VERSION = (
