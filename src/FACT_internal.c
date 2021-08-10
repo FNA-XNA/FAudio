@@ -3313,6 +3313,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		wb->waveBankNames = (char*) pEngine->pMalloc(64 * wbinfo.dwEntryCount);
 		READ(wb->waveBankNames, 64 * wbinfo.dwEntryCount);
 	}
+	else
+	{
+		wb->waveBankNames = NULL;
+	}
 
 	/* Add to the Engine WaveBank list */
 	LinkedList_AddEntry(
