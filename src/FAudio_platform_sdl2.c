@@ -338,7 +338,8 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 			for (i = 0; i < devcount; i += 1)
 			{
 				SDL_GetAudioDeviceSpec(i, 0, &spec);
-				if (spec.channels > channels)
+				if (	(spec.channels > channels) &&
+					(spec.channels <= 8)	)
 				{
 					channels = spec.channels;
 					if (setRate)
