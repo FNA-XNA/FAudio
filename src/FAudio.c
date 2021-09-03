@@ -303,7 +303,14 @@ uint32_t FAudio_CreateSourceVoice(
 		fmtex->Format.nChannels = pSourceFormat->nChannels;
 		fmtex->Format.nSamplesPerSec = pSourceFormat->nSamplesPerSec;
 		fmtex->Format.nAvgBytesPerSec = pSourceFormat->nAvgBytesPerSec;
-		fmtex->Format.nBlockAlign = pSourceFormat->nBlockAlign;
+		if ( pSourceFormat->wFormatTag == FAUDIO_FORMAT_IEEE_FLOAT && pSourceFormat->nBlockAlign == 0 )
+		{
+			fmtex->Format.nBlockAlign = pSourceFormat->nChannels * (pSourceFormat->wBitsPerSample / 8);
+		}
+		else
+		{
+			fmtex->Format.nBlockAlign = pSourceFormat->nBlockAlign;
+		}
 		fmtex->Format.wBitsPerSample = pSourceFormat->wBitsPerSample;
 		fmtex->Format.cbSize = sizeof(FAudioWaveFormatExtensible) - sizeof(FAudioWaveFormatEx);
 		fmtex->Samples.wValidBitsPerSample = pSourceFormat->wBitsPerSample;
