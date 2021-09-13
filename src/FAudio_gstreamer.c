@@ -125,10 +125,73 @@ static int FAudio_GSTREAMER_CheckForBusErrors(FAudioVoice *voice)
 	return ret;
 }
 
+static const GstMetaInfo *FAudio_DecodedBytes_MetaInfo;
+
+typedef struct DecodedBytesMeta
+{
+	GstMeta meta;
+	uint32_t decodedBytes;
+} DecodedBytesMeta;
+
+static gboolean FAudio_GSTREAMER_InitDecodedBytesMeta(
+	struct DecodedBytesMeta *meta,
+	gpointer params,
+	GstBuffer *buf
+) {
+	meta->decodedBytes = 0;
+	return TRUE;
+}
+
+static void FAudio_GSTREAMER_FreeDecodedBytesMeta(
+	struct DecodedBytesMeta *meta,
+	GstBuffer *buf
+) {
+}
+
+static gboolean FAudio_GSTREAMER_TransformDecodedBytesMeta(
+	GstBuffer *dst,
+	GstMeta *meta,
+	GstBuffer *buf,
+	GQuark type,
+	gpointer data
+) {
+	return FALSE;
+}
+
+static const GstMetaInfo *FAudio_GSTREAMER_RegisterDecodedBytesMeta(void)
+{
+	GType type;
+	static const gchar *tags[] = { NULL };
+
+	type = gst_meta_api_type_register("DecodedBytesMetaAPI", tags);
+
+	return gst_meta_register(
+		type,
+		"DecodedBytesMeta",
+		sizeof(DecodedBytesMeta),
+		(GstMetaInitFunction) FAudio_GSTREAMER_InitDecodedBytesMeta,
+		(GstMetaFreeFunction) FAudio_GSTREAMER_FreeDecodedBytesMeta,
+		(GstMetaTransformFunction) FAudio_GSTREAMER_TransformDecodedBytesMeta
+	);
+
+}
+
+static void FAudio_GSTREAMER_PutDecodedBytesMeta(GstBuffer *buffer, uint32_t decodedBytes)
+{
+	DecodedBytesMeta *meta = (DecodedBytesMeta *) gst_buffer_add_meta(buffer, FAudio_DecodedBytes_MetaInfo, NULL);
+	if (!meta)
+	{
+		return;
+	}
+
+	meta->decodedBytes = decodedBytes;
+}
+
 static size_t FAudio_GSTREAMER_FillConvertCache(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer,
-	size_t availableBytes
+	size_t availableBytes,
+	uint32_t decodedBytes
 ) {
 	GstBuffer *src, *dst;
 	GstSample *sample;
@@ -182,6 +245,8 @@ static size_t FAudio_GSTREAMER_FillConvertCache(
 		gst_buffer_unref(src);
 		return (size_t) -1;
 	}
+
+	FAudio_GSTREAMER_PutDecodedBytesMeta(src, decodedBytes);
 
 	push_ret = gst_pad_push(voice->src.wmadec->srcpad, src);
 	if(	push_ret != GST_FLOW_OK &&
@@ -259,6 +324,7 @@ static int FAudio_WMADEC_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, u
 	FAudioWMADEC *wmadec = voice->src.wmadec;
 	uint8_t *tmpBuf;
 	size_t tmpLen;
+	uint32_t expectedBytes;
 
 	if (wmadec->curBlock != ~0u && block != wmadec->curBlock + 1)
 	{
@@ -295,10 +361,25 @@ static int FAudio_WMADEC_DecodeBlock(FAudioVoice *voice, FAudioBuffer *buffer, u
 	wmadec->prevBlock = wmadec->curBlock;
 	wmadec->curBlock = block;
 
+	if (wmadec->blockCount == 0)
+	{
+		expectedBytes = voice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[block];
+
+		if (block > 0)
+		{
+			expectedBytes -= voice->src.bufferList->bufferWMA.pDecodedPacketCumulativeBytes[block - 1];
+		}
+	}
+	else
+	{
+		expectedBytes = buffer->PlayLength / wmadec->blockCount;
+	}
+
 	wmadec->blockSizes[block] = FAudio_GSTREAMER_FillConvertCache(
 		voice,
 		buffer,
-		availableBytes
+		availableBytes,
+		expectedBytes
 	);
 
 	return wmadec->blockSizes[block] != (size_t) -1;
@@ -555,6 +636,8 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *pSourceVoice, uint32_t type)
 	{
 		/* Apparently they ask for this to leak... */
 		gst_init(NULL, NULL);
+
+		FAudio_DecodedBytes_MetaInfo = FAudio_GSTREAMER_RegisterDecodedBytesMeta();
 	}
 
 #ifndef FAUDIO_GST_LIBAV_EXPOSES_XMA2_CAPS_IN_CURRENT_YEAR
