@@ -83,13 +83,13 @@
     <GenerateManifest>false</GenerateManifest>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
     <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
-    <LibraryPath>..\..\SDL2\VisualC-WinRT\UWP_VS2015\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\..\SDL2\VisualC-WinRT\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
     <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
-    <LibraryPath>..\..\SDL2\VisualC-WinRT\UWP_VS2015\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\..\SDL2\VisualC-WinRT\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
