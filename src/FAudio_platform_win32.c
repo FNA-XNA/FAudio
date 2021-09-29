@@ -998,7 +998,7 @@ struct FAudioWMADEC
 	size_t input_size;
 };
 
-static BOOL FAudio_WMAMF_ProcessInput(
+static HRESULT FAudio_WMAMF_ProcessInput(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer
 ) {
@@ -1010,7 +1010,7 @@ static BOOL FAudio_WMAMF_ProcessInput(
 	HRESULT hr;
 
 	copy_size = min(buffer->AudioBytes - impl->input_pos, impl->input_size);
-	if (!copy_size) return FALSE;
+	if (!copy_size) return S_FALSE;
 	LOG_INFO(voice->audio, "pushing %x bytes at %x", copy_size, impl->input_pos);
 
 	hr = MFCreateSample(&sample);
@@ -1036,15 +1036,18 @@ static BOOL FAudio_WMAMF_ProcessInput(
 
 	hr = IMFTransform_ProcessInput(impl->decoder, 0, sample, 0);
 	IMFSample_Release(sample);
-	if (hr == MF_E_NOTACCEPTING) return TRUE;
-	if (FAILED(hr)) LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
-	FAudio_assert(!FAILED(hr) || !"Failed to process input sample!");
+	if (hr == MF_E_NOTACCEPTING) return S_OK;
+	if (FAILED(hr))
+	{
+		LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
+		return hr;
+	}
 
 	impl->input_pos += copy_size;
-	return TRUE;
+	return S_OK;
 };
 
-static BOOL FAudio_WMAMF_ProcessOutput(
+static HRESULT FAudio_WMAMF_ProcessOutput(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer
 ) {
@@ -1060,9 +1063,12 @@ static BOOL FAudio_WMAMF_ProcessOutput(
 		FAudio_memset(&output, 0, sizeof(output));
 		output.pSample = impl->output_sample;
 		hr = IMFTransform_ProcessOutput(impl->decoder, 0, 1, &output, &status);
-		if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) return FALSE;
-		if (FAILED(hr)) LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
-		FAudio_assert(!FAILED(hr) && "Failed to process output sample!");
+		if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) return S_FALSE;
+		if (FAILED(hr))
+		{
+			LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
+			return hr;
+		}
 
 		if (output.dwStatus & MFT_OUTPUT_DATA_BUFFER_NO_SAMPLE) continue;
 
@@ -1100,7 +1106,7 @@ static BOOL FAudio_WMAMF_ProcessOutput(
 		if (!impl->output_sample) IMFSample_Release(output.pSample);
 	}
 
-	return TRUE;
+	return S_OK;
 };
 
 static void FAudio_INTERNAL_DecodeWMAMF(
@@ -1163,8 +1169,14 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 
 	while (impl->output_pos < samples_pos + samples_size)
 	{
-		if (FAudio_WMAMF_ProcessOutput(voice, buffer)) continue;
-		if (FAudio_WMAMF_ProcessInput(voice, buffer)) continue;
+		hr = FAudio_WMAMF_ProcessOutput(voice, buffer);
+		if (FAILED(hr)) goto error;
+		if (hr == S_OK) continue;
+
+		hr  = FAudio_WMAMF_ProcessInput(voice, buffer);
+		if (FAILED(hr)) goto error;
+		if (hr == S_OK) continue;
+
 		if (!impl->input_size) break;
 
 		LOG_INFO(voice->audio, "sending EOS to %p", impl->decoder);
@@ -1189,6 +1201,11 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 	);
 
 	LOG_FUNC_EXIT(voice->audio)
+	return;
+
+error:
+	FAudio_zero(decodeCache, samples * voice->src.format->nChannels * sizeof(float));
+	LOG_FUNC_EXIT(voice->audio)
 }
 
 uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
@@ -1206,7 +1223,7 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 
 	LOG_FUNC_ENTER(voice->audio)
 
-	if (!(impl = voice->audio->pMalloc(sizeof(*impl)))) return 0;
+	if (!(impl = voice->audio->pMalloc(sizeof(*impl)))) return -1;
 	FAudio_memset(impl, 0, sizeof(*impl));
 
 	hr = CoCreateInstance(
@@ -1216,7 +1233,11 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 		&IID_IMFTransform,
 		(void **)&decoder
 	);
-	FAudio_assert(!FAILED(hr) && "Failed to create decoder!");
+	if (FAILED(hr))
+	{
+		voice->audio->pFree(impl->output_buf);
+		return -2;
+	}
 
 	hr = MFCreateMediaType(&media_type);
 	FAudio_assert(!FAILED(hr) && "Failed create media type!");
