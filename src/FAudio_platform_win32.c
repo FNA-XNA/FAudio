@@ -622,6 +622,7 @@ static int FAUDIOCALL FAudio_mem_close(void *data)
 {
 	if (!data) return 0;
 	FAudio_free(data);
+	return 0;
 }
 
 FAudioIOStream* FAudio_memopen(void *mem, int len)
