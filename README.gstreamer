@@ -1,3 +1,8 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+THE GSTREAMER BACKEND HAS BEEN DEPRECATED!
+THIS WILL BE REMOVED WHEN WINE 7.0 IS RELEASED!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 FAudio has optional support for decoding xWMA resources using GStreamer.
 
 Please note that enabling support for GStreamer means your project has to comply
