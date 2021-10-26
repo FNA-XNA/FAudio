@@ -228,8 +228,8 @@ void FAudio_PlatformInit(
 	FAudio_assert(!FAILED(hr) && "Failed to create audio client!");
 	IMMDevice_Release(device);
 
-	if (flags & FAUDIO_1024_QUANTUM) duration = 21330;
-	else duration = 30000;
+	if (flags & FAUDIO_1024_QUANTUM) duration = 213300;
+	else duration = 300000;
 
 	hr = IAudioClient_IsFormatSupported(
 		data->client,
