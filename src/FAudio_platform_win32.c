@@ -229,7 +229,7 @@ void FAudio_PlatformInit(
 	IMMDevice_Release(device);
 
 	if (flags & FAUDIO_1024_QUANTUM) duration = 213300;
-	else duration = 300000;
+	else duration = 100000;
 
 	hr = IAudioClient_IsFormatSupported(
 		data->client,
@@ -250,7 +250,7 @@ void FAudio_PlatformInit(
 		data->client,
 		AUDCLNT_SHAREMODE_SHARED,
 		AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-		duration,
+		duration * 3,
 		0,
 		&args->format.Format,
 		&GUID_NULL
