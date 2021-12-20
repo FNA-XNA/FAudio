@@ -473,6 +473,8 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 		);
 	}
 
+	CoTaskMemFree(format);
+
 	IAudioClient_Release(client);
 
 	IMMDevice_Release(device);
