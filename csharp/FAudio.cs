@@ -2369,6 +2369,14 @@ public static class FAudio
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern int stb_vorbis_get_samples_float_interleaved(
+		IntPtr f,
+		int channels,
+		IntPtr buffer,
+		int num_floats
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern int stb_vorbis_get_samples_float(
 		IntPtr f,
 		int channels,
