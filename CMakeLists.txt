@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 2.8.12)
 project(FAudio C)
 
 # Options
-option(GSTREAMER "Enable GStreamer support (WMA, XMA)" OFF)
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 if(WIN32)
@@ -101,7 +100,6 @@ add_library(FAudio
 	src/FAudio_platform_win32.c
 	# Optional source files
 	src/XNA_Song.c
-	src/FAudio_gstreamer.c
 )
 
 if(PLATFORM_WIN32)
@@ -109,7 +107,6 @@ if(PLATFORM_WIN32)
 	target_compile_definitions(FAudio PUBLIC FAUDIO_WIN32_PLATFORM)
 	target_compile_definitions(FAudio PRIVATE HAVE_WMADEC=1)
 	set(PLATFORM_CFLAGS "-DFAUDIO_WIN32_PLATFORM")
-	set(GSTREAMER OFF)
 	set(XNASONG OFF)
 else()
 	set(PLATFORM_CFLAGS)
@@ -146,35 +143,6 @@ set_target_properties(FAudio PROPERTIES OUTPUT_NAME "FAudio"
 if(NOT XNASONG)
 	target_compile_definitions(FAudio PRIVATE DISABLE_XNASONG)
 endif()
-
-# GStreamer Support
-if(GSTREAMER)
-	# Requires for gstreamer in the pkgconfig file
-	set(FAUDIO_GSTREAMER_DEPS " gstreamer-app-1.0 gstreamer-audio-1.0")
-
-	# Add the extra definition...
-	target_compile_definitions(FAudio PRIVATE HAVE_WMADEC=1 HAVE_GSTREAMER=1)
-
-	# Find GStreamer
-	find_package(PkgConfig)
-	pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.9.2)
-	pkg_check_modules(GSTAUDIO REQUIRED gstreamer-audio-1.0>=1.9.2)
-	pkg_check_modules(GSTAPP REQUIRED gstreamer-app-1.0>=1.9.2)
-
-	# Include/Link GStreamer...
-	target_include_directories(FAudio PRIVATE
-		${GST_INCLUDE_DIRS}
-		${GSTAUDIO_INCLUDE_DIRS}
-		${GSTAPP_INCLUDE_DIRS}
-	)
-	target_link_libraries(FAudio PRIVATE
-            ${GST_LDFLAGS}
-            ${GSTAUDIO_LDFLAGS}
-            ${GSTAPP_LDFLAGS}
-        )
-else()
-	set(FAUDIO_GSTREAMER_DEPS "")
-endif(GSTREAMER)
 
 # Dump source voices to RIFF WAVE files
 if(DUMP_VOICES)
