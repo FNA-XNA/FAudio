@@ -31,8 +31,6 @@
 
 #include <stdint.h>
 #include <SDL.h>
-#include <SDL_opengl.h>
-
 #include "imgui.h"
 
 /* Defined by the tools using this UI framework */
