@@ -191,7 +191,6 @@ if(BUILD_UTILS)
 	# Shared ImGui Framework
 	add_library(uicommon STATIC
 		utils/uicommon/FAudioUI_main.cpp
-		utils/uicommon/FAudioUI_ui.cpp
 		utils/uicommon/glfuncs.h
 		utils/uicommon/glmacros.h
 		utils/uicommon/imconfig.h

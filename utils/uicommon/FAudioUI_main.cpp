@@ -29,8 +29,11 @@
  * -flibit
  */
 
+#include <stdint.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
+
+#include "imgui.h"
 
 /* GL Function typedefs */
 #define GL_PROC(ret, func, parms) \
@@ -54,121 +57,88 @@ extern void FAudioTool_Init();
 extern void FAudioTool_Update();
 extern void FAudioTool_Quit();
 
-/* FAudioUI_ui.cpp */
+/* ImGui Callbacks */
 
-extern void UI_Init(
-	int tab,
-	int left,
-	int right,
-	int up,
-	int down,
-	int pgup,
-	int pgdown,
-	int home,
-	int end,
-	int del,
-	int backspace,
-	int enter,
-	int escape,
-	int a,
-	int c,
-	int v,
-	int x,
-	int y,
-	int z,
-	unsigned char **pixels,
-	int *tw,
-	int *th
-);
-extern void UI_Quit();
-extern uint8_t UI_Update(
-	int ww,
-	int wh,
-	int dw,
-	int dh,
-	int mx,
-	int my,
-	uint8_t mouse1,
-	uint8_t mouse2,
-	uint8_t mouse3,
-	int8_t wheel,
-	float deltaTime
-);
-extern void UI_Render();
-extern void UI_SubmitKey(
-	int key,
-	uint8_t down,
-	uint8_t shift,
-	uint8_t ctrl,
-	uint8_t alt,
-	uint8_t gui
-);
-extern void UI_SubmitText(char *text);
-extern void UI_SetFontTexture(void* texture);
-
-/* FAudioUI_ui.cpp Callbacks */
-
-void main_setupviewport(int fbw, int fbh, float dw, float dh)
+static void RenderDrawLists(ImDrawData *draw_data)
 {
-	glViewport(0, 0, fbw, fbh);
+	ImGuiIO& io = ImGui::GetIO();
+
+	/* Set up viewport/scissor rects (based on display size/scale */
+	int fb_width = (int) (io.DisplaySize.x * io.DisplayFramebufferScale.x);
+	int fb_height = (int) (io.DisplaySize.y * io.DisplayFramebufferScale.y);
+	if (fb_width == 0 || fb_height == 0)
+	{
+		/* No point in rendering to nowhere... */
+		return;
+	}
+	draw_data->ScaleClipRects(io.DisplayFramebufferScale);
+
+	glViewport(0, 0, fb_width, fb_height);
 	glLoadIdentity();
-	glOrtho(0.0f, dw, dh, 0.0f, -1.0f, 1.0f);
+	glOrtho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
+
+	/* Submit draw commands */
+	#define OFFSETOF(TYPE, ELEMENT) ((size_t) &(((TYPE*) NULL)->ELEMENT))
+	for (int cmd_l = 0; cmd_l < draw_data->CmdListsCount; cmd_l += 1)
+	{
+		const ImDrawList* cmd_list = draw_data->CmdLists[cmd_l];
+		const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;
+		const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
+
+		glVertexPointer(
+			2,
+			GL_FLOAT,
+			sizeof(ImDrawVert),
+			((const char*) vtx_buffer + OFFSETOF(ImDrawVert, pos))
+		);
+		glTexCoordPointer(
+			2,
+			GL_FLOAT,
+			sizeof(ImDrawVert),
+			((const char*) vtx_buffer + OFFSETOF(ImDrawVert, uv))
+		);
+		glColorPointer(
+			4,
+			GL_UNSIGNED_BYTE,
+			sizeof(ImDrawVert),
+			((const char*) vtx_buffer + OFFSETOF(ImDrawVert, col))
+		);
+
+		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i += 1)
+		{
+			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+
+			glBindTexture(
+				GL_TEXTURE_2D,
+				(GLuint) (intptr_t) pcmd->TextureId
+			);
+			glScissor(
+				(int) pcmd->ClipRect.x,
+				(int) (fb_height - pcmd->ClipRect.w),
+				(int) (pcmd->ClipRect.z - pcmd->ClipRect.x),
+				(int) (pcmd->ClipRect.w - pcmd->ClipRect.y)
+			);
+			glDrawElements(
+				GL_TRIANGLES,
+				pcmd->ElemCount,
+				sizeof(ImDrawIdx) == 2 ?
+					GL_UNSIGNED_SHORT :
+					GL_UNSIGNED_INT,
+				idx_buffer
+			);
+
+			idx_buffer += pcmd->ElemCount;
+		}
+	}
+	#undef OFFSETOF
 }
 
-void main_setupvertexattribs(
-	int stride,
-	const void *vtx,
-	const void *txc,
-	const void *clr
-) {
-	glVertexPointer(
-		2,
-		GL_FLOAT,
-		stride,
-		vtx
-	);
-	glTexCoordPointer(
-		2,
-		GL_FLOAT,
-		stride,
-		txc
-	);
-	glColorPointer(
-		4,
-		GL_UNSIGNED_BYTE,
-		stride,
-		clr
-	);
-}
-
-void main_draw(
-	void *texture,
-	int sx,
-	int sy,
-	int sw,
-	int sh,
-	int count,
-	int idxSize,
-	const void *idx
-) {
-	glBindTexture(GL_TEXTURE_2D, (GLuint) (intptr_t) texture);
-	glScissor(sx, sy, sw, sh);
-	glDrawElements(
-		GL_TRIANGLES,
-		count,
-		idxSize == 2 ?
-			GL_UNSIGNED_SHORT :
-			GL_UNSIGNED_INT,
-		idx
-	);
-}
-
-const char* main_getclipboardtext(void* userdata)
+static const char* GetClipboardText(void* userdata)
 {
 	return SDL_GetClipboardText();
 }
 
-void main_setclipboardtext(void* userdata, const char *text)
+static void SetClipboardText(void* userdata, const char *text)
 {
 	SDL_SetClipboardText(text);
 }
@@ -184,6 +154,7 @@ int main(int argc, char **argv)
 	uint8_t run = 1;
 
 	/* ImGui interop */
+	ImGuiContext *imContext;
 	SDL_Keymod kmod;
 	uint8_t mouseClicked[3];
 	int8_t mouseWheel;
@@ -242,30 +213,38 @@ int main(int argc, char **argv)
 	glMatrixMode(GL_PROJECTION);
 
 	/* ImGui setup */
-	UI_Init(
-		SDLK_TAB,
-		SDL_SCANCODE_LEFT,
-		SDL_SCANCODE_RIGHT,
-		SDL_SCANCODE_UP,
-		SDL_SCANCODE_DOWN,
-		SDL_SCANCODE_PAGEUP,
-		SDL_SCANCODE_PAGEDOWN,
-		SDL_SCANCODE_HOME,
-		SDL_SCANCODE_END,
-		SDLK_DELETE,
-		SDLK_BACKSPACE,
-		SDLK_RETURN,
-		SDLK_ESCAPE,
-		SDLK_a,
-		SDLK_c,
-		SDLK_v,
-		SDLK_x,
-		SDLK_y,
-		SDLK_z,
-		&pixels,
-		&tw,
-		&th
-	);
+	imContext = ImGui::CreateContext(NULL);
+	ImGui::SetCurrentContext(imContext);
+	ImGuiIO& io = ImGui::GetIO();
+
+	/* Keyboard */
+	io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;
+	io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
+	io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
+	io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
+	io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
+	io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
+	io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
+	io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
+	io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
+	io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
+	io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
+	io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
+	io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
+	io.KeyMap[ImGuiKey_A] = SDLK_a;
+	io.KeyMap[ImGuiKey_C] = SDLK_c;
+	io.KeyMap[ImGuiKey_V] = SDLK_v;
+	io.KeyMap[ImGuiKey_X] = SDLK_x;
+	io.KeyMap[ImGuiKey_Y] = SDLK_y;
+	io.KeyMap[ImGuiKey_Z] = SDLK_z;
+
+	/* Callbacks */
+	io.RenderDrawListsFn = RenderDrawLists;
+	io.GetClipboardTextFn = GetClipboardText;
+	io.SetClipboardTextFn = SetClipboardText;
+
+	/* Create texture for text rendering */
+	io.Fonts->GetTexDataAsAlpha8(&pixels, &tw, &th);
 	glGenTextures(1, &fontTexture);
 	glBindTexture(GL_TEXTURE_2D, fontTexture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -282,7 +261,7 @@ int main(int argc, char **argv)
 		GL_UNSIGNED_BYTE,
 		pixels
 	);
-	UI_SetFontTexture((void*) (intptr_t) fontTexture);
+	io.Fonts->TexID = (void*) (intptr_t) fontTexture;
 
 	while (run)
 	{
@@ -296,14 +275,13 @@ int main(int argc, char **argv)
 					evt.type == SDL_KEYUP	)
 			{
 				kmod = SDL_GetModState();
-				UI_SubmitKey(
-					evt.key.keysym.sym & ~SDLK_SCANCODE_MASK,
-					evt.type == SDL_KEYDOWN,
-					(kmod & KMOD_SHIFT) != 0,
-					(kmod & KMOD_CTRL) != 0,
-					(kmod & KMOD_ALT) != 0,
-					(kmod & KMOD_GUI) != 0
-				);
+				io.KeysDown[
+					evt.key.keysym.sym & ~SDLK_SCANCODE_MASK
+				] = evt.type == SDL_KEYDOWN;
+				io.KeyShift = (kmod & KMOD_SHIFT) != 0;
+				io.KeyCtrl = (kmod & KMOD_CTRL) != 0;
+				io.KeyAlt = (kmod & KMOD_ALT) != 0;
+				io.KeySuper = (kmod & KMOD_GUI) != 0;
 			}
 			else if (evt.type == SDL_MOUSEBUTTONDOWN)
 			{
@@ -319,7 +297,7 @@ int main(int argc, char **argv)
 			}
 			else if (evt.type == SDL_TEXTINPUT)
 			{
-				UI_SubmitText(evt.text.text);
+				io.AddInputCharactersUTF8(evt.text.text);
 			}
 		}
 
@@ -332,18 +310,32 @@ int main(int argc, char **argv)
 		mouseClicked[2] |= (mouseState * SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
 		tCur = SDL_GetTicks();
 
-		/* Update ImGui input, prep for the new frame */
-		SDL_ShowCursor(UI_Update(
-			ww, wh, dw, dh,
-			mx, my,
-			mouseClicked[0],
-			mouseClicked[1],
-			mouseClicked[2],
-			mouseWheel,
-			(tCur - tLast) / 1000.0f
-		) ? 0 : 1);
+		/* Set these every frame, we have a resizable window! */
+		io.DisplaySize = ImVec2((float) ww, (float) wh);
+		io.DisplayFramebufferScale = ImVec2(
+			ww > 0 ? ((float) dw / ww) : 0,
+			wh > 0 ? ((float) dh / wh) : 0
+		);
+
+		/* Time update */
+		io.DeltaTime = (tCur - tLast) / 1000.0f;
+		if (io.DeltaTime == 0.0f)
+		{
+			io.DeltaTime = 0.01f;
+		}
+
+		/* Input updates not done via UI_Submit*() */
+		io.MousePos = ImVec2((float) mx, (float) my);
+		io.MouseDown[0] = mouseClicked[0];
+		io.MouseDown[1] = mouseClicked[1];
+		io.MouseDown[2] = mouseClicked[2];
+		io.MouseWheel = mouseWheel;
+
+		/* BEGIN */
+		ImGui::NewFrame();
 
 		/* Reset some things now that input's updated */
+		SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
 		tLast = tCur;
 		mouseClicked[0] = 0;
 		mouseClicked[1] = 0;
@@ -357,7 +349,7 @@ int main(int argc, char **argv)
 		glDisable(GL_SCISSOR_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glEnable(GL_SCISSOR_TEST);
-		UI_Render();
+		ImGui::Render();
 		SDL_GL_SwapWindow(window);
 	}
 
@@ -365,7 +357,7 @@ int main(int argc, char **argv)
 	FAudioTool_Quit();
 
 	/* Clean up. We out. */
-	UI_Quit();
+	ImGui::DestroyContext(imContext);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDeleteTextures(1, &fontTexture);
 	SDL_GL_DeleteContext(context);
