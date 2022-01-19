@@ -35,19 +35,6 @@
 
 #include "imgui.h"
 
-/* GL Function typedefs */
-#define GL_PROC(ret, func, parms) \
-	typedef ret (GLAPIENTRY *glfntype_##func) parms;
-#include "glfuncs.h"
-#undef GL_PROC
-/* GL Function declarations */
-#define GL_PROC(ret, func, parms) \
-	glfntype_##func INTERNAL_##func;
-#include "glfuncs.h"
-#undef GL_PROC
-/* Remap GL function names to internal entry points */
-#include "glmacros.h"
-
 /* Defined by the tools using this UI framework */
 
 extern const char* TOOL_NAME;
@@ -62,20 +49,21 @@ extern void FAudioTool_Quit();
 static void RenderDrawLists(ImDrawData *draw_data)
 {
 	ImGuiIO& io = ImGui::GetIO();
+	SDL_Renderer *renderer = (SDL_Renderer*) io.BackendRendererUserData;
+	SDL_Rect rect;
 
 	/* Set up viewport/scissor rects (based on display size/scale */
-	int fb_width = (int) (io.DisplaySize.x * io.DisplayFramebufferScale.x);
-	int fb_height = (int) (io.DisplaySize.y * io.DisplayFramebufferScale.y);
-	if (fb_width == 0 || fb_height == 0)
+	rect.x = 0;
+	rect.y = 0;
+	rect.w = (int) (io.DisplaySize.x * io.DisplayFramebufferScale.x);
+	rect.h = (int) (io.DisplaySize.y * io.DisplayFramebufferScale.y);
+	if (rect.w == 0 || rect.h == 0)
 	{
 		/* No point in rendering to nowhere... */
 		return;
 	}
 	draw_data->ScaleClipRects(io.DisplayFramebufferScale);
-
-	glViewport(0, 0, fb_width, fb_height);
-	glLoadIdentity();
-	glOrtho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
+	SDL_RenderSetViewport(renderer, &rect);
 
 	/* Submit draw commands */
 	#define OFFSETOF(TYPE, ELEMENT) ((size_t) &(((TYPE*) NULL)->ELEMENT))
@@ -85,49 +73,34 @@ static void RenderDrawLists(ImDrawData *draw_data)
 		const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;
 		const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
 
-		glVertexPointer(
-			2,
-			GL_FLOAT,
-			sizeof(ImDrawVert),
-			((const char*) vtx_buffer + OFFSETOF(ImDrawVert, pos))
-		);
-		glTexCoordPointer(
-			2,
-			GL_FLOAT,
-			sizeof(ImDrawVert),
-			((const char*) vtx_buffer + OFFSETOF(ImDrawVert, uv))
-		);
-		glColorPointer(
-			4,
-			GL_UNSIGNED_BYTE,
-			sizeof(ImDrawVert),
-			((const char*) vtx_buffer + OFFSETOF(ImDrawVert, col))
-		);
-
 		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i += 1)
 		{
 			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+			const char *vtx = (const char*) (vtx_buffer + pcmd->VtxOffset);
+			const char *xy = vtx + OFFSETOF(ImDrawVert, pos);
+			const char *uv = vtx + OFFSETOF(ImDrawVert, uv);
+			const char *cl = vtx + OFFSETOF(ImDrawVert, col);
 
-			glBindTexture(
-				GL_TEXTURE_2D,
-				(GLuint) (intptr_t) pcmd->TextureId
-			);
-			glScissor(
-				(int) pcmd->ClipRect.x,
-				(int) (fb_height - pcmd->ClipRect.w),
-				(int) (pcmd->ClipRect.z - pcmd->ClipRect.x),
-				(int) (pcmd->ClipRect.w - pcmd->ClipRect.y)
-			);
-			glDrawElements(
-				GL_TRIANGLES,
+			rect.x = (int) pcmd->ClipRect.x;
+			rect.y = (int) pcmd->ClipRect.y;
+			rect.w = (int) (pcmd->ClipRect.z - pcmd->ClipRect.x);
+			rect.h = (int) (pcmd->ClipRect.w - pcmd->ClipRect.y);
+			SDL_RenderSetClipRect(renderer, &rect);
+
+			SDL_RenderGeometryRaw(
+				renderer,
+				(SDL_Texture*) pcmd->TextureId,
+				(const float*) xy,
+				(int) sizeof(ImDrawVert),
+				(const SDL_Color*) cl,
+				(int) sizeof(ImDrawVert),
+				(const float*) uv,
+				(int) sizeof(ImDrawVert),
+				cmd_list->VtxBuffer.Size - pcmd->VtxOffset,
+				idx_buffer + pcmd->IdxOffset,
 				pcmd->ElemCount,
-				sizeof(ImDrawIdx) == 2 ?
-					GL_UNSIGNED_SHORT :
-					GL_UNSIGNED_INT,
-				idx_buffer
+				sizeof(ImDrawIdx)
 			);
-
-			idx_buffer += pcmd->ElemCount;
 		}
 	}
 	#undef OFFSETOF
@@ -149,7 +122,7 @@ int main(int argc, char **argv)
 {
 	/* Basic stuff */
 	SDL_Window *window;
-	SDL_GLContext context;
+	SDL_Renderer *renderer;
 	SDL_Event evt;
 	uint8_t run = 1;
 
@@ -166,56 +139,26 @@ int main(int argc, char **argv)
 	/* ImGui texture */
 	unsigned char *pixels;
 	int tw, th;
-	GLuint fontTexture;
+	SDL_Texture *fontTexture;
 
 	/* Create window/context */
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	window = SDL_CreateWindow(
 		TOOL_NAME,
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
 		TOOL_WIDTH,
 		TOOL_HEIGHT,
-		(
-			SDL_WINDOW_OPENGL |
-			SDL_WINDOW_RESIZABLE |
-			SDL_WINDOW_ALLOW_HIGHDPI
-		)
+		SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 	);
-	context = SDL_GL_CreateContext(window);
-	SDL_GL_SetSwapInterval(1);
-
-	/* GL function loading */
-	#define GL_PROC(ret, func, parms) \
-		INTERNAL_##func = (glfntype_##func) SDL_GL_GetProcAddress(#func);
-	#include "glfuncs.h"
-	#undef GL_PROC
-
-	/* Initialize GL state */
-	glClearColor(114.0f / 255.0f, 144.0f / 255.0f, 154.0f / 255.0f, 1.0f);
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_SCISSOR_TEST);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glMatrixMode(GL_PROJECTION);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
+	SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
 
 	/* ImGui setup */
 	imContext = ImGui::CreateContext(NULL);
 	ImGui::SetCurrentContext(imContext);
 	ImGuiIO& io = ImGui::GetIO();
+	io.BackendRendererUserData = (void*) renderer;
 
 	/* Keyboard */
 	io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;
@@ -244,24 +187,17 @@ int main(int argc, char **argv)
 	io.SetClipboardTextFn = SetClipboardText;
 
 	/* Create texture for text rendering */
-	io.Fonts->GetTexDataAsAlpha8(&pixels, &tw, &th);
-	glGenTextures(1, &fontTexture);
-	glBindTexture(GL_TEXTURE_2D, fontTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_ALPHA,
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &tw, &th);
+	fontTexture = SDL_CreateTexture(
+		renderer,
+		SDL_PIXELFORMAT_RGBA32, /* FIXME: GL_ALPHA? */
+		SDL_TEXTUREACCESS_STATIC,
 		tw,
-		th,
-		0,
-		GL_ALPHA,
-		GL_UNSIGNED_BYTE,
-		pixels
+		th
 	);
-	io.Fonts->TexID = (void*) (intptr_t) fontTexture;
+	SDL_UpdateTexture(fontTexture, NULL, pixels, 4 * tw);
+	SDL_SetTextureBlendMode(fontTexture, SDL_BLENDMODE_BLEND);
+	io.Fonts->TexID = (void*) fontTexture;
 
 	while (run)
 	{
@@ -346,11 +282,9 @@ int main(int argc, char **argv)
 		FAudioTool_Update();
 
 		/* Draw, draw, draw! */
-		glDisable(GL_SCISSOR_TEST);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glEnable(GL_SCISSOR_TEST);
+		SDL_RenderClear(renderer);
 		ImGui::Render();
-		SDL_GL_SwapWindow(window);
+		SDL_RenderPresent(renderer);
 	}
 
 	/* Clean up if we need to */
@@ -358,9 +292,8 @@ int main(int argc, char **argv)
 
 	/* Clean up. We out. */
 	ImGui::DestroyContext(imContext);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glDeleteTextures(1, &fontTexture);
-	SDL_GL_DeleteContext(context);
+	SDL_DestroyTexture(fontTexture);
+	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
