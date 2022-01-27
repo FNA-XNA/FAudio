@@ -399,6 +399,12 @@ uint32_t FAudio_PlatformGetDeviceCount(void)
 		eConsole,
 		&device
 	);
+
+	if (hr == E_NOTFOUND) {
+		FAudio_PlatformRelease();
+		return 0;
+	}
+
 	FAudio_assert(!FAILED(hr) && "Failed to get default audio endpoint!");
 
 	IMMDevice_Release(device);
