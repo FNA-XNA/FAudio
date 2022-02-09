@@ -463,6 +463,14 @@ void FACT_INTERNAL_GetNextWave(
 			track->frequency,
 			cue->parentBank->parentEngine->audio->master->master.inputSampleRate
 		);
+
+		/* FIXME: For some reason the 0.67 Q Factor causes problems, but it's also
+		 * the only possible value until ~1 so just clamp it for now.
+		 */
+		trackInst->upcomingWave.baseQFactor = FAudio_min(
+			trackInst->upcomingWave.baseQFactor,
+			1.0f
+		);
 	}
 
 	/* Try to change loop counter at the very end */
