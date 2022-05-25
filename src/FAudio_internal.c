@@ -1932,7 +1932,7 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	midOffset = (voice->src.curBufferOffset % bsize);
 
 	/* Read in each block directly to the decode cache */
-	blockCache = (int16_t*) FAudio_alloca(bsize * sizeof(int16_t));
+	blockCache = (int16_t*) FAudio_alloca(bsize * 2 * sizeof(int16_t));
 	while (done < samples)
 	{
 		copy = FAudio_min(samples - done, bsize - midOffset);
