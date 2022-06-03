@@ -82,6 +82,7 @@ void FAudio_PlatformInit(
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
 	const char *driver;
+	SDL_version version;
 	int changes = 0;
 
 	FAudio_assert(mixFormat != NULL);
@@ -119,7 +120,8 @@ void FAudio_PlatformInit(
 	 * -flibit
 	 */
 	driver = SDL_GetCurrentAudioDriver();
-	if (SDL_strcmp(driver, "pulseaudio") == 0)
+	SDL_GetVersion(&version);
+	if (version.minor < 23 && SDL_strcmp(driver, "pulseaudio") == 0)
 	{
 		want.samples *= 2;
 		changes = SDL_AUDIO_ALLOW_SAMPLES_CHANGE;
