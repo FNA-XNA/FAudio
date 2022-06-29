@@ -377,6 +377,26 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 		channels = 2;
 	}
 
+	/* FIXME: SDL bug!
+	 * SDL_audio.c enforces specific channel counts for all platforms,
+	 * even if they support channel counts that could make sense (for
+	 * example, 2.1 is not supported), so we have to adjust it here.
+	 *
+	 * Note that we don't check > 8 since we do that in the spec check,
+	 * meaning only the environment variable can give us this and that
+	 * needs to break for validation purposes.
+	 *
+	 * -flibit
+	 */
+	if (channels == 3)
+	{
+		channels = 2;
+	}
+	if (channels == 5)
+	{
+		channels = 4;
+	}
+
 	/* Write the format, finally. */
 	WriteWaveFormatExtensible(
 		&details->OutputFormat,
