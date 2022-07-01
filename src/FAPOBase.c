@@ -392,15 +392,14 @@ void FAPOBase_SetParameters(
 	);
 
 	/* Increment parameter block index... */
-	fapo->m_uCurrentParametersIndex += 1;
-	if (fapo->m_uCurrentParametersIndex == 3)
-	{
-		fapo->m_uCurrentParametersIndex = 0;
+	if(fapo->m_pCurrentParametersInternal == fapo->m_pCurrentParameters) {
+		fapo->m_pCurrentParametersInternal = fapo->m_pParameterBlocks + (
+			fapo->m_uParameterBlockByteSize *
+			1
+		);
 	}
-	fapo->m_pCurrentParametersInternal = fapo->m_pParameterBlocks + (
-		fapo->m_uParameterBlockByteSize *
-		fapo->m_uCurrentParametersIndex
-	);
+
+	fapo->m_uCurrentParametersIndex = 1;
 
 	/* Copy to what will eventually be the next parameter update */
 	FAudio_memcpy(
@@ -433,13 +432,21 @@ void FAPOBase_OnSetParameters(
 uint8_t FAPOBase_ParametersChanged(FAPOBase *fapo)
 {
 	/* Internal will get updated when SetParameters is called */
-	return fapo->m_pCurrentParametersInternal != fapo->m_pCurrentParameters;
+	return fapo->m_uCurrentParametersIndex == 1;
 }
 
 uint8_t* FAPOBase_BeginProcess(FAPOBase *fapo)
 {
+	uint8_t* temp;
 	/* Set the latest block as "current", this is what Process will use now */
-	fapo->m_pCurrentParameters = fapo->m_pCurrentParametersInternal;
+	if(fapo->m_uCurrentParametersIndex == 1) {
+		temp = fapo->m_pCurrentParametersInternal;
+		fapo->m_pCurrentParameters = fapo->m_pCurrentParametersInternal;
+		fapo->m_pCurrentParametersInternal = temp;
+
+		fapo->m_uCurrentParametersIndex = 0;
+	}
+	
 	return fapo->m_pCurrentParameters;
 }
 
