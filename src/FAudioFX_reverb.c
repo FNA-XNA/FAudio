@@ -1407,6 +1407,22 @@ uint32_t FAudioFXReverb_LockForProcess(
 		fapo->base.pMalloc
 	);
 
+	/* Initialize the effect to a default setting */
+	if (fapo->apiVersion == 9)
+	{
+		DspReverb_SetParameters9(
+			&fapo->reverb,
+			(FAudioFXReverbParameters9*) fapo->base.m_pParameterBlocks
+		);
+	}
+	else
+	{
+		DspReverb_SetParameters(
+			&fapo->reverb,
+			(FAudioFXReverbParameters*) fapo->base.m_pParameterBlocks
+		);
+	}
+
 	/* Call	parent to do basic validation */
 	return FAPOBase_LockForProcess(
 		&fapo->base,
@@ -1666,16 +1682,6 @@ uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 		sizeof(FAudioFXReverbParameters) * 3
 	);
 	result->apiVersion = 7;
-	#define INITPARAMS(offset) \
-		FAudio_memcpy( \
-			params + sizeof(FAudioFXReverbParameters) * offset, \
-			&fxdefault, \
-			sizeof(FAudioFXReverbParameters) \
-		);
-	INITPARAMS(0)
-	INITPARAMS(1)
-	INITPARAMS(2)
-	#undef INITPARAMS
 
 	/* Initialize... */
 	FAudio_memcpy(
@@ -1710,6 +1716,13 @@ uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
 	ASSIGN_VT(Process);
 	result->base.Destructor = FAudioFXReverb_Free;
 	#undef ASSIGN_VT
+
+	/* Prepare the default parameters */
+	result->base.base.Initialize(
+		result,
+		&fxdefault,
+		sizeof(FAudioFXReverbParameters)
+	);
 
 	/* Finally. */
 	*ppApo = &result->base.base;
@@ -1839,16 +1852,6 @@ uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
 		sizeof(FAudioFXReverbParameters9) * 3
 	);
 	result->apiVersion = 9;
-	#define INITPARAMS(offset) \
-		FAudio_memcpy( \
-			params + sizeof(FAudioFXReverbParameters9) * offset, \
-			&fxdefault, \
-			sizeof(FAudioFXReverbParameters9) \
-		);
-	INITPARAMS(0)
-	INITPARAMS(1)
-	INITPARAMS(2)
-	#undef INITPARAMS
 
 	/* Initialize... */
 	FAudio_memcpy(
@@ -1883,6 +1886,13 @@ uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
 	ASSIGN_VT(Process);
 	result->base.Destructor = FAudioFXReverb_Free;
 	#undef ASSIGN_VT
+
+	/* Prepare the default parameters */
+	result->base.base.Initialize(
+		result,
+		&fxdefault,
+		sizeof(FAudioFXReverbParameters9)
+	);
 
 	/* Finally. */
 	*ppApo = &result->base.base;
