@@ -1015,35 +1015,35 @@ static inline float DspReverb_INTERNAL_Process_2_to_2(
 	size_t sample_count
 ) {
 	const float *in_end = samples_in + sample_count;
-	float in, in_ratio, early, late[2];
+	float in, early, late[2];
 	float squared_sum = 0;
 
 	while (samples_in < in_end)
 	{
 		/* Input - Combine 2 channels into 1 */
 		in = (samples_in[0] + samples_in[1]) / 2.0f;
-		in_ratio = in * reverb->dry_ratio;
-		samples_in += 2;
 
 		/* Early Reflections */
 		early = DspReverb_INTERNAL_ProcessEarly(reverb, in);
 
 		/* Reverberation with Wet/Dry Mix */
-		late[0] = DspReverb_INTERNAL_ProcessChannel(
+		late[0] = (DspReverb_INTERNAL_ProcessChannel(
 			reverb,
 			&reverb->channel[0],
 			early
-		);
+		) * reverb->wet_ratio) + samples_in[0] * reverb->dry_ratio;
 		late[1] = (DspReverb_INTERNAL_ProcessChannel(
 			reverb,
 			&reverb->channel[1],
 			early
-		) * reverb->wet_ratio) + in_ratio;
+		) * reverb->wet_ratio) + samples_in[1] * reverb->dry_ratio;
 		squared_sum += (late[0] * late[0]) + (late[1] * late[1]);
 
 		/* Output */
 		*samples_out++ = late[0];
 		*samples_out++ = late[1];
+
+		samples_in += 2;
 	}
 
 	return squared_sum;
