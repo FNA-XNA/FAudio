@@ -1503,6 +1503,24 @@ void FAudioFXReverb_Process(
 	FAudioFXReverbParameters *params;
 	uint8_t update_params = FAPOBase_ParametersChanged(&fapo->base);
 	float total;
+
+	params = (FAudioFXReverbParameters*) FAPOBase_BeginProcess(&fapo->base);
+
+	/* Update parameters before doing anything else  */
+	if (update_params)
+	{
+		if (fapo->apiVersion == 9)
+		{
+			DspReverb_SetParameters9(
+				&fapo->reverb,
+				(FAudioFXReverbParameters9*) params
+			);
+		}
+		else
+		{
+			DspReverb_SetParameters(&fapo->reverb, params);
+		}
+	}
 	
 	/* Handle disabled filter */
 	if (IsEnabled == 0)
@@ -1519,6 +1537,7 @@ void FAudioFXReverb_Process(
 			);
 		}
 
+		FAPOBase_EndProcess(&fapo->base);
 		return;
 	}
 	
@@ -1530,24 +1549,6 @@ void FAudioFXReverb_Process(
 			pInputProcessParameters->pBuffer,
 			pInputProcessParameters->ValidFrameCount * fapo->inBlockAlign
 		);
-	}
-
-	params = (FAudioFXReverbParameters*) FAPOBase_BeginProcess(&fapo->base);
-
-	/* Update parameters  */
-	if (update_params)
-	{
-		if (fapo->apiVersion == 9)
-		{
-			DspReverb_SetParameters9(
-				&fapo->reverb,
-				(FAudioFXReverbParameters9*) params
-			);
-		}
-		else
-		{
-			DspReverb_SetParameters(&fapo->reverb, params);
-		}
 	}
 
 	/* Run reverb effect */
