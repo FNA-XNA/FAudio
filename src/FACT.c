@@ -2175,11 +2175,13 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 	{
 		FACTNotification note;
 		note.type = FACTNOTIFICATIONTYPE_WAVESTOP;
+		note.wave.cueIndex = pWave->parentCue->index;
+		note.wave.pCue = pWave->parentCue;
+		note.wave.pSoundBank = pWave->parentCue->parentBank;
 		note.wave.pWave = pWave;
-		if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVESTOP)
-		{
-			note.pvContext = pWave->parentBank->parentEngine->wave_context;
-		}
+		note.wave.pWaveBank = pWave->parentBank;
+		note.pvContext = pWave->parentBank->parentEngine->wave_context;
+
 		pWave->parentBank->parentEngine->notificationCallback(&note);
 	}
 
