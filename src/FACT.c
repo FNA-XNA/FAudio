@@ -433,8 +433,16 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	uint8_t i;
 	FACTCue *cue;
 	LinkedList *list;
+	FACTNotification *note;
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
+
+	while (pEngine->wb_notifications_list)
+	{
+		note = (FACTNotification*) pEngine->wb_notifications_list->entry;
+		pEngine->notificationCallback(note);
+		LinkedList_RemoveEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pFree);
+	}
 
 	list = pEngine->sbList;
 	while (list != NULL)
@@ -495,6 +503,7 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	uint32_t dwAllocAttributes,
 	FACTWaveBank **ppWaveBank
 ) {
+	FACTNotification *note;
 	uint32_t retval;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	retval = FACT_INTERNAL_ParseWaveBank(
@@ -507,6 +516,14 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 		0,
 		ppWaveBank
 	);
+	if (pEngine->notifications & NOTIFY_WAVEBANKPREPARED)
+	{
+		note = (FACTNotification*) pEngine->pMalloc(sizeof(FACTNotification));
+		note->type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
+		note->waveBank.pWaveBank = *ppWaveBank;
+		note->pvContext = pEngine->wb_context;
+		LinkedList_AddEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pMalloc);
+	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
 }
@@ -516,6 +533,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	const FACTStreamingParameters *pParms,
 	FACTWaveBank **ppWaveBank
 ) {
+	FACTNotification *note;
 	uint32_t retval, packetSize;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	if (	pEngine->pReadFile == FACT_INTERNAL_DefaultReadFile &&
@@ -538,6 +556,14 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 		1,
 		ppWaveBank
 	);
+	if (pEngine->notifications & NOTIFY_WAVEBANKPREPARED)
+	{
+		note = (FACTNotification*) pEngine->pMalloc(sizeof(FACTNotification));
+		note->type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
+		note->waveBank.pWaveBank = *ppWaveBank;
+		note->pvContext = pEngine->wb_context;
+		LinkedList_AddEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pMalloc);
+	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
 }
