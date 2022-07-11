@@ -30,8 +30,8 @@
 
 #include <SDL.h>
 
-#if !SDL_VERSION_ATLEAST(2, 0, 9)
-#error "SDL version older than 2.0.9"
+#if !SDL_VERSION_ATLEAST(2, 24, 0)
+#error "SDL version older than 2.24.0"
 #endif /* !SDL_VERSION_ATLEAST */
 
 /* Mixer Thread */
@@ -52,8 +52,47 @@ static void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 
 /* Platform Functions */
 
+static void FAudio_INTERNAL_PrioritizeDirectSound()
+{
+	int numdrivers, i, wasapi, directsound;
+
+	if (SDL_GetHint("SDL_AUDIODRIVER") != NULL)
+	{
+		/* Already forced to something, ignore */
+		return;
+	}
+
+	/* Check to see if we have both Windows drivers in the list */
+	numdrivers = SDL_GetNumAudioDrivers();
+	wasapi = -1;
+	directsound = -1;
+	for (i = 0; i < numdrivers; i += 1)
+	{
+		const char *driver = SDL_GetAudioDriver(i);
+		if (SDL_strcmp(driver, "wasapi") == 0)
+		{
+			wasapi = i;
+		}
+		else if (SDL_strcmp(driver, "directsound") == 0)
+		{
+			directsound = i;
+		}
+	}
+
+	/* We force if and only if both drivers exist and wasapi is earlier */
+	if ((wasapi > -1) && (directsound > -1))
+	{
+		if (wasapi < directsound)
+		{
+			SDL_SetHint("SDL_AUDIODRIVER", "directsound");
+		}
+	}
+}
+
 void FAudio_PlatformAddRef()
 {
+	FAudio_INTERNAL_PrioritizeDirectSound();
+
 	/* SDL tracks ref counts for each subsystem */
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
@@ -81,9 +120,6 @@ void FAudio_PlatformInit(
 ) {
 	SDL_AudioDeviceID device;
 	SDL_AudioSpec want, have;
-	const char *driver;
-	SDL_version version;
-	int changes = 0;
 
 	FAudio_assert(mixFormat != NULL);
 	FAudio_assert(updateSize != NULL);
@@ -109,49 +145,6 @@ void FAudio_PlatformInit(
 		want.samples = want.freq / 100;
 	}
 
-	/* FIXME: SDL bug!
-	 * The PulseAudio backend does this annoying thing where it halves the
-	 * buffer size to prevent latency issues:
-	 *
-	 * https://hg.libsdl.org/SDL/file/df343364c6c5/src/audio/pulseaudio/SDL_pulseaudio.c#l577
-	 *
-	 * To get the _actual_ quantum size we want, we just double the buffer
-	 * size and allow SDL to set the quantum size back to normal.
-	 * -flibit
-	 */
-	driver = SDL_GetCurrentAudioDriver();
-	SDL_GetVersion(&version);
-	if (version.minor < 23 && SDL_strcmp(driver, "pulseaudio") == 0)
-	{
-		want.samples *= 2;
-		changes = SDL_AUDIO_ALLOW_SAMPLES_CHANGE;
-	}
-
-	/* FIXME: SDL bug!
-	 * The most common backends support varying samples values, but many
-	 * require a power-of-two value, which XAudio2 is not a fan of.
-	 * Normally SDL creates an intermediary stream to handle this, but this
-	 * has not been written yet:
-	 * https://bugzilla.libsdl.org/show_bug.cgi?id=5136
-	 * -flibit
-	 */
-	else if (	SDL_strcmp(driver, "emscripten") == 0 ||
-			SDL_strcmp(driver, "dsp") == 0	)
-	{
-		want.samples -= 1;
-		want.samples |= want.samples >> 1;
-		want.samples |= want.samples >> 2;
-		want.samples |= want.samples >> 4;
-		want.samples |= want.samples >> 8;
-		want.samples |= want.samples >> 16;
-		want.samples += 1;
-		SDL_Log(
-			"Forcing FAudio quantum to a power-of-two.\n"
-			"You don't actually want this, it's technically a bug:\n"
-			"https://bugzilla.libsdl.org/show_bug.cgi?id=5136"
-		);
-	}
-
 	/* Open the device (or at least try to) */
 iosretry:
 	device = SDL_OpenAudioDevice(
@@ -159,7 +152,7 @@ iosretry:
 		0,
 		&want,
 		&have,
-		changes
+		0
 	);
 	if (device == 0)
 	{
@@ -286,86 +279,26 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 		channels = 0;
 	}
 
-#if SDL_VERSION_ATLEAST(2, 0, 15)
+	/* Get the device format from the OS */
 	if (index == 0)
 	{
-		/* Okay, so go grab something from the liquor cabinet and get
-		 * ready, because this loop is a bit of a trip:
-		 *
-		 * We can't get the spec for the default device, because in
-		 * audio land a "default device" is a completely foreign idea,
-		 * some APIs support it but in reality you just have to pass
-		 * NULL as a driver string and the sound server figures out the
-		 * rest. In some psychotic universe the device can even be a
-		 * network address. No, seriously.
-		 *
-		 * So what do we do? Well, at least in my experience shipping
-		 * for the PC, the easiest thing to do is assume that the
-		 * highest spec in the list is what you should target, even if
-		 * it turns out that's not the default at the time you create
-		 * your device.
-		 *
-		 * Consider a laptop that has built-in stereo speakers, but is
-		 * connected to a home theater system with 5.1 audio. It may be
-		 * the case that the stereo audio is active, but the user may
-		 * at some point move audio to 5.1, at which point the server
-		 * will simply move the endpoint from underneath us and move our
-		 * output stream to the new device. At that point, you _really_
-		 * want to already be pushing out 5.1, because if not the user
-		 * will be stuck recreating the whole program, which on many
-		 * platforms is an instant cert failure. The tradeoff is that
-		 * you're potentially downmixing a 5.1 stream to stereo, which
-		 * is a bit wasteful, but presumably the hardware can handle it
-		 * if they were able to use a 5.1 system to begin with.
-		 *
-		 * So, we just aim for the highest channel count on the system.
-		 * We also do this with sample rate to a lesser degree; we try
-		 * to use a single device spec at a time, so it may be that
-		 * the sample rate you get isn't the highest from the list if
-		 * another device had a higher channel count.
-		 *
-		 * Lastly, if you set SDL_AUDIO_CHANNELS but not
-		 * SDL_AUDIO_FREQUENCY, we don't bother checking for a sample
-		 * rate, we fall through to the hardcoded value at the bottom of
-		 * this function.
-		 *
-		 * I'm so tired.
-		 *
-		 * -flibit
-		 */
-		if (channels <= 0)
+		if (SDL_GetDefaultAudioInfo(NULL, &spec, 0) < 0)
 		{
-			const uint8_t setRate = (rate <= 0);
-			devcount -= 1; /* Subtracting the default index */
-			for (i = 0; i < devcount; i += 1)
-			{
-				SDL_GetAudioDeviceSpec(i, 0, &spec);
-				if (	(spec.channels > channels) &&
-					(spec.channels <= 8)	)
-				{
-					channels = spec.channels;
-					if (setRate)
-					{
-						/* May be 0! That's okay! */
-						rate = spec.freq;
-					}
-				}
-			}
+			SDL_zero(spec);
 		}
 	}
 	else
 	{
 		SDL_GetAudioDeviceSpec(index - 1, 0, &spec);
-		if ((spec.freq > 0) && (rate <= 0))
-		{
-			rate = spec.freq;
-		}
-		if ((spec.channels > 0) && (channels <= 0))
-		{
-			channels = spec.channels;
-		}
 	}
-#endif /* SDL >= 2.0.15 */
+	if ((spec.freq > 0) && (rate <= 0))
+	{
+		rate = spec.freq;
+	}
+	if ((spec.channels > 0) && (channels <= 0))
+	{
+		channels = spec.channels;
+	}
 
 	/* If we make it all the way here with no format, hardcode a sane one */
 	if (rate <= 0)
@@ -375,26 +308,6 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	if (channels <= 0)
 	{
 		channels = 2;
-	}
-
-	/* FIXME: SDL bug!
-	 * SDL_audio.c enforces specific channel counts for all platforms,
-	 * even if they support channel counts that could make sense (for
-	 * example, 2.1 is not supported), so we have to adjust it here.
-	 *
-	 * Note that we don't check > 8 since we do that in the spec check,
-	 * meaning only the environment variable can give us this and that
-	 * needs to break for validation purposes.
-	 *
-	 * -flibit
-	 */
-	if (channels == 3)
-	{
-		channels = 2;
-	}
-	if (channels == 5)
-	{
-		channels = 4;
 	}
 
 	/* Write the format, finally. */
