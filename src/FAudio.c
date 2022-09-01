@@ -685,9 +685,13 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* For now we only support one allocated master voice at a time */
 	FAudio_assert(audio->master == NULL);
 
-	if (FAudio_GetDeviceDetails(audio, DeviceIndex, &details) != 0)
+	if (	InputChannels != FAUDIO_DEFAULT_CHANNELS ||
+		InputSampleRate != FAUDIO_DEFAULT_SAMPLERATE	)
 	{
-		return FAUDIO_E_INVALID_CALL;
+		if (FAudio_GetDeviceDetails(audio, DeviceIndex, &details) != 0)
+		{
+			return FAUDIO_E_INVALID_CALL;
+		}
 	}
 
 	*ppMasteringVoice = (FAudioMasteringVoice*) audio->pMalloc(sizeof(FAudioVoice));
