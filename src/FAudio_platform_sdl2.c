@@ -219,7 +219,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	const char *name, *envvar;
 	int channels, rate;
 	SDL_AudioSpec spec;
-	uint32_t devcount, i;
+	uint32_t devcount;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 
