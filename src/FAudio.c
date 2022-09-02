@@ -683,8 +683,8 @@ uint32_t FAudio_CreateMasteringVoice(
 	/* For now we only support one allocated master voice at a time */
 	FAudio_assert(audio->master == NULL);
 
-	if (	InputChannels != FAUDIO_DEFAULT_CHANNELS ||
-		InputSampleRate != FAUDIO_DEFAULT_SAMPLERATE	)
+	if (	InputChannels == FAUDIO_DEFAULT_CHANNELS ||
+		InputSampleRate == FAUDIO_DEFAULT_SAMPLERATE	)
 	{
 		FAudioDeviceDetails details;
 		if (FAudio_GetDeviceDetails(audio, DeviceIndex, &details) != 0)
