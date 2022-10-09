@@ -38,7 +38,6 @@
 extern const char* TOOL_NAME;
 extern int TOOL_WIDTH;
 extern int TOOL_HEIGHT;
-extern void FAudioTool_Init();
 extern void FAudioTool_Update();
 extern void FAudioTool_Quit();
 

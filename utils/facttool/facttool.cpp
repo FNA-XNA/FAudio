@@ -55,11 +55,6 @@ std::vector<bool> wavebankShows;
 
 std::vector<FACTWave*> waves;
 
-void FAudioTool_Init()
-{
-	/* Nothing to do... */
-}
-
 void FAudioTool_Quit()
 {
 	for (size_t i = 0; i < soundBanks.size(); i += 1)
