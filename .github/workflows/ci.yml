@@ -62,7 +62,7 @@ jobs:
     - name: Build (Release)
       run: ninja -C release
 
-  windows:
+  windows-msvc:
     name: Windows (MSVC)
     runs-on: windows-latest
     env:
@@ -117,3 +117,49 @@ jobs:
       run: |
         cd release
         cmake --build .
+
+  windows-mingw:
+    name: Windows (MinGW)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Set up MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: mingw32
+        install: >-
+          mingw-w64-i686-cc
+          mingw-w64-i686-cmake
+          mingw-w64-i686-ninja
+          mingw-w64-i686-pkg-config
+          mingw-w64-i686-SDL2
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build (Debug)
+      run: cmake --build debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build (Release)
+      run: cmake --build release
+
+    - name: CMake configure (Debug Wine)
+      run: cmake -B debugwine -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_WIN32=ON
+
+    - name: Build (Debug Wine)
+      run: cmake --build debugwine
+
+    - name: CMake configure (Release Wine)
+      run: cmake -B releasewine -G Ninja . -DCMAKE_BUILD_TYPE=Release -DPLATFORM_WIN32=ON
+
+    - name: Build (Release Wine)
+      run: cmake --build releasewine
