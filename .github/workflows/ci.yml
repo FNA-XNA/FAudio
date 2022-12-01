@@ -13,6 +13,7 @@ jobs:
 
     - name: Install dependencies
       run: |
+        sudo apt-add-repository ppa:savoury1/multimedia
         sudo apt-get update
         sudo apt-get install ninja-build libsdl2-dev
 
