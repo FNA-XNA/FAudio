@@ -1,0 +1,119 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install ninja-build libsdl2-dev
+
+    - name: CMake configure (Debug)
+      run: |
+        mkdir debug && cd debug
+        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: |
+        mkdir release && cd release
+        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build (Release)
+      run: ninja -C release
+
+  macos:
+    name: macOS (CMake)
+    runs-on: macos-latest
+    env:
+      CXXFLAGS: -I/usr/local/include/SDL2
+      LDFLAGS: -L/usr/local/lib
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: brew install ninja sdl2
+
+    - name: CMake configure (Debug)
+      run: |
+        mkdir debug && cd debug
+        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: |
+        mkdir release && cd release
+        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build (Release)
+      run: ninja -C release
+
+  windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+    env:
+      SDL_VERSION: 2.26.0
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Cache SDL
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-sdl
+      with:
+        path: C:\SDL
+        key: ${{ runner.os }}-build-${{ env.cache-name }}
+
+    - name: Download SDL if not cached
+      run: |
+        if (-Not (Test-Path C:\SDL))
+        {
+            Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-$env:SDL_VERSION/SDL2-devel-$env:SDL_VERSION-VC.zip" -o C:\SDL.zip
+            Expand-Archive C:\SDL.zip -DestinationPath C:\
+        }
+
+    - name: CMake configure (Debug)
+      run: |
+        mkdir debug
+        cd debug
+        $env:LDFLAGS =  "/LIBPATH:C:\SDL2-$env:SDL_VERSION\lib\x86 "
+        cmake -G "Visual Studio 17 2022" .. -DCMAKE_BUILD_TYPE=Debug `
+          -A Win32 `
+          -DSDL2_INCLUDE_DIRS="C:\SDL2-$env:SDL_VERSION\include" `
+          -DSDL2_LIBRARIES="SDL2;SDL2main" ..
+
+    - name: Build (Debug)
+      run: |
+        cd debug
+        cmake --build .
+
+    - name: CMake configure (Release)
+      run: |
+        mkdir release
+        cd release
+        $env:LDFLAGS =  "/LIBPATH:C:\SDL2-$env:SDL_VERSION\lib\x86 "
+        cmake -G "Visual Studio 17 2022" .. -DCMAKE_BUILD_TYPE=Release `
+          -A Win32 `
+          -DSDL2_INCLUDE_DIRS="C:\SDL2-$env:SDL_VERSION\include" `
+          -DSDL2_LIBRARIES="SDL2;SDL2main" ..
+
+    - name: Build (Release)
+      run: |
+        cd release
+        cmake --build .
