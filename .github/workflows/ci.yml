@@ -11,11 +11,15 @@ jobs:
       with:
         submodules: true
 
+    - name: Set up Homebrew
+      id: set-up-homebrew
+      uses: Homebrew/actions/setup-homebrew@master
+
     - name: Install dependencies
       run: |
-        sudo apt-add-repository ppa:savoury1/multimedia
         sudo apt-get update
-        sudo apt-get install ninja-build libsdl2-dev
+        sudo apt-get install ninja-build
+        brew install sdl2
 
     - name: CMake configure (Debug)
       run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
