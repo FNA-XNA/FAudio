@@ -17,17 +17,13 @@ jobs:
         sudo apt-get install ninja-build libsdl2-dev
 
     - name: CMake configure (Debug)
-      run: |
-        mkdir debug && cd debug
-        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: |
-        mkdir release && cd release
-        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
 
     - name: Build (Release)
       run: ninja -C release
@@ -47,17 +43,13 @@ jobs:
       run: brew install ninja sdl2
 
     - name: CMake configure (Debug)
-      run: |
-        mkdir debug && cd debug
-        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: |
-        mkdir release && cd release
-        cmake -G Ninja .. -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
 
     - name: Build (Release)
       run: ninja -C release
@@ -90,33 +82,25 @@ jobs:
 
     - name: CMake configure (Debug)
       run: |
-        mkdir debug
-        cd debug
         $env:LDFLAGS =  "/LIBPATH:C:\SDL2-$env:SDL_VERSION\lib\x86 "
-        cmake -G "Visual Studio 17 2022" .. -DCMAKE_BUILD_TYPE=Debug `
+        cmake -B debug -G "Visual Studio 17 2022" . -DCMAKE_BUILD_TYPE=Debug `
           -A Win32 `
           -DSDL2_INCLUDE_DIRS="C:\SDL2-$env:SDL_VERSION\include" `
-          -DSDL2_LIBRARIES="SDL2;SDL2main" ..
+          -DSDL2_LIBRARIES="SDL2;SDL2main"
 
     - name: Build (Debug)
-      run: |
-        cd debug
-        cmake --build .
+      run: cmake --build debug
 
     - name: CMake configure (Release)
       run: |
-        mkdir release
-        cd release
         $env:LDFLAGS =  "/LIBPATH:C:\SDL2-$env:SDL_VERSION\lib\x86 "
-        cmake -G "Visual Studio 17 2022" .. -DCMAKE_BUILD_TYPE=Release `
+        cmake -B release -G "Visual Studio 17 2022" . -DCMAKE_BUILD_TYPE=Release `
           -A Win32 `
           -DSDL2_INCLUDE_DIRS="C:\SDL2-$env:SDL_VERSION\include" `
-          -DSDL2_LIBRARIES="SDL2;SDL2main" ..
+          -DSDL2_LIBRARIES="SDL2;SDL2main"
 
     - name: Build (Release)
-      run: |
-        cd release
-        cmake --build .
+      run: cmake --build release
 
   windows-mingw:
     name: Windows (MinGW)
