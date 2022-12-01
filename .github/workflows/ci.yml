@@ -148,3 +148,17 @@ jobs:
 
     - name: Build (Release Wine)
       run: cmake --build releasewine
+
+  freebsd:
+    runs-on: macos-12
+    name: FreeBSD
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      uses: vmactions/freebsd-vm@v0
+      with:
+        usesh: true
+        prepare: pkg install -y cmake ninja sdl2
+        run: |
+          cmake -B build -G Ninja .
+          cmake --build build --verbose -- -j`sysctl -n hw.ncpu`
