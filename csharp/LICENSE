@@ -1,6 +1,6 @@
 /* FAudio# - C# Wrapper for FAudio
  *
- * Copyright (c) 2018-2022 Ethan Lee.
+ * Copyright (c) 2018-2023 Ethan Lee.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
