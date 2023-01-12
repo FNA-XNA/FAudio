@@ -290,6 +290,7 @@ uint32_t FACTAudioEngine_Initialize(
 			NULL
 		) != 0) {
 			FAudio_Release(pEngine->audio);
+			FAudio_PlatformUnlockMutex(pEngine->apiLock);
 			return FAUDIO_E_INVALID_CALL;
 		}
 	}
