@@ -1419,16 +1419,13 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		FACTCue_Destroy(pSoundBank->cueList);
 	}
 
-	if (pSoundBank->parentEngine != NULL)
-	{
-		/* Remove this SoundBank from the Engine list */
-		LinkedList_RemoveEntry(
-			&pSoundBank->parentEngine->sbList,
-			pSoundBank,
-			pSoundBank->parentEngine->sbLock,
-			pSoundBank->parentEngine->pFree
-		);
-	}
+	/* Remove this SoundBank from the Engine list */
+	LinkedList_RemoveEntry(
+		&pSoundBank->parentEngine->sbList,
+		pSoundBank,
+		pSoundBank->parentEngine->sbLock,
+		pSoundBank->parentEngine->pFree
+	);
 
 	/* SoundBank Name */
 	pSoundBank->parentEngine->pFree(pSoundBank->name);
@@ -1595,16 +1592,13 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		}
 	}
 
-	if (pWaveBank->parentEngine != NULL)
-	{
-		/* Remove this WaveBank from the Engine list */
-		LinkedList_RemoveEntry(
-			&pWaveBank->parentEngine->wbList,
-			pWaveBank,
-			pWaveBank->parentEngine->wbLock,
-			pWaveBank->parentEngine->pFree
-		);
-	}
+	/* Remove this WaveBank from the Engine list */
+	LinkedList_RemoveEntry(
+		&pWaveBank->parentEngine->wbList,
+		pWaveBank,
+		pWaveBank->parentEngine->wbLock,
+		pWaveBank->parentEngine->pFree
+	);
 
 	/* Free everything, finally. */
 	pWaveBank->parentEngine->pFree(pWaveBank->name);
