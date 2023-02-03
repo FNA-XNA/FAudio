@@ -268,6 +268,7 @@ endif()
 # tests/ Folder
 if(BUILD_TESTS)
 	add_executable(faudio_tests tests/xaudio2.c)
+	target_compile_definitions(faudio_tests PRIVATE _DEFAULT_SOURCE _BSD_SOURCE)
 	target_link_libraries(faudio_tests PRIVATE FAudio)
 endif()
 
