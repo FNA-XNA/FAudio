@@ -249,6 +249,10 @@ if(BUILD_UTILS)
 		utils/testvolumemeter/testvolumemeter.cpp
 	)
 	target_link_libraries(testvolumemeter PRIVATE uicommon wavs)
+	add_executable(voicepool
+		utils/voicepool/voicepool.cpp
+	)
+	target_link_libraries(voicepool PRIVATE uicommon wavs)
 endif()
 
 # define install directories
