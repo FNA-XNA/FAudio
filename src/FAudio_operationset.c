@@ -169,7 +169,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 	break;
 
 	case FAUDIOOP_SETFILTERPARAMETERS:
-		FAudioVoice_SetFilterParameters(
+		FAudioVoice_SetFilterParametersEXT(
 			op->Voice,
 			&op->Data.SetFilterParameters.Parameters,
 			FAUDIO_COMMIT_NOW
@@ -177,7 +177,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 	break;
 
 	case FAUDIOOP_SETOUTPUTFILTERPARAMETERS:
-		FAudioVoice_SetOutputFilterParameters(
+		FAudioVoice_SetOutputFilterParametersEXT(
 			op->Voice,
 			op->Data.SetOutputFilterParameters.pDestinationVoice,
 			&op->Data.SetOutputFilterParameters.Parameters,

@@ -1704,7 +1704,7 @@ uint32_t FAudioVoice_SetFilterParameters(
 	return FAudioVoice_SetFilterParametersEXT(voice, &ext_parameters, OperationSet);
 }
 
-void FAudioVoice_GetFilterParametersEXT (
+void FAudioVoice_GetFilterParametersEXT(
 	FAudioVoice *voice,
 	FAudioFilterParametersEXT *pParameters
 ) {
