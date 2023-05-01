@@ -244,7 +244,7 @@ typedef struct FAudioFilterParametersEXT
 	FAudioFilterType Type;
 	float Frequency;	/* [0, FAUDIO_MAX_FILTER_FREQUENCY] */
 	float OneOverQ;		/* [0, FAUDIO_MAX_FILTER_ONEOVERQ] */
-	float WetDryMix;    /* [0, 1] */
+	float WetDryMix;	/* [0, 1] */
 } FAudioFilterParametersEXT;
 
 typedef struct FAudioBuffer
