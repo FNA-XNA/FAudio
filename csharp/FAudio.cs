@@ -2391,40 +2391,26 @@ public static class FAudio
 
 	/* Because, again, why not? */
 
-	const int QOA_LMS_LEN = 4;
-	const int QOA_MAX_CHANNELS = 8;
-
-	[StructLayout(LayoutKind.Sequential)]
-	public unsafe struct qoa_lms_t
-	{
-		public fixed int history[QOA_LMS_LEN];
-		public fixed int weights[QOA_LMS_LEN];
-	}
-
-	[StructLayout(LayoutKind.Sequential)]
-	public unsafe struct qoa_desc
-	{
-		public int channels;
-		public int samplerate;
-		public int samples;
-
-		public fixed int lms[2 * QOA_LMS_LEN * QOA_MAX_CHANNELS];
-	}
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe IntPtr qoa_open(char *bytes, int size);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe int qoa_max_frame_size(char* bytes, int size, qoa_desc* qoa);
+	public extern static unsafe void qoa_attributes(IntPtr qoa, out uint frame_size, out uint channels, out uint samplerate, out uint total_samples_per_channel);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe int qoa_decode_header(char* bytes, int size, qoa_desc* qoa);
+	public extern static unsafe uint qoa_decode_next_frame(IntPtr qoa, short *sample_data);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe int qoa_decode_frame(char* bytes, uint size, qoa_desc* qoa, out short sample_data, out uint frame_len);
+	public extern static unsafe void qoa_seek_frame(IntPtr qoa, int frame_index);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe short* qoa_decode(char* bytes, int size, qoa_desc* file);
+	public extern static unsafe short* qoa_load(IntPtr qoa);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe void qoa_free(short* sample_data);
+	public extern static unsafe void qoa_free(short *sample_data);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe void qoa_close(IntPtr qoa);
 
 	#endregion
 }
