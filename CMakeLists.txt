@@ -79,6 +79,7 @@ add_library(FAudio
 	src/FAudio_internal.h
 	src/stb.h
 	src/stb_vorbis.h
+	src/qoa_decoder.h
 	# Source Files
 	src/F3DAudio.c
 	src/FACT3D.c

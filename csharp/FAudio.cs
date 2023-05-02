@@ -68,7 +68,7 @@ public static class FAudio
 		}
 		return buffer;
 	}
-	
+
 	#endregion
 
 	#region FAudio API
@@ -2383,6 +2383,48 @@ public static class FAudio
 		float[][] buffer,
 		int num_samples
 	);
+
+	#endregion
+
+
+	#region qoa
+
+	/* Because, again, why not? */
+
+	const int QOA_LMS_LEN = 4;
+	const int QOA_MAX_CHANNELS = 8;
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct qoa_lms_t
+	{
+		public fixed int history[QOA_LMS_LEN];
+		public fixed int weights[QOA_LMS_LEN];
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct qoa_desc
+	{
+		public int channels;
+		public int samplerate;
+		public int samples;
+
+		public fixed int lms[2 * QOA_LMS_LEN * QOA_MAX_CHANNELS];
+	}
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe int qoa_max_frame_size(char* bytes, int size, qoa_desc* qoa);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe int qoa_decode_header(char* bytes, int size, qoa_desc* qoa);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe int qoa_decode_frame(char* bytes, uint size, qoa_desc* qoa, out short sample_data, out uint frame_len);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe short* qoa_decode(char* bytes, int size, qoa_desc* file);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe void qoa_free(short* sample_data);
 
 	#endregion
 }

@@ -39,6 +39,7 @@
     <ClInclude Include="..\src\FAudio_internal.h" />
     <ClInclude Include="..\src\stb.h" />
     <ClInclude Include="..\src\stb_vorbis.h" />
+	<ClInclude Include="..\src\qoa_decoder.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\F3DAudio.c" />
