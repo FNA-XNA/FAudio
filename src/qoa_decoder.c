@@ -125,19 +125,8 @@ dequantized residual forms the final output sample.
 
 */
 
-
-
-/* -----------------------------------------------------------------------------
-	Header - Public functions */
-
-#ifndef QOA_H
-#define QOA_H
-
 #include "FAudio_internal.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "qoa_decoder.h"
 
 #define QOA_MIN_FILESIZE 16
 #define QOA_MAX_CHANNELS 8
@@ -168,31 +157,12 @@ typedef struct {
 
 typedef struct {
 	unsigned char *bytes;
-	int size;
+	unsigned int size;
 	unsigned int offset;
 	unsigned int frame_size;
+	unsigned short samples_per_channel_per_frame;
 	qoa_desc qoa;
 } qoa_data;
-
-typedef struct qoa qoa;
-
-/* NOTE: this API only supports "static" type QOA files. "streaming" type files are not supported!! */
-FAUDIOAPI qoa *qoa_open(unsigned char *bytes, int size);
-FAUDIOAPI void qoa_attributes(qoa *qoa, unsigned int *frame_size, unsigned int *channels, unsigned int *samplerate, unsigned int *total_samples_per_channel);
-FAUDIOAPI unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data); /* decode the next frame into a preallocated buffer */
-FAUDIOAPI void qoa_seek_frame(qoa *qoa, int frame_index);
-FAUDIOAPI short *qoa_load(qoa *qoa); /* return the entire qoa data decoded */
-FAUDIOAPI void qoa_free(short *sample_data); /* free data from qoa_free */
-FAUDIOAPI void qoa_close(qoa *qoa);
-
-#ifdef __cplusplus
-}
-#endif
-#endif /* QOA_H */
-
-
-/* -----------------------------------------------------------------------------
-	Implementation */
 
 typedef unsigned long long qoa_uint64_t;
 
@@ -375,6 +345,7 @@ static unsigned int qoa_decode_header(qoa_data *data) {
 	qoa_uint64_t frame_header = qoa_read_u64(data->bytes, &p);
 	data->qoa.channels   = (frame_header >> 56) & 0x0000ff;
 	data->qoa.samplerate = (frame_header >> 32) & 0xffffff;
+	data->samples_per_channel_per_frame = (frame_header >> 16) & 0x00ffff;
 
 	if (data->qoa.channels == 0 || data->qoa.channels == 0 || data->qoa.samplerate == 0) {
 		return 0;
@@ -383,30 +354,35 @@ static unsigned int qoa_decode_header(qoa_data *data) {
 	return 8;
 }
 
-qoa *qoa_open(unsigned char *bytes, int size)
+qoa *qoa_open(unsigned char *bytes, unsigned int size)
 {
 	qoa_data *data = (qoa_data*) FAudio_malloc(sizeof(qoa_data));
 	data->bytes = (unsigned char*) FAudio_malloc(size);
 	FAudio_memcpy(data->bytes, bytes, size);
 	data->size = size;
 	data->offset = 0;
-	qoa_decode_header(data);
+	if (qoa_decode_header(data) == 0)
+	{
+		FAudio_free(data->bytes);
+		FAudio_free(data);
+		return 0;
+	}
 	data->frame_size = QOA_FRAME_SIZE(data->qoa.channels, QOA_SLICES_PER_FRAME);
 	return (qoa*) data;
 }
 
 void qoa_attributes(
 	qoa *qoa,
-	unsigned int *frame_size,
 	unsigned int *channels,
 	unsigned int *samplerate,
-	unsigned int *total_samples_per_channels
+	unsigned int *samples_per_channel_per_frame,
+	unsigned int *total_samples_per_channel
 ) {
 	qoa_data *data = (qoa_data*) qoa;
-	*frame_size = data->frame_size;
 	*channels = data->qoa.channels;
 	*samplerate = data->qoa.samplerate;
-	*total_samples_per_channels = data->qoa.samples;
+	*samples_per_channel_per_frame = data->samples_per_channel_per_frame;
+	*total_samples_per_channel = data->qoa.samples;
 }
 
 unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data) {
@@ -420,14 +396,14 @@ unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data) {
 
 	/* Read and verify the frame header */
 	qoa_uint64_t frame_header = qoa_read_u64(data->bytes, &data->offset);
-	int channels   = (frame_header >> 56) & 0x0000ff;
-	int samplerate = (frame_header >> 32) & 0xffffff;
-	int samples    = (frame_header >> 16) & 0x00ffff;
-	int frame_size = (frame_header      ) & 0x00ffff;
+	unsigned int channels   = (frame_header >> 56) & 0x0000ff;
+	unsigned int samplerate = (frame_header >> 32) & 0xffffff;
+	unsigned int samples    = (frame_header >> 16) & 0x00ffff;
+	unsigned int frame_size = (frame_header      ) & 0x00ffff;
 
-	int data_size = frame_size - 8 - QOA_LMS_LEN * 4 * channels;
-	int num_slices = data_size / 8;
-	int max_total_samples = num_slices * QOA_SLICE_LEN;
+	unsigned int data_size = frame_size - 8 - QOA_LMS_LEN * 4 * channels;
+	unsigned int num_slices = data_size / 8;
+	unsigned int max_total_samples = num_slices * QOA_SLICE_LEN;
 
 	if (
 		channels != data->qoa.channels ||
@@ -439,7 +415,7 @@ unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data) {
 	}
 
 	/* Read the LMS state: 4 x 2 bytes history, 4 x 2 bytes weights per channel */
-	for (int c = 0; c < channels; c++) {
+	for (unsigned int c = 0; c < channels; c++) {
 		qoa_uint64_t history = qoa_read_u64(data->bytes, &data->offset);
 		qoa_uint64_t weights = qoa_read_u64(data->bytes, &data->offset);
 		for (int i = 0; i < QOA_LMS_LEN; i++) {
@@ -451,8 +427,8 @@ unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data) {
 	}
 
 	/* Decode all slices for all channels in this frame */
-	for (int sample_index = 0; sample_index < samples; sample_index += QOA_SLICE_LEN) {
-		for (int c = 0; c < channels; c++) {
+	for (unsigned int sample_index = 0; sample_index < samples; sample_index += QOA_SLICE_LEN) {
+		for (unsigned int c = 0; c < channels; c++) {
 			qoa_uint64_t slice = qoa_read_u64(data->bytes, &data->offset);
 
 			int scalefactor = (slice >> 60) & 0xf;
@@ -483,7 +459,7 @@ void qoa_seek_frame(qoa *qoa, int frame_index) {
 
 short *qoa_load(qoa *qoa) {
 	qoa_data* data = (qoa_data *) qoa;
-	int32_t i;
+	uint32_t i;
 
 	/* Calculate the required size of the sample buffer and allocate */
 	int total_samples = data->qoa.samples * data->qoa.channels;
