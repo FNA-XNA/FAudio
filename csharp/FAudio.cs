@@ -2404,10 +2404,7 @@ public static class FAudio
 	public extern static unsafe void qoa_seek_frame(IntPtr qoa, int frame_index);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe short* qoa_load(IntPtr qoa);
-
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe void qoa_free(short *sample_data);
+	public extern static unsafe void qoa_decode_entire(IntPtr qoa, short *sample_data);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public extern static unsafe void qoa_close(IntPtr qoa);

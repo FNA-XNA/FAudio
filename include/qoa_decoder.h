@@ -38,8 +38,7 @@ FAUDIOAPI qoa *qoa_open(unsigned char *bytes, unsigned int size);
 FAUDIOAPI void qoa_attributes(qoa *qoa, unsigned int *channels, unsigned int *samplerate, unsigned int *samples_per_channel_per_frame, unsigned int *total_samples_per_channel);
 FAUDIOAPI unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data); /* decode the next frame into a preallocated buffer */
 FAUDIOAPI void qoa_seek_frame(qoa *qoa, int frame_index);
-FAUDIOAPI short *qoa_load(qoa *qoa); /* return the entire qoa data decoded */
-FAUDIOAPI void qoa_free(short *sample_data); /* free data from qoa_free */
+FAUDIOAPI void qoa_decode_entire(qoa *qoa, short *sample_data); /* fill a buffer with the entire qoa data decoded */
 FAUDIOAPI void qoa_close(qoa *qoa);
 
 #ifdef __cplusplus

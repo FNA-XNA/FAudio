@@ -461,13 +461,12 @@ void qoa_seek_frame(qoa *qoa, int frame_index) {
 	data->frame_index = frame_index;
 }
 
-short *qoa_load(qoa *qoa) {
+void qoa_decode_entire(qoa *qoa, short *sample_data) {
 	qoa_data* data = (qoa_data *) qoa;
 	uint32_t i;
 
 	/* Calculate the required size of the sample buffer and allocate */
 	int total_samples = data->qoa.samples * data->qoa.channels;
-	short *sample_data = (short*) FAudio_malloc(total_samples * sizeof(short));
 
 	unsigned int frame_count = (data->size - 64) / data->frame_size;
 	unsigned int sample_index = 0;
@@ -479,12 +478,6 @@ short *qoa_load(qoa *qoa) {
 		sample_count = qoa_decode_next_frame(qoa, sample_ptr);
 		sample_index += sample_count;
 	}
-
-	return sample_data;
-}
-
-void qoa_free(short *sample_data) {
-	FAudio_free(sample_data);
 }
 
 void qoa_close(qoa *qoa)
