@@ -2392,7 +2392,7 @@ public static class FAudio
 	/* Because, again, why not? */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static unsafe IntPtr qoa_open(char *bytes, uint size);
+	public extern static unsafe IntPtr qoa_open_memory(char *bytes, uint size);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public extern static unsafe void qoa_attributes(IntPtr qoa, out uint channels, out uint samplerate, out uint samples_per_channel_per_frame, out uint total_samples_per_channel);
