@@ -117,6 +117,9 @@ static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferCon
 			activeVorbisSongInfo.sample_rate * activeVorbisSongInfo.channels
 		);
 		buffer.AudioBytes = decoded * activeVorbisSongInfo.channels * sizeof(float);
+		buffer.Flags = (decoded < activeVorbisSongInfo.sample_rate) ?
+			FAUDIO_END_OF_STREAM :
+			0;
 	}
 	else
 	{
@@ -126,15 +129,16 @@ static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferCon
 			(short*) songCache
 		);
 		buffer.AudioBytes = decoded * qoaChannels * sizeof(short);
+		buffer.Flags = (decoded < qoaSamplesPerChannelPerFrame) ?
+			FAUDIO_END_OF_STREAM :
+			0;
 	}
 
 	if (decoded == 0)
 	{
 		return;
 	}
-	buffer.Flags = (decoded < activeVorbisSongInfo.sample_rate) ?
-		FAUDIO_END_OF_STREAM :
-		0;
+
 	buffer.pAudioData = songCache;
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = decoded;
@@ -275,7 +279,7 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	}
 	else
 	{
-		return (qoaTotalSamplesPerChannel * qoaChannels) / qoaSampleRate;
+		return qoaTotalSamplesPerChannel / qoaSampleRate;
 	}
 }
 
@@ -314,7 +318,7 @@ FAUDIOAPI void XNA_SetSongVolume(float volume)
 FAUDIOAPI uint32_t XNA_GetSongEnded()
 {
 	FAudioVoiceState state;
-	if (songVoice == NULL || activeVorbisSong == NULL)
+	if (songVoice == NULL || (activeVorbisSong == NULL && activeQoaSong == NULL))
 	{
 		return 1;
 	}
