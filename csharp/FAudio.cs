@@ -68,7 +68,7 @@ public static class FAudio
 		}
 		return buffer;
 	}
-	
+
 	#endregion
 
 	#region FAudio API
@@ -2383,6 +2383,35 @@ public static class FAudio
 		float[][] buffer,
 		int num_samples
 	);
+
+	#endregion
+
+	#region qoa
+
+	/* Because, again, why not? */
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe IntPtr qoa_open_from_memory(char *bytes, uint size, int free_on_close);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static IntPtr qoa_open_from_filename(
+		[MarshalAs(UnmanagedType.LPWStr)] string filename
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe void qoa_attributes(IntPtr qoa, out uint channels, out uint samplerate, out uint samples_per_channel_per_frame, out uint total_samples_per_channel);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe uint qoa_decode_next_frame(IntPtr qoa, short *sample_data);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe void qoa_seek_frame(IntPtr qoa, int frame_index);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe void qoa_decode_entire(IntPtr qoa, short *sample_data);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public extern static unsafe void qoa_close(IntPtr qoa);
 
 	#endregion
 }
