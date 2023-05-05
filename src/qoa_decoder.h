@@ -362,7 +362,7 @@ static unsigned int qoa_decode_header(qoa_data *data) {
 
 qoa *qoa_open_from_memory(unsigned char *bytes, unsigned int size, int free_on_close)
 {
-	qoa_data *data = (qoa_data*) FAudio_malloc(sizeof(qoa_data));
+	qoa_data *data = (qoa_data*) malloc(sizeof(qoa_data));
 	data->bytes = bytes;
 	data->size = size;
 	data->frame_index = 0;
@@ -384,7 +384,7 @@ static qoa *qoa_open_from_file(FILE *file, int free_on_close)
 	len = (unsigned int) (ftell(file) - start);
 	fseek(file, start, SEEK_SET);
 
-	unsigned char *bytes = FAudio_malloc(len);
+	unsigned char *bytes = malloc(len);
 	fread(bytes, 1, len, file);
 	fclose(file);
 
@@ -518,7 +518,7 @@ void qoa_close(qoa *qoa)
 	qoa_data *data = (qoa_data*) qoa;
 	if (data->free_on_close)
 	{
-		FAudio_free(data->bytes);
+		free(data->bytes);
 	}
-	FAudio_free(qoa);
+	free(qoa);
 }
