@@ -29,7 +29,6 @@
     <ClCompile Include="..\src\FAPOFX_echo.c" />
     <ClCompile Include="..\src\XNA_Song.c" />
     <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
-	<ClCompile Include="..\src\qoa_decoder.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\F3DAudio.h" />
@@ -42,7 +41,6 @@
     <ClInclude Include="..\include\FAPOFX.h" />
     <ClInclude Include="..\src\FAudio_internal.h" />
     <ClInclude Include="..\src\FACT_internal.h" />
-	<ClInclude Include="..\src\qoa_decoder.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{208f0a10-10fe-4c43-990f-3569169b1083}</ProjectGuid>

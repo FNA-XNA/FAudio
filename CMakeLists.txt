@@ -74,12 +74,12 @@ add_library(FAudio
 	include/FAPO.h
 	include/FAudioFX.h
 	include/FAudio.h
-	include/qoa_decoder.h
 	# Internal Headers
 	src/FACT_internal.h
 	src/FAudio_internal.h
 	src/stb.h
 	src/stb_vorbis.h
+	src/qoa_decoder.h
 	# Source Files
 	src/F3DAudio.c
 	src/FACT3D.c
@@ -99,7 +99,6 @@ add_library(FAudio
 	src/FAudio_operationset.c
 	src/FAudio_platform_sdl2.c
 	src/FAudio_platform_win32.c
-	src/qoa_decoder.c
 	# Optional source files
 	src/XNA_Song.c
 )

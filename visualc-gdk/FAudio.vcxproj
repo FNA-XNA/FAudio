@@ -60,7 +60,6 @@
     <ClCompile Include="..\src\FAudio_operationset.c" />
     <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
     <ClCompile Include="..\src\FAudio_platform_win32.c" />
-	<ClCompile Include="..\src\qoa_decoder.c" />
     <ClCompile Include="..\src\XNA_Song.c" />
   </ItemGroup>
   <ItemGroup>

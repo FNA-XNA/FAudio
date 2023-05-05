@@ -125,9 +125,6 @@ dequantized residual forms the final output sample.
 
 */
 
-#include "FAudio_internal.h"
-#include "qoa_decoder.h"
-
 #define QOA_MIN_FILESIZE 16
 #define QOA_MAX_CHANNELS 8
 
@@ -161,11 +158,23 @@ typedef struct {
 	unsigned int frame_index;
 	unsigned int frame_size;
 	unsigned short samples_per_channel_per_frame;
+	int free_on_close;
 	qoa_desc qoa;
 } qoa_data;
 
 typedef unsigned long long qoa_uint64_t;
 
+typedef struct qoa qoa;
+
+/* NOTE: this API only supports "static" type QOA files. "streaming" type files are not supported!! */
+FAUDIOAPI qoa *qoa_open_memory(unsigned char *bytes, unsigned int size, int free_on_close);
+FAUDIOAPI qoa *qoa_open_file(FILE *file, int free_on_close);
+FAUDIOAPI qoa *qoa_open_filename(const char *filename);
+FAUDIOAPI void qoa_attributes(qoa *qoa, unsigned int *channels, unsigned int *samplerate, unsigned int *samples_per_channel_per_frame, unsigned int *total_samples_per_channel);
+FAUDIOAPI unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data); /* decode the next frame into a preallocated buffer */
+FAUDIOAPI void qoa_seek_frame(qoa *qoa, int frame_index);
+FAUDIOAPI void qoa_decode_entire(qoa *qoa, short *sample_data); /* fill a buffer with the entire qoa data decoded */
+FAUDIOAPI void qoa_close(qoa *qoa);
 
 /* The quant_tab provides an index into the dequant_tab for residuals in the
 range of -8 .. 8. It maps this range to just 3bits and becomes less accurate at
@@ -352,19 +361,46 @@ static unsigned int qoa_decode_header(qoa_data *data) {
 	return 8;
 }
 
-qoa *qoa_open_memory(unsigned char *bytes, unsigned int size)
+qoa *qoa_open_memory(unsigned char *bytes, unsigned int size, int free_on_close)
 {
 	qoa_data *data = (qoa_data*) FAudio_malloc(sizeof(qoa_data));
 	data->bytes = bytes;
 	data->size = size;
 	data->frame_index = 0;
+	data->free_on_close = free_on_close;
 	if (qoa_decode_header(data) == 0)
 	{
-		FAudio_free(data);
-		return 0;
+		qoa_close((qoa*) data);
+		return NULL;
 	}
 	data->frame_size = QOA_FRAME_SIZE(data->qoa.channels, QOA_SLICES_PER_FRAME);
 	return (qoa*) data;
+}
+
+qoa *qoa_open_file(FILE *file, int free_on_close)
+{
+	unsigned int len, start;
+	start = (unsigned int) ftell(file);
+	fseek(file, 0, SEEK_END);
+	len = (unsigned int) (ftell(file) - start);
+	fseek(file, start, SEEK_SET);
+
+	unsigned char *bytes = FAudio_malloc(len);
+	fread(bytes, 1, len, file);
+	fclose(file);
+
+	return qoa_open_memory(bytes, len, free_on_close);
+}
+
+qoa *qoa_open_filename(const char *filename)
+{
+	FILE *f;
+	f = fopen(filename, "rb");
+
+	if (f)
+		return qoa_open_file(f, TRUE);
+
+	return NULL;
 }
 
 void qoa_attributes(
@@ -480,5 +516,10 @@ void qoa_decode_entire(qoa *qoa, short *sample_data) {
 
 void qoa_close(qoa *qoa)
 {
+	qoa_data *data = (qoa_data*) qoa;
+	if (data->free_on_close)
+	{
+		FAudio_free(data->bytes);
+	}
 	FAudio_free(qoa);
 }
