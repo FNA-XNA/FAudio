@@ -106,7 +106,7 @@ static uint8_t *songCache;
 static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
 	FAudioBuffer buffer;
-	uint32_t decoded;
+	uint32_t decoded = 0;
 
 	if (activeVorbisSong != NULL)
 	{
@@ -121,7 +121,7 @@ static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferCon
 			FAUDIO_END_OF_STREAM :
 			0;
 	}
-	else
+	else if (activeQoaSong != NULL)
 	{
 		/* TODO: decode multiple frames? */
 		decoded = qoa_decode_next_frame(
@@ -263,7 +263,7 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	{
 		stb_vorbis_seek_start(activeVorbisSong);
 	}
-	else
+	else if (activeQoaSong != NULL)
 	{
 		qoa_seek_frame(activeQoaSong, 0);
 	}
@@ -277,10 +277,12 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	{
 		return stb_vorbis_stream_length_in_seconds(activeVorbisSong);
 	}
-	else
+	else if (activeQoaSong != NULL)
 	{
 		return qoaTotalSamplesPerChannel / qoaSampleRate;
 	}
+
+	return 0;
 }
 
 FAUDIOAPI void XNA_PauseSong()
