@@ -2386,7 +2386,6 @@ public static class FAudio
 
 	#endregion
 
-
 	#region qoa
 
 	/* Because, again, why not? */
