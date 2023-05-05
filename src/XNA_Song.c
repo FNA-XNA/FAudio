@@ -221,7 +221,7 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	}
 	else /* It's not vorbis, try qoa!*/
 	{
-		activeQoaSong = qoa_open_filename(name);
+		activeQoaSong = qoa_open_from_filename(name);
 
 		if (activeQoaSong == NULL)
 		{

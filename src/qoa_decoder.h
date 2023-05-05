@@ -167,9 +167,8 @@ typedef unsigned long long qoa_uint64_t;
 typedef struct qoa qoa;
 
 /* NOTE: this API only supports "static" type QOA files. "streaming" type files are not supported!! */
-FAUDIOAPI qoa *qoa_open_memory(unsigned char *bytes, unsigned int size, int free_on_close);
-FAUDIOAPI qoa *qoa_open_file(FILE *file, int free_on_close);
-FAUDIOAPI qoa *qoa_open_filename(const char *filename);
+FAUDIOAPI qoa *qoa_open_from_memory(unsigned char *bytes, unsigned int size, int free_on_close);
+FAUDIOAPI qoa *qoa_open_from_filename(const char *filename);
 FAUDIOAPI void qoa_attributes(qoa *qoa, unsigned int *channels, unsigned int *samplerate, unsigned int *samples_per_channel_per_frame, unsigned int *total_samples_per_channel);
 FAUDIOAPI unsigned int qoa_decode_next_frame(qoa *qoa, short *sample_data); /* decode the next frame into a preallocated buffer */
 FAUDIOAPI void qoa_seek_frame(qoa *qoa, int frame_index);
@@ -361,7 +360,7 @@ static unsigned int qoa_decode_header(qoa_data *data) {
 	return 8;
 }
 
-qoa *qoa_open_memory(unsigned char *bytes, unsigned int size, int free_on_close)
+qoa *qoa_open_from_memory(unsigned char *bytes, unsigned int size, int free_on_close)
 {
 	qoa_data *data = (qoa_data*) FAudio_malloc(sizeof(qoa_data));
 	data->bytes = bytes;
@@ -377,7 +376,7 @@ qoa *qoa_open_memory(unsigned char *bytes, unsigned int size, int free_on_close)
 	return (qoa*) data;
 }
 
-qoa *qoa_open_file(FILE *file, int free_on_close)
+static qoa *qoa_open_from_file(FILE *file, int free_on_close)
 {
 	unsigned int len, start;
 	start = (unsigned int) ftell(file);
@@ -389,16 +388,16 @@ qoa *qoa_open_file(FILE *file, int free_on_close)
 	fread(bytes, 1, len, file);
 	fclose(file);
 
-	return qoa_open_memory(bytes, len, free_on_close);
+	return qoa_open_from_memory(bytes, len, free_on_close);
 }
 
-qoa *qoa_open_filename(const char *filename)
+qoa *qoa_open_from_filename(const char *filename)
 {
 	FILE *f;
 	f = fopen(filename, "rb");
 
 	if (f)
-		return qoa_open_file(f, TRUE);
+		return qoa_open_from_file(f, TRUE);
 
 	return NULL;
 }
