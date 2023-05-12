@@ -2394,9 +2394,19 @@ public static class FAudio
 	public extern static unsafe IntPtr qoa_open_from_memory(char *bytes, uint size, int free_on_close);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public extern static IntPtr qoa_open_from_filename(
-		[MarshalAs(UnmanagedType.LPWStr)] string filename
+	private static extern unsafe IntPtr qoa_open_from_filename(
+		byte* filename
 	);
+
+	public static unsafe IntPtr qoa_open_from_filename(
+		string filename
+	) {
+		int utf8BufSize = Utf8Size(filename);
+		byte* utf8Buf = stackalloc byte[utf8BufSize];
+		return qoa_open_from_filename(
+			Utf8Encode(filename, utf8Buf, utf8BufSize)
+		);
+	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public extern static unsafe void qoa_attributes(IntPtr qoa, out uint channels, out uint samplerate, out uint samples_per_channel_per_frame, out uint total_samples_per_channel);
