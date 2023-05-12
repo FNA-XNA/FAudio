@@ -2395,7 +2395,7 @@ public static class FAudio
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public extern static IntPtr qoa_open_from_filename(
-		[MarshalAs(UnmanagedType.LPWStr)] string filename
+		[MarshalAs(UnmanagedType.LPUTF8Str)] string filename
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
