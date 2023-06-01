@@ -29,7 +29,7 @@ For *nix platforms, use cmake.
 
 For Windows, see the 'visualc/' directory.
 
-For Xbox One, see the 'visualc-winrt/' directory.
+For Xbox GDK, see the 'visualc-gdk/' directory.
 
 For iOS/tvOS, see the 'Xcode-iOS/' directory.
 
