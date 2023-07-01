@@ -279,7 +279,7 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	}
 	else if (activeQoaSong != NULL)
 	{
-		return qoaTotalSamplesPerChannel / qoaSampleRate;
+		return qoaTotalSamplesPerChannel / (float) qoaSampleRate;
 	}
 
 	return 0;
