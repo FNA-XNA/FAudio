@@ -55,10 +55,33 @@ static void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
 static void FAudio_INTERNAL_PrioritizeDirectSound()
 {
 	int numdrivers, i, wasapi, directsound;
+	void *dll, *proc;
 
 	if (SDL_GetHint("SDL_AUDIODRIVER") != NULL)
 	{
 		/* Already forced to something, ignore */
+		return;
+	}
+
+	/* Windows 10+ decided to break version detection, so instead of doing
+	 * it the right way we have to do something dumb like search for an
+	 * export that's only in Windows 10 or newer.
+	 * -flibit
+	 */
+	if (SDL_strcmp(SDL_GetPlatform(), "Windows") != 0)
+	{
+		return;
+	}
+	dll = SDL_LoadObject("USER32.DLL");
+	if (dll == NULL)
+	{
+		return;
+	}
+	proc = SDL_LoadFunction(dll, "SetProcessDpiAwarenessContext");
+	SDL_UnloadObject(dll); /* We aren't really using this, unload now */
+	if (proc != NULL)
+	{
+		/* OS is new enough to trust WASAPI, bail */
 		return;
 	}
 
