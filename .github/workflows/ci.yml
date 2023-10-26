@@ -150,18 +150,19 @@ jobs:
       run: cmake --build releasewine
 
   freebsd:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     name: FreeBSD
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: true
     - name: Build
-      uses: vmactions/freebsd-vm@v0
+      uses: cross-platform-actions/action@v0.19.1
       with:
-        mem: 8192
-        usesh: true
-        prepare: pkg install -y cmake ninja sdl2
+        operating_system: freebsd
+        version: '13.2'
         run: |
+          sudo pkg update
+          sudo pkg install -y cmake ninja sdl2
           cmake -B build -G Ninja .
           cmake --build build --verbose -- -j`sysctl -n hw.ncpu`
