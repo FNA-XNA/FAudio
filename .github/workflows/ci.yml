@@ -159,6 +159,7 @@ jobs:
     - name: Build
       uses: vmactions/freebsd-vm@v0
       with:
+        mem: 8192
         usesh: true
         prepare: pkg install -y cmake ninja sdl2
         run: |
