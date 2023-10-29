@@ -319,7 +319,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	{
 		rate = spec.freq;
 	}
-	if ((spec.channels > 0) && (channels <= 0))
+	if ((spec.channels > 0) && (spec.channels < 9) && (channels <= 0))
 	{
 		channels = spec.channels;
 	}
