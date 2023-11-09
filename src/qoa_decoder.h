@@ -516,7 +516,6 @@ void qoa_decode_entire(qoa *qoa, short *sample_data) {
 
 	frame_count = (data->size - 64) / data->frame_size;
 	sample_index = 0;
-	sample_count;
 
 	for (i = 0; i < frame_count; i += 1)
 	{
