@@ -1,6 +1,6 @@
 /* QOA decoder API for FAudio
 
-Copyright (c) 2023 Ethan Lee.
+Copyright (c) 2024 Ethan Lee.
 
 This software is provided 'as-is', without any express or implied warranty.
 In no event will the authors be held liable for any damages arising from
@@ -24,7 +24,7 @@ Ethan "flibitijibibo" Lee <flibitijibibo@flibitijibibo.com>
 
 Original version:
 
-Copyright (c) 2023, Dominic Szablewski - https://phoboslab.org
+Copyright (c) 2024, Dominic Szablewski - https://phoboslab.org
 SPDX-License-Identifier: MIT
 
 QOA - The "Quite OK Audio" format for fast, lossy audio compression
