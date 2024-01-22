@@ -149,7 +149,7 @@ void FAudio_PlatformInit(
 
 	/* Build the device spec */
 	want.freq = mixFormat->Format.nSamplesPerSec;
-	want.format = AUDIO_F32;
+	want.format = AUDIO_F32SYS;
 	want.channels = mixFormat->Format.nChannels;
 	want.silence = 0;
 	want.callback = FAudio_INTERNAL_MixCallback;
