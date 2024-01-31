@@ -77,7 +77,7 @@ jobs:
       run: |
         if (-Not (Test-Path C:\SDL))
         {
-            Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-$env:SDL_VERSION/SDL2-devel-$env:SDL_VERSION-VC.zip" -o C:\SDL.zip
+            Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-$env:SDL_VERSION/SDL2-devel-$env:SDL_VERSION-VC.zip" -OutFile C:\SDL.zip
             Expand-Archive C:\SDL.zip -DestinationPath C:\
         }
 
