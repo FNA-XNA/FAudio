@@ -630,6 +630,11 @@ public static class FAudio
 		IntPtr voice /* FAudioVoice* */
 	);
 
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioVoice_DestroyVoiceSafeEXT(
+		IntPtr voice /* FAudioVoice* */
+	);
+
 	/* FAudioSourceVoice Interface */
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
