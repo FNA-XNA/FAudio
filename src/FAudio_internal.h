@@ -37,8 +37,8 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include <windef.h>
-#include <winbase.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #define FAudio_malloc malloc
 #define FAudio_realloc realloc
@@ -208,6 +208,15 @@ extern void FAudio_Log(char const *msg);
 /* C++ does not have restrict (though VS2012+ does have __restrict) */
 #if defined(__cplusplus) && !defined(restrict)
 #define restrict
+#endif
+
+/* Alignment macro for gcc/clang/msvc */
+#if defined(__GNUC__) || defined(__clang__)
+#define ALIGN(type, boundary) type __attribute_((aligned(boundary)))
+#elif defined(_MSC_VER)
+#define ALIGN(type, boundary) __declspec(align(boundary)) type
+#else
+#define ALIGN(type, boundary) type
 #endif
 
 /* Threading Types */
