@@ -903,7 +903,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	cur_frac = vdupq_n_s32(
 		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
 	);
-	int32_t __attribute__((aligned(16))) data[4] =
+	ALIGN(int32_t, 16) data[4] =
 	{
 		0,
 		(uint32_t) (resampleStep & FIXED_FRACTION_MASK),
@@ -1077,7 +1077,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	cur_frac = vdupq_n_s32(
 		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
 	);
-	int32_t __attribute__((aligned(16))) data[4] =
+	ALIGN(int32_t, 16) data[4] =
 	{
 		0,
 		0,
