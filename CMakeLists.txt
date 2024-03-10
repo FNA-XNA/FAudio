@@ -298,6 +298,11 @@ install(
 include(cmake/JoinPaths.cmake)
 join_paths(FAUDIO_PKGCONF_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
 join_paths(FAUDIO_PKGCONF_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
+
+if(NOT PLATFORM_WIN32)
+	set(PC_REQUIRES_PRIVATE "Requires.private: sdl2")
+endif()
+
 configure_file(
 	"${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}.pc.in"
 	${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.pc

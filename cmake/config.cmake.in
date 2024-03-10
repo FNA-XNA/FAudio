@@ -1,5 +1,10 @@
 @PACKAGE_INIT@
 
+if(NOT "@PLATFORM_WIN32@")
+	include(CMakeFindDependencyMacro)
+	find_dependency(SDL2 CONFIG)
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@-targets.cmake")
 check_required_components("@CMAKE_PROJECT_NAME@")
 
