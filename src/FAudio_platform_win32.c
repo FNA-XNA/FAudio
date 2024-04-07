@@ -188,6 +188,11 @@ static DWORD WINAPI FAudio_AudioClientThread(void *user)
 	while (WaitForMultipleObjects(2, args->events, FALSE, INFINITE) == WAIT_OBJECT_0)
 	{
 		hr = IAudioClient_GetCurrentPadding(args->client, &padding);
+		if (hr == AUDCLNT_E_DEVICE_INVALIDATED)
+		{
+			/* Device was removed, just exit */
+			break;
+		}
 		FAudio_assert(!FAILED(hr) && "Failed to get IAudioClient current padding!");
 
 		hr = FAudio_FillAudioClientBuffer(args, render_client, frames, padding);
