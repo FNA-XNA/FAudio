@@ -498,7 +498,7 @@ void FAudio_close(FAudioIOStream *io)
 }
 
 #ifdef FAUDIO_DUMP_VOICES
-static size_t FAUDIOCALL * FAudio_INTERNAL_iowrite(
+static size_t FAUDIOCALL FAudio_INTERNAL_iowrite(
 	void *data,
 	const void *src,
 	size_t size,
@@ -529,9 +529,6 @@ FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
 	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
-#else
-	return NULL;
-#endif
 }
 
 void FAudio_close_out(FAudioIOStreamOut *io)
