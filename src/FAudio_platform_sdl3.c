@@ -205,7 +205,6 @@ void FAudio_PlatformInit(
 	result->stagingBuffer = (float*) SDL_malloc(result->stagingLen);
 
 	/* Open the device (or at least try to) */
-iosretry:
 	result->stream = SDL_OpenAudioDeviceStream(
 		devID,
 		&spec,
