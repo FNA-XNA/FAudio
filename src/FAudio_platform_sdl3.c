@@ -429,51 +429,65 @@ uint32_t FAudio_timems()
 
 /* FAudio I/O */
 
+static size_t FAUDIOCALL FAudio_INTERNAL_ioread(
+	void *data,
+	void *dst,
+	size_t size,
+	size_t count
+) {
+	FAudioIOStream *io = (FAudioIOStream*) data;
+	return SDL_ReadIO((SDL_IOStream*) io->data, dst, size * count);
+}
+
+static int64_t FAUDIOCALL FAudio_INTERNAL_ioseek(
+	void *data,
+	int64_t offset,
+	int whence
+) {
+	FAudioIOStream *io = (FAudioIOStream*) data;
+	return SDL_SeekIO((SDL_IOStream*) io->data, offset, whence);
+}
+
+static int FAUDIOCALL FAudio_INTERNAL_ioclose(
+	void *data
+) {
+	FAudioIOStream *io = (FAudioIOStream*) data;
+	return SDL_CloseIO((SDL_IOStream*) io->data);
+}
+
 FAudioIOStream* FAudio_fopen(const char *path)
 {
-#if 0 /* FIXME: IOStream */
 	FAudioIOStream *io = (FAudioIOStream*) FAudio_malloc(
 		sizeof(FAudioIOStream)
 	);
-	SDL_RWops *rwops = SDL_RWFromFile(path, "rb");
-	io->data = rwops;
-	io->read = (FAudio_readfunc) rwops->read;
-	io->seek = (FAudio_seekfunc) rwops->seek;
-	io->close = (FAudio_closefunc) rwops->close;
+	SDL_IOStream *stream = SDL_IOFromFile(path, "rb");
+	io->data = stream;
+	io->read = FAudio_INTERNAL_ioread;
+	io->seek = FAudio_INTERNAL_ioseek;
+	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
-#else
-	return NULL;
-#endif
 }
 
 FAudioIOStream* FAudio_memopen(void *mem, int len)
 {
-#if 0 /* FIXME: IOStream */
 	FAudioIOStream *io = (FAudioIOStream*) FAudio_malloc(
 		sizeof(FAudioIOStream)
 	);
-	SDL_RWops *rwops = SDL_RWFromMem(mem, len);
-	io->data = rwops;
-	io->read = (FAudio_readfunc) rwops->read;
-	io->seek = (FAudio_seekfunc) rwops->seek;
-	io->close = (FAudio_closefunc) rwops->close;
+	SDL_IOStream *stream = SDL_IOFromMem(mem, len);
+	io->data = stream;
+	io->read = FAudio_INTERNAL_ioread;
+	io->seek = FAudio_INTERNAL_ioseek;
+	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
-#else
-	return NULL;
-#endif
 }
 
 uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 {
-#if 0 /* FIXME: IOStream */
-	SDL_RWops *rwops = (SDL_RWops*) io->data;
-	FAudio_assert(rwops->type == SDL_RWOPS_MEMORY);
-	return rwops->hidden.mem.base + offset;
-#else
-	return NULL;
-#endif
+	SDL_PropertiesID props = SDL_GetIOProperties((SDL_IOStream*) io->data);
+	FAudio_assert(SDL_HasProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER));
+	return (uint8_t*) SDL_GetProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
 }
 
 void FAudio_close(FAudioIOStream *io)
@@ -484,19 +498,35 @@ void FAudio_close(FAudioIOStream *io)
 }
 
 #ifdef FAUDIO_DUMP_VOICES
+static size_t FAUDIOCALL * FAudio_INTERNAL_iowrite(
+	void *data,
+	const void *src,
+	size_t size,
+	size_t count
+) {
+	FAudioIOStream *io = (FAudioIOStream*) data;
+	SDL_WriteIO((SDL_IOStream*) io->data, src, size * count);
+}
+
+static size_t FAUDIOCALL FAudio_INTERNAL_iosize(
+	void *data
+) {
+	FAudioIOStream *io = (FAudioIOStream*) data;
+	return SDL_GetIOSize((SDL_IOStream*) io->data;
+}
+
 FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
 {
-#if 0 /* FIXME: IOStream */
 	FAudioIOStreamOut *io = (FAudioIOStreamOut*) FAudio_malloc(
 		sizeof(FAudioIOStreamOut)
 	);
-	SDL_RWops *rwops = SDL_RWFromFile(path, mode);
-	io->data = rwops;
-	io->read = (FAudio_readfunc) rwops->read;
-	io->write = (FAudio_writefunc) rwops->write;
-	io->seek = (FAudio_seekfunc) rwops->seek;
-	io->size = (FAudio_sizefunc) rwops->size;
-	io->close = (FAudio_closefunc) rwops->close;
+	SDL_IOStream *stream = SDL_IOFromFile(path, mode);
+	io->data = stream;
+	io->read = FAudio_INTERNAL_ioread;
+	io->write = FAudio_INTERNAL_iowrite;
+	io->seek = FAudio_INTERNAL_ioseek;
+	io->size = FAudio_INTERNAL_iosize;
+	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
 #else
