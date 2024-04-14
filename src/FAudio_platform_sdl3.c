@@ -124,7 +124,7 @@ static void FAudio_INTERNAL_PrioritizeDirectSound()
 	{
 		if (wasapi < directsound)
 		{
-			SDL_SetHint("SDL_AUDIODRIVER", "directsound");
+			SDL_SetHint("SDL_AUDIO_DRIVER", "directsound");
 		}
 	}
 }
@@ -265,7 +265,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 
 	devs = SDL_GetAudioOutputDevices(&devcount);
-	if (index >= devcount)
+	if (index > devcount)
 	{
 		SDL_free(devs);
 		return FAUDIO_E_INVALID_CALL;
@@ -336,6 +336,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 			SDL_zero(spec);
 		}
 	}
+	SDL_free(devs);
 	if ((spec.freq > 0) && (rate <= 0))
 	{
 		rate = spec.freq;
