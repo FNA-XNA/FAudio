@@ -226,7 +226,7 @@ iosretry:
 	*platformDevice = result;
 
 	/* Start the thread! */
-	SDL_ResumeAudioDevice(devID);
+	SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(result->stream));
 }
 
 void FAudio_PlatformQuit(void* platformDevice)
