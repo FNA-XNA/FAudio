@@ -32,21 +32,21 @@
  * https://hg.icculus.org/icculus/mojoAL/file/default/mojoal.c
  */
 
-#if defined(__x86_64__) || defined(_M_X64)
-	/* Some platforms fail to define this... */
-	#ifndef __SSE2__
-	#define __SSE2__ 1
-	#endif
-
-	/* x86_64 guarantees SSE2. */
-	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
-#elif defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(__arm64ec__) || defined(_M_ARM64EC)
 	/* Some platforms fail to define this... */
 	#ifndef __ARM_NEON__
 	#define __ARM_NEON__ 1
 	#endif
 
 	/* AArch64 guarantees NEON. */
+	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
+#elif defined(__x86_64__) || defined(_M_X64)
+	/* Some platforms fail to define this... */
+	#ifndef __SSE2__
+	#define __SSE2__ 1
+	#endif
+
+	/* x86_64 guarantees SSE2. */
 	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
 #elif __MACOSX__ && !defined(__POWERPC__)
 	/* Some build systems may need to specify this. */
@@ -62,7 +62,7 @@
 #endif
 
 /* Our NEON paths require AArch64, don't check __ARM_NEON__ here */
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(__arm64ec__) || defined(_M_ARM64EC)
 #include <arm_neon.h>
 #define HAVE_NEON_INTRINSICS 1
 #endif
