@@ -1055,7 +1055,7 @@ FAUDIOAPI uint32_t XNA_GetSongEnded()
 		return 1;
 	}
 	FAudioSourceVoice_GetState(songVoice, &state, 0);
-	return state.BuffersQueued == 0;
+	return state.BuffersQueued == 0 && state.SamplesPlayed == 0;
 }
 
 FAUDIOAPI void XNA_EnableVisualization(uint32_t enable)
