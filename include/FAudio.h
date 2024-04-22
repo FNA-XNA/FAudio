@@ -511,7 +511,7 @@ FAUDIOAPI uint32_t FAudioLinkedVersion(void);
 /* This should be your first FAudio call.
  *
  * ppFAudio:		Filled with the FAudio core context.
- * Flags:		Can be 0 or FAUDIO_DEBUG_ENGINE.
+ * Flags:		Can be 0 or a combination of FAUDIO_DEBUG_ENGINE and FAUDIO_1024_QUANTUM.
  * XAudio2Processor:	Set this to FAUDIO_DEFAULT_PROCESSOR.
  *
  * Returns 0 on success.
