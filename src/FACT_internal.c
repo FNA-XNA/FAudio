@@ -515,7 +515,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		/* Sound */
 		baseSound = cue->sound;
 	}
-	else if(cue->variation)
+	else if (cue->variation)
 	{
 		/* Variation */
 		if (cue->variation->flags == 3)
