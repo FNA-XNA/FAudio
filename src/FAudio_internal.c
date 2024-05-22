@@ -685,7 +685,7 @@ static inline void FAudio_INTERNAL_FilterVoice(
 		filterState[ci][FAudioHighPassFilter] = samples[j * numChannels + ci] - filterState[ci][FAudioLowPassFilter] - (filter->OneOverQ * filterState[ci][FAudioBandPassFilter]);
 		filterState[ci][FAudioBandPassFilter] = (filter->Frequency * filterState[ci][FAudioHighPassFilter]) + filterState[ci][FAudioBandPassFilter];
 		filterState[ci][FAudioNotchFilter] = filterState[ci][FAudioHighPassFilter] + filterState[ci][FAudioLowPassFilter];
-		samples[j * numChannels + ci] = filterState[ci][filter->Type] * filter->WetDryMix + samples[j * numChannels + ci] * (1.0 - filter->WetDryMix);
+		samples[j * numChannels + ci] = filterState[ci][filter->Type] * filter->WetDryMix + samples[j * numChannels + ci] * (1.0f - filter->WetDryMix);
 	}
 
 	LOG_FUNC_EXIT(audio)

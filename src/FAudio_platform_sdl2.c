@@ -146,11 +146,12 @@ void FAudio_PlatformInit(
 
 	FAudio_assert(mixFormat != NULL);
 	FAudio_assert(updateSize != NULL);
+	FAudio_assert((mixFormat->Format.nChannels <= 255) && "mixFormat->Format.nChannels out of range!");
 
 	/* Build the device spec */
 	want.freq = mixFormat->Format.nSamplesPerSec;
 	want.format = AUDIO_F32SYS;
-	want.channels = mixFormat->Format.nChannels;
+	want.channels = (Uint8)(mixFormat->Format.nChannels);
 	want.silence = 0;
 	want.callback = FAudio_INTERNAL_MixCallback;
 	want.userdata = audio;
