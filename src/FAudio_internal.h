@@ -57,6 +57,7 @@
 #define FAudio_strlcpy(ptr1, ptr2, size) lstrcpynA(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) pow(x, y)
+#define FAudio_powf(x, y) powf(x, y)
 #define FAudio_log(x) log(x)
 #define FAudio_log10(x) log10(x)
 #define FAudio_sin(x) sin(x)
