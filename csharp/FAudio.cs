@@ -1952,7 +1952,7 @@ public static class FAudio
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct F3DAUDIO_DISTANCE_CURVE
 	{
-		IntPtr pPoints; /* F3DAUDIO_DISTANCE_CURVE_POINT* */
+		public IntPtr pPoints; /* F3DAUDIO_DISTANCE_CURVE_POINT* */
 		public uint PointCount;
 	}
 
