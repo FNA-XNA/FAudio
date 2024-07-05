@@ -186,12 +186,12 @@ void FAudio_PlatformInit(
 
 	if (deviceIndex == 0)
 	{
-		devID = SDL_AUDIO_DEVICE_DEFAULT_OUTPUT;
+		devID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
 	}
 	else
 	{
 		int devcount;
-		SDL_AudioDeviceID *devs = SDL_GetAudioOutputDevices(&devcount);
+		SDL_AudioDeviceID *devs = SDL_GetAudioPlaybackDevices(&devcount);
 
 		/* Bounds checking is done before this function is called */
 		devID = devs[deviceIndex - 1];
@@ -241,7 +241,7 @@ void FAudio_PlatformQuit(void* platformDevice)
 uint32_t FAudio_PlatformGetDeviceCount()
 {
 	int devcount;
-	SDL_free(SDL_GetAudioOutputDevices(&devcount));
+	SDL_free(SDL_GetAudioPlaybackDevices(&devcount));
 	if (devcount == 0)
 	{
 		return 0;
@@ -264,7 +264,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 
-	devs = SDL_GetAudioOutputDevices(&devcount);
+	devs = SDL_GetAudioPlaybackDevices(&devcount);
 	if (index > devcount)
 	{
 		SDL_free(devs);
@@ -324,7 +324,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	/* Get the device format from the OS */
 	if (index == 0)
 	{
-		if (SDL_GetAudioDeviceFormat(SDL_AUDIO_DEVICE_DEFAULT_OUTPUT, &spec, NULL) < 0)
+		if (SDL_GetAudioDeviceFormat(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL) < 0)
 		{
 			SDL_zero(spec);
 		}
