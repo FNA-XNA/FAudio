@@ -157,10 +157,10 @@ jobs:
       with:
         submodules: true
     - name: Build
-      uses: cross-platform-actions/action@v0.19.1
+      uses: cross-platform-actions/action@v0.24.0
       with:
         operating_system: freebsd
-        version: '13.2'
+        version: '13.3'
         run: |
           sudo pkg update
           sudo pkg install -y cmake ninja sdl2
