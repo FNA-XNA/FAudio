@@ -487,7 +487,7 @@ uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 {
 	SDL_PropertiesID props = SDL_GetIOProperties((SDL_IOStream*) io->data);
 	FAudio_assert(SDL_HasProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER));
-	return (uint8_t*) SDL_GetProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
+	return (uint8_t*) SDL_GetPointerProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
 }
 
 void FAudio_close(FAudioIOStream *io)
