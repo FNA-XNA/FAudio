@@ -28,6 +28,7 @@
 #include "FAPOBase.h"
 #include <stdarg.h>
 
+
 #ifdef FAUDIO_WIN32_PLATFORM
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +40,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#define NO_MEMCPY_OVERRIDE
+#define NO_MEMSET_OVERRIDE
 
 #define FAudio_malloc malloc
 #define FAudio_realloc realloc
@@ -136,6 +140,14 @@ extern void FAudio_Log(char const *msg);
 #define FAudio_swap32BE(x) SDL_SwapBE32(x)
 #define FAudio_swap64LE(x) SDL_SwapLE64(x)
 #define FAudio_swap64BE(x) SDL_SwapBE64(x)
+#endif
+
+/* SDL3 allows memcpy/memset for compiler optimization reasons */
+#ifndef SDL_SLOW_MEMCPY
+#define NO_MEMCPY_OVERRIDE
+#endif
+#ifndef SDL_SLOW_MEMSET
+#define NO_MEMSET_OVERRIDE
 #endif
 
 #define FAudio_malloc SDL_malloc
