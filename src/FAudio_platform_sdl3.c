@@ -435,8 +435,7 @@ static size_t FAUDIOCALL FAudio_INTERNAL_ioread(
 	size_t size,
 	size_t count
 ) {
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	return SDL_ReadIO((SDL_IOStream*) io->data, dst, size * count);
+	return SDL_ReadIO((SDL_IOStream*) data, dst, size * count);
 }
 
 static int64_t FAUDIOCALL FAudio_INTERNAL_ioseek(
@@ -444,15 +443,13 @@ static int64_t FAUDIOCALL FAudio_INTERNAL_ioseek(
 	int64_t offset,
 	int whence
 ) {
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	return SDL_SeekIO((SDL_IOStream*) io->data, offset, whence);
+	return SDL_SeekIO((SDL_IOStream*) data, offset, whence);
 }
 
 static int FAUDIOCALL FAudio_INTERNAL_ioclose(
 	void *data
 ) {
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	return SDL_CloseIO((SDL_IOStream*) io->data);
+	return SDL_CloseIO((SDL_IOStream*) data);
 }
 
 FAudioIOStream* FAudio_fopen(const char *path)
@@ -483,11 +480,26 @@ FAudioIOStream* FAudio_memopen(void *mem, int len)
 	return io;
 }
 
+/* FIXME: Expose IOStreamMemData as a property! */
+struct SDL_IOStream
+{
+    SDL_IOStreamInterface iface;
+    void *userdata;
+    SDL_IOStatus status;
+    SDL_PropertiesID props;
+};
+typedef struct IOStreamMemData
+{
+    Uint8 *base;
+    Uint8 *here;
+    Uint8 *stop;
+} IOStreamMemData;
+
 uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 {
-	SDL_PropertiesID props = SDL_GetIOProperties((SDL_IOStream*) io->data);
-	FAudio_assert(SDL_HasProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER));
-	return (uint8_t*) SDL_GetPointerProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
+	SDL_IOStream *stream = (SDL_IOStream*) io->data;
+	IOStreamMemData *memdata = (IOStreamMemData*) stream->userdata;
+	return memdata->base + offset;
 }
 
 void FAudio_close(FAudioIOStream *io)
@@ -504,15 +516,13 @@ static size_t FAUDIOCALL FAudio_INTERNAL_iowrite(
 	size_t size,
 	size_t count
 ) {
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	SDL_WriteIO((SDL_IOStream*) io->data, src, size * count);
+	SDL_WriteIO((SDL_IOStream*) data, src, size * count);
 }
 
 static size_t FAUDIOCALL FAudio_INTERNAL_iosize(
 	void *data
 ) {
-	FAudioIOStream *io = (FAudioIOStream*) data;
-	return SDL_GetIOSize((SDL_IOStream*) io->data;
+	return SDL_GetIOSize((SDL_IOStream*) data);
 }
 
 FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
