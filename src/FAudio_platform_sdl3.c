@@ -480,26 +480,11 @@ FAudioIOStream* FAudio_memopen(void *mem, int len)
 	return io;
 }
 
-/* FIXME: Expose IOStreamMemData as a property! */
-struct SDL_IOStream
-{
-    SDL_IOStreamInterface iface;
-    void *userdata;
-    SDL_IOStatus status;
-    SDL_PropertiesID props;
-};
-typedef struct IOStreamMemData
-{
-    Uint8 *base;
-    Uint8 *here;
-    Uint8 *stop;
-} IOStreamMemData;
-
 uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 {
-	SDL_IOStream *stream = (SDL_IOStream*) io->data;
-	IOStreamMemData *memdata = (IOStreamMemData*) stream->userdata;
-	return memdata->base + offset;
+	SDL_PropertiesID props = SDL_GetIOProperties((SDL_IOStream*) io->data);
+	FAudio_assert(SDL_HasProperty(props, SDL_PROP_IOSTREAM_MEMORY_POINTER));
+	return ((uint8_t*) SDL_GetPointerProperty(props, SDL_PROP_IOSTREAM_MEMORY_POINTER, NULL)) + offset;
 }
 
 void FAudio_close(FAudioIOStream *io)
