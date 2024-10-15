@@ -435,7 +435,7 @@ static size_t FAUDIOCALL FAudio_INTERNAL_ioread(
 	size_t size,
 	size_t count
 ) {
-	return SDL_ReadIO((SDL_IOStream*) data, dst, size * count);
+	return SDL_ReadIO((SDL_IOStream*) data, dst, size * count) / size;
 }
 
 static int64_t FAUDIOCALL FAudio_INTERNAL_ioseek(
