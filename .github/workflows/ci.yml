@@ -93,6 +93,18 @@ jobs:
       - name: Build 64-bit (Release)
         run: ninja -C release-x64
 
+      - name: CMake configure (Debug Wine)
+        run: cmake -B debugwine -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_WIN32=ON
+
+      - name: Build (Debug Wine)
+        run: cmake --build debugwine
+
+      - name: CMake configure (Release Wine)
+        run: cmake -B releasewine -G Ninja . -DCMAKE_BUILD_TYPE=Release -DPLATFORM_WIN32=ON
+
+      - name: Build (Release Wine)
+        run: cmake --build releasewine
+
       - name: Archive build result 32-bit
         uses: actions/upload-artifact@v4
         with:
