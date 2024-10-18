@@ -37,13 +37,13 @@ jobs:
         cd ..
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL2_DIR=${GITHUB_WORKSPACE}/SDL/build
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL2-2.0.so
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_DIR=${GITHUB_WORKSPACE}/SDL/build
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL2-2.0.so
 
     - name: Build (Release)
       run: |
