@@ -20,7 +20,8 @@ jobs:
       run: |
         dnf update -y
         dnf install -y epel-release
-        dnf --enablerepo=powertools install -y chrpath cmake gcc-c++ git ninja-build
+        crb enable
+        dnf install -y chrpath cmake gcc-c++ git ninja-build
 
     - uses: actions/checkout@v4
       with:
@@ -70,7 +71,8 @@ jobs:
         run: |
           dnf update -y
           dnf install -y epel-release
-          dnf --enablerepo=powertools install -y git cmake ninja-build mingw32-gcc mingw64-gcc
+          crb enable
+          dnf install -y git cmake ninja-build mingw32-gcc mingw64-gcc
 
       - uses: actions/checkout@v4
         with:
@@ -226,7 +228,8 @@ jobs:
       run: |
         dnf update -y
         dnf install -y epel-release
-        dnf --enablerepo=powertools install -y chrpath cmake gcc git ninja-build
+        crb enable
+        dnf install -y chrpath cmake gcc git ninja-build
 
     - uses: actions/checkout@v4
       with:
@@ -276,7 +279,8 @@ jobs:
         run: |
           dnf update -y
           dnf install -y epel-release
-          dnf --enablerepo=powertools install -y git cmake ninja-build mingw32-gcc mingw64-gcc xz
+          crb enable
+          dnf install -y git cmake ninja-build mingw32-gcc mingw64-gcc xz
 
       - uses: actions/checkout@v4
         with:
