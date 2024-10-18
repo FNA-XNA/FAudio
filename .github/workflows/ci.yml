@@ -96,16 +96,16 @@ jobs:
         run: ninja -C release-x64
 
       - name: CMake configure (Debug Wine)
-        run: cmake -B debugwine -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_WIN32=ON
+        run: mingw32-cmake -B debugwine -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_WIN32=ON
 
       - name: Build (Debug Wine)
-        run: cmake --build debugwine
+        run: ninja -C debugwine
 
       - name: CMake configure (Release Wine)
-        run: cmake -B releasewine -G Ninja . -DCMAKE_BUILD_TYPE=Release -DPLATFORM_WIN32=ON
+        run: mingw32-cmake -B releasewine -G Ninja . -DCMAKE_BUILD_TYPE=Release -DPLATFORM_WIN32=ON
 
       - name: Build (Release Wine)
-        run: cmake --build releasewine
+        run: ninja -C releasewine
 
       - name: Archive build result 32-bit
         uses: actions/upload-artifact@v4
