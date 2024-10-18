@@ -20,7 +20,7 @@ jobs:
       run: |
         dnf update -y
         dnf install -y epel-release
-        dnf --enablerepo=powertools install -y chrpath cmake gcc git ninja-build
+        dnf --enablerepo=powertools install -y chrpath cmake gcc-c++ git ninja-build
 
     - uses: actions/checkout@v4
       with:
