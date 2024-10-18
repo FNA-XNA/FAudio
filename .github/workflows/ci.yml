@@ -20,8 +20,7 @@ jobs:
       run: |
         dnf update -y
         dnf install -y epel-release
-        dnf config-manager --set-enabled powertools
-        dnf install -y chrpath cmake gcc-c++ git ninja-build
+        dnf --enablerepo=powertools install -y chrpath cmake gcc git ninja-build
 
     - uses: actions/checkout@v4
       with:
@@ -33,18 +32,18 @@ jobs:
     - name: Build SDL2 (Debug)
       run: |
         cd SDL
-        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
-        ninja -C debug
+        cmake -B build -G Ninja . -DCMAKE_BUILD_TYPE=Release
+        ninja -C build
         cd ..
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/debug/libSDL2-2.0d.so
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL2_DIR=${GITHUB_WORKSPACE}/SDL/build
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/debug/libSDL2-2.0d.so
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_DIR=${GITHUB_WORKSPACE}/SDL/build
 
     - name: Build (Release)
       run: |
@@ -71,7 +70,7 @@ jobs:
         run: |
           dnf update -y
           dnf install -y epel-release
-          dnf --enablerepo=powertools install -y git xz cmake ninja-build mingw32-gcc-c++ mingw64-gcc-c++
+          dnf --enablerepo=powertools install -y git cmake ninja-build mingw32-gcc mingw64-gcc
 
       - uses: actions/checkout@v4
         with:
@@ -215,8 +214,7 @@ jobs:
       run: |
         dnf update -y
         dnf install -y epel-release
-        dnf config-manager --set-enabled powertools
-        dnf install -y chrpath cmake gcc-c++ git ninja-build
+        dnf --enablerepo=powertools install -y chrpath cmake gcc git ninja-build
 
     - uses: actions/checkout@v4
       with:
@@ -233,13 +231,13 @@ jobs:
         cd ..
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DBUILD_SDL3=ON -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL/debug/libSDL3.so
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DBUILD_SDL3=ON -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL/debug/libSDL3.so
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
 
     - name: Build (Release)
       run: |
@@ -266,7 +264,7 @@ jobs:
         run: |
           dnf update -y
           dnf install -y epel-release
-          dnf --enablerepo=powertools install -y git xz cmake ninja-build mingw32-gcc-c++ mingw64-gcc-c++
+          dnf --enablerepo=powertools install -y git cmake ninja-build mingw32-gcc mingw64-gcc xz
 
       - uses: actions/checkout@v4
         with:
@@ -324,13 +322,13 @@ jobs:
         cd ..
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBUILD_SDL3=ON -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL/debug/libSDL3.dylib
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBUILD_SDL3=ON -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL/debug/libSDL3.dylib
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
 
     - name: Build (Release)
       run: ninja -C release
