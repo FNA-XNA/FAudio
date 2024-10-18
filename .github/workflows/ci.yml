@@ -62,7 +62,7 @@ jobs:
     name: Rocky Linux MinGW
     runs-on: ubuntu-latest
     container:
-      image: rockylinux/rockylinux:8
+      image: rockylinux/rockylinux:9
     steps:
       - name: Are we really on Rocky Linux?
         run: cat /etc/os-release
@@ -270,7 +270,7 @@ jobs:
     name: Rocky Linux MinGW SDL3
     runs-on: ubuntu-latest
     container:
-      image: rockylinux/rockylinux:8
+      image: rockylinux/rockylinux:9
     steps:
       - name: Are we really on Rocky Linux?
         run: cat /etc/os-release
