@@ -134,7 +134,7 @@ void FAudio_PlatformAddRef()
 	FAudio_INTERNAL_PrioritizeDirectSound();
 
 	/* SDL tracks ref counts for each subsystem */
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
 	{
 		SDL_Log("SDL_INIT_AUDIO failed: %s", SDL_GetError());
 	}
@@ -324,14 +324,14 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	/* Get the device format from the OS */
 	if (index == 0)
 	{
-		if (SDL_GetAudioDeviceFormat(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL) < 0)
+		if (!SDL_GetAudioDeviceFormat(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL))
 		{
 			SDL_zero(spec);
 		}
 	}
 	else
 	{
-		if (SDL_GetAudioDeviceFormat(devs[index - 1], &spec, NULL) < 0)
+		if (!SDL_GetAudioDeviceFormat(devs[index - 1], &spec, NULL))
 		{
 			SDL_zero(spec);
 		}
