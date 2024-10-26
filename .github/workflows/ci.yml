@@ -356,3 +356,58 @@ jobs:
       with:
         name: FAudio-SDL3-osx
         path: release/libFAudio.0.dylib
+
+  ios-tvos-SDL3:
+    name: iOS/tvOS SDL3
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - platform: iOS
+            sdk: iphoneos
+            architectures: arm64
+          - platform: iOS
+            sdk: iphonesimulator
+            architectures: x86_64;arm64
+          - platform: tvOS
+            sdk: appletvos
+            architectures: arm64
+          - platform: tvOS
+            sdk: appletvsimulator
+            architectures: x86_64;arm64
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # This can be replaced by installing once brew ships SDL3
+    - name: Clone SDL3
+      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Install dependencies
+      run: brew install ninja
+
+    - name: Build SDL3 (Debug)
+      run: |
+        cd SDL
+        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path`
+        ninja -C debug
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Release)
+      run: ninja -C release
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL3-${{ matrix.sdk }}
+        path: release/libFAudio.a
