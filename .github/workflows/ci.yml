@@ -356,3 +356,163 @@ jobs:
       with:
         name: FAudio-SDL3-osx
         path: release/libFAudio.0.dylib
+
+  ios-SDL3:
+    name: iOS SDL3
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # This can be replaced by installing once brew ships SDL3
+    - name: Clone SDL3
+      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Install dependencies
+      run: brew install ninja
+
+    - name: Build SDL3 (Debug)
+      run: |
+        cd SDL
+        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphoneos Path`
+        ninja -C debug
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphoneos Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphoneos Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Release)
+      run: ninja -C release
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL3-ios
+        path: release/libFAudio.a
+
+  ios-simulator-SDL3:
+    name: iOS Simulator SDL3
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # This can be replaced by installing once brew ships SDL3
+    - name: Clone SDL3
+      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Install dependencies
+      run: brew install ninja
+
+    - name: Build SDL3 (Debug)
+      run: |
+        cd SDL
+        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphonesimulator Path`
+        ninja -C debug
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphonesimulator Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphonesimulator Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Release)
+      run: ninja -C release
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL3-ios-simulator
+        path: release/libFAudio.a
+
+  tvos-SDL3:
+    name: tvOS SDL3
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # This can be replaced by installing once brew ships SDL3
+    - name: Clone SDL3
+      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Install dependencies
+      run: brew install ninja
+
+    - name: Build SDL3 (Debug)
+      run: |
+        cd SDL
+        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk appletvos Path`
+        ninja -C debug
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk appletvos Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk appletvos Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Release)
+      run: ninja -C release
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL3-tvos
+        path: release/libFAudio.a
+
+  tvos-simulator-SDL3:
+    name: tvOS Simulator SDL3
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # This can be replaced by installing once brew ships SDL3
+    - name: Clone SDL3
+      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Install dependencies
+      run: brew install ninja
+
+    - name: Build SDL3 (Debug)
+      run: |
+        cd SDL
+        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk appletvsimulator Path`
+        ninja -C debug
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk appletvsimulator Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk appletvsimulator Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+
+    - name: Build (Release)
+      run: ninja -C release
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL3-tvos-simulator
+        path: release/libFAudio.a
