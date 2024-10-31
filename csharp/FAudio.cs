@@ -947,9 +947,9 @@ public static class FAudio
 	public delegate uint LockForProcessFunc (
 		IntPtr fapo,
 		uint InputLockedParameterCount,
-		IntPtr pInputLockedParameters,
+		ref FAPOLockForProcessBufferParameters pInputLockedParameters,
 		uint OutputLockedParameterCount,
-		IntPtr pOutputLockedParameters
+		ref FAPOLockForProcessBufferParameters pOutputLockedParameters
 	);
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void UnlockForProcessFunc (
@@ -1022,7 +1022,14 @@ public static class FAudio
 	};
 
 	[StructLayout(LayoutKind.Sequential)]
-	public unsafe struct FAPOProcessBufferParameters
+	public struct FAPOLockForProcessBufferParameters
+	{
+		public IntPtr pFormat;
+		uint MaxFrameCount;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAPOProcessBufferParameters
 	{
 		public IntPtr pBuffer;
 		public FAPOBufferFlags BufferFlags;
