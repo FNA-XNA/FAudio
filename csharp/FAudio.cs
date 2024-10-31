@@ -27,6 +27,7 @@
 #region Using Statements
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 #endregion
 
@@ -888,13 +889,203 @@ public static class FAudio
 
 	#region FAPO API
 
+	public const int FAPO_MIN_CHANNELS = 1,
+		FAPO_MAX_CHANNELS = 64,
+		FAPO_MIN_FRAMERATE = 1000,
+		FAPO_MAX_FRAMERATE = 200000,
+		FAPO_REGISTRATION_STRING_LENGTH = 256;
+
+	public enum FAPOBufferFlags {
+		FAPO_BUFFER_SILENT,
+		FAPO_BUFFER_VALID
+	}
+
+	[Flags]
+	public enum FAPOMiscFlags : uint {
+		FAPO_FLAG_CHANNELS_MUST_MATCH	    = 0x00000001,
+		FAPO_FLAG_FRAMERATE_MUST_MATCH	    = 0x00000002,
+		FAPO_FLAG_BITSPERSAMPLE_MUST_MATCH  = 0x00000004,
+		FAPO_FLAG_BUFFERCOUNT_MUST_MATCH    = 0x00000008,
+		FAPO_FLAG_INPLACE_SUPPORTED		    = 0x00000010,
+		FAPO_FLAG_INPLACE_REQUIRED		    = 0x00000020,
+	}
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate int AddRefFunc(IntPtr fapo);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate int ReleaseFunc(IntPtr fapo);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint GetRegistrationPropertiesFunc(
+		IntPtr fapo,
+		IntPtr ppRegistrationProperties
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint IsInputFormatSupportedFunc(
+		IntPtr fapo,
+		IntPtr pOutputFormat,
+		IntPtr pRequestedInputFormat,
+		IntPtr ppSupportedInputFormat
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint IsOutputFormatSupportedFunc(
+		IntPtr fapo,
+		IntPtr pInputFormat,
+		IntPtr pRequestedOutputFormat,
+		IntPtr ppSupportedOutputFormat
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint InitializeFunc(
+		IntPtr fapo,
+		IntPtr pData,
+		uint DataByteSize
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void ResetFunc(
+		IntPtr fapo
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint LockForProcessFunc (
+		IntPtr fapo,
+		uint InputLockedParameterCount,
+		IntPtr pInputLockedParameters,
+		uint OutputLockedParameterCount,
+		IntPtr pOutputLockedParameters
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void UnlockForProcessFunc (
+		IntPtr fapo
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void ProcessFunc (
+		IntPtr fapo,
+		uint InputProcessParameterCount,
+		ref FAPOProcessBufferParameters pInputProcessParameters,
+		uint OutputProcessParameterCount,
+		ref FAPOProcessBufferParameters pOutputProcessParameters,
+		int IsEnabled
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint CalcInputFramesFunc (
+		IntPtr fapo,
+		uint OutputFrameCount
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate uint CalcOutputFramesFunc (
+		IntPtr fapo,
+		uint InputFrameCount
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void SetParametersFunc (
+		IntPtr fapo,
+		IntPtr pParameters,
+		uint ParameterByteSize
+	);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate void GetParametersFunc (
+		IntPtr fapo,
+		IntPtr pParameters,
+		uint ParameterByteSize
+	);
+
 	/* TODO */
+	[StructLayout(LayoutKind.Sequential)]
+	public struct FAPO {
+		public IntPtr AddRef;
+		public IntPtr Release;
+		public IntPtr GetRegistrationProperties;
+		public IntPtr IsInputFormatSupported;
+		public IntPtr IsOutputFormatSupported;
+		public IntPtr Initialize;
+		public IntPtr Reset;
+		public IntPtr LockForProcess;
+		public IntPtr UnlockForProcess;
+		public IntPtr Process;
+		public IntPtr CalcInputFrames;
+		public IntPtr CalcOutputFrames;
+		public IntPtr SetParameters;
+		public IntPtr GetParameters;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct FAPORegistrationProperties
+	{
+		public Guid clsid;
+		public fixed char FriendlyName[FAPO_REGISTRATION_STRING_LENGTH]; /* Win32 wchar_t */
+		public fixed char CopyrightInfo[FAPO_REGISTRATION_STRING_LENGTH]; /* Win32 wchar_t */
+		public uint MajorVersion;
+		public uint MinorVersion;
+		public uint Flags;
+		public uint MinInputBufferCount;
+		public uint MaxInputBufferCount;
+		public uint MinOutputBufferCount;
+		public uint MaxOutputBufferCount;
+	};
+
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct FAPOProcessBufferParameters
+	{
+		public IntPtr pBuffer;
+		public FAPOBufferFlags BufferFlags;
+		public uint ValidFrameCount;
+	}
 
 	#endregion
 
 	#region FAPOBase API
 
 	/* TODO */
+
+	[StructLayout(LayoutKind.Sequential, Pack = 8)]
+	public struct FAPOBase {
+		public FAPO FAPO;
+		public IntPtr Destructor;
+		public IntPtr OnSetParameters;
+
+		IntPtr m_pRegistrationProperties;
+		IntPtr m_pfnMatrixMixFunction;
+		IntPtr m_pfl32MatrixCoefficients;
+		uint m_nSrcFormatType;
+		byte m_fIsScalarMatrix;
+		byte m_fIsLocked;
+		IntPtr m_pParameterBlocks;
+		IntPtr m_pCurrentParameters;
+		IntPtr m_pCurrentParametersInternal;
+		uint m_uCurrentParametersIndex;
+		uint m_uParameterBlockByteSize;
+		byte m_fNewerResultsReady;
+		byte m_fProducer;
+
+		/* Protected Variables */
+		int m_lReferenceCount; /* LONG */
+
+		/* Allocator callbacks, NOT part of XAPOBase spec! */
+		IntPtr pMalloc;
+		IntPtr pFree;
+		IntPtr pRealloc;
+	}
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint CreateFAPOBase(
+		IntPtr fapo,
+		// The create operation does not copy this into its own persistent storage! This pointer must remain valid.
+		IntPtr pRegistrationProperties,
+		IntPtr pParameterBlocks,
+		uint parameterBlockByteSize,
+		byte fProducer
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint CreateFAPOBaseWithCustomAllocatorEXT(
+		IntPtr fapo,
+		// The create operation does not copy this into its own persistent storage! This pointer must remain valid.
+		IntPtr pRegistrationProperties,
+		IntPtr pParameterBlocks,
+		uint parameterBlockByteSize,
+		byte fProducer,
+		IntPtr customMalloc,
+		IntPtr customFree,
+		IntPtr customRealloc
+	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAPOBase_Release(IntPtr fapo);
