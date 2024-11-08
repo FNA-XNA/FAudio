@@ -58,6 +58,54 @@ jobs:
         name: FAudio-SDL2-lib64
         path: release/libFAudio.so.0
 
+  linux-ppc:
+    name: Debian Linux PPC
+    runs-on: ubuntu-latest
+    container:
+      image: dockcross/linux-ppc:latest
+    steps:
+    - name: Are we really on Debian Linux?
+      run: cat /etc/os-release
+
+    - name: Install dependencies
+      run: |
+        apt install -y chrpath
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Clone SDL2
+      run: git clone --depth 1 --branch release-$SDL2_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Build SDL2 (Debug)
+      run: |
+        cd SDL
+        cmake -B build -G Ninja . -DCMAKE_BUILD_TYPE=Release
+        ninja -C build
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL2-2.0.so
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL2-2.0.so
+
+    - name: Build (Release)
+      run: |
+        ninja -C release
+        chrpath -d release/libFAudio.so.0
+        strip -S release/libFAudio.so.0
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL2-lib64
+        path: release/libFAudio.so.0
+
   linux-mingw:
     name: Rocky Linux MinGW
     runs-on: ubuntu-latest
@@ -232,6 +280,54 @@ jobs:
         dnf install -y epel-release
         crb enable
         dnf install -y chrpath cmake gcc git ninja-build
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Clone SDL3
+      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Build SDL3 (Debug)
+      run: |
+        cd SDL
+        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
+        ninja -C debug
+        cd ..
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
+
+    - name: Build (Release)
+      run: |
+        ninja -C release
+        chrpath -d release/libFAudio.so.0
+        strip -S release/libFAudio.so.0
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-SDL3-lib64
+        path: release/libFAudio.so.0
+
+  linux-ppc-SDL3:
+    name: Debian Linux PPC SDL3
+    runs-on: ubuntu-latest
+    container:
+      image: dockcross/linux-ppc:latest
+    steps:
+    - name: Are we really on Debian Linux?
+      run: cat /etc/os-release
+
+    - name: Install dependencies
+      run: |
+        apt install -y chrpath
 
     - uses: actions/checkout@v4
       with:
