@@ -98,7 +98,7 @@ jobs:
       run: |
         ninja -C release
         chrpath -d release/libFAudio.so.0
-        strip -I elf32-big -S release/libFAudio.so.0
+        strip --help
 
     - name: Archive build result
       uses: actions/upload-artifact@v4
@@ -356,7 +356,7 @@ jobs:
       run: |
         ninja -C release
         chrpath -d release/libFAudio.so.0
-        strip -I elf32-big -S release/libFAudio.so.0
+        strip --help
 
     - name: Archive build result
       uses: actions/upload-artifact@v4
