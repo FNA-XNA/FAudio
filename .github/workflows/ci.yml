@@ -98,7 +98,6 @@ jobs:
       run: |
         ninja -C release
         chrpath -d release/libFAudio.so.0
-        dockcross bash -c "strip -S release/libFAudio.so.0"
 
     - name: Archive build result
       uses: actions/upload-artifact@v4
@@ -356,7 +355,6 @@ jobs:
       run: |
         ninja -C release
         chrpath -d release/libFAudio.so.0
-        dockcross bash -c "strip -S release/libFAudio.so.0"
 
     - name: Archive build result
       uses: actions/upload-artifact@v4
