@@ -98,12 +98,12 @@ jobs:
       run: |
         ninja -C release
         chrpath -d release/libFAudio.so.0
-        strip -S release/libFAudio.so.0
+        strip -I elf32-big -S release/libFAudio.so.0
 
     - name: Archive build result
       uses: actions/upload-artifact@v4
       with:
-        name: FAudio-SDL2-lib64
+        name: FAudio-PPC-SDL2-lib32
         path: release/libFAudio.so.0
 
   linux-mingw:
@@ -356,12 +356,12 @@ jobs:
       run: |
         ninja -C release
         chrpath -d release/libFAudio.so.0
-        strip -S release/libFAudio.so.0
+        strip -I elf32-big -S release/libFAudio.so.0
 
     - name: Archive build result
       uses: actions/upload-artifact@v4
       with:
-        name: FAudio-SDL3-lib64
+        name: FAudio-PPC-SDL3-lib32
         path: release/libFAudio.so.0
 
   linux-mingw-SDL3:
