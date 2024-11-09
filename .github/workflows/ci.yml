@@ -233,7 +233,7 @@ jobs:
           -DSDL2_LIBRARIES="SDL2;SDL2main"
 
     - name: Build (Debug)
-      run: cmake --build debug
+      run: cmake --build debug --config Debug
 
     - name: CMake configure (Release)
       run: |
@@ -244,7 +244,7 @@ jobs:
           -DSDL2_LIBRARIES="SDL2;SDL2main"
 
     - name: Build (Release)
-      run: cmake --build release
+      run: cmake --build release --config Release
 
   freebsd:
     runs-on: ubuntu-latest
