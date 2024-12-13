@@ -57,11 +57,15 @@
     <ClCompile Include="..\src\FAudio_internal.c" />
     <ClCompile Include="..\src\FAudio_internal_simd.c" />
     <ClCompile Include="..\src\FAudio_operationset.c" />
-    <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
-    <ClCompile Include="..\src\FAudio_platform_win32.c" />
+    <ClCompile Include="..\src\FAudio_platform_sdl3.c" />
     <ClCompile Include="..\src\XNA_Song.c" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="Exists('..\..\..\..\SDL\VisualC-GDK\SDL\SDL.vcxproj')">
+    <ProjectReference Include="..\..\..\..\SDL\VisualC-GDK\SDL\SDL.vcxproj">
+      <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('..\..\..\..\SDL\VisualC-GDK\SDL\SDL.vcxproj')">
     <ProjectReference Include="..\..\SDL\VisualC-GDK\SDL\SDL.vcxproj">
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
     </ProjectReference>
@@ -155,7 +159,7 @@
     <ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>
     <LibraryPath>$(Console_SdkLibPath)</LibraryPath>
     <LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>
-    <IncludePath>..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
+    <IncludePath>..\..\SDL\include;..\..\..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
     <ExecutablePath>$(Console_SdkRoot)bin;$(Console_SdkToolPath);$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
@@ -163,7 +167,7 @@
     <ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>
     <LibraryPath>$(Console_SdkLibPath)</LibraryPath>
     <LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>
-    <IncludePath>..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
+    <IncludePath>..\..\SDL\include;..\..\..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
     <ExecutablePath>$(Console_SdkRoot)bin;$(Console_SdkToolPath);$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
@@ -171,7 +175,7 @@
     <ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>
     <LibraryPath>$(Console_SdkLibPath)</LibraryPath>
     <LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>
-    <IncludePath>..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
+    <IncludePath>..\..\SDL\include;..\..\..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
     <ExecutablePath>$(Console_SdkRoot)bin;$(Console_SdkToolPath);$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
@@ -179,7 +183,7 @@
     <ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>
     <LibraryPath>$(Console_SdkLibPath)</LibraryPath>
     <LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>
-    <IncludePath>..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
+    <IncludePath>..\..\SDL\include;..\..\..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
     <ExecutablePath>$(Console_SdkRoot)bin;$(Console_SdkToolPath);$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
@@ -187,7 +191,7 @@
     <ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>
     <LibraryPath>$(Console_SdkLibPath)</LibraryPath>
     <LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>
-    <IncludePath>..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
+    <IncludePath>..\..\SDL\include;..\..\..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
     <ExecutablePath>$(Console_SdkRoot)bin;$(Console_SdkToolPath);$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
@@ -195,7 +199,7 @@
     <ReferencePath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</ReferencePath>
     <LibraryPath>$(Console_SdkLibPath)</LibraryPath>
     <LibraryWPath>$(Console_SdkLibPath);$(Console_SdkWindowsMetadataPath)</LibraryWPath>
-    <IncludePath>..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
+    <IncludePath>..\..\SDL\include;..\..\..\..\SDL\include;..\include;$(Console_SdkIncludeRoot)</IncludePath>
     <ExecutablePath>$(Console_SdkRoot)bin;$(Console_SdkToolPath);$(ExecutablePath)</ExecutablePath>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
@@ -209,7 +213,7 @@
     </Link>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FAUDIO_SDL3_PLATFORM;FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -227,7 +231,7 @@
     </Link>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FAUDIO_SDL3_PLATFORM;FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -245,7 +249,7 @@
     </Link>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FAUDIO_SDL3_PLATFORM;FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -263,7 +267,7 @@
     </Link>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FAUDIO_SDL3_PLATFORM;FAUDIO_DISABLE_DEBUGCONFIGURATION;NDEBUG;_LIB;PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -281,7 +285,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FAUDIO_SDL3_PLATFORM;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -296,7 +300,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FAUDIO_SDL3_PLATFORM;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
