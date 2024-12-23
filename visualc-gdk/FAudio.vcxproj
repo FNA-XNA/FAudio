@@ -65,7 +65,7 @@
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup Condition="!Exists('..\..\..\..\SDL\VisualC-GDK\SDL\SDL.vcxproj')">
+  <ItemGroup>
     <ProjectReference Include="..\..\SDL\VisualC-GDK\SDL\SDL.vcxproj">
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
     </ProjectReference>
