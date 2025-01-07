@@ -1773,8 +1773,12 @@ threadstart:
 
 			if (cue->state & FACT_STATE_PAUSED)
 			{
-				cue = cue->next;
-				continue;
+				/* Funky edge case where we need to keep updating even when paused */
+				if (!(cue->state & FACT_STATE_STOPPING))
+				{
+					cue = cue->next;
+					continue;
+				}
 			}
 
 			if (cue->playingSound != NULL)
