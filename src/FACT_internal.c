@@ -930,7 +930,7 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 	/* TODO: if (sound->parentCue->playingSounds == NULL) */
 	{
 		sound->parentCue->state |= FACT_STATE_STOPPED;
-		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING);
+		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_PAUSED | FACT_STATE_STOPPING);
 		sound->parentCue->data->instanceCount -= 1;
 
 		FACT_INTERNAL_SendCueNotification(sound->parentCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
