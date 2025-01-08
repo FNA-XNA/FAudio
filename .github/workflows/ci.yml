@@ -3,8 +3,8 @@ name: CI
 on: [push, pull_request]
 
 env:
-  SDL2_VERSION: 2.30.8
-  SDL3_VERSION: 3.1.3
+  SDL2_VERSION: 2.30.11
+  SDL3_VERSION: 3.1.8
 
 jobs:
   linux:
