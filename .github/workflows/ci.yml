@@ -4,47 +4,29 @@ on: [push, pull_request]
 
 env:
   SDL2_VERSION: 2.30.11
-  SDL3_VERSION: 3.1.8
+  SDL3_VERSION: 3.2.0
 
 jobs:
   linux:
-    name: Rocky Linux
+    name: Steam Linux Runtime (SDL2)
     runs-on: ubuntu-latest
     container:
-      image: rockylinux/rockylinux:8
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:beta
     steps:
-    - name: Are we really on Rocky Linux?
-      run: cat /etc/os-release
-
-    - name: Install dependencies
-      run: |
-        dnf update -y
-        dnf install -y epel-release
-        crb enable
-        dnf install -y chrpath cmake gcc-c++ git ninja-build
-
     - uses: actions/checkout@v4
       with:
         submodules: true
-
-    - name: Clone SDL2
-      run: git clone --depth 1 --branch release-$SDL2_VERSION https://github.com/libsdl-org/SDL.git
-
-    - name: Build SDL2 (Debug)
-      run: |
-        cd SDL
-        cmake -B build -G Ninja . -DCMAKE_BUILD_TYPE=Release
-        ninja -C build
-        cd ..
+    - name: Install chrpath
+      run: apt install -y chrpath
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL2-2.0.so
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL2-2.0.so
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
 
     - name: Build (Release)
       run: |
@@ -59,17 +41,13 @@ jobs:
         path: release/libFAudio.so.0
 
   linux-ppc:
-    name: Debian Linux PPC
+    name: Debian Linux PPC (SDL2)
     runs-on: ubuntu-latest
     container:
       image: dockcross/linux-ppc:latest
     steps:
-    - name: Are we really on Debian Linux?
-      run: cat /etc/os-release
-
-    - name: Install dependencies
-      run: |
-        apt install -y chrpath
+    - name: Install chrpath
+      run: apt install -y chrpath
 
     - uses: actions/checkout@v4
       with:
@@ -78,7 +56,7 @@ jobs:
     - name: Clone SDL2
       run: git clone --depth 1 --branch release-$SDL2_VERSION https://github.com/libsdl-org/SDL.git
 
-    - name: Build SDL2 (Debug)
+    - name: Build SDL2 (Release)
       run: |
         cd SDL
         cmake -B build -G Ninja . -DCMAKE_BUILD_TYPE=Release
@@ -102,57 +80,36 @@ jobs:
     - name: Archive build result
       uses: actions/upload-artifact@v4
       with:
-        name: FAudio-PPC-SDL2-lib32
+        name: FAudio-SDL2-libpowerpc
         path: release/libFAudio.so.0
 
+
   linux-mingw:
-    name: Rocky Linux MinGW
+    name: Fedora Linux MinGW (SDL2)
     runs-on: ubuntu-latest
     container:
-      image: rockylinux/rockylinux:9
+      image: fedora
     steps:
-      - name: Are we really on Rocky Linux?
-        run: cat /etc/os-release
-
-      - name: Install dependencies
+      - name: Install toolchain
         run: |
           dnf update -y
-          dnf install -y epel-release
-          crb enable
-          dnf install -y git cmake ninja-build mingw32-gcc mingw64-gcc
+          dnf install -y git cmake ninja-build mingw32-gcc mingw64-gcc mingw32-SDL2 mingw64-SDL2
 
       - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Download SDL
-        run: |
-          curl -LO https://github.com/libsdl-org/SDL/releases/download/release-$SDL2_VERSION/SDL2-devel-$SDL2_VERSION-mingw.tar.gz
-          tar -xvf SDL2-devel-$SDL2_VERSION-mingw.tar.gz -C ${GITHUB_WORKSPACE}
-
       - name: CMake configure 32-bit (Release)
-        run: mingw32-cmake -B release-x86 -G Ninja . -DCMAKE_BUILD_TYPE=Release  -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL2-$SDL2_VERSION/i686-w64-mingw32/bin/SDL2.dll -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL2-$SDL2_VERSION/i686-w64-mingw32/include/SDL2
+        run: mingw32-cmake -B release-x86 -G Ninja . -DCMAKE_BUILD_TYPE=Release
 
       - name: Build 32-bit (Release)
         run: ninja -C release-x86
 
       - name: CMake configure 64-bit (Release)
-        run: mingw64-cmake -B release-x64 -G Ninja . -DCMAKE_BUILD_TYPE=Release -DSDL2_LIBRARIES=${GITHUB_WORKSPACE}/SDL2-$SDL2_VERSION/x86_64-w64-mingw32/bin/SDL2.dll -DSDL2_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL2-$SDL2_VERSION/x86_64-w64-mingw32/include/SDL2
+        run: mingw64-cmake -B release-x64 -G Ninja . -DCMAKE_BUILD_TYPE=Release
 
       - name: Build 64-bit (Release)
         run: ninja -C release-x64
-
-      - name: CMake configure (Debug Wine)
-        run: mingw32-cmake -B debugwine -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_WIN32=ON
-
-      - name: Build (Debug Wine)
-        run: ninja -C debugwine
-
-      - name: CMake configure (Release Wine)
-        run: mingw32-cmake -B releasewine -G Ninja . -DCMAKE_BUILD_TYPE=Release -DPLATFORM_WIN32=ON
-
-      - name: Build (Release Wine)
-        run: ninja -C releasewine
 
       - name: Archive build result 32-bit
         uses: actions/upload-artifact@v4
@@ -167,7 +124,7 @@ jobs:
           path: release-x64/FAudio.dll
 
   macos:
-    name: macOS (x86_64)
+    name: macOS (x86_64) (SDL2)
     runs-on: macos-13
     env:
       CXXFLAGS: -I/usr/local/include/SDL2
@@ -201,7 +158,7 @@ jobs:
         path: release/libFAudio.0.dylib
 
   windows-msvc:
-    name: Windows (MSVC)
+    name: Windows MSVC (SDL2)
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -233,7 +190,7 @@ jobs:
           -DSDL2_LIBRARIES="SDL2;SDL2main"
 
     - name: Build (Debug)
-      run: cmake --build debug --config Debug
+      run: cmake --build debug
 
     - name: CMake configure (Release)
       run: |
@@ -244,11 +201,11 @@ jobs:
           -DSDL2_LIBRARIES="SDL2;SDL2main"
 
     - name: Build (Release)
-      run: cmake --build release --config Release
+      run: cmake --build release
 
   freebsd:
+    name: FreeBSD (SDL2)
     runs-on: ubuntu-latest
-    name: FreeBSD
     steps:
     - uses: actions/checkout@v4
       with:
@@ -265,34 +222,16 @@ jobs:
           cmake --build build --verbose -- -j`sysctl -n hw.ncpu`
 
   linux-SDL3:
-    name: Rocky Linux SDL3
+    name: Steam Linux Runtime (SDL3)
     runs-on: ubuntu-latest
     container:
-      image: rockylinux/rockylinux:8
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:beta
     steps:
-    - name: Are we really on Rocky Linux?
-      run: cat /etc/os-release
-
-    - name: Install dependencies
-      run: |
-        dnf update -y
-        dnf install -y epel-release
-        crb enable
-        dnf install -y chrpath cmake gcc git ninja-build
-
     - uses: actions/checkout@v4
       with:
         submodules: true
-
-    - name: Clone SDL3
-      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
-
-    - name: Build SDL3 (Debug)
-      run: |
-        cd SDL
-        cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DSDL_UNIX_CONSOLE_BUILD=ON
-        ninja -C debug
-        cd ..
+    - name: Install chrpath
+      run: apt install -y chrpath
 
     - name: CMake configure (Debug)
       run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug
@@ -316,24 +255,20 @@ jobs:
         path: release/libFAudio.so.0
 
   linux-ppc-SDL3:
-    name: Debian Linux PPC SDL3
+    name: Debian Linux PPC (SDL3)
     runs-on: ubuntu-latest
     container:
       image: dockcross/linux-ppc:latest
     steps:
-    - name: Are we really on Debian Linux?
-      run: cat /etc/os-release
-
-    - name: Install dependencies
-      run: |
-        apt install -y chrpath
+    - name: Install chrpath
+      run: apt install -y chrpath
 
     - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Clone SDL3
-      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+      run: git clone --depth 1 --branch release-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
 
     - name: Build SDL3 (Debug)
       run: |
@@ -359,42 +294,32 @@ jobs:
     - name: Archive build result
       uses: actions/upload-artifact@v4
       with:
-        name: FAudio-PPC-SDL3-lib32
+        name: FAudio-SDL3-libpowerpc
         path: release/libFAudio.so.0
 
   linux-mingw-SDL3:
-    name: Rocky Linux MinGW SDL3
+    name: Fedora Linux MinGW (SDL3)
     runs-on: ubuntu-latest
     container:
-      image: rockylinux/rockylinux:9
+      image: fedora
     steps:
-      - name: Are we really on Rocky Linux?
-        run: cat /etc/os-release
-
-      - name: Install dependencies
+      - name: Install toolchain
         run: |
           dnf update -y
-          dnf install -y epel-release
-          crb enable
-          dnf install -y git cmake ninja-build mingw32-gcc mingw64-gcc
+          dnf install -y git cmake ninja-build mingw32-gcc mingw64-gcc mingw32-SDL3 mingw64-SDL3
 
       - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Download SDL
-        run: |
-          curl -LO https://github.com/libsdl-org/SDL/releases/download/preview-$SDL3_VERSION/SDL3-devel-$SDL3_VERSION-mingw.tar.gz
-          tar -xvf SDL3-devel-$SDL3_VERSION-mingw.tar.gz -C ${GITHUB_WORKSPACE}
-
       - name: CMake configure 32-bit (Release)
-        run: mingw32-cmake -B release-x86 -G Ninja . -DBUILD_SDL3=ON -DCMAKE_BUILD_TYPE=Release -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL3-$SDL3_VERSION/i686-w64-mingw32/bin/SDL3.dll -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL3-$SDL3_VERSION/i686-w64-mingw32/include
+        run: mingw32-cmake -B release-x86 -G Ninja . -DBUILD_SDL3=ON -DCMAKE_BUILD_TYPE=Release
 
       - name: Build 32-bit (Release)
         run: ninja -C release-x86
 
       - name: CMake configure 64-bit (Release)
-        run: mingw64-cmake -B release-x64 -G Ninja . -DBUILD_SDL3=ON -DCMAKE_BUILD_TYPE=Release -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL3-$SDL3_VERSION/x86_64-w64-mingw32/bin/SDL3.dll -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL3-$SDL3_VERSION/x86_64-w64-mingw32/include
+        run: mingw64-cmake -B release-x64 -G Ninja . -DBUILD_SDL3=ON -DCMAKE_BUILD_TYPE=Release
 
       - name: Build 64-bit (Release)
         run: ninja -C release-x64
@@ -411,62 +336,8 @@ jobs:
           name: FAudio-SDL3-x64
           path: release-x64/FAudio.dll
 
-  windows-msvc-SDL3:
-    name: Windows (MSVC) SDL3
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Cache SDL
-      uses: actions/cache@v4
-      env:
-        cache-name: cache-sdl
-      with:
-        path: C:\SDL
-        key: ${{ runner.os }}-build-${{ env.cache-name }}
-
-    - name: Download SDL if not cached
-      run: |
-        if (-Not (Test-Path C:\SDL))
-        {
-            Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/preview-$env:SDL3_VERSION/SDL3-devel-$env:SDL3_VERSION-VC.zip" -OutFile C:\SDL.zip
-            Expand-Archive C:\SDL.zip -DestinationPath C:\
-        }
-
-    - name: CMake configure (Debug)
-      run: |
-        $env:LDFLAGS =  "/LIBPATH:C:\SDL3-$env:SDL3_VERSION\lib\x64 "
-        cmake -B debug -G "Visual Studio 17 2022" . -DCMAKE_BUILD_TYPE:STRING=Debug `
-          -A x64 `
-          -DBUILD_SDL3=ON `
-          -DSDL3_INCLUDE_DIRS="C:\SDL3-$env:SDL3_VERSION\include" `
-          -DSDL3_LIBRARIES="SDL3"
-
-    - name: Build (Debug)
-      run: cmake --build debug --config Debug
-
-    - name: CMake configure (Release)
-      run: |
-        $env:LDFLAGS =  "/LIBPATH:C:\SDL3-$env:SDL3_VERSION\lib\x64 "
-        cmake -B release -G "Visual Studio 17 2022" . -DCMAKE_BUILD_TYPE:STRING=Release `
-          -A x64 `
-          -DBUILD_SDL3=ON `
-          -DSDL3_INCLUDE_DIRS="C:\SDL3-$env:SDL3_VERSION\include" `
-          -DSDL3_LIBRARIES="SDL3"
-
-    - name: Build (Release)
-      run: cmake --build release --config Release
-
-    - name: Archive build result
-      uses: actions/upload-artifact@v4
-      with:
-        name: FAudio-SDL3-msvc-x64
-        path: release/Release/FAudio.dll
-
   macos-SDL3:
-    name: macOS (Universal) SDL3
+    name: macOS (Universal) (SDL3)
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
@@ -475,7 +346,7 @@ jobs:
 
     # This can be replaced by installing once brew ships SDL3
     - name: Clone SDL3
-      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+      run: git clone --depth 1 --branch release-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
 
     - name: Install dependencies
       run: brew install ninja
@@ -506,7 +377,7 @@ jobs:
         path: release/libFAudio.0.dylib
 
   ios-tvos-SDL3:
-    name: iOS/tvOS SDL3
+    name: iOS/tvOS (SDL3)
     runs-on: macos-latest
     strategy:
       matrix:
@@ -530,7 +401,7 @@ jobs:
 
     # This can be replaced by installing once brew ships SDL3
     - name: Clone SDL3
-      run: git clone --depth 1 --branch preview-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+      run: git clone --depth 1 --branch release-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
 
     - name: Install dependencies
       run: brew install ninja
@@ -543,13 +414,13 @@ jobs:
         cd ..
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF -DMOJOSHADER_STATIC_SPIRVCROSS=ON
 
     - name: Build (Debug)
       run: ninja -C debug
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=${{ matrix.platform }} -DCMAKE_OSX_ARCHITECTURES="${{ matrix.architectures }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk ${{ matrix.sdk }} Path` -DBUILD_SDL3=ON -DSDL3_DIR=${GITHUB_WORKSPACE}/SDL/debug -DBUILD_SHARED_LIBS=OFF -DMOJOSHADER_STATIC_SPIRVCROSS=ON
 
     - name: Build (Release)
       run: ninja -C release
@@ -558,4 +429,52 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: FAudio-SDL3-${{ matrix.sdk }}
-        path: release/libFAudio.a
+        path: release/*.a
+
+  windows-msvc-SDL3:
+    name: Windows MSVC (SDL3)
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Cache SDL
+      uses: actions/cache@v4
+      env:
+        cache-name: cache-sdl
+      with:
+        path: C:\SDL
+        key: ${{ runner.os }}-build-${{ env.cache-name }}
+
+    - name: Download SDL if not cached
+      run: |
+        if (-Not (Test-Path C:\SDL))
+        {
+            Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-$env:SDL3_VERSION/SDL3-devel-$env:SDL3_VERSION-VC.zip" -OutFile C:\SDL.zip
+            Expand-Archive C:\SDL.zip -DestinationPath C:\
+        }
+
+    - name: CMake configure (Debug)
+      run: |
+        $env:LDFLAGS =  "/LIBPATH:C:\SDL3-$env:SDL3_VERSION\lib\x86 "
+        cmake -B debug -G "Visual Studio 17 2022" . -DCMAKE_BUILD_TYPE=Debug `
+          -A Win32 `
+          -DBUILD_SDL3=ON `
+          -DSDL3_INCLUDE_DIRS="C:\SDL3-$env:SDL3_VERSION\include" `
+          -DSDL3_LIBRARIES="SDL3"
+
+    - name: Build (Debug)
+      run: cmake --build debug
+
+    - name: CMake configure (Release)
+      run: |
+        $env:LDFLAGS =  "/LIBPATH:C:\SDL3-$env:SDL3_VERSION\lib\x86 "
+        cmake -B release -G "Visual Studio 17 2022" . -DCMAKE_BUILD_TYPE=Release `
+          -A Win32 `
+          -DBUILD_SDL3=ON `
+          -DSDL3_INCLUDE_DIRS="C:\SDL3-$env:SDL3_VERSION\include" `
+          -DSDL3_LIBRARIES="SDL3"
+
+    - name: Build (Release)
+      run: cmake --build release
