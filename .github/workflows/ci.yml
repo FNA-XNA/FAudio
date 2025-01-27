@@ -344,7 +344,6 @@ jobs:
       with:
         submodules: true
 
-    # This can be replaced by installing once brew ships SDL3
     - name: Clone SDL3
       run: git clone --depth 1 --branch release-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
 
@@ -399,7 +398,6 @@ jobs:
       with:
         submodules: true
 
-    # This can be replaced by installing once brew ships SDL3
     - name: Clone SDL3
       run: git clone --depth 1 --branch release-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
 
@@ -478,3 +476,21 @@ jobs:
 
     - name: Build (Release)
       run: cmake --build release
+
+  freebsd-SDL3:
+    name: FreeBSD (SDL3)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Build
+      uses: cross-platform-actions/action@v0.26.0
+      with:
+        operating_system: freebsd
+        version: '14.2'
+        run: |
+          sudo pkg update
+          sudo pkg install -y cmake ninja sdl3
+          cmake -B build -G Ninja . -DBUILD_SDL3=ON
+          cmake --build build --verbose -- -j`sysctl -n hw.ncpu`
