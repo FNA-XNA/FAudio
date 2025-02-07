@@ -84,6 +84,7 @@ typedef struct FAPOProcessBufferParameters
 {
 	void* pBuffer;
 	FAPOBufferFlags BufferFlags;
+	// The number of per-channel frames (samples) in the buffer. The total size of the buffer in floats is (ValidFrameCount * ChannelCount).
 	uint32_t ValidFrameCount;
 } FAPOProcessBufferParameters;
 
