@@ -30,7 +30,7 @@
  */
 
 #include <stdint.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "imgui.h"
 
 /* Defined by the tools using this UI framework */
@@ -60,7 +60,7 @@ static void RenderDrawLists(ImDrawData *draw_data)
 		return;
 	}
 	draw_data->ScaleClipRects(io.DisplayFramebufferScale);
-	SDL_RenderSetViewport(renderer, &rect);
+	SDL_SetRenderViewport(renderer, &rect);
 
 	/* Submit draw commands */
 	#define OFFSETOF(TYPE, ELEMENT) ((size_t) &(((TYPE*) NULL)->ELEMENT))
@@ -82,14 +82,14 @@ static void RenderDrawLists(ImDrawData *draw_data)
 			rect.y = (int) pcmd->ClipRect.y;
 			rect.w = (int) (pcmd->ClipRect.z - pcmd->ClipRect.x);
 			rect.h = (int) (pcmd->ClipRect.w - pcmd->ClipRect.y);
-			SDL_RenderSetClipRect(renderer, &rect);
+			SDL_SetRenderClipRect(renderer, &rect);
 
 			SDL_RenderGeometryRaw(
 				renderer,
 				(SDL_Texture*) pcmd->TextureId,
 				(const float*) xy,
 				(int) sizeof(ImDrawVert),
-				(const SDL_Color*) cl,
+				(const SDL_FColor*) cl,
 				(int) sizeof(ImDrawVert),
 				(const float*) uv,
 				(int) sizeof(ImDrawVert),
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 	SDL_Keymod kmod;
 	uint8_t mouseClicked[3];
 	int8_t mouseWheel;
-	int mx, my;
+	float mx, my;
 	uint32_t mouseState;
 	int ww, wh, dw, dh;
 	Uint32 tCur, tLast = 0;
@@ -142,13 +142,11 @@ int main(int argc, char **argv)
 	SDL_Init(SDL_INIT_VIDEO);
 	window = SDL_CreateWindow(
 		TOOL_NAME,
-		SDL_WINDOWPOS_CENTERED,
-		SDL_WINDOWPOS_CENTERED,
 		TOOL_WIDTH,
 		TOOL_HEIGHT,
-		SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
 	);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
+	renderer = SDL_CreateRenderer(window, NULL);
 	SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
 
 	/* ImGui setup */
@@ -171,12 +169,12 @@ int main(int argc, char **argv)
 	io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
 	io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
 	io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
-	io.KeyMap[ImGuiKey_A] = SDLK_a;
-	io.KeyMap[ImGuiKey_C] = SDLK_c;
-	io.KeyMap[ImGuiKey_V] = SDLK_v;
-	io.KeyMap[ImGuiKey_X] = SDLK_x;
-	io.KeyMap[ImGuiKey_Y] = SDLK_y;
-	io.KeyMap[ImGuiKey_Z] = SDLK_z;
+	io.KeyMap[ImGuiKey_A] = SDLK_A;
+	io.KeyMap[ImGuiKey_C] = SDLK_C;
+	io.KeyMap[ImGuiKey_V] = SDLK_V;
+	io.KeyMap[ImGuiKey_X] = SDLK_X;
+	io.KeyMap[ImGuiKey_Y] = SDLK_Y;
+	io.KeyMap[ImGuiKey_Z] = SDLK_Z;
 
 	/* Callbacks */
 	io.RenderDrawListsFn = RenderDrawLists;
@@ -200,35 +198,35 @@ int main(int argc, char **argv)
 	{
 		while (SDL_PollEvent(&evt) == 1)
 		{
-			if (evt.type == SDL_QUIT)
+			if (evt.type == SDL_EVENT_QUIT)
 			{
 				run = 0;
 			}
-			else if (	evt.type == SDL_KEYDOWN ||
-					evt.type == SDL_KEYUP	)
+			else if (	evt.type == SDL_EVENT_KEY_DOWN ||
+					evt.type == SDL_EVENT_KEY_UP	)
 			{
 				kmod = SDL_GetModState();
 				io.KeysDown[
-					evt.key.keysym.sym & ~SDLK_SCANCODE_MASK
-				] = evt.type == SDL_KEYDOWN;
-				io.KeyShift = (kmod & KMOD_SHIFT) != 0;
-				io.KeyCtrl = (kmod & KMOD_CTRL) != 0;
-				io.KeyAlt = (kmod & KMOD_ALT) != 0;
-				io.KeySuper = (kmod & KMOD_GUI) != 0;
+					evt.key.key & ~SDLK_SCANCODE_MASK
+				] = evt.type == SDL_EVENT_KEY_DOWN;
+				io.KeyShift = (kmod & SDL_KMOD_SHIFT) != 0;
+				io.KeyCtrl = (kmod & SDL_KMOD_CTRL) != 0;
+				io.KeyAlt = (kmod & SDL_KMOD_ALT) != 0;
+				io.KeySuper = (kmod & SDL_KMOD_GUI) != 0;
 			}
-			else if (evt.type == SDL_MOUSEBUTTONDOWN)
+			else if (evt.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
 			{
 				if (evt.button.button < 4)
 				{
 					mouseClicked[evt.button.button - 1] = 1;
 				}
 			}
-			else if (evt.type == SDL_MOUSEWHEEL)
+			else if (evt.type == SDL_EVENT_MOUSE_WHEEL)
 			{
 				if (evt.wheel.y > 0) mouseWheel = 1;
 				if (evt.wheel.y < 0) mouseWheel = -1;
 			}
-			else if (evt.type == SDL_TEXTINPUT)
+			else if (evt.type == SDL_EVENT_TEXT_INPUT)
 			{
 				io.AddInputCharactersUTF8(evt.text.text);
 			}
@@ -236,11 +234,11 @@ int main(int argc, char **argv)
 
 		/* SDL-related updates */
 		SDL_GetWindowSize(window, &ww, &wh);
-		SDL_GL_GetDrawableSize(window, &dw, &dh);
+		SDL_GetWindowSizeInPixels(window, &dw, &dh);
 		mouseState = SDL_GetMouseState(&mx, &my); /* TODO: Focus */
-		mouseClicked[0] |= (mouseState * SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;
-		mouseClicked[1] |= (mouseState * SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
-		mouseClicked[2] |= (mouseState * SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+		mouseClicked[0] |= (mouseState * SDL_BUTTON_MASK(SDL_BUTTON_LEFT)) != 0;
+		mouseClicked[1] |= (mouseState * SDL_BUTTON_MASK(SDL_BUTTON_MIDDLE)) != 0;
+		mouseClicked[2] |= (mouseState * SDL_BUTTON_MASK(SDL_BUTTON_RIGHT)) != 0;
 		tCur = SDL_GetTicks();
 
 		/* Set these every frame, we have a resizable window! */
@@ -268,7 +266,14 @@ int main(int argc, char **argv)
 		ImGui::NewFrame();
 
 		/* Reset some things now that input's updated */
-		SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
+		if (io.MouseDrawCursor)
+		{
+			SDL_ShowCursor();
+		}
+		else
+		{
+			SDL_HideCursor();
+		}
 		tLast = tCur;
 		mouseClicked[0] = 0;
 		mouseClicked[1] = 0;

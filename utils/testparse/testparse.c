@@ -25,7 +25,8 @@
  */
 
 #include <FACT_internal.h> /* DO NOT INCLUDE THIS IN REAL CODE! */
-#include <SDL.h>
+#include <stdio.h> /* printf */
+#include <SDL3/SDL.h>
 
 static void print_soundbank(FACTAudioEngine *engine, uint8_t *buf, size_t len)
 {

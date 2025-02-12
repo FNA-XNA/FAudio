@@ -1,8 +1,9 @@
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <FAudio.h>
 #include "../uicommon/imgui.h"
 #include "../wavcommon/wavs.h"
 #include <vector>
+#include <stdlib.h> /* free */
 
 /* UI Vars */
 const char *TOOL_NAME = "Voice Pool";
