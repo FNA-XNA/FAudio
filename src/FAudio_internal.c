@@ -81,13 +81,22 @@ void FAudio_INTERNAL_debug(
 
 	/* The actual message... */
 	va_start(va, fmt);
-	FAudio_vsnprintf(
+	out += FAudio_vsnprintf(
 		out,
 		sizeof(output) - (out - output),
 		fmt,
 		va
 	);
 	va_end(va);
+
+    char* terminator = output + (1024 - 2);
+    if (out < terminator)
+    {
+        terminator = out;
+    }
+
+    *terminator++ = '\n';
+    *terminator++ = '\0';
 
 	/* Print, finally. */
 	FAudio_Log(output);
