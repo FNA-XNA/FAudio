@@ -90,7 +90,14 @@ void FAudio_INTERNAL_debug(
 	va_end(va);
 
 	/* Print, finally. */
-	FAudio_Log(output);
+    if (audio->debug.LogCallback)
+    {
+        audio->debug.LogCallback(output, audio->debug.LogUserData);
+    }
+    else
+    {
+	    FAudio_Log(output);
+    }
 }
 
 static const char *get_wformattag_string(const FAudioWaveFormatEx *fmt)
