@@ -1071,6 +1071,25 @@ public static class FAudio
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateCollector(
+		out IntPtr ppApo,
+		UInt32 flags,
+		IntPtr pBuffer,
+		UInt32 bufferLength
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateCollectorWithCustomAllocatorEXT(
+		out IntPtr ppApo,
+		UInt32 flags,
+		IntPtr pBuffer,
+		UInt32 bufferLength,
+		IntPtr customMalloc,
+		IntPtr customFree,
+		IntPtr customRealloc
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint CreateFAPOBase(
 		IntPtr fapo,
 		// The create operation does not copy this into its own persistent storage! This pointer must remain valid.
