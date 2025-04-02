@@ -26,7 +26,6 @@
 
 #include "FAudioFX.h"
 #include "FAudio_internal.h"
-#include "SDL_atomic.h"
 
 /* Sample Collector FAPO Implementation */
 
