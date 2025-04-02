@@ -123,7 +123,7 @@ uint32_t FAudioFXCollector_LockForProcess(
 	return 0;
 }
 
-void FAudioFXCollector_UnlockForProcess(FAudioFXCollector*fapo)
+void FAudioFXCollector_UnlockForProcess(FAudioFXCollector* fapo)
 {
 	fapo->base.m_fIsLocked = 0;
 }
@@ -173,7 +173,14 @@ void FAudioFXCollector_Free(void* fapo)
 
 /* Public API */
 
-uint32_t FAudioCreateCollector(FAPO** ppApo, uint32_t Flags, float* pBuffer, uint32_t bufferLength)
+uint32_t FAudioCollectorGetWritePositionEXT(FAPO* pApo)
+{
+	FAudioFXCollector* collector = (FAudioFXCollector*)pApo;
+	SDL_assert(collector);
+	return collector->writeOffset;
+}
+
+uint32_t FAudioCreateCollectorEXT(FAPO** ppApo, uint32_t Flags, float* pBuffer, uint32_t bufferLength)
 {
 	return FAudioCreateCollectorWithCustomAllocatorEXT(
 		ppApo,

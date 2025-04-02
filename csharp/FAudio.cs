@@ -1071,7 +1071,12 @@ public static class FAudio
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FAudioCreateCollector(
+	public static extern uint FAudioCollectorGetWritePositionEXT(
+		IntPtr pApo
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateCollectorEXT(
 		out IntPtr ppApo,
 		UInt32 flags,
 		IntPtr pBuffer,
