@@ -262,11 +262,21 @@ typedef struct FAudioFXReverbI3DL2Parameters
 
 /* Functions */
 
+FAUDIOAPI uint32_t FAudioCreateCollectorEXT(FAPO** ppApo, uint32_t Flags, float* pBuffer, uint32_t bufferLength);
 FAUDIOAPI uint32_t FAudioCreateVolumeMeter(FAPO** ppApo, uint32_t Flags);
 FAUDIOAPI uint32_t FAudioCreateReverb(FAPO** ppApo, uint32_t Flags);
 FAUDIOAPI uint32_t FAudioCreateReverb9(FAPO** ppApo, uint32_t Flags);
 
 /* See "extensions/CustomAllocatorEXT.txt" for more information. */
+FAUDIOAPI uint32_t FAudioCreateCollectorWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	float* pBuffer, 
+	uint32_t bufferLength, 
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
 FAUDIOAPI uint32_t FAudioCreateVolumeMeterWithCustomAllocatorEXT(
 	FAPO** ppApo,
 	uint32_t Flags,
@@ -297,6 +307,10 @@ FAUDIOAPI void ReverbConvertI3DL2ToNative9(
 	const FAudioFXReverbI3DL2Parameters *pI3DL2,
 	FAudioFXReverbParameters9 *pNative,
 	int32_t sevenDotOneReverb
+);
+
+FAUDIOAPI uint32_t FAudioCollectorGetWritePositionEXT(
+	FAPO* pApo
 );
 
 #ifdef __cplusplus
