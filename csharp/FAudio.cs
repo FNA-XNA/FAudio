@@ -1070,6 +1070,30 @@ public static class FAudio
 		IntPtr pRealloc;
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 4)]
+	public struct FAudioFXCollectorState {
+		public UInt32 WriteOffset;
+	};
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateCollectorEXT(
+		out IntPtr ppApo,
+		UInt32 flags,
+		IntPtr pBuffer,
+		UInt32 bufferLength
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern uint FAudioCreateCollectorWithCustomAllocatorEXT(
+		out IntPtr ppApo,
+		UInt32 flags,
+		IntPtr pBuffer,
+		UInt32 bufferLength,
+		IntPtr customMalloc,
+		IntPtr customFree,
+		IntPtr customRealloc
+	);
+
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint CreateFAPOBase(
 		IntPtr fapo,
