@@ -14,6 +14,10 @@ New Defines
 
 New Types
 ---------
+typedef struct FAudioFXCollectorState
+{
+	uint32_t WriteOffset;
+} FAudioFXCollectorState;
 
 New Procedures and Functions
 ----------------------------
@@ -32,10 +36,6 @@ FAUDIOAPI uint32_t FAudioCreateCollectorWithCustomAllocatorEXT(
 	FAudioMallocFunc customMalloc,
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
-);
-
-FAUDIOAPI uint32_t FAudioCollectorGetWritePositionEXT(
-	FAPO* pApo
 );
 
 How to Use
@@ -59,7 +59,13 @@ FAudio.FAudioEffectChain effectChain = new() {
     pEffectDescriptors = (IntPtr)Unsafe.AsPointer(ref effectDescriptor)
 };
 
+
 FAQ
 ---
 Q. How do I avoid processing the same samples twice, or missing samples, if my game is running faster/slower than the mixer?
-A. Allocate a sufficiently large ring buffer and use FAudioCollectorGetWritePositionEXT to determine the current write position of the mixer, then read the N most recent samples before the write position. The write position is updated once per block of processed samples instead of once per sample so it doesn't change that often.
+A. Allocate a sufficiently large ring buffer and use GetParameters to determine the current write position of the mixer, then read the N most recent samples before the write position. The write position is updated once per block of processed samples instead of once per sample so it doesn't change that often. i.e.
+
+FAudio.FAudioFXCollectorState parameters = default;
+FAudio.FAudioVoice_GetEffectParameters(
+    Voice, 0, (IntPtr)(&parameters), (uint)sizeof(FAudio.FAudioFXCollectorState)
+);

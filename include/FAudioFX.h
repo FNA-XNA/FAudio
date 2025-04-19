@@ -56,6 +56,11 @@ typedef struct FAudioFXVolumeMeterLevels
 	uint32_t ChannelCount;
 } FAudioFXVolumeMeterLevels;
 
+typedef struct FAudioFXCollectorState
+{
+	uint32_t WriteOffset;
+} FAudioFXCollectorState;
+
 typedef struct FAudioFXReverbParameters
 {
 	float WetDryMix;
@@ -307,10 +312,6 @@ FAUDIOAPI void ReverbConvertI3DL2ToNative9(
 	const FAudioFXReverbI3DL2Parameters *pI3DL2,
 	FAudioFXReverbParameters9 *pNative,
 	int32_t sevenDotOneReverb
-);
-
-FAUDIOAPI uint32_t FAudioCollectorGetWritePositionEXT(
-	FAPO* pApo
 );
 
 #ifdef __cplusplus

@@ -1070,10 +1070,10 @@ public static class FAudio
 		IntPtr pRealloc;
 	}
 
-	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern uint FAudioCollectorGetWritePositionEXT(
-		IntPtr pApo
-	);
+	[StructLayout(LayoutKind.Sequential, Pack = 4)]
+	public struct FAudioFXCollectorState {
+		public UInt32 WriteOffset;
+	};
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern uint FAudioCreateCollectorEXT(

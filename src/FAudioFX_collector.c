@@ -170,14 +170,17 @@ void FAudioFXCollector_Free(void* fapo)
 	collector->base.pFree(fapo);
 }
 
-/* Public API */
-
-uint32_t FAudioCollectorGetWritePositionEXT(FAPO* pApo)
-{
-	FAudioFXCollector* collector = (FAudioFXCollector*)pApo;
-	SDL_assert(collector);
-	return collector->writeOffset;
+void FAudioFXCollector_GetParameters(
+	FAudioFXCollector* fapo,
+	FAudioFXCollectorState* pParameters,
+	uint32_t ParameterByteSize
+) {
+	FAudio_assert(pParameters);
+	FAudio_assert(ParameterByteSize == sizeof(FAudioFXCollectorState));
+	pParameters->WriteOffset = fapo->writeOffset;
 }
+
+/* Public API */
 
 uint32_t FAudioCreateCollectorEXT(FAPO** ppApo, uint32_t Flags, float* pBuffer, uint32_t bufferLength)
 {
@@ -201,9 +204,9 @@ FAUDIOAPI uint32_t FAudioCreateCollectorWithCustomAllocatorEXT(
 	FAudioFreeFunc customFree,
 	FAudioReallocFunc customRealloc
 ) {
-	SDL_assert(ppApo);
-	SDL_assert(pBuffer);
-	SDL_assert(bufferLength);
+	FAudio_assert(ppApo);
+	FAudio_assert(pBuffer);
+	FAudio_assert(bufferLength);
 
 	/* Allocate... */
 	FAudioFXCollector *result = (FAudioFXCollector*) customMalloc(
@@ -234,7 +237,8 @@ FAUDIOAPI uint32_t FAudioCreateCollectorWithCustomAllocatorEXT(
 		FAudioFXCollector_UnlockForProcess;
 	result->base.base.Process = (ProcessFunc)
 		FAudioFXCollector_Process;
-	result->base.base.GetParameters = NULL;
+	result->base.base.GetParameters = (GetParametersFunc)
+		FAudioFXCollector_GetParameters;
 	result->base.Destructor = FAudioFXCollector_Free;
 
 	result->pBuffer = pBuffer;
