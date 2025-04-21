@@ -100,6 +100,7 @@ add_library(${target}
 	src/FAPOFX_reverb.c
 	src/FAudio.c
 	src/FAudioFX_reverb.c
+	src/FAudioFX_collector.c
 	src/FAudioFX_volumemeter.c
 	src/FAudio_internal.c
 	src/FAudio_internal_simd.c

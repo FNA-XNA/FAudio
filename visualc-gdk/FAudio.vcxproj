@@ -52,6 +52,7 @@
     <ClCompile Include="..\src\FAPOFX_masteringlimiter.c" />
     <ClCompile Include="..\src\FAPOFX_reverb.c" />
     <ClCompile Include="..\src\FAudio.c" />
+    <ClCompile Include="..\src\FAudioFX_collector.c" />
     <ClCompile Include="..\src\FAudioFX_reverb.c" />
     <ClCompile Include="..\src\FAudioFX_volumemeter.c" />
     <ClCompile Include="..\src\FAudio_internal.c" />
