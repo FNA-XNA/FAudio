@@ -302,7 +302,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	);
 
 	/* Environment variables take precedence over all possible values */
-	envvar = SDL_getenv("SDL_AUDIO_FREQUENCY");
+	envvar = SDL_GetHint("SDL_AUDIO_FREQUENCY");
 	if (envvar != NULL)
 	{
 		rate = SDL_atoi(envvar);
@@ -311,7 +311,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	{
 		rate = 0;
 	}
-	envvar = SDL_getenv("SDL_AUDIO_CHANNELS");
+	envvar = SDL_GetHint("SDL_AUDIO_CHANNELS");
 	if (envvar != NULL)
 	{
 		channels = SDL_atoi(envvar);
