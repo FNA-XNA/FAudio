@@ -65,6 +65,39 @@ jobs:
         name: FAudio-lib64
         path: release/libFAudio.so.0
 
+  linux-aarch64:
+    name: Steam Linux Runtime (AArch64)
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:beta
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Install chrpath
+      run: apt install -y chrpath
+
+    - name: CMake configure (Debug)
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build (Debug)
+      run: ninja -C debug
+
+    - name: CMake configure (Release)
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build (Release)
+      run: |
+        ninja -C release
+        chrpath -d release/libFAudio.so.0
+        strip -S release/libFAudio.so.0
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-aarch64
+        path: release/libFAudio.so.0
+
   linux-ppc:
     name: Debian Linux PPC
     runs-on: ubuntu-latest
