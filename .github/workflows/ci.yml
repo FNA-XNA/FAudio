@@ -95,7 +95,7 @@ jobs:
     - name: Archive build result
       uses: actions/upload-artifact@v4
       with:
-        name: FAudio-aarch64
+        name: FAudio-libaarch64
         path: release/libFAudio.so.0
 
   linux-ppc:
