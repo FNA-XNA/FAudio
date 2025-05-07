@@ -1453,7 +1453,7 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 		copy_size = FAudio_min(impl->output_pos - samples_pos, samples_size);
 		FAudio_memcpy(decodeCache, impl->output_buf + samples_pos, copy_size);
 	}
-	FAudio_zero(decodeCache + copy_size, samples_size - copy_size);
+	FAudio_zero((char *)decodeCache + copy_size, samples_size - copy_size);
 	LOG_INFO(
 		voice->audio,
 		"decoded %x / %x bytes, copied %x / %x bytes",
