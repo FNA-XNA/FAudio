@@ -11,7 +11,7 @@ jobs:
     name: Steam Linux Runtime (SDL2)
     runs-on: ubuntu-latest
     container:
-      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:beta
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
     steps:
     - uses: actions/checkout@v4
       with:
@@ -36,7 +36,7 @@ jobs:
     name: Steam Linux Runtime
     runs-on: ubuntu-latest
     container:
-      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:beta
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
     steps:
     - uses: actions/checkout@v4
       with:
