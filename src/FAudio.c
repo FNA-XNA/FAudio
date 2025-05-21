@@ -2314,21 +2314,9 @@ static uint32_t check_for_sends_to_voice(FAudioVoice *voice)
 	return ret;
 }
 
-uint32_t FAudioVoice_DestroyVoiceSafeEXT(FAudioVoice *voice)
+static void destroy_voice(FAudioVoice *voice)
 {
-	uint32_t i, ret;
-	LOG_API_ENTER(voice->audio)
-
-	if ((ret = check_for_sends_to_voice(voice)))
-	{
-		LOG_ERROR(
-			voice->audio,
-			"Voice %p is an output for other voice(s)",
-			voice
-		)
-		LOG_API_EXIT(voice->audio)
-		return ret;
-	}
+	uint32_t i;
 
 	/* TODO: Check for dependencies and remove from audio graph first! */
 	FAudio_OPERATIONSET_ClearAllForVoice(voice);
@@ -2500,9 +2488,28 @@ uint32_t FAudioVoice_DestroyVoiceSafeEXT(FAudioVoice *voice)
 		FAudio_PlatformDestroyMutex(voice->volumeLock);
 	}
 
+	voice->audio->pFree(voice);
+}
+
+uint32_t FAudioVoice_DestroyVoiceSafeEXT(FAudioVoice *voice)
+{
+	uint32_t ret;
+
+	LOG_API_ENTER(voice->audio)
+
+	if ((ret = check_for_sends_to_voice(voice)))
+	{
+		LOG_ERROR(
+			voice->audio,
+			"Voice %p is an output for other voice(s)",
+			voice
+		)
+		LOG_API_EXIT(voice->audio)
+		return ret;
+	}
+	destroy_voice(voice);
 	LOG_API_EXIT(voice->audio)
 	FAudio_Release(voice->audio);
-	voice->audio->pFree(voice);
 	return 0;
 }
 
