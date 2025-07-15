@@ -3,6 +3,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(FAudio C)
 
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  set(FAUDIO_MAINPROJECT ON)
+else()
+  set(FAUDIO_MAINPROJECT OFF)
+endif()
+
 # Options
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
@@ -18,6 +24,7 @@ option(BUILD_SHARED_LIBS "Build shared library" ON)
 if(WIN32)
 option(INSTALL_MINGW_DEPENDENCIES "Add dependent libraries to MinGW install target" OFF)
 endif()
+option(FAUDIO_INSTALL "Enable installation of FAudio" ${FAUDIO_MAINPROJECT})
 
 # C99 Requirement
 if(${CMAKE_VERSION} VERSION_LESS "3.1.3")
@@ -325,64 +332,67 @@ endif()
 
 # Installation
 
-# Public Headers...
-install(
-	DIRECTORY include/
-	DESTINATION ${FAudio_INSTALL_INCLUDEDIR}
-)
-# Libraries...
-set(export ${PROJECT_NAME}-targets-shared)
+if(FAUDIO_INSTALL)
 
-if(NOT BUILD_SHARED_LIBS)
-	set(export ${PROJECT_NAME}-targets-static)
-endif()
+	# Public Headers...
+	install(
+		DIRECTORY include/
+		DESTINATION ${FAudio_INSTALL_INCLUDEDIR}
+	)
+	# Libraries...
+	set(export ${PROJECT_NAME}-targets-shared)
 
-install(
-	TARGETS ${target}
-	EXPORT ${export}
-	INCLUDES DESTINATION ${FAudio_INSTALL_INCLUDEDIR}
-	RUNTIME DESTINATION ${FAudio_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${FAudio_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${FAudio_INSTALL_LIBDIR}
-)
-
-# Generate a pkgconfig file
-include(cmake/JoinPaths.cmake)
-join_paths(FAUDIO_PKGCONF_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
-join_paths(FAUDIO_PKGCONF_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
-
-if(NOT PLATFORM_WIN32)
-	if(BUILD_SDL3)
-		set(PC_REQUIRES_PRIVATE "Requires.private: sdl3")
-	else()
-		set(PC_REQUIRES_PRIVATE "Requires.private: sdl2")
+	if(NOT BUILD_SHARED_LIBS)
+		set(export ${PROJECT_NAME}-targets-static)
 	endif()
+
+	install(
+		TARGETS ${target}
+		EXPORT ${export}
+		INCLUDES DESTINATION ${FAudio_INSTALL_INCLUDEDIR}
+		RUNTIME DESTINATION ${FAudio_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${FAudio_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${FAudio_INSTALL_LIBDIR}
+	)
+
+	# Generate a pkgconfig file
+	include(cmake/JoinPaths.cmake)
+	join_paths(FAUDIO_PKGCONF_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
+	join_paths(FAUDIO_PKGCONF_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
+
+	if(NOT PLATFORM_WIN32)
+		if(BUILD_SDL3)
+			set(PC_REQUIRES_PRIVATE "Requires.private: sdl3")
+		else()
+			set(PC_REQUIRES_PRIVATE "Requires.private: sdl2")
+		endif()
+	endif()
+
+	configure_file(
+		"${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}.pc.in"
+		${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.pc
+		@ONLY
+	)
+	install(
+		FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}.pc
+		DESTINATION ${FAudio_INSTALL_LIBDIR}/pkgconfig
+	)
+
+	# Generate cmake-config file, install CMake files
+	include(CMakePackageConfigHelpers)
+	configure_package_config_file(
+		cmake/config.cmake.in
+		${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}Config.cmake
+		INSTALL_DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+	)
+	install(
+		FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}Config.cmake
+		DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+	)
+
+	install(
+		EXPORT ${export}
+		NAMESPACE ${PROJECT_NAME}::
+		DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+	)
 endif()
-
-configure_file(
-	"${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}.pc.in"
-	${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.pc
-	@ONLY
-)
-install(
-	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}.pc
-	DESTINATION ${FAudio_INSTALL_LIBDIR}/pkgconfig
-)
-
-# Generate cmake-config file, install CMake files
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-	cmake/config.cmake.in
-	${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}Config.cmake
-	INSTALL_DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-install(
-	FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/${PROJECT_NAME}Config.cmake
-	DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-
-install(
-	EXPORT ${export}
-	NAMESPACE ${PROJECT_NAME}::
-	DESTINATION ${FAudio_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
