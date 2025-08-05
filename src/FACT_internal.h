@@ -66,11 +66,19 @@ typedef struct FACTVariable
 	float maxValue;
 } FACTVariable;
 
+enum rpc_point_type
+{
+	RPC_POINT_TYPE_LINEAR = 0,
+	RPC_POINT_TYPE_FAST = 1,
+	RPC_POINT_TYPE_SLOW = 2,
+	RPC_POINT_TYPE_SINCOS = 3,
+};
+
 typedef struct FACTRPCPoint
 {
 	float x;
 	float y;
-	uint8_t type;
+	enum rpc_point_type type;
 } FACTRPCPoint;
 
 typedef enum FACTRPCParameter

@@ -1010,32 +1010,29 @@ float FACT_INTERNAL_CalculateRPC(
 			const float deltaX = (var - rpc->points[i].x);
 			const float deltaXNormalized = deltaX / maxX;
 
-			if (rpc->points[i].type == 0) /* Linear */
+			switch (rpc->points[i].type)
 			{
-				result += maxY * deltaXNormalized;
-			}
-			else if (rpc->points[i].type == 1) /* Fast */
-			{
-				result += maxY * (1.0f - FAudio_powf(1.0f - FAudio_powf(deltaXNormalized, 1.0f / 1.5f), 1.5f));
-			}
-			else if (rpc->points[i].type == 2) /* Slow */
-			{
-				result += maxY * (1.0f - FAudio_powf(1.0f - FAudio_powf(deltaXNormalized, 1.5f), 1.0f / 1.5f));
-			}
-			else if (rpc->points[i].type == 3) /* SinCos */
-			{
-				if (maxY > 0.0f)
-				{
-					result += maxY * (1.0f - FAudio_powf(1.0f - FAudio_sqrtf(deltaXNormalized), 2.0f));
-				}
-				else
-				{
-					result += maxY * (1.0f - FAudio_sqrtf(1.0f - FAudio_powf(deltaXNormalized, 2.0f)));
-				}
-			}
-			else
-			{
-				FAudio_assert(0 && "Unrecognized curve type!");
+				case RPC_POINT_TYPE_LINEAR:
+					result += maxY * deltaXNormalized;
+					break;
+
+				case RPC_POINT_TYPE_FAST:
+					result += maxY * (1.0f - FAudio_powf(1.0f - FAudio_powf(deltaXNormalized, 1.0f / 1.5f), 1.5f));
+					break;
+
+				case RPC_POINT_TYPE_SLOW:
+					result += maxY * (1.0f - FAudio_powf(1.0f - FAudio_powf(deltaXNormalized, 1.5f), 1.0f / 1.5f));
+					break;
+
+				case RPC_POINT_TYPE_SINCOS:
+					if (maxY > 0.0f)
+						result += maxY * (1.0f - FAudio_powf(1.0f - FAudio_sqrtf(deltaXNormalized), 2.0f));
+					else
+						result += maxY * (1.0f - FAudio_sqrtf(1.0f - FAudio_powf(deltaXNormalized, 2.0f)));
+					break;
+
+				default:
+					FAudio_assert(0 && "Unrecognized curve type!");
 			}
 
 			break;
