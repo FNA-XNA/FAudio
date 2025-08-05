@@ -1030,7 +1030,7 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
 		if (	FAudio_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
-			!(pEngine->variables[i].accessibility & 0x04)	)
+			!(pEngine->variables[i].accessibility & ACCESSIBILITY_CUE))
 		{
 			FAudio_PlatformUnlockMutex(pEngine->apiLock);
 			return i;
@@ -1050,9 +1050,9 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
 	var = &pEngine->variables[nIndex];
-	FAudio_assert(var->accessibility & 0x01);
-	FAudio_assert(!(var->accessibility & 0x02));
-	FAudio_assert(!(var->accessibility & 0x04));
+	FAudio_assert(var->accessibility & ACCESSIBILITY_PUBLIC);
+	FAudio_assert(!(var->accessibility & ACCESSIBILITY_READONLY));
+	FAudio_assert(!(var->accessibility & ACCESSIBILITY_CUE));
 	pEngine->globalVariableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
@@ -1073,8 +1073,8 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
 	var = &pEngine->variables[nIndex];
-	FAudio_assert(var->accessibility & 0x01);
-	FAudio_assert(!(var->accessibility & 0x04));
+	FAudio_assert(var->accessibility & ACCESSIBILITY_PUBLIC);
+	FAudio_assert(!(var->accessibility & ACCESSIBILITY_CUE));
 	*pnValue = pEngine->globalVariableValues[nIndex];
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
@@ -2788,7 +2788,7 @@ uint16_t FACTCue_GetVariableIndex(
 	for (i = 0; i < pCue->parentBank->parentEngine->variableCount; i += 1)
 	{
 		if (	FAudio_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
-			pCue->parentBank->parentEngine->variables[i].accessibility & 0x04	)
+			(pCue->parentBank->parentEngine->variables[i].accessibility & ACCESSIBILITY_CUE))
 		{
 			FAudio_PlatformUnlockMutex(
 				pCue->parentBank->parentEngine->apiLock
@@ -2819,9 +2819,9 @@ uint32_t FACTCue_SetVariable(
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
 	var = &pCue->parentBank->parentEngine->variables[nIndex];
-	FAudio_assert(var->accessibility & 0x01);
-	FAudio_assert(!(var->accessibility & 0x02));
-	FAudio_assert(var->accessibility & 0x04);
+	FAudio_assert(var->accessibility & ACCESSIBILITY_PUBLIC);
+	FAudio_assert(!(var->accessibility & ACCESSIBILITY_READONLY));
+	FAudio_assert(var->accessibility & ACCESSIBILITY_CUE);
 	pCue->variableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
@@ -2852,8 +2852,8 @@ uint32_t FACTCue_GetVariable(
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
 	var = &pCue->parentBank->parentEngine->variables[nIndex];
-	FAudio_assert(var->accessibility & 0x01);
-	FAudio_assert(var->accessibility & 0x04);
+	FAudio_assert(var->accessibility & ACCESSIBILITY_PUBLIC);
+	FAudio_assert(var->accessibility & ACCESSIBILITY_CUE);
 
 	if (nIndex == 0) /* NumCueInstances */
 	{

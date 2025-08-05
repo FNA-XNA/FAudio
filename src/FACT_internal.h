@@ -30,6 +30,11 @@
 
 /* Internal AudioEngine Types */
 
+#define ACCESSIBILITY_PUBLIC    0x1
+#define ACCESSIBILITY_READONLY  0x2
+#define ACCESSIBILITY_CUE       0x4
+#define ACCESSIBILITY_RESERVED  0x8
+
 typedef struct FACTAudioCategory
 {
 	uint8_t instanceLimit;

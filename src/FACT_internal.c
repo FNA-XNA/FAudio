@@ -521,7 +521,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		if (cue->variation->flags == 3)
 		{
 			/* Interactive */
-			if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & 0x04)
+			if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & ACCESSIBILITY_CUE)
 			{
 				FACTCue_GetVariable(
 					cue,
@@ -857,7 +857,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					newSound->sound->tracks[i].rpcCodes[j]
 				);
 				if (	rpc->parameter == RPC_PARAMETER_VOLUME &&
-					cue->parentBank->parentEngine->variables[rpc->variable].accessibility & 0x04	)
+					(cue->parentBank->parentEngine->variables[rpc->variable].accessibility & ACCESSIBILITY_CUE))
 				{
 					if (FAudio_strcmp(
 						newSound->parentCue->parentBank->parentEngine->variableNames[rpc->variable],
@@ -1087,7 +1087,7 @@ void FACT_INTERNAL_UpdateRPCs(
 				engine,
 				codes[i]
 			);
-			if (engine->variables[rpc->variable].accessibility & 0x04)
+			if (engine->variables[rpc->variable].accessibility & ACCESSIBILITY_CUE)
 			{
 				if (FAudio_strcmp(
 					engine->variableNames[rpc->variable],
@@ -1170,7 +1170,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 		if (engine->rpcs[i].parameter >= RPC_PARAMETER_COUNT)
 		{
 			/* FIXME: Why did I make this global vars only...? */
-			if (!(engine->variables[engine->rpcs[i].variable].accessibility & 0x04))
+			if (!(engine->variables[engine->rpcs[i].variable].accessibility & ACCESSIBILITY_CUE))
 			{
 				for (j = 0; j < engine->dspPresetCount; j += 1)
 				{
@@ -1671,7 +1671,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	if (!(cue->data->flags & 0x04) && cue->variation && cue->variation->flags == 3)
 	{
 		/* Interactive */
-		if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & 0x04)
+		if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & ACCESSIBILITY_CUE)
 		{
 			FACTCue_GetVariable(
 				cue,
