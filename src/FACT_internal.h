@@ -168,6 +168,10 @@ enum variation_type
 
 #define EVENT_SETTINGS_RAMP	0x01
 
+#define EVENT_EQUATION_ADD	0x01
+#define EVENT_EQUATION_VALUE	0x04
+#define EVENT_EQUATION_RANDOM	0x08
+
 typedef struct FACTEvent
 {
 	uint16_t type;

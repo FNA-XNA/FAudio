@@ -1332,12 +1332,11 @@ void FACT_INTERNAL_ActivateEvent(
 		}
 		else
 		{
-			/* Value/Random */
-			if (evt->value.equation.flags & 0x04)
+			if (evt->value.equation.flags & EVENT_EQUATION_VALUE)
 			{
 				svResult = evt->value.equation.value1;
 			}
-			else if (evt->value.equation.flags & 0x08)
+			else if (evt->value.equation.flags & EVENT_EQUATION_RANDOM)
 			{
 				svResult = evt->value.equation.value1 + FACT_INTERNAL_rng() * (
 					evt->value.equation.value2 -
@@ -1350,8 +1349,7 @@ void FACT_INTERNAL_ActivateEvent(
 				FAudio_assert(0 && "Equation flags?");
 			}
 
-			/* Add/Replace */
-			if (evt->value.equation.flags & 0x01)
+			if (evt->value.equation.flags & EVENT_EQUATION_ADD)
 			{
 				if(	evt->type == FACTEVENT_PITCH ||
 					evt->type == FACTEVENT_PITCHREPEATING	)
@@ -2442,7 +2440,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 				track->events[i].value.equation.flags = read_u8(ptr);
 
 				/* SetValue, SetRandomValue, anything else? */
-				FAudio_assert(track->events[i].value.equation.flags & 0x0C);
+				FAudio_assert(track->events[i].value.equation.flags & (EVENT_EQUATION_RANDOM | EVENT_EQUATION_VALUE));
 
 				track->events[i].value.equation.value1 = read_f32(ptr, se);
 				track->events[i].value.equation.value2 = read_f32(ptr, se);
