@@ -1238,10 +1238,9 @@ void FACT_INTERNAL_ActivateEvent(
 	/* STOP */
 	if (evt->type == FACTEVENT_STOP)
 	{
-		/* Stop Cue */
-		if (evt->stop.flags & 0x02)
+		if (evt->stop.flags & EVENT_STOP_CUE)
 		{
-			if (	evt->stop.flags & 0x01 ||
+			if (evt->stop.flags & EVENT_STOP_IMMEDIATE ||
 				(	sound->parentCue->parentBank->cues[sound->parentCue->index].fadeOutMS == 0 &&
 					sound->parentCue->maxRpcReleaseTime == 0	)	)
 			{
@@ -1284,7 +1283,7 @@ void FACT_INTERNAL_ActivateEvent(
 			FACT_INTERNAL_StopTrack(
 				track,
 				trackInst,
-				evt->stop.flags & 0x01
+				evt->stop.flags & EVENT_STOP_IMMEDIATE
 			);
 		}
 	}

@@ -163,6 +163,9 @@ enum variation_type
 	VARIATION_TYPE_SHUFFLE = 4,
 };
 
+#define EVENT_STOP_IMMEDIATE	0x01
+#define EVENT_STOP_CUE		0x02
+
 typedef struct FACTEvent
 {
 	uint16_t type;
