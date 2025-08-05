@@ -369,8 +369,8 @@ if(FAUDIO_INSTALL)
 
 	# Generate a pkgconfig file
 	include(cmake/JoinPaths.cmake)
-	join_paths(FAUDIO_PKGCONF_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
-	join_paths(FAUDIO_PKGCONF_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
+	join_paths(FAUDIO_PKGCONF_LIBDIR "\${prefix}" "${FAudio_INSTALL_LIBDIR}")
+	join_paths(FAUDIO_PKGCONF_INCLUDEDIR "\${prefix}" "${FAudio_INSTALL_INCLUDEDIR}")
 
 	if(NOT PLATFORM_WIN32)
 		if(BUILD_SDL3)
