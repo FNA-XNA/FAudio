@@ -188,7 +188,7 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[0].instanceLimit = 255;
 		pEngine->categories[0].fadeInMS = 0;
 		pEngine->categories[0].fadeOutMS = 0;
-		pEngine->categories[0].maxInstanceBehavior = 0;
+		pEngine->categories[0].maxInstanceBehavior = MAX_INSTANCE_BEHAVIOR_FAIL;
 		pEngine->categories[0].parentCategory = -1;
 		pEngine->categories[0].volume = 1.0f;
 		pEngine->categories[0].visibility = 1;
@@ -200,7 +200,7 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[1].instanceLimit = 255;
 		pEngine->categories[1].fadeInMS = 0;
 		pEngine->categories[1].fadeOutMS = 0;
-		pEngine->categories[1].maxInstanceBehavior = 0;
+		pEngine->categories[1].maxInstanceBehavior = MAX_INSTANCE_BEHAVIOR_FAIL;
 		pEngine->categories[1].parentCategory = 0;
 		pEngine->categories[1].volume = 1.0f;
 		pEngine->categories[1].visibility = 1;
@@ -212,7 +212,7 @@ uint32_t FACTAudioEngine_Initialize(
 		pEngine->categories[2].instanceLimit = 255;
 		pEngine->categories[2].fadeInMS = 0;
 		pEngine->categories[2].fadeOutMS = 0;
-		pEngine->categories[2].maxInstanceBehavior = 0;
+		pEngine->categories[2].maxInstanceBehavior = MAX_INSTANCE_BEHAVIOR_FAIL;
 		pEngine->categories[2].parentCategory = 0;
 		pEngine->categories[2].volume = 1.0f;
 		pEngine->categories[2].visibility = 1;
@@ -2483,85 +2483,66 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	{
 		wnr = NULL;
 		tmp = pCue->parentBank->cueList;
-		if (data->maxInstanceBehavior == 0) /* Fail */
-		{
-			pCue->state |= FACT_STATE_STOPPED;
-			pCue->state &= ~(
-				FACT_STATE_PLAYING |
-				FACT_STATE_STOPPING |
-				FACT_STATE_PAUSED
-			);
 
-			FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
+		switch (data->maxInstanceBehavior)
+		{
+			case MAX_INSTANCE_BEHAVIOR_FAIL:
+				pCue->state |= FACT_STATE_STOPPED;
+				pCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
 
-			FAudio_PlatformUnlockMutex(
-				pCue->parentBank->parentEngine->apiLock
-			);
-			return 1;
-		}
-		else if (data->maxInstanceBehavior == 1) /* Queue */
-		{
-			/* FIXME: How is this different from Replace Oldest? */
-			while (tmp != NULL)
-			{
-				if (	tmp != pCue &&
-					tmp->index == pCue->index &&
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
+
+				FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
+				return 1;
+
+			case MAX_INSTANCE_BEHAVIOR_QUEUE:
+				/* FIXME: How is this different from Replace Oldest? */
+			case MAX_INSTANCE_BEHAVIOR_REPLACE_OLDEST:
+				while (tmp != NULL)
 				{
-					wnr = tmp;
-					break;
+					if (tmp != pCue && tmp->index == pCue->index &&
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED)))
+					{
+						wnr = tmp;
+						break;
+					}
+					tmp = tmp->next;
 				}
-				tmp = tmp->next;
-			}
-		}
-		else if (data->maxInstanceBehavior == 2) /* Replace Oldest */
-		{
-			while (tmp != NULL)
-			{
-				if (	tmp != pCue &&
-					tmp->index == pCue->index &&
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				break;
+
+			case MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST:
+				limitmax.maxf = FACTVOLUME_MAX;
+				while (tmp != NULL)
 				{
-					wnr = tmp;
-					break;
+					if (tmp != pCue && tmp->index == pCue->index &&
+						tmp->playingSound != NULL &&
+						/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					{
+						wnr = tmp;
+						/* limitmax.maxf = tmp->playingSound->volume; */
+					}
+					tmp = tmp->next;
 				}
-				tmp = tmp->next;
-			}
-		}
-		else if (data->maxInstanceBehavior == 3) /* Replace Quietest */
-		{
-			limitmax.maxf = FACTVOLUME_MAX;
-			while (tmp != NULL)
-			{
-				if (	tmp != pCue &&
-					tmp->index == pCue->index &&
-					tmp->playingSound != NULL &&
-					/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+				break;
+
+			case MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY:
+				limitmax.maxi = 0xFF;
+				while (tmp != NULL)
 				{
-					wnr = tmp;
-					/* limitmax.maxf = tmp->playingSound->volume; */
+					if (tmp != pCue && tmp->index == pCue->index &&
+						tmp->playingSound != NULL &&
+						tmp->playingSound->sound->priority < limitmax.maxi &&
+						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED)))
+					{
+						wnr = tmp;
+						limitmax.maxi = tmp->playingSound->sound->priority;
+					}
+					tmp = tmp->next;
 				}
-				tmp = tmp->next;
-			}
+				break;
 		}
-		else if (data->maxInstanceBehavior == 4) /* Replace Lowest Priority */
-		{
-			limitmax.maxi = 0xFF;
-			while (tmp != NULL)
-			{
-				if (	tmp != pCue &&
-					tmp->index == pCue->index &&
-					tmp->playingSound != NULL &&
-					tmp->playingSound->sound->priority < limitmax.maxi &&
-					!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
-				{
-					wnr = tmp;
-					limitmax.maxi = tmp->playingSound->sound->priority;
-				}
-				tmp = tmp->next;
-			}
-		}
+
 		if (wnr != NULL)
 		{
 			fadeInMS = data->fadeInMS;

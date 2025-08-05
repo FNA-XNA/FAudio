@@ -639,81 +639,64 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			{
 				wnr = NULL;
 				tmp = cue->parentBank->cueList;
-				if (category->maxInstanceBehavior == 0) /* Fail */
+
+				switch (category->maxInstanceBehavior)
 				{
-					cue->state |= FACT_STATE_STOPPED;
-					cue->state &= ~(
-						FACT_STATE_PLAYING |
-						FACT_STATE_STOPPING |
-						FACT_STATE_PAUSED
-					);
-					return 0;
-				}
-				else if (category->maxInstanceBehavior == 1) /* Queue */
-				{
-					/* FIXME: How is this different from Replace Oldest? */
-					while (tmp != NULL)
-					{
-						if (	tmp != cue &&
-							tmp->playingSound != NULL &&
-							tmp->playingSound->sound->category == categoryIndex &&
-							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+					case MAX_INSTANCE_BEHAVIOR_FAIL:
+						cue->state |= FACT_STATE_STOPPED;
+						cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
+						return 0;
+
+					case MAX_INSTANCE_BEHAVIOR_QUEUE:
+						/* FIXME: How is this different from Replace Oldest? */
+					case MAX_INSTANCE_BEHAVIOR_REPLACE_OLDEST:
+						while (tmp != NULL)
 						{
-							wnr = tmp;
-							break;
+							if (tmp != cue && tmp->playingSound != NULL &&
+								tmp->playingSound->sound->category == categoryIndex &&
+								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+							{
+								wnr = tmp;
+								break;
+							}
+							tmp = tmp->next;
 						}
-						tmp = tmp->next;
-					}
-				}
-				else if (category->maxInstanceBehavior == 2) /* Replace Oldest */
-				{
-					while (tmp != NULL)
-					{
-						if (	tmp != cue &&
-							tmp->playingSound != NULL &&
-							tmp->playingSound->sound->category == categoryIndex &&
-							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+						break;
+
+					case MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST:
+						limitmax.maxf = FACTVOLUME_MAX;
+						while (tmp != NULL)
 						{
-							wnr = tmp;
-							break;
+							if (tmp != cue && tmp->playingSound != NULL &&
+								tmp->playingSound->sound->category == categoryIndex &&
+								/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
+								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+							{
+								wnr = tmp;
+								/* limitmax.maxf = tmp->playingSound->volume; */
+							}
+							tmp = tmp->next;
 						}
-						tmp = tmp->next;
-					}
-				}
-				else if (category->maxInstanceBehavior == 3) /* Replace Quietest */
-				{
-					limitmax.maxf = FACTVOLUME_MAX;
-					while (tmp != NULL)
-					{
-						if (	tmp != cue &&
-							tmp->playingSound != NULL &&
-							tmp->playingSound->sound->category == categoryIndex &&
-							/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
-							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+						break;
+
+					case MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY:
+						limitmax.maxi = 0xFF;
+						while (tmp != NULL)
 						{
-							wnr = tmp;
-							/* limitmax.maxf = tmp->playingSound->volume; */
+							if (	tmp != cue &&
+								tmp->playingSound != NULL &&
+								tmp->playingSound->sound->category == categoryIndex &&
+								tmp->playingSound->sound->priority < limitmax.maxi &&
+								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
+							{
+								wnr = tmp;
+								limitmax.maxi = tmp->playingSound->sound->priority;
+							}
+							tmp = tmp->next;
 						}
-						tmp = tmp->next;
-					}
+						break;
 				}
-				else if (category->maxInstanceBehavior == 4) /* Replace Lowest Priority */
-				{
-					limitmax.maxi = 0xFF;
-					while (tmp != NULL)
-					{
-						if (	tmp != cue &&
-							tmp->playingSound != NULL &&
-							tmp->playingSound->sound->category == categoryIndex &&
-							tmp->playingSound->sound->priority < limitmax.maxi &&
-							!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
-						{
-							wnr = tmp;
-							limitmax.maxi = tmp->playingSound->sound->priority;
-						}
-						tmp = tmp->next;
-					}
-				}
+
 				if (wnr != NULL)
 				{
 					fadeInMS = category->fadeInMS;
@@ -2843,7 +2826,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->cues[cur].instanceLimit = 0xFF;
 			sb->cues[cur].fadeInMS = 0;
 			sb->cues[cur].fadeOutMS = 0;
-			sb->cues[cur].maxInstanceBehavior = 0;
+			sb->cues[cur].maxInstanceBehavior = MAX_INSTANCE_BEHAVIOR_FAIL;
 			sb->cues[cur].instanceCount = 0;
 		}
 	}

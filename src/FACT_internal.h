@@ -35,12 +35,21 @@
 #define ACCESSIBILITY_CUE       0x4
 #define ACCESSIBILITY_RESERVED  0x8
 
+enum max_instance_behavior
+{
+    MAX_INSTANCE_BEHAVIOR_FAIL = 0,
+    MAX_INSTANCE_BEHAVIOR_QUEUE = 1,
+    MAX_INSTANCE_BEHAVIOR_REPLACE_OLDEST = 2,
+    MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST = 3,
+    MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY = 4,
+};
+
 typedef struct FACTAudioCategory
 {
 	uint8_t instanceLimit;
 	uint16_t fadeInMS;
 	uint16_t fadeOutMS;
-	uint8_t maxInstanceBehavior;
+	enum max_instance_behavior maxInstanceBehavior;
 	int16_t parentCategory;
 	float volume;
 	uint8_t visibility;
@@ -261,7 +270,7 @@ typedef struct FACTCueData
 	uint8_t instanceLimit;
 	uint16_t fadeInMS;
 	uint16_t fadeOutMS;
-	uint8_t maxInstanceBehavior;
+	enum max_instance_behavior maxInstanceBehavior;
 	uint8_t instanceCount;
 } FACTCueData;
 
