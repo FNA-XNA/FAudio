@@ -1162,7 +1162,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 
 		FAudio_assert(i < pSoundBank->variationCount && "Variation table not found!");
 
-		if (pSoundBank->variations[i].flags == 3)
+		if (pSoundBank->variations[i].type == VARIATION_TABLE_TYPE_INTERACTIVE)
 		{
 			pProperties->interactive = 1;
 			pProperties->iaVariableIndex = pSoundBank->variations[i].variable;
@@ -1239,7 +1239,7 @@ uint32_t FACTSoundBank_Prepare(
 				break;
 			}
 		}
-		if ((*ppCue)->variation && (*ppCue)->variation->flags == 3)
+		if ((*ppCue)->variation && (*ppCue)->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 		{
 			(*ppCue)->interactive = pSoundBank->parentEngine->variables[
 				(*ppCue)->variation->variable
@@ -2952,7 +2952,7 @@ uint32_t FACTCue_GetProperties(
 			pCue->playingVariation->maxWeight -
 			pCue->playingVariation->minWeight
 		);
-		if (pCue->variation->flags == 3)
+		if (pCue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 		{
 			varProps->iaVariableMin =
 				pCue->playingVariation->minWeight;

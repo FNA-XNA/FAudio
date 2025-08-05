@@ -307,9 +307,18 @@ typedef struct FACTVariation
 	uint32_t linger;
 } FACTVariation;
 
+enum variation_table_type
+{
+    VARIATION_TABLE_TYPE_WAVE = 0,
+    VARIATION_TABLE_TYPE_SOUND = 1,
+    VARIATION_TABLE_TYPE_CLIP = 2,
+    VARIATION_TABLE_TYPE_INTERACTIVE = 3,
+    VARIATION_TABLE_TYPE_COMPACT_WAVE = 4,
+};
+
 typedef struct FACTVariationTable
 {
-	uint8_t flags;
+	enum variation_table_type type;
 	int16_t variable;
 	uint8_t isComplex;
 

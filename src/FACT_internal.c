@@ -509,9 +509,8 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	else if (cue->variation)
 	{
 		/* Variation */
-		if (cue->variation->flags == 3)
+		if (cue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 		{
-			/* Interactive */
 			if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & ACCESSIBILITY_CUE)
 			{
 				FACTCue_GetVariable(
@@ -1639,7 +1638,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	FACTSoundInstance *sound;
 
 	/* Interactive sound selection */
-	if (!(cue->data->flags & 0x04) && cue->variation && cue->variation->flags == 3)
+	if (!(cue->data->flags & 0x04) && cue->variation && cue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 	{
 		/* Interactive */
 		if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & ACCESSIBILITY_CUE)
@@ -2878,7 +2877,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		sb->variationCodes[i] = (uint32_t) (ptr - start);
 		entryCountAndFlags = read_u32(&ptr, se);
 		sb->variations[i].entryCount = entryCountAndFlags & 0xFFFF;
-		sb->variations[i].flags = (entryCountAndFlags >> (16 + 3)) & 0x07;
+		sb->variations[i].type = (entryCountAndFlags >> (16 + 3)) & 0x07;
 		ptr += 2; /* Unknown value */
 		sb->variations[i].variable = read_s16(&ptr, se);
 		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
@@ -2887,56 +2886,53 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		);
 		FAudio_zero(sb->variations[i].entries, memsize);
 
-		if (sb->variations[i].flags == 0)
+		switch (sb->variations[i].type)
 		{
-			/* Wave with byte min/max */
-			sb->variations[i].isComplex = 0;
-			for (j = 0; j < sb->variations[i].entryCount; j += 1)
-			{
-				sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
-				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
-				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
-				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
-			}
-		}
-		else if (sb->variations[i].flags == 1)
-		{
-			/* Complex with byte min/max */
-			sb->variations[i].isComplex = 1;
-			for (j = 0; j < sb->variations[i].entryCount; j += 1)
-			{
-				sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
-				sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
-				sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
-			}
-		}
-		else if (sb->variations[i].flags == 3)
-		{
-			/* Complex Interactive Variation with float min/max */
-			sb->variations[i].isComplex = 1;
-			for (j = 0; j < sb->variations[i].entryCount; j += 1)
-			{
-				sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
-				sb->variations[i].entries[j].minWeight = read_f32(&ptr, se);
-				sb->variations[i].entries[j].maxWeight = read_f32(&ptr, se);
-				sb->variations[i].entries[j].linger = read_u32(&ptr, se);
-			}
-		}
-		else if (sb->variations[i].flags == 4)
-		{
-			/* Compact Wave */
-			sb->variations[i].isComplex = 0;
-			for (j = 0; j < sb->variations[i].entryCount; j += 1)
-			{
-				sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
-				sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
-				sb->variations[i].entries[j].minWeight = 0.0f;
-				sb->variations[i].entries[j].maxWeight = 1.0f;
-			}
-		}
-		else
-		{
-			FAudio_assert(0 && "Unknown variation type!");
+			case VARIATION_TABLE_TYPE_WAVE:
+				sb->variations[i].isComplex = 0;
+				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				{
+					sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
+					sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+					sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
+					sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+				}
+				break;
+
+			case VARIATION_TABLE_TYPE_SOUND:
+				sb->variations[i].isComplex = 1;
+				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				{
+					sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
+					sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
+					sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+				}
+				break;
+
+			case VARIATION_TABLE_TYPE_INTERACTIVE:
+				sb->variations[i].isComplex = 1;
+				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				{
+					sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
+					sb->variations[i].entries[j].minWeight = read_f32(&ptr, se);
+					sb->variations[i].entries[j].maxWeight = read_f32(&ptr, se);
+					sb->variations[i].entries[j].linger = read_u32(&ptr, se);
+				}
+				break;
+
+			case VARIATION_TABLE_TYPE_COMPACT_WAVE:
+				sb->variations[i].isComplex = 0;
+				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				{
+					sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
+					sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
+					sb->variations[i].entries[j].minWeight = 0.0f;
+					sb->variations[i].entries[j].maxWeight = 1.0f;
+				}
+				break;
+
+			default:
+				FAudio_assert(0 && "Unknown variation type!");
 		}
 	}
 
