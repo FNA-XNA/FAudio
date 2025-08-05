@@ -281,7 +281,7 @@ void FACT_INTERNAL_GetNextWave(
 	/* Generate the Wave */
 	if (	evtInst->loopCount == 255 &&
 		noTrackVariation &&
-		!(evt->wave.variationFlags & 0x0F00)	)
+		!(evt->wave.variationFlags & VARIATION_FLAG_LOOP_MASK))
 	{
 		/* For infinite loops with no variation, let Wave do the work */
 		loopCount = 255;
@@ -324,8 +324,7 @@ void FACT_INTERNAL_GetNextWave(
 		/* TODO: Position/Angle/UseCenterSpeaker */
 	}
 
-	/* Pitch Variation */
-	if (evt->wave.variationFlags & 0x1000)
+	if (evt->wave.variationFlags & VARIATION_FLAG_PITCH)
 	{
 		const int16_t rngPitch = (int16_t) (
 			FACT_INTERNAL_rng() *
@@ -333,11 +332,9 @@ void FACT_INTERNAL_GetNextWave(
 		) + evt->wave.minPitch;
 		if (trackInst->activeWave.wave != NULL)
 		{
-			/* Variation on Loop */
-			if (evt->wave.variationFlags & 0x0100)
+			if (evt->wave.variationFlags & VARIATION_FLAG_PITCH_NEW_ON_LOOP)
 			{
-				/* Add/Replace */
-				if (evt->wave.variationFlags & 0x0004)
+				if (evt->wave.variationFlags & VARIATION_FLAG_PITCH_ADD)
 				{
 					trackInst->upcomingWave.basePitch =
 						trackInst->activeWave.basePitch + rngPitch;
@@ -359,8 +356,7 @@ void FACT_INTERNAL_GetNextWave(
 		trackInst->upcomingWave.basePitch = sound->pitch;
 	}
 
-	/* Volume Variation */
-	if (evt->wave.variationFlags & 0x2000)
+	if (evt->wave.variationFlags & VARIATION_FLAG_VOLUME)
 	{
 		const float rngVolume = (
 			FACT_INTERNAL_rng() *
@@ -368,11 +364,9 @@ void FACT_INTERNAL_GetNextWave(
 		) + evt->wave.minVolume;
 		if (trackInst->activeWave.wave != NULL)
 		{
-			/* Variation on Loop */
-			if (evt->wave.variationFlags & 0x0200)
+			if (evt->wave.variationFlags & VARIATION_FLAG_VOLUME_NEW_ON_LOOP)
 			{
-				/* Add/Replace */
-				if (evt->wave.variationFlags & 0x0001)
+				if (evt->wave.variationFlags & VARIATION_FLAG_VOLUME_ADD)
 				{
 					trackInst->upcomingWave.baseVolume =
 						trackInst->activeWave.baseVolume + rngVolume;
@@ -402,8 +396,7 @@ void FACT_INTERNAL_GetNextWave(
 		trackInst->upcomingWave.baseVolume = sound->volume + track->volume;
 	}
 
-	/* Filter Variation, QFactor/Freq are always together */
-	if (evt->wave.variationFlags & 0xC000)
+	if (evt->wave.variationFlags & VARIATION_FLAG_FREQUENCY_Q)
 	{
 		const float rngQFactor = 1.0f / (
 			FACT_INTERNAL_rng() *
@@ -420,18 +413,17 @@ void FACT_INTERNAL_GetNextWave(
 		);
 		if (trackInst->activeWave.wave != NULL)
 		{
-			/* Variation on Loop */
-			if (evt->wave.variationFlags & 0x0C00)
+			if (evt->wave.variationFlags & VARIATION_FLAG_FREQUENCY_Q_NEW_ON_LOOP)
 			{
 				/* TODO: Add/Replace */
-				/* FIXME: Which is QFactor/Freq?
-				if (evt->wave.variationFlags & 0x0010)
+				/*
+				if (evt->wave.variationFlags & VARIATION_FLAG_FREQUENCY_ADD)
 				{
 				}
 				else
 				{
 				}
-				if (evt->wave.variationFlags & 0x0040)
+				if (evt->wave.variationFlags & VARIATION_FLAG_Q_ADD)
 				{
 				}
 				else

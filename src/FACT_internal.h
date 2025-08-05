@@ -316,6 +316,20 @@ enum variation_table_type
     VARIATION_TABLE_TYPE_COMPACT_WAVE = 4,
 };
 
+#define VARIATION_FLAG_VOLUME_ADD               0x0001
+#define VARIATION_FLAG_PITCH_ADD                0x0004
+#define VARIATION_FLAG_FREQUENCY_ADD            0x0010
+#define VARIATION_FLAG_Q_ADD                    0x0040
+#define VARIATION_FLAG_PITCH_NEW_ON_LOOP        0x0100
+#define VARIATION_FLAG_VOLUME_NEW_ON_LOOP       0x0200
+#define VARIATION_FLAG_FREQUENCY_Q_NEW_ON_LOOP  0x0c00
+#define VARIATION_FLAG_PITCH                    0x1000
+#define VARIATION_FLAG_VOLUME                   0x2000
+#define VARIATION_FLAG_FREQUENCY_Q              0xc000
+
+#define VARIATION_FLAG_LOOP_MASK (VARIATION_FLAG_PITCH_NEW_ON_LOOP \
+        | VARIATION_FLAG_VOLUME_NEW_ON_LOOP | VARIATION_FLAG_FREQUENCY_Q_NEW_ON_LOOP)
+
 typedef struct FACTVariationTable
 {
 	enum variation_table_type type;
