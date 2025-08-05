@@ -166,6 +166,8 @@ enum variation_type
 #define EVENT_STOP_IMMEDIATE	0x01
 #define EVENT_STOP_CUE		0x02
 
+#define EVENT_SETTINGS_RAMP	0x01
+
 typedef struct FACTEvent
 {
 	uint16_t type;

@@ -1311,8 +1311,7 @@ void FACT_INTERNAL_ActivateEvent(
 			evt->type == FACTEVENT_VOLUME ||
 			evt->type == FACTEVENT_VOLUMEREPEATING	)
 	{
-		/* Ramp/Equation */
-		if (evt->value.settings & 0x01)
+		if (evt->value.settings & EVENT_SETTINGS_RAMP)
 		{
 			/* FIXME: Incorporate 2nd derivative into the interpolated pitch (slopeDelta) */
 			skipLoopCheck = elapsed <= (evtInst->timestamp + evt->value.ramp.duration);
@@ -2430,7 +2429,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 				EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 		{
 			track->events[i].value.settings = read_u8(ptr);
-			if (track->events[i].value.settings & 1) /* Ramp */
+			if (track->events[i].value.settings & EVENT_SETTINGS_RAMP)
 			{
 				track->events[i].value.repeats = 0;
 				track->events[i].value.ramp.initialValue = read_f32(ptr, se);
