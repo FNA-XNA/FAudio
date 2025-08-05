@@ -203,62 +203,53 @@ void FACT_INTERNAL_GetNextWave(
 		{
 			/* No-op, no variation on loop */
 		}
-		/* Ordered, Ordered From Random */
-		else if (	(evt->wave.complex.variation & 0xF) == 0 ||
-				(evt->wave.complex.variation & 0xF) == 1	)
+		switch (evt->wave.complex.variation & 0xf)
 		{
-			evtInst->valuei += 1;
-			if (evtInst->valuei >= evt->wave.complex.trackCount)
-			{
-				evtInst->valuei = 0;
-			}
-		}
-		/* Random */
-		else if ((evt->wave.complex.variation & 0xF) == 2)
-		{
-			max = 0.0f;
-			for (i = 0; i < evt->wave.complex.trackCount; i += 1)
-			{
-				max += evt->wave.complex.weights[i];
-			}
-			next = FACT_INTERNAL_rng() * max;
-			for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
-			{
-				if (next > (max - evt->wave.complex.weights[i - 1]))
+			case VARIATION_TYPE_ORDERED:
+			case VARIATION_TYPE_ORDERED_FROM_RANDOM:
+				evtInst->valuei += 1;
+				if (evtInst->valuei >= evt->wave.complex.trackCount)
+					evtInst->valuei = 0;
+				break;
+
+			case VARIATION_TYPE_RANDOM:
+				max = 0.0f;
+				for (i = 0; i < evt->wave.complex.trackCount; i += 1)
+					max += evt->wave.complex.weights[i];
+				next = FACT_INTERNAL_rng() * max;
+				for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
 				{
-					evtInst->valuei = i - 1;
-					break;
+					if (next > (max - evt->wave.complex.weights[i - 1]))
+					{
+						evtInst->valuei = i - 1;
+						break;
+					}
+					max -= evt->wave.complex.weights[i - 1];
 				}
-				max -= evt->wave.complex.weights[i - 1];
-			}
-		}
-		/* Random (No Immediate Repeats), Shuffle */
-		else if (	(evt->wave.complex.variation & 0xF) == 3 ||
-				(evt->wave.complex.variation & 0xF) == 4	)
-		{
-			max = 0.0f;
-			for (i = 0; i < evt->wave.complex.trackCount; i += 1)
-			{
-				if (i == evtInst->valuei)
+				break;
+
+			case VARIATION_TYPE_RANDOM_NO_REPEATS:
+			case VARIATION_TYPE_SHUFFLE:
+				max = 0.0f;
+				for (i = 0; i < evt->wave.complex.trackCount; i += 1)
 				{
-					continue;
+					if (i == evtInst->valuei)
+						continue;
+					max += evt->wave.complex.weights[i];
 				}
-				max += evt->wave.complex.weights[i];
-			}
-			next = FACT_INTERNAL_rng() * max;
-			for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
-			{
-				if (i - 1 == evtInst->valuei)
+				next = FACT_INTERNAL_rng() * max;
+				for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
 				{
-					continue;
+					if (i - 1 == evtInst->valuei)
+						continue;
+					if (next > (max - evt->wave.complex.weights[i - 1]))
+					{
+						evtInst->valuei = i - 1;
+						break;
+					}
+					max -= evt->wave.complex.weights[i - 1];
 				}
-				if (next > (max - evt->wave.complex.weights[i - 1]))
-				{
-					evtInst->valuei = i - 1;
-					break;
-				}
-				max -= evt->wave.complex.weights[i - 1];
-			}
+				break;
 		}
 
 		if (evt->wave.complex.variation & 0x00F0)
