@@ -2621,8 +2621,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		/* Length of sound entry, unused */
 		ptr += 2;
 
-		/* Simple/Complex Track data */
-		if (sb->sounds[i].flags & 0x01)
+		if (sb->sounds[i].flags & SOUND_FLAG_COMPLEX)
 		{
 			sb->sounds[i].trackCount = read_u8(&ptr);
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
@@ -2652,8 +2651,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->sounds[i].tracks[0].events[0].wave.simple.wavebank = read_u8(&ptr);
 		}
 
-		/* RPC Code data */
-		if (sb->sounds[i].flags & 0x0E)
+		if (sb->sounds[i].flags & SOUND_FLAG_RPC_MASK)
 		{
 			const uint16_t rpcDataLength = read_u16(&ptr, se);
 			ptrBookmark = ptr - 2;
@@ -2667,8 +2665,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 					loc.rpcCodes[k] = read_u32(&ptr, se); \
 				} \
 
-			/* Sound has attached RPCs */
-			if (sb->sounds[i].flags & 0x02)
+			if (sb->sounds[i].flags & SOUND_FLAG_HAS_RPC)
 			{
 				COPYRPCBLOCK(sb->sounds[i])
 			}
@@ -2678,8 +2675,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				sb->sounds[i].rpcCodes = NULL;
 			}
 
-			/* Tracks have attached RPCs */
-			if (sb->sounds[i].flags & 0x04)
+			if (sb->sounds[i].flags & SOUND_FLAG_HAS_TRACK_RPC)
 			{
 				for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 				{
@@ -2711,8 +2707,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			}
 		}
 
-		/* DSP Preset Code data */
-		if (sb->sounds[i].flags & 0x10)
+		if (sb->sounds[i].flags & SOUND_FLAG_HAS_DSP)
 		{
 			/* DSP presets length, unused */
 			ptr += 2;
@@ -2731,8 +2726,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->sounds[i].dspCodes = NULL;
 		}
 
-		/* Track data */
-		if (sb->sounds[i].flags & 0x01)
+		if (sb->sounds[i].flags & SOUND_FLAG_COMPLEX)
 		{
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{

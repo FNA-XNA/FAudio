@@ -271,6 +271,12 @@ typedef struct FACTTrack
 	FACTEvent *events;
 } FACTTrack;
 
+#define SOUND_FLAG_COMPLEX		0x01
+#define SOUND_FLAG_HAS_RPC		0x02
+#define SOUND_FLAG_HAS_TRACK_RPC	0x04
+#define SOUND_FLAG_RPC_MASK		0x0e
+#define SOUND_FLAG_HAS_DSP		0x10
+
 typedef struct FACTSound
 {
 	uint8_t flags;
