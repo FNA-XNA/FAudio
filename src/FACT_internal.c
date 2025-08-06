@@ -2098,7 +2098,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	dspParameterOffset = read_u32(&ptr, se);
 
 	/* Category data */
-	FAudio_assert((ptr - start) == categoryOffset);
+	ptr = start + categoryOffset;
 	pEngine->categories = (FACTAudioCategory*) pEngine->pMalloc(
 		sizeof(FACTAudioCategory) * pEngine->categoryCount
 	);
@@ -2118,7 +2118,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	}
 
 	/* Variable data */
-	FAudio_assert((ptr - start) == variableOffset);
+	ptr = start + variableOffset;
 	pEngine->variables = (FACTVariable*) pEngine->pMalloc(
 		sizeof(FACTVariable) * pEngine->variableCount
 	);
@@ -2142,7 +2142,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	/* RPC data */
 	if (pEngine->rpcCount > 0)
 	{
-		FAudio_assert((ptr - start) == rpcOffset);
+		ptr = start + rpcOffset;
 		pEngine->rpcs = (FACTRPC*) pEngine->pMalloc(
 			sizeof(FACTRPC) *
 			pEngine->rpcCount
@@ -2173,7 +2173,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	/* DSP Preset data */
 	if (pEngine->dspPresetCount > 0)
 	{
-		FAudio_assert((ptr - start) == dspPresetOffset);
+		ptr = start + dspPresetOffset;
 		pEngine->dspPresets = (FACTDSPPreset*) pEngine->pMalloc(
 			sizeof(FACTDSPPreset) *
 			pEngine->dspPresetCount
@@ -2195,7 +2195,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		}
 
 		/* DSP Parameter data */
-		FAudio_assert((ptr - start) == dspParameterOffset);
+		ptr = start + dspParameterOffset;
 		for (i = 0; i < pEngine->dspPresetCount; i += 1)
 		{
 			for (j = 0; j < pEngine->dspPresets[i].parameterCount; j += 1)
@@ -2209,48 +2209,46 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		}
 	}
 
-	/* Blob #1, no idea what this is... */
-	FAudio_assert((ptr - start) == blob1Offset);
-	ptr += blob1Count * 2;
-
-	/* Category Name Index data */
-	FAudio_assert((ptr - start) == categoryNameIndexOffset);
-	ptr += pEngine->categoryCount * 6; /* FIXME: index as assert value? */
-
 	/* Category Name data */
-	FAudio_assert((ptr - start) == categoryNameOffset);
 	pEngine->categoryNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
 		pEngine->categoryCount
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
+		uint8_t *offset_ptr = start + categoryNameIndexOffset + (i * 6);
+		uint16_t unknown;
+
+		ptr = start + read_u32(&offset_ptr, se);
+		unknown = read_u16(&offset_ptr, se);
+
+		if (unknown != 0xff)
+			FAudio_Log("Ignoring unknown value.\n");
+
 		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
 		pEngine->categoryNames[i] = (char*) pEngine->pMalloc(memsize);
 		FAudio_memcpy(pEngine->categoryNames[i], ptr, memsize);
-		ptr += memsize;
 	}
 
-	/* Blob #2, no idea what this is... */
-	FAudio_assert((ptr - start) == blob2Offset);
-	ptr += blob2Count * 2;
-
-	/* Variable Name Index data */
-	FAudio_assert((ptr - start) == variableNameIndexOffset);
-	ptr += pEngine->variableCount * 6; /* FIXME: index as assert value? */
-
 	/* Variable Name data */
-	FAudio_assert((ptr - start) == variableNameOffset);
 	pEngine->variableNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
 		pEngine->variableCount
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
+		uint8_t *offset_ptr = start + variableNameIndexOffset + (i * 6);
+		uint16_t unknown;
+
+		ptr = start + read_u32(&offset_ptr, se);
+		unknown = read_u16(&offset_ptr, se);
+
+		if (unknown != 0xff)
+			FAudio_Log("Ignoring unknown value.\n");
+
 		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
 		pEngine->variableNames[i] = (char*) pEngine->pMalloc(memsize);
 		FAudio_memcpy(pEngine->variableNames[i], ptr, memsize);
-		ptr += memsize;
 	}
 
 	/* Store this pointer in case we're asked to free it */
@@ -2259,8 +2257,6 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		pEngine->settings = pParams->pGlobalSettingsBuffer;
 	}
 
-	/* Finally. */
-	FAudio_assert((ptr - start) == pParams->globalSettingsBufferSize);
 	return 0;
 }
 
