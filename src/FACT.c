@@ -1150,7 +1150,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 			0xFF
 		);
 	}
-	if (!(pSoundBank->cues[nCueIndex].flags & 0x04))
+	if (!(pSoundBank->cues[nCueIndex].flags & CUE_FLAG_SINGLE_SOUND))
 	{
 		for (i = 0; i < pSoundBank->variationCount; i += 1)
 		{
@@ -1218,7 +1218,7 @@ uint32_t FACTSoundBank_Prepare(
 
 	/* Sound data */
 	(*ppCue)->data = &pSoundBank->cues[nCueIndex];
-	if ((*ppCue)->data->flags & 0x04)
+	if ((*ppCue)->data->flags & CUE_FLAG_SINGLE_SOUND)
 	{
 		for (i = 0; i < pSoundBank->soundCount; i += 1)
 		{
@@ -1761,12 +1761,12 @@ uint32_t FACTWaveBank_GetWaveProperties(
 
 	pWaveProperties->format = entry->Format;
 	pWaveProperties->durationInSamples = entry->PlayRegion.dwLength;
-	if (entry->Format.wFormatTag == 0)
+	if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_PCM)
 	{
 		pWaveProperties->durationInSamples /= (8 << entry->Format.wBitsPerSample) / 8;
 		pWaveProperties->durationInSamples /= entry->Format.nChannels;
 	}
-	else if (entry->Format.wFormatTag == FAUDIO_FORMAT_MSADPCM)
+	else if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_ADPCM)
 	{
 		pWaveProperties->durationInSamples = (
 			pWaveProperties->durationInSamples /
@@ -1852,7 +1852,7 @@ uint32_t FACTWaveBank_Prepare(
 	sends.pSends = &send;
 	format.pcm.nChannels = entry->Format.nChannels;
 	format.pcm.nSamplesPerSec = entry->Format.nSamplesPerSec;
-	if (entry->Format.wFormatTag == 0x0)
+	if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_PCM)
 	{
 		format.pcm.wFormatTag = FAUDIO_FORMAT_PCM;
 		format.pcm.wBitsPerSample = 8 << entry->Format.wBitsPerSample;
@@ -1860,7 +1860,7 @@ uint32_t FACTWaveBank_Prepare(
 		format.pcm.nAvgBytesPerSec = format.pcm.nBlockAlign * format.pcm.nSamplesPerSec;
 		format.pcm.cbSize = 0;
 	}
-	else if (entry->Format.wFormatTag == 0x1)
+	else if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_XMA)
 	{
 		/* XMA2 is quite similar to WMA Pro... is what everyone thought.
 		 * What a great way to start this comment.
@@ -1911,7 +1911,7 @@ uint32_t FACTWaveBank_Prepare(
 		format.xma2.bEncoderVersion = 4;
 		format.xma2.wBlockCount = seek->entryCount;
 	}
-	else if (entry->Format.wFormatTag == 0x2)
+	else if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_ADPCM)
 	{
 		format.pcm.wFormatTag = FAUDIO_FORMAT_MSADPCM;
 		format.pcm.nBlockAlign = (entry->Format.wBlockAlign + 22) * format.pcm.nChannels;
@@ -1924,7 +1924,7 @@ uint32_t FACTWaveBank_Prepare(
 			((format.pcm.nBlockAlign / format.pcm.nChannels) - 6) * 2
 		);
 	}
-	else if (entry->Format.wFormatTag == 0x3)
+	else if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_WMA)
 	{
 		/* Apparently this is used to detect WMA Pro...? */
 		FAudio_assert(entry->Format.wBitsPerSample == 0);

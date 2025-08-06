@@ -493,7 +493,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	uint16_t categoryIndex;
 	FACTAudioCategory *category;
 
-	if (cue->data->flags & 0x04)
+	if (cue->data->flags & CUE_FLAG_SINGLE_SOUND)
 	{
 		/* Sound */
 		baseSound = cue->sound;
@@ -1626,7 +1626,7 @@ void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 	FACTSoundInstance *sound;
 
 	/* Interactive sound selection */
-	if (!(cue->data->flags & 0x04) && cue->variation && cue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
+	if (!(cue->data->flags & CUE_FLAG_SINGLE_SOUND) && cue->variation && cue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 	{
 		/* Interactive */
 		if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & ACCESSIBILITY_CUE)
@@ -1794,7 +1794,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	if (c->wave->loopCount > 0 && entry->LoopRegion.dwTotalSamples > 0)
 	{
 		length = entry->LoopRegion.dwStartSample + entry->LoopRegion.dwTotalSamples;
-		if (entry->Format.wFormatTag == 0x0)
+		if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_PCM)
 		{
 			length = (
 				length *
@@ -1802,7 +1802,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 				(1 << entry->Format.wBitsPerSample)
 			);
 		}
-		else if (entry->Format.wFormatTag == 0x2)
+		else if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_ADPCM)
 		{
 			length = (
 				length /
@@ -1867,7 +1867,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 			c->wave->streamOffset = entry->PlayRegion.dwOffset;
 
 			/* Loop start */
-			if (entry->Format.wFormatTag == 0x0)
+			if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_PCM)
 			{
 				c->wave->streamOffset += (
 					entry->LoopRegion.dwStartSample *
@@ -1875,7 +1875,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 					(1 << entry->Format.wBitsPerSample)
 				);
 			}
-			else if (entry->Format.wFormatTag == 0x2)
+			else if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_ADPCM)
 			{
 				c->wave->streamOffset += (
 					entry->LoopRegion.dwStartSample /
@@ -1901,7 +1901,7 @@ void FACT_INTERNAL_OnBufferEnd(FAudioVoiceCallback *callback, void* pContext)
 	buffer.pContext = NULL;
 
 	/* Submit, finally. */
-	if (entry->Format.wFormatTag == 0x3)
+	if (entry->Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_WMA)
 	{
 		bufferWMA.pDecodedPacketCumulativeBytes =
 			c->wave->parentBank->seekTables[c->wave->index].entries;
@@ -2822,7 +2822,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sb->cues[cur].maxInstanceBehavior = read_u8(&ptr) >> 3;
 			sb->cues[cur].instanceCount = 0;
 
-			if (!(sb->cues[cur].flags & 0x04))
+			if (!(sb->cues[cur].flags & CUE_FLAG_SINGLE_SOUND))
 			{
 				/* FIXME: Is this the only way to get this...? */
 				sb->variationCount += 1;
@@ -3220,7 +3220,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 			/* If it's in-memory big-endian PCM, swap! */
 			if (	se &&
 				!wb->streaming &&
-				wb->entries[i].Format.wFormatTag == 0x0 &&
+				wb->entries[i].Format.wFormatTag == FACT_WAVEBANKMINIFORMAT_TAG_PCM &&
 				wb->entries[i].Format.wBitsPerSample == 1	)
 			{
 				pcm = (uint16_t*) FAudio_memptr(

@@ -294,6 +294,8 @@ typedef struct FACTSound
 	uint32_t *dspCodes;
 } FACTSound;
 
+#define CUE_FLAG_SINGLE_SOUND	0x04
+
 typedef struct FACTCueData
 {
 	uint8_t flags;
