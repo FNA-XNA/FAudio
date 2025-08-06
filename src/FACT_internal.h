@@ -512,7 +512,8 @@ struct FACTAudioEngine
 	void *sb_context;
 	void *wb_context;
 	void *wave_context;
-	LinkedList *wb_notifications_list;
+	FACTNotification *wavebank_notifications;
+	size_t wavebank_notification_count, wavebank_notifications_capacity;
 
 	/* Settings handle */
 	void *settings;
