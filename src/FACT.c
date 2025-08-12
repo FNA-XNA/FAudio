@@ -1030,17 +1030,12 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	const char *szFriendlyName
 ) {
 	uint16_t i;
-	FAudio_PlatformLockMutex(pEngine->apiLock);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
 		if (	FAudio_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
 			!(pEngine->variables[i].accessibility & ACCESSIBILITY_CUE))
-		{
-			FAudio_PlatformUnlockMutex(pEngine->apiLock);
 			return i;
-		}
 	}
-	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return FACTVARIABLEINDEX_INVALID;
 }
 
