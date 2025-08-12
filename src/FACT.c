@@ -2764,15 +2764,17 @@ uint16_t FACTCue_GetVariableIndex(
 	FACTCue *pCue,
 	const char *szFriendlyName
 ) {
-	uint16_t i;
+	FACTAudioEngine *engine = pCue->parentBank->parentEngine;
+
 	if (pCue == NULL)
 	{
 		return FACTVARIABLEINDEX_INVALID;
 	}
-	for (i = 0; i < pCue->parentBank->parentEngine->variableCount; i += 1)
+	for (uint16_t i = 0; i < engine->variableCount; ++i)
 	{
-		if (	FAudio_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
-			(pCue->parentBank->parentEngine->variables[i].accessibility & ACCESSIBILITY_CUE))
+		if (!FAudio_strcmp(szFriendlyName, engine->variableNames[i]) &&
+			(engine->variables[i].accessibility & ACCESSIBILITY_CUE) &&
+			(engine->variables[i].accessibility & ACCESSIBILITY_PUBLIC))
 			return i;
 	}
 	return FACTVARIABLEINDEX_INVALID;
