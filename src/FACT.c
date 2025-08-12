@@ -766,7 +766,9 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 	}
 
 	FAudio_assert(pEngine != NULL);
-	FAudio_assert(pEngine->notificationCallback != NULL);
+
+	if (!pEngine->notificationCallback)
+		return FACTENGINE_E_NONOTIFICATIONCALLBACK;
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
