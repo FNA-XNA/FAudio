@@ -2798,11 +2798,12 @@ uint32_t FACTCue_SetVariable(
 
 	if (nIndex >= pCue->parentBank->parentEngine->variableCount)
 		return FACTENGINE_E_INVALIDVARIABLEINDEX;
+	var = &pCue->parentBank->parentEngine->variables[nIndex];
+	if (!(var->accessibility & ACCESSIBILITY_PUBLIC))
+		return FACTENGINE_E_INVALIDVARIABLEINDEX;
 
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
-	var = &pCue->parentBank->parentEngine->variables[nIndex];
-	FAudio_assert(var->accessibility & ACCESSIBILITY_PUBLIC);
 	FAudio_assert(!(var->accessibility & ACCESSIBILITY_READONLY));
 	FAudio_assert(var->accessibility & ACCESSIBILITY_CUE);
 	pCue->variableValues[nIndex] = FAudio_clamp(
