@@ -631,8 +631,10 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	FACTAudioEngine *pEngine,
 	const FACTNotificationDescription *pNotificationDescription
 ) {
+	if (!pNotificationDescription)
+		return FAUDIO_E_INVALID_ARG;
+
 	FAudio_assert(pEngine != NULL);
-	FAudio_assert(pNotificationDescription != NULL);
 	FAudio_assert(pEngine->notificationCallback != NULL);
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
