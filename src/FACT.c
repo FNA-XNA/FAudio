@@ -1076,11 +1076,12 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 
 	if (nIndex >= pEngine->variableCount)
 		return FACTENGINE_E_INVALIDVARIABLEINDEX;
+	var = &pEngine->variables[nIndex];
+	if (!(var->accessibility & ACCESSIBILITY_PUBLIC))
+		return FACTENGINE_E_INVALIDVARIABLEINDEX;
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
-	var = &pEngine->variables[nIndex];
-	FAudio_assert(var->accessibility & ACCESSIBILITY_PUBLIC);
 	FAudio_assert(!(var->accessibility & ACCESSIBILITY_CUE));
 	*pnValue = pEngine->globalVariableValues[nIndex];
 
