@@ -323,7 +323,7 @@ uint32_t FACTAudioEngine_Initialize(
 		FAPOBase_Release((FAPOBase*) reverbDesc.pEffect);
 	}
 
-	pEngine->initialized = 1;
+	pEngine->initialized = true;
 	pEngine->apiThread = FAudio_PlatformCreateThread(
 		FACT_INTERNAL_APIThread,
 		"FACT Thread",
@@ -343,7 +343,7 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	FAudioReallocFunc pRealloc;
 
 	/* Close thread, then lock ASAP */
-	pEngine->initialized = 0;
+	pEngine->initialized = false;
 	FAudio_PlatformWaitThread(pEngine->apiThread, NULL);
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
@@ -518,7 +518,7 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 		0,
 		FACT_INTERNAL_DefaultReadFile,
 		FACT_INTERNAL_DefaultGetOverlappedResult,
-		0,
+		false,
 		ppWaveBank
 	);
 	if (pEngine->notifications & NOTIFY_WAVEBANKPREPARED)
@@ -563,7 +563,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 		packetSize,
 		pEngine->pReadFile,
 		pEngine->pGetOverlappedResult,
-		1,
+		true,
 		ppWaveBank
 	);
 	if (pEngine->notifications & NOTIFY_WAVEBANKPREPARED)
@@ -665,7 +665,7 @@ uint32_t FACTAudioEngine_RegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pCue->notifyOnDestroy = 1;
+			pNotificationDescription->pCue->notifyOnDestroy = true;
 			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -686,7 +686,7 @@ uint32_t FACTAudioEngine_RegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pSoundBank->notifyOnDestroy = 1;
+			pNotificationDescription->pSoundBank->notifyOnDestroy = true;
 			pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -699,7 +699,7 @@ uint32_t FACTAudioEngine_RegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pWaveBank->notifyOnDestroy = 1;
+			pNotificationDescription->pWaveBank->notifyOnDestroy = true;
 			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -727,7 +727,7 @@ uint32_t FACTAudioEngine_RegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pWave->notifyOnDestroy = 1;
+			pNotificationDescription->pWave->notifyOnDestroy = true;
 			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -789,7 +789,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pCue->notifyOnDestroy = 0;
+			pNotificationDescription->pCue->notifyOnDestroy = false;
 			pNotificationDescription->pCue->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -810,7 +810,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pSoundBank->notifyOnDestroy = 0;
+			pNotificationDescription->pSoundBank->notifyOnDestroy = false;
 			pNotificationDescription->pSoundBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -823,7 +823,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pWaveBank->notifyOnDestroy = 0;
+			pNotificationDescription->pWaveBank->notifyOnDestroy = false;
 			pNotificationDescription->pWaveBank->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -851,7 +851,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 		}
 		else
 		{
-			pNotificationDescription->pWave->notifyOnDestroy = 0;
+			pNotificationDescription->pWave->notifyOnDestroy = false;
 			pNotificationDescription->pWave->usercontext = pNotificationDescription->pvContext;
 		}
 	}
@@ -893,7 +893,7 @@ uint16_t FACTAudioEngine_GetCategory(
 	return FACTCATEGORY_INVALID;
 }
 
-uint8_t FACT_INTERNAL_IsInCategory(
+bool FACT_INTERNAL_IsInCategory(
 	FACTAudioEngine *engine,
 	uint16_t target,
 	uint16_t category
@@ -903,7 +903,7 @@ uint8_t FACT_INTERNAL_IsInCategory(
 	/* Same category, no need to go on a crazy hunt */
 	if (category == target)
 	{
-		return 1;
+		return true;
 	}
 
 	/* Right, on with the crazy hunt */
@@ -912,11 +912,11 @@ uint8_t FACT_INTERNAL_IsInCategory(
 	{
 		if (cat->parentCategory == target)
 		{
-			return 1;
+			return true;
 		}
 		cat = &engine->categories[cat->parentCategory];
 	}
-	return 0;
+	return false;
 }
 
 uint32_t FACTAudioEngine_Stop(
@@ -1215,9 +1215,9 @@ uint32_t FACTSoundBank_Prepare(
 	/* Engine references */
 	(*ppCue)->parentBank = pSoundBank;
 	(*ppCue)->next = NULL;
-	(*ppCue)->managed = 0;
+	(*ppCue)->managed = false;
 	(*ppCue)->index = nCueIndex;
-	(*ppCue)->notifyOnDestroy = 0;
+	(*ppCue)->notifyOnDestroy = false;
 	(*ppCue)->usercontext = NULL;
 
 	/* Sound data */
@@ -1316,7 +1316,7 @@ uint32_t FACTSoundBank_Play(
 	else
 	{
 		/* AKA we get to Destroy() this ourselves */
-		result->managed = 1;
+		result->managed = true;
 	}
 	FACTCue_Play(result);
 
@@ -1358,7 +1358,7 @@ uint32_t FACTSoundBank_Play3D(
 	else
 	{
 		/* AKA we get to Destroy() this ourselves */
-		result->managed = 1;
+		result->managed = true;
 	}
 	FACT3DApply(pDSPSettings, result);
 	FACTCue_Play(result);
@@ -1826,7 +1826,7 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->parentBank = pWaveBank;
 	(*ppWave)->parentCue = NULL;
 	(*ppWave)->index = nWaveIndex;
-	(*ppWave)->notifyOnDestroy = 0;
+	(*ppWave)->notifyOnDestroy = false;
 	(*ppWave)->usercontext = NULL;
 
 	/* Playback */
@@ -2726,7 +2726,7 @@ uint32_t FACTCue_SetMatrixCoefficients(
 		pMatrixCoefficients,
 		sizeof(float) * uSrcChannelCount * uDstChannelCount
 	);
-	pCue->active3D = 1;
+	pCue->active3D = true;
 
 	/* Apply to Waves if they exist */
 	if (pCue->simpleWave != NULL)

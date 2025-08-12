@@ -188,7 +188,7 @@ typedef struct FACTEvent
 			uint16_t angle;
 
 			/* Track Variation */
-			uint8_t isComplex;
+			bool isComplex;
 			FAUDIONAMELESS union
 			{
 				struct
@@ -351,7 +351,7 @@ typedef struct FACTVariationTable
 {
 	enum variation_table_type type;
 	int16_t variable;
-	uint8_t isComplex;
+	bool isComplex;
 
 	uint16_t entryCount;
 	FACTVariation *entries;
@@ -398,7 +398,7 @@ typedef struct FACTEventInstance
 {
 	uint32_t timestamp;
 	uint16_t loopCount;
-	uint8_t finished;
+	bool finished;
 	FAUDIONAMELESS union
 	{
 		float value;
@@ -499,7 +499,7 @@ struct FACTAudioEngine
 	/* Engine thread */
 	FAudioThread apiThread;
 	FAudioMutex apiLock;
-	uint8_t initialized;
+	bool initialized;
 
 	/* Allocator callbacks */
 	FAudioMallocFunc pMalloc;
@@ -524,7 +524,7 @@ struct FACTSoundBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
-	uint8_t notifyOnDestroy;
+	bool notifyOnDestroy;
 	void *usercontext;
 
 	/* Array sizes */
@@ -555,7 +555,7 @@ struct FACTWaveBank
 	FACTAudioEngine *parentEngine;
 	LinkedList *waveList;
 	FAudioMutex waveLock;
-	uint8_t notifyOnDestroy;
+	bool notifyOnDestroy;
 	void *usercontext;
 
 	/* Actual WaveBank information */
@@ -568,7 +568,7 @@ struct FACTWaveBank
 
 	/* I/O information */
 	uint32_t packetSize;
-	uint16_t streaming;
+	bool streaming;
 	uint8_t *packetBuffer;
 	uint32_t packetBufferLen;
 	void* io;
@@ -580,7 +580,7 @@ struct FACTWave
 	FACTWaveBank *parentBank;
 	FACTCue *parentCue;
 	uint16_t index;
-	uint8_t notifyOnDestroy;
+	bool notifyOnDestroy;
 	void *usercontext;
 
 	/* Playback */
@@ -605,9 +605,9 @@ struct FACTCue
 	/* Engine references */
 	FACTSoundBank *parentBank;
 	FACTCue *next;
-	uint8_t managed;
+	bool managed;
 	uint16_t index;
-	uint8_t notifyOnDestroy;
+	bool notifyOnDestroy;
 	void *usercontext;
 
 	/* Sound data */
@@ -635,7 +635,7 @@ struct FACTCue
 	uint32_t maxRpcReleaseTime;
 
 	/* 3D Data */
-	uint8_t active3D;
+	bool active3D;
 	uint32_t srcChannels;
 	uint32_t dstChannels;
 	float matrixCoefficients[2 * 8]; /* Stereo input, 7.1 output */
@@ -655,7 +655,7 @@ void FACT_INTERNAL_GetNextWave(
 	FACTEvent *evt,
 	FACTEventInstance *evtInst
 );
-uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
+bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS);
@@ -711,7 +711,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t packetSize,
 	FACTReadFileCallback pRead,
 	FACTGetOverlappedResultCallback pOverlap,
-	uint16_t isStreaming,
+	bool isStreaming,
 	FACTWaveBank **ppWaveBank
 );
 

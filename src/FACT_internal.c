@@ -106,7 +106,7 @@ static inline void FACT_INTERNAL_ReadFile(
 ) {
 	FACTOverlapped ovlp;
 	uint32_t realOffset, realLen, offPacket, lenPacket, result;
-	uint8_t usePacketBuffer;
+	bool usePacketBuffer = false;
 	void *buf;
 
 	ovlp.Internal = NULL;
@@ -119,20 +119,19 @@ static inline void FACT_INTERNAL_ReadFile(
 	 */
 	realOffset = offset;
 	realLen = len;
-	usePacketBuffer = 0;
 	if (packetSize > 0)
 	{
 		offPacket = realOffset % packetSize;
 		if (offPacket > 0)
 		{
-			usePacketBuffer = 1;
+			usePacketBuffer = true;
 			realOffset -= offPacket;
 			realLen += offPacket;
 		}
 		lenPacket = realLen % packetSize;
 		if (lenPacket > 0)
 		{
-			usePacketBuffer = 1;
+			usePacketBuffer = true;
 			realLen += (packetSize - lenPacket);
 		}
 	}
@@ -184,6 +183,7 @@ void FACT_INTERNAL_GetNextWave(
 	FACTEventInstance *evtInst
 ) {
 	FAudioSendDescriptor reverbDesc[2];
+	bool has_track_variation = false;
 	FAudioVoiceSends reverbSends;
 	const char *wbName;
 	FACTWaveBank *wb = NULL;
@@ -192,7 +192,6 @@ void FACT_INTERNAL_GetNextWave(
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
 	float max, next;
-	uint8_t noTrackVariation = 1;
 	uint32_t i;
 
 	/* Track Variation */
@@ -254,7 +253,7 @@ void FACT_INTERNAL_GetNextWave(
 
 		if (evt->wave.complex.variation & 0x00F0)
 		{
-			noTrackVariation = 0;
+			has_track_variation = true;
 		}
 
 		wbIndex = evt->wave.complex.wavebanks[evtInst->valuei];
@@ -279,8 +278,7 @@ void FACT_INTERNAL_GetNextWave(
 	FAudio_assert(wb != NULL);
 
 	/* Generate the Wave */
-	if (	evtInst->loopCount == 255 &&
-		noTrackVariation &&
+	if (evtInst->loopCount == 255 && !has_track_variation &&
 		!(evt->wave.variationFlags & VARIATION_FLAG_LOOP_MASK))
 	{
 		/* For infinite loops with no variation, let Wave do the work */
@@ -470,7 +468,7 @@ void FACT_INTERNAL_GetNextWave(
 	}
 }
 
-uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
+bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 {
 	int32_t i, j, k;
 	float max, next, weight;
@@ -535,7 +533,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			 */
 			if (i == cue->variation->entryCount)
 			{
-				return 1;
+				return true;
 			}
 		}
 		else
@@ -627,7 +625,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 					case MAX_INSTANCE_BEHAVIOR_FAIL:
 						cue->state |= FACT_STATE_STOPPED;
 						cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
-						return 0;
+						return false;
 
 					case MAX_INSTANCE_BEHAVIOR_QUEUE:
 						/* FIXME: How is this different from Replace Oldest? */
@@ -751,7 +749,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 				newSound->tracks[i].events[j].timestamp =
 					newSound->sound->tracks[i].events[j].timestamp;
 				newSound->tracks[i].events[j].loopCount = 0;
-				newSound->tracks[i].events[j].finished = 0;
+				newSound->tracks[i].events[j].finished = false;
 				newSound->tracks[i].events[j].value = 0.0f;
 
 				if (	evt->type == FACTEVENT_PLAYWAVE ||
@@ -841,7 +839,7 @@ uint8_t FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		cue->playingSound = newSound;
 	}
 
-	return 1;
+	return true;
 }
 
 void FACT_INTERNAL_SendCueNotification(FACTCue *cue, FACTNoticationsFlags flag, uint8_t type)
@@ -1195,7 +1193,7 @@ void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 static inline void FACT_INTERNAL_StopTrack(
 	FACTTrack *track,
 	FACTTrackInstance *trackInst,
-	uint8_t immediate
+	bool immediate
 ) {
 	uint8_t i;
 
@@ -1219,7 +1217,7 @@ static inline void FACT_INTERNAL_StopTrack(
 	for (i = 0; i < track->eventCount; i += 1)
 	{
 		trackInst->events[i].loopCount = 0;
-		trackInst->events[i].finished = 1;
+		trackInst->events[i].finished = true;
 	}
 }
 
@@ -1233,7 +1231,7 @@ void FACT_INTERNAL_ActivateEvent(
 ) {
 	uint8_t i;
 	float svResult;
-	uint8_t skipLoopCheck = 0;
+	bool skipLoopCheck = false;
 
 	/* STOP */
 	if (evt->type == FACTEVENT_STOP)
@@ -1246,11 +1244,7 @@ void FACT_INTERNAL_ActivateEvent(
 			{
 				for (i = 0; i < sound->sound->trackCount; i += 1)
 				{
-					FACT_INTERNAL_StopTrack(
-						&sound->sound->tracks[i],
-						&sound->tracks[i],
-						1
-					);
+					FACT_INTERNAL_StopTrack(&sound->sound->tracks[i], &sound->tracks[i], true);
 				}
 			}
 			else
@@ -1418,17 +1412,17 @@ void FACT_INTERNAL_ActivateEvent(
 	}
 
 	/* If we made it here, we're done! */
-	evtInst->finished = 1;
+	evtInst->finished = true;
 }
 
-uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
+bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 {
 	uint8_t i, j;
 	uint32_t waveState;
 	uint32_t elapsedCue;
 	FACTEventInstance *evtInst;
 	FAudioFilterParameters filterParams;
-	uint8_t finished = 1;
+	bool finished = true;
 
 	/* Instance limiting Fade in/out */
 	float fadeVolume;
@@ -1455,7 +1449,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
 			/* We've faded out! */
-			return 1;
+			return true;
 		}
 		fadeVolume = 1.0f - (
 			(float) (timestamp - sound->fadeStart) /
@@ -1467,7 +1461,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
 			/* We've faded out! */
-			return 1;
+			return true;
 		}
 		fadeVolume = 1.0f;
 	}
@@ -1516,7 +1510,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 			if (!evtInst->finished)
 			{
 				/* Cue's not done yet...! */
-				finished = 0;
+				finished = false;
 
 				/* Trigger events at the right time */
 				if (elapsedCue >= evtInst->timestamp)
@@ -1538,7 +1532,7 @@ uint8_t FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 		{
 			continue;
 		}
-		finished = 0;
+		finished = false;
 
 		/* Clear out Waves as they finish */
 		FACTWave_GetState(
@@ -1978,7 +1972,7 @@ int32_t FACTCALL FACT_INTERNAL_DefaultGetOverlappedResult(
 /* Parsing functions */
 
 #define READ_FUNC(type, size, bitsize, suffix) \
-	static inline type read_##suffix(uint8_t **ptr, const uint8_t swapendian) \
+	static inline type read_##suffix(uint8_t **ptr, const bool swapendian) \
 	{ \
 		type result = *((type*) *ptr); \
 		*ptr += size; \
@@ -1997,7 +1991,7 @@ READ_FUNC(uint16_t, 2, 16, u16)
 READ_FUNC(uint32_t, 4, 32, u32)
 READ_FUNC(int16_t, 2, 16, s16)
 READ_FUNC(int32_t, 4, 32, s32)
-static inline float read_f32(uint8_t **ptr, const uint8_t swapendian)
+static inline float read_f32(uint8_t **ptr, const bool swapendian)
 {
 	float result = *((float*) *ptr);
 	*ptr += 4;
@@ -2036,10 +2030,10 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 			dspParameterOffset;
 	uint16_t blob1Count, blob2Count, tool;
 	uint8_t version;
-	uint8_t se;
 	uint32_t magic;
 	size_t memsize;
 	uint16_t i, j;
+	bool se;
 
 	uint8_t *ptr = (uint8_t*) pParams->pGlobalSettingsBuffer;
 	uint8_t *start = ptr;
@@ -2262,7 +2256,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 
 void FACT_INTERNAL_ParseTrackEvents(
 	uint8_t **ptr,
-	uint8_t se,
+	bool se,
 	FACTTrack *track,
 	FAudioMallocFunc pMalloc
 ) {
@@ -2296,7 +2290,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 		else if (EVTTYPE(FACTEVENT_PLAYWAVE))
 		{
 			/* Basic Wave */
-			track->events[i].wave.isComplex = 0;
+			track->events[i].wave.isComplex = false;
 			track->events[i].wave.flags = read_u8(ptr);
 			track->events[i].wave.simple.track = read_u16(ptr, se);
 			track->events[i].wave.simple.wavebank = read_u8(ptr);
@@ -2310,7 +2304,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
 		{
 			/* Complex Wave */
-			track->events[i].wave.isComplex = 1;
+			track->events[i].wave.isComplex = true;
 			track->events[i].wave.flags = read_u8(ptr);
 			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr, se);
@@ -2350,7 +2344,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 		else if (EVTTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
 		{
 			/* Basic Wave */
-			track->events[i].wave.isComplex = 0;
+			track->events[i].wave.isComplex = false;
 			track->events[i].wave.flags = read_u8(ptr);
 			track->events[i].wave.simple.track = read_u16(ptr, se);
 			track->events[i].wave.simple.wavebank = read_u8(ptr);
@@ -2372,7 +2366,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
 		{
 			/* Complex Wave */
-			track->events[i].wave.isComplex = 1;
+			track->events[i].wave.isComplex = true;
 			track->events[i].wave.flags = read_u8(ptr);
 			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr, se);
@@ -2506,7 +2500,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	uint8_t *start = ptr;
 
 	uint32_t magic = read_u32(&ptr, 0);
-	uint8_t se = magic == 0x5344424B; /* Swap Endian */
+	bool se = magic == 0x5344424B; /* Swap Endian */
 
 	if (magic != 0x4B424453 && magic != 0x5344424B)  /* 'SDBK' */
 	{
@@ -2543,7 +2537,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb = (FACTSoundBank*) pEngine->pMalloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
-	sb->notifyOnDestroy = 0;
+	sb->notifyOnDestroy = false;
 	sb->usercontext = NULL;
 
 	cueSimpleCount = read_u16(&ptr, se);
@@ -2864,7 +2858,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		switch (sb->variations[i].type)
 		{
 			case VARIATION_TABLE_TYPE_WAVE:
-				sb->variations[i].isComplex = 0;
+				sb->variations[i].isComplex = false;
 				for (j = 0; j < sb->variations[i].entryCount; j += 1)
 				{
 					sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
@@ -2875,7 +2869,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				break;
 
 			case VARIATION_TABLE_TYPE_SOUND:
-				sb->variations[i].isComplex = 1;
+				sb->variations[i].isComplex = true;
 				for (j = 0; j < sb->variations[i].entryCount; j += 1)
 				{
 					sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
@@ -2885,7 +2879,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				break;
 
 			case VARIATION_TABLE_TYPE_INTERACTIVE:
-				sb->variations[i].isComplex = 1;
+				sb->variations[i].isComplex = true;
 				for (j = 0; j < sb->variations[i].entryCount; j += 1)
 				{
 					sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
@@ -2896,7 +2890,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				break;
 
 			case VARIATION_TABLE_TYPE_COMPACT_WAVE:
-				sb->variations[i].isComplex = 0;
+				sb->variations[i].isComplex = false;
 				for (j = 0; j < sb->variations[i].entryCount; j += 1)
 				{
 					sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
@@ -3008,10 +3002,10 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	uint32_t packetSize,
 	FACTReadFileCallback pRead,
 	FACTGetOverlappedResultCallback pOverlap,
-	uint16_t isStreaming,
+	bool isStreaming,
 	FACTWaveBank **ppWaveBank
 ) {
-	uint8_t se = 0; /* Swap Endian */
+	bool se; /* Swap Endian */
 	FACTWaveBank *wb;
 	size_t memsize;
 	uint32_t i, j;
@@ -3100,7 +3094,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->waveLock = FAudio_PlatformCreateMutex();
 	wb->packetSize = packetSize;
 	wb->io = io;
-	wb->notifyOnDestroy = 0;
+	wb->notifyOnDestroy = false;
 	wb->usercontext = NULL;
 
 	/* WaveBank Data */
