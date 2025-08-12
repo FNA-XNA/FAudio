@@ -44,6 +44,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define FACTENGINE_E_INVALIDVARIABLEINDEX	0x8ac7000a
+
 /* Type Declarations */
 
 typedef struct FACTAudioEngine FACTAudioEngine;
