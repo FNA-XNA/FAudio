@@ -2797,9 +2797,7 @@ uint32_t FACTCue_SetVariable(
 	}
 
 	if (nIndex == FACTINDEX_INVALID)
-	{
-		return 1;
-	}
+		return FACTENGINE_E_INVALIDVARIABLEINDEX;
 
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
