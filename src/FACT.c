@@ -1054,18 +1054,16 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 	if (nIndex >= pEngine->variableCount)
 		return FACTENGINE_E_INVALIDVARIABLEINDEX;
 	var = &pEngine->variables[nIndex];
-	if (!(var->accessibility & ACCESSIBILITY_PUBLIC) || (var->accessibility & ACCESSIBILITY_CUE))
+	if (!(var->accessibility & ACCESSIBILITY_PUBLIC) || (var->accessibility & ACCESSIBILITY_CUE)
+			|| (var->accessibility & ACCESSIBILITY_READONLY))
 		return FACTENGINE_E_INVALIDVARIABLEINDEX;
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
-
-	FAudio_assert(!(var->accessibility & ACCESSIBILITY_READONLY));
 	pEngine->globalVariableValues[nIndex] = FAudio_clamp(
 		nValue,
 		var->minValue,
 		var->maxValue
 	);
-
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return 0;
 }
