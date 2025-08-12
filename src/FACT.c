@@ -1032,8 +1032,9 @@ uint16_t FACTAudioEngine_GetGlobalVariableIndex(
 	uint16_t i;
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		if (	FAudio_strcmp(szFriendlyName, pEngine->variableNames[i]) == 0 &&
-			!(pEngine->variables[i].accessibility & ACCESSIBILITY_CUE))
+		if (!FAudio_strcmp(szFriendlyName, pEngine->variableNames[i]) &&
+			!(pEngine->variables[i].accessibility & ACCESSIBILITY_CUE) &&
+			(pEngine->variables[i].accessibility & ACCESSIBILITY_PUBLIC))
 			return i;
 	}
 	return FACTVARIABLEINDEX_INVALID;
