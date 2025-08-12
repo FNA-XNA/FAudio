@@ -759,8 +759,13 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 	FACTAudioEngine *pEngine,
 	const FACTNotificationDescription *pNotificationDescription
 ) {
+	if (!pNotificationDescription)
+	{
+		FAudio_Log("Unregistration of all notifications is not implemented.\n");
+		return FAUDIO_E_INVALID_CALL;
+	}
+
 	FAudio_assert(pEngine != NULL);
-	FAudio_assert(pNotificationDescription != NULL);
 	FAudio_assert(pEngine->notificationCallback != NULL);
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
