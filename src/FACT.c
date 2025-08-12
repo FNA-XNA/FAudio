@@ -1074,6 +1074,9 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 ) {
 	FACTVariable *var;
 
+	if (nIndex >= pEngine->variableCount)
+		return FACTENGINE_E_INVALIDVARIABLEINDEX;
+
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
 	var = &pEngine->variables[nIndex];
