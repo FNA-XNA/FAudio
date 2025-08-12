@@ -2769,19 +2769,12 @@ uint16_t FACTCue_GetVariableIndex(
 	{
 		return FACTVARIABLEINDEX_INVALID;
 	}
-	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 	for (i = 0; i < pCue->parentBank->parentEngine->variableCount; i += 1)
 	{
 		if (	FAudio_strcmp(szFriendlyName, pCue->parentBank->parentEngine->variableNames[i]) == 0 &&
 			(pCue->parentBank->parentEngine->variables[i].accessibility & ACCESSIBILITY_CUE))
-		{
-			FAudio_PlatformUnlockMutex(
-				pCue->parentBank->parentEngine->apiLock
-			);
 			return i;
-		}
 	}
-	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
 	return FACTVARIABLEINDEX_INVALID;
 }
 
