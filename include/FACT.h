@@ -44,6 +44,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define FACTENGINE_E_NONOTIFICATIONCALLBACK	0x8ac70004
 #define FACTENGINE_E_INVALIDVARIABLEINDEX	0x8ac7000a
 
 /* Type Declarations */
