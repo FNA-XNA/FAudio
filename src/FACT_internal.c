@@ -2581,7 +2581,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	ptr += 64;
 
 	/* WaveBank Name data */
-	FAudio_assert((ptr - start) == wavebankNameOffset);
 	ptr = start + wavebankNameOffset;
 	sb->wavebankNames = (char**) pEngine->pMalloc(
 		sizeof(char*) *
@@ -2596,7 +2595,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	}
 
 	/* Sound data */
-	FAudio_assert((ptr - start) == soundOffset);
+	ptr = start + soundOffset;
 	sb->sounds = (FACTSound*) pEngine->pMalloc(
 		sizeof(FACTSound) *
 		sb->soundCount
@@ -2690,7 +2689,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			#undef COPYRPCBLOCK
 
 			/* FIXME: Does 0x08 mean something for RPCs...? */
-			FAudio_assert((ptr - ptrBookmark) == rpcDataLength);
+			if (ptr - ptrBookmark != rpcDataLength)
+				FAudio_Log("Unexpected RPC data length.\n");
 		}
 		else
 		{
@@ -2757,7 +2757,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			/* All Track events are stored at the end of the block */
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				FAudio_assert((ptr - start) == sb->sounds[i].tracks[j].code);
+				ptr = start + sb->sounds[i].tracks[j].code;
 				FACT_INTERNAL_ParseTrackEvents(
 					&ptr,
 					se,
@@ -2778,7 +2778,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	cur = 0;
 
 	/* Simple Cue data */
-	FAudio_assert(cueSimpleCount == 0 || (ptr - start) == cueSimpleOffset);
 	if (cueSimpleCount > 0)
 	{
 		ptr = start + cueSimpleOffset;
@@ -2797,7 +2796,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	}
 
 	/* Complex Cue data */
-	FAudio_assert(cueComplexCount == 0 || (ptr - start) == cueComplexOffset);
 	if (cueComplexCount > 0)
 	{
 		ptr = start + cueComplexOffset;
@@ -2834,7 +2832,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	/* Variation data */
 	if (sb->variationCount > 0)
 	{
-		FAudio_assert((ptr - start) == variationOffset);
 		ptr = start + variationOffset;
 		sb->variations = (FACTVariationTable*) pEngine->pMalloc(
 			sizeof(FACTVariationTable) *
@@ -2917,7 +2914,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	/* Transition data */
 	if (sb->transitionCount > 0)
 	{
-		FAudio_assert((ptr - start) == transitionOffset);
 		ptr = start + transitionOffset;
 		sb->transitions = (FACTTransitionTable*) pEngine->pMalloc(
 			sizeof(FACTTransitionTable) *
@@ -2955,25 +2951,9 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		}
 	}
 
-	/* Cue Hash data? No idea what this is... */
-	if (cueHashOffset != -1)
-	{
-		FAudio_assert((ptr - start) == cueHashOffset);
-		ptr += 2 * cueTotalAlign;
-	}
-
-	/* Cue Name Index data */
-	if (cueNameIndexOffset != -1)
-	{
-		FAudio_assert((ptr - start) == cueNameIndexOffset);
-		ptr = start + cueNameIndexOffset;
-		ptr += 6 * sb->cueCount; /* FIXME: index as assert value? */
-	}
-
 	/* Cue Name data */
 	if (cueNameOffset != -1)
 	{
-		FAudio_assert((ptr - start) == cueNameOffset);
 		ptr = start + cueNameOffset;
 		sb->cueNames = (char**) pEngine->pMalloc(
 			sizeof(char*) *
@@ -2981,10 +2961,18 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		);
 		for (i = 0; i < sb->cueCount; i += 1)
 		{
+			uint8_t *offset_ptr = start + cueNameIndexOffset + (i * 6);
+			uint16_t unknown;
+
+			ptr = start + read_u32(&offset_ptr, se);
+			unknown = read_u16(&offset_ptr, se);
+
+			if (unknown != 0xff)
+				FAudio_Log("Ignoring unknown value.\n");
+
 			memsize = FAudio_strlen((char*) ptr) + 1;
 			sb->cueNames[i] = (char*) pEngine->pMalloc(memsize);
 			FAudio_memcpy(sb->cueNames[i], ptr, memsize);
-			ptr += memsize;
 		}
 	}
 	else
@@ -3000,8 +2988,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		pEngine->pMalloc
 	);
 
-	/* Finally. */
-	FAudio_assert((ptr - start) == dwSize);
 	*ppSoundBank = sb;
 	return 0;
 }
