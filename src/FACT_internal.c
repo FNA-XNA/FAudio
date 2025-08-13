@@ -842,9 +842,9 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	return true;
 }
 
-void FACT_INTERNAL_SendCueNotification(FACTCue *cue, FACTNoticationsFlags flag, uint8_t type)
+void FACT_INTERNAL_SendCueNotification(FACTCue *cue, uint8_t type)
 {
-    if (cue->parentBank->parentEngine->notifications & flag)
+    if (cue->parentBank->parentEngine->notifications & (1u << type))
     {
         FACTNotification note;
 
@@ -896,7 +896,7 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_PAUSED | FACT_STATE_STOPPING);
 		sound->parentCue->data->instanceCount -= 1;
 
-		FACT_INTERNAL_SendCueNotification(sound->parentCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
+		FACT_INTERNAL_SendCueNotification(sound->parentCue, FACTNOTIFICATIONTYPE_CUESTOP);
 	}
 	sound->parentCue->parentBank->parentEngine->pFree(sound);
 }
