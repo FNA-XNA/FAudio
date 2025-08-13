@@ -491,12 +491,9 @@ struct FACTAudioEngine
 	FAudioFreeFunc pFree;
 	FAudioReallocFunc pRealloc;
 
-	/* Peristent Notifications */
-	uint32_t notifications;
-	void *cue_context;
-	void *sb_context;
-	void *wb_context;
-	void *wave_context;
+	FACTNotificationDescription *notifications;
+	size_t notification_count, notifications_capacity;
+
 	/* Wave banks to send PREPARED notifications for.
 	 * These are queued and processed in DoWork(). */
 	FACTWaveBank **prepared_wavebanks;
@@ -511,8 +508,6 @@ struct FACTSoundBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Array sizes */
 	uint16_t cueCount;
@@ -542,8 +537,6 @@ struct FACTWaveBank
 	FACTAudioEngine *parentEngine;
 	LinkedList *waveList;
 	FAudioMutex waveLock;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Actual WaveBank information */
 	char *name;
@@ -567,8 +560,6 @@ struct FACTWave
 	FACTWaveBank *parentBank;
 	FACTCue *parentCue;
 	uint16_t index;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Playback */
 	uint32_t state;
@@ -594,8 +585,6 @@ struct FACTCue
 	FACTCue *next;
 	bool managed;
 	uint16_t index;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Sound data */
 	FACTCueData *data;
