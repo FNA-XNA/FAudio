@@ -29,6 +29,23 @@
 
 /* AudioEngine implementation */
 
+static void send_wavebank_notification(FACTAudioEngine *engine, uint8_t type, FACTWaveBank *wavebank)
+{
+	FACTNotification notification;
+
+	if (!(engine->notifications & (1u << type)) &&
+		!(type == FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED && wavebank->notifyOnDestroy))
+		return;
+
+	notification.type = type;
+	notification.waveBank.pWaveBank = wavebank;
+	if (engine->notifications & (1u << type))
+		notification.pvContext = engine->wb_context;
+	else
+		notification.pvContext = wavebank->usercontext;
+	engine->notificationCallback(&notification);
+}
+
 uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
@@ -336,18 +353,8 @@ uint32_t FACTAudioEngine_Initialize(
 
 static void send_queued_wavebank_notifications(FACTAudioEngine *engine)
 {
-	if (engine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKPREPARED))
-	{
-		for (size_t i = 0; i < engine->prepared_wavebank_count; ++i)
-		{
-			FACTNotification notification;
-
-			notification.type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
-			notification.pvContext = engine->wb_context;
-			notification.waveBank.pWaveBank = engine->prepared_wavebanks[i];
-			engine->notificationCallback(&notification);
-		}
-	}
+	for (size_t i = 0; i < engine->prepared_wavebank_count; ++i)
+		send_wavebank_notification(engine, FACTNOTIFICATIONTYPE_WAVEBANKPREPARED, engine->prepared_wavebanks[i]);
 	engine->prepared_wavebank_count = 0;
 }
 
@@ -1637,20 +1644,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	{
 		pWaveBank->parentEngine->pFree(pWaveBank->packetBuffer);
 	}
-	if (pWaveBank->notifyOnDestroy || (pWaveBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED)))
-	{
-		note.type = FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED;
-		note.waveBank.pWaveBank = pWaveBank;
-		if (pWaveBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED))
-		{
-			note.pvContext = pWaveBank->parentEngine->wb_context;
-		}
-		else
-		{
-			note.pvContext = pWaveBank->usercontext;
-		}
-		pWaveBank->parentEngine->notificationCallback(&note);
-	}
+	send_wavebank_notification(pWaveBank->parentEngine, FACTNOTIFICATIONTYPE_WAVEBANKDESTROYED, pWaveBank);
 	FAudio_PlatformDestroyMutex(pWaveBank->waveLock);
 
 	if (pWaveBank->waveBankNames != NULL)
