@@ -334,6 +334,20 @@ uint32_t FACTAudioEngine_Initialize(
 	return 0;
 }
 
+static void send_queued_wavebank_notifications(FACTAudioEngine *engine)
+{
+	for (size_t i = 0; i < engine->prepared_wavebank_count; ++i)
+	{
+		FACTNotification notification;
+
+		notification.type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
+		notification.pvContext = engine->wb_context;
+		notification.waveBank.pWaveBank = engine->prepared_wavebanks[i];
+		engine->notificationCallback(&notification);
+	}
+	engine->prepared_wavebank_count = 0;
+}
+
 uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 {
 	uint32_t i, refcount;
@@ -353,10 +367,8 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 		FAudio_StopEngine(pEngine->audio);
 	}
 
-	for (size_t i = 0; i < pEngine->wavebank_notification_count; ++i)
-		pEngine->notificationCallback(&pEngine->wavebank_notifications[i]);
-	pEngine->wavebank_notification_count = 0;
-	pEngine->pFree(pEngine->wavebank_notifications);
+	send_queued_wavebank_notifications(pEngine);
+	pEngine->pFree(pEngine->prepared_wavebanks);
 
 	pEngine->notifications = 0;
 
@@ -445,9 +457,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
-	for (size_t i = 0; i < pEngine->wavebank_notification_count; ++i)
-		pEngine->notificationCallback(&pEngine->wavebank_notifications[i]);
-	pEngine->wavebank_notification_count = 0;
+	send_queued_wavebank_notifications(pEngine);
 
 	list = pEngine->sbList;
 	while (list != NULL)
@@ -508,7 +518,6 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	uint32_t dwAllocAttributes,
 	FACTWaveBank **ppWaveBank
 ) {
-	FACTNotification *note;
 	uint32_t retval;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	retval = FACT_INTERNAL_ParseWaveBank(
@@ -523,16 +532,13 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	);
 	if (pEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKPREPARED))
 	{
-		if (pEngine->wavebank_notification_count == pEngine->wavebank_notifications_capacity)
+		if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 		{
-			pEngine->wavebank_notifications_capacity *= 2;
-			pEngine->wavebank_notifications = pEngine->pRealloc(pEngine->wavebank_notifications,
-				pEngine->wavebank_notifications_capacity * sizeof(FACTNotification));
+			pEngine->prepared_wavebanks_capacity *= 2;
+			pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
+				pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 		}
-		note = &pEngine->wavebank_notifications[pEngine->wavebank_notification_count++];
-		note->type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
-		note->waveBank.pWaveBank = *ppWaveBank;
-		note->pvContext = pEngine->wb_context;
+		pEngine->prepared_wavebanks[pEngine->prepared_wavebank_count++] = *ppWaveBank;
 	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
@@ -568,16 +574,13 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	);
 	if (pEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKPREPARED))
 	{
-		if (pEngine->wavebank_notification_count == pEngine->wavebank_notifications_capacity)
+		if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 		{
-			pEngine->wavebank_notifications_capacity *= 2;
-			pEngine->wavebank_notifications = pEngine->pRealloc(pEngine->wavebank_notifications,
-				pEngine->wavebank_notifications_capacity * sizeof(FACTNotification));
+			pEngine->prepared_wavebanks_capacity *= 2;
+			pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
+				pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 		}
-		note = &pEngine->wavebank_notifications[pEngine->wavebank_notification_count++];
-		note->type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
-		note->waveBank.pWaveBank = *ppWaveBank;
-		note->pvContext = pEngine->wb_context;
+		pEngine->prepared_wavebanks[pEngine->prepared_wavebank_count++] = *ppWaveBank;
 	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
