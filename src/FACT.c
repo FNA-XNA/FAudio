@@ -63,6 +63,22 @@ static void send_wave_notification(FACTAudioEngine *engine, uint8_t type, const 
 	engine->notificationCallback(&notification);
 }
 
+static void send_soundbank_notification(FACTAudioEngine *engine, FACTSoundBank *soundbank)
+{
+	FACTNotification notification;
+
+	if (!(engine->notifications & (1u << FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)) && !soundbank->notifyOnDestroy)
+		return;
+
+	notification.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
+	notification.soundBank.pSoundBank = soundbank;
+	if (engine->notifications & (1u << FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED))
+		notification.pvContext = engine->sb_context;
+	else
+		notification.pvContext = soundbank->usercontext;
+	engine->notificationCallback(&notification);
+}
+
 uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
@@ -1439,7 +1455,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 {
 	uint16_t i, j, k;
 	FAudioMutex mutex;
-	FACTNotification note;
+
 	if (pSoundBank == NULL)
 	{
 		return 1;
@@ -1544,21 +1560,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		pSoundBank->parentEngine->pFree(pSoundBank->cueNames);
 	}
 
-	/* Finally. */
-	if (pSoundBank->notifyOnDestroy || (pSoundBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)))
-	{
-		note.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
-		note.soundBank.pSoundBank = pSoundBank;
-		if (pSoundBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED))
-		{
-			note.pvContext = pSoundBank->parentEngine->sb_context;
-		}
-		else
-		{
-			note.pvContext = pSoundBank->usercontext;
-		}
-		pSoundBank->parentEngine->notificationCallback(&note);
-	}
+	send_soundbank_notification(pSoundBank->parentEngine, pSoundBank);
 
 	mutex = pSoundBank->parentEngine->apiLock;
 	pSoundBank->parentEngine->pFree(pSoundBank);
