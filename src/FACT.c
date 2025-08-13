@@ -639,6 +639,10 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	if (!pEngine->notificationCallback)
 		return FACTENGINE_E_NONOTIFICATIONCALLBACK;
 
+	if (pNotificationDescription->type == 0 ||
+		pNotificationDescription->type > FACTNOTIFICATIONTYPE_WAVEBANKSTREAMING_INVALIDCONTENT)
+		return FAUDIO_E_INVALID_ARG;
+
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 
 	#define HANDLE_PERSIST(nt) \
@@ -742,12 +746,6 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	else HANDLE_PERSIST(WAVEBANKPREPARED)
 	else HANDLE_PERSIST(WAVEBANKSTREAMING_INVALIDCONTENT)
 	#undef PERSIST_ACTION
-
-	/* Anything else? */
-	else
-	{
-		FAudio_assert(0 && "TODO: Unimplemented notification!");
-	}
 
 	#undef HANDLE_PERSIST
 
