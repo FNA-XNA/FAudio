@@ -46,6 +46,23 @@ static void send_wavebank_notification(FACTAudioEngine *engine, uint8_t type, FA
 	engine->notificationCallback(&notification);
 }
 
+static void send_wave_notification(FACTAudioEngine *engine, uint8_t type, const FACTNotificationWave *wave)
+{
+	FACTNotification notification;
+
+	if (!(engine->notifications & (1u << type)) &&
+		!(type == FACTNOTIFICATIONTYPE_WAVEDESTROYED && wave->pWave->notifyOnDestroy))
+		return;
+
+	notification.type = type;
+	notification.wave = *wave;
+	if (engine->notifications & (1u << type))
+		notification.pvContext = engine->wave_context;
+	else
+		notification.pvContext = wave->pWave->usercontext;
+	engine->notificationCallback(&notification);
+}
+
 uint32_t FACTCreateEngine(
 	uint32_t dwCreationFlags,
 	FACTAudioEngine **ppEngine
@@ -2108,8 +2125,9 @@ uint32_t FACTWaveBank_Stop(
 
 uint32_t FACTWave_Destroy(FACTWave *pWave)
 {
+	FACTNotificationWave notification;
 	FAudioMutex mutex;
-	FACTNotification note;
+
 	if (pWave == NULL)
 	{
 		return 1;
@@ -2132,20 +2150,8 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	{
 		pWave->parentBank->parentEngine->pFree(pWave->streamCache);
 	}
-	if (pWave->notifyOnDestroy || (pWave->parentBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEDESTROYED)))
-	{
-		note.type = FACTNOTIFICATIONTYPE_WAVEDESTROYED;
-		note.wave.pWave = pWave;
-		if (pWave->parentBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEDESTROYED))
-		{
-			note.pvContext = pWave->parentBank->parentEngine->wave_context;
-		}
-		else
-		{
-			note.pvContext = pWave->usercontext;
-		}
-		pWave->parentBank->parentEngine->notificationCallback(&note);
-	}
+	notification.pWave = pWave;
+	send_wave_notification(pWave->parentBank->parentEngine, FACTNOTIFICATIONTYPE_WAVEDESTROYED, &notification);
 
 	mutex = pWave->parentBank->parentEngine->apiLock;
 	pWave->parentBank->parentEngine->pFree(pWave);
@@ -2173,6 +2179,8 @@ uint32_t FACTWave_Play(FACTWave *pWave)
 
 uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 {
+	FACTNotificationWave notification;
+
 	if (pWave == NULL)
 	{
 		return 1;
@@ -2201,19 +2209,12 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 		FAudioSourceVoice_ExitLoop(pWave->voice, 0);
 	}
 
-	if (pWave->parentBank->parentEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVESTOP))
-	{
-		FACTNotification note;
-		note.type = FACTNOTIFICATIONTYPE_WAVESTOP;
-		note.wave.cueIndex = pWave->parentCue->index;
-		note.wave.pCue = pWave->parentCue;
-		note.wave.pSoundBank = pWave->parentCue->parentBank;
-		note.wave.pWave = pWave;
-		note.wave.pWaveBank = pWave->parentBank;
-		note.pvContext = pWave->parentBank->parentEngine->wave_context;
-
-		pWave->parentBank->parentEngine->notificationCallback(&note);
-	}
+	notification.cueIndex = pWave->parentCue->index;
+	notification.pCue = pWave->parentCue;
+	notification.pSoundBank = pWave->parentCue->parentBank;
+	notification.pWave = pWave;
+	notification.pWaveBank = pWave->parentBank;
+	send_wave_notification(pWave->parentBank->parentEngine, FACTNOTIFICATIONTYPE_WAVESTOP, &notification);
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
 	return 0;
