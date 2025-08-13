@@ -497,8 +497,10 @@ struct FACTAudioEngine
 	void *sb_context;
 	void *wb_context;
 	void *wave_context;
-	FACTNotification *wavebank_notifications;
-	size_t wavebank_notification_count, wavebank_notifications_capacity;
+	/* Wave banks to send PREPARED notifications for.
+	 * These are queued and processed in DoWork(). */
+	FACTWaveBank **prepared_wavebanks;
+	size_t prepared_wavebank_count, prepared_wavebanks_capacity;
 
 	/* Settings handle */
 	void *settings;
