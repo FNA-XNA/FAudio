@@ -832,22 +832,6 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	return true;
 }
 
-void FACT_INTERNAL_SendCueNotification(FACTCue *cue, uint8_t type)
-{
-    if (cue->parentBank->parentEngine->notifications & (1u << type))
-    {
-        FACTNotification note;
-
-        note.type = type;
-        note.pvContext = cue->parentBank->parentEngine->cue_context;
-        note.cue.cueIndex = cue->index;
-        note.cue.pSoundBank = cue->parentBank;
-        note.cue.pCue = cue;
-
-        cue->parentBank->parentEngine->notificationCallback(&note);
-    }
-}
-
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 {
 	uint8_t i;
@@ -2543,8 +2527,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	sb = (FACTSoundBank*) pEngine->pMalloc(sizeof(FACTSoundBank));
 	sb->parentEngine = pEngine;
 	sb->cueList = NULL;
-	sb->notifyOnDestroy = false;
-	sb->usercontext = NULL;
 
 	cueSimpleCount = read_u16(&ptr, se);
 	cueComplexCount = read_u16(&ptr, se);
@@ -3102,8 +3084,6 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->waveLock = FAudio_PlatformCreateMutex();
 	wb->packetSize = packetSize;
 	wb->io = io;
-	wb->notifyOnDestroy = false;
-	wb->usercontext = NULL;
 
 	/* WaveBank Data */
 	SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_BANKDATA].dwOffset)
