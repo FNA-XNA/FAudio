@@ -336,14 +336,17 @@ uint32_t FACTAudioEngine_Initialize(
 
 static void send_queued_wavebank_notifications(FACTAudioEngine *engine)
 {
-	for (size_t i = 0; i < engine->prepared_wavebank_count; ++i)
+	if (engine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKPREPARED))
 	{
-		FACTNotification notification;
+		for (size_t i = 0; i < engine->prepared_wavebank_count; ++i)
+		{
+			FACTNotification notification;
 
-		notification.type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
-		notification.pvContext = engine->wb_context;
-		notification.waveBank.pWaveBank = engine->prepared_wavebanks[i];
-		engine->notificationCallback(&notification);
+			notification.type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
+			notification.pvContext = engine->wb_context;
+			notification.waveBank.pWaveBank = engine->prepared_wavebanks[i];
+			engine->notificationCallback(&notification);
+		}
 	}
 	engine->prepared_wavebank_count = 0;
 }
@@ -530,16 +533,13 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 		false,
 		ppWaveBank
 	);
-	if (pEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKPREPARED))
+	if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 	{
-		if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
-		{
-			pEngine->prepared_wavebanks_capacity *= 2;
-			pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
-				pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
-		}
-		pEngine->prepared_wavebanks[pEngine->prepared_wavebank_count++] = *ppWaveBank;
+		pEngine->prepared_wavebanks_capacity *= 2;
+		pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
+			pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 	}
+	pEngine->prepared_wavebanks[pEngine->prepared_wavebank_count++] = *ppWaveBank;
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
 }
@@ -572,16 +572,13 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 		true,
 		ppWaveBank
 	);
-	if (pEngine->notifications & (1u << FACTNOTIFICATIONTYPE_WAVEBANKPREPARED))
+	if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 	{
-		if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
-		{
-			pEngine->prepared_wavebanks_capacity *= 2;
-			pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
-				pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
-		}
-		pEngine->prepared_wavebanks[pEngine->prepared_wavebank_count++] = *ppWaveBank;
+		pEngine->prepared_wavebanks_capacity *= 2;
+		pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
+			pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 	}
+	pEngine->prepared_wavebanks[pEngine->prepared_wavebank_count++] = *ppWaveBank;
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
 }
