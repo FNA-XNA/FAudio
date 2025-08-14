@@ -341,6 +341,7 @@ typedef struct FAudioXMA2WaveFormatEx
 
 /* Constants */
 
+#define FAUDIO_OK			0x0
 #define FAUDIO_E_OUT_OF_MEMORY		0x8007000e
 #define FAUDIO_E_INVALID_ARG		0x80070057
 #define FAUDIO_E_UNSUPPORTED_FORMAT	0x88890008

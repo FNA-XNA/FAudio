@@ -2229,7 +2229,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		pEngine->settings = pParams->pGlobalSettingsBuffer;
 	}
 
-	return 0;
+	return FAUDIO_OK;
 }
 
 void FACT_INTERNAL_ParseTrackEvents(
@@ -2973,7 +2973,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	);
 
 	*ppSoundBank = sb;
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* This parser is based on the unxwb project, written by Luigi Auriemma.
@@ -3296,7 +3296,7 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	wb->packetBuffer = packetBuffer;
 	wb->packetBufferLen = packetBufferLen;
 	*ppWaveBank = wb;
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */

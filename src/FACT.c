@@ -163,7 +163,7 @@ uint32_t FACTCreateEngineWithCustomAllocatorEXT(
 	(*ppEngine)->pFree = customFree;
 	(*ppEngine)->pRealloc = customRealloc;
 	(*ppEngine)->refcount = 1;
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_AddRef(FACTAudioEngine *pEngine)
@@ -204,7 +204,7 @@ uint32_t FACTAudioEngine_GetRendererCount(
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	*pnRendererCount = (uint16_t) FAudio_PlatformGetDeviceCount();
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_GetRendererDetails(
@@ -237,7 +237,7 @@ uint32_t FACTAudioEngine_GetRendererDetails(
 	)) != 0;
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_GetFinalMixFormat(
@@ -251,7 +251,7 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 		sizeof(FAudioWaveFormatExtensible)
 	);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_Initialize(
@@ -427,7 +427,7 @@ uint32_t FACTAudioEngine_Initialize(
 	);
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 static void send_queued_wavebank_notifications(FACTAudioEngine *engine)
@@ -536,7 +536,7 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	pEngine->apiLock = mutex;
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
@@ -578,7 +578,7 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	}
 
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_CreateSoundBank(
@@ -682,7 +682,7 @@ uint32_t FACTAudioEngine_PrepareWave(
 	FACTWave **ppWave
 ) {
 	/* TODO: FACTWave */
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_PrepareInMemoryWave(
@@ -696,7 +696,7 @@ uint32_t FACTAudioEngine_PrepareInMemoryWave(
 	FACTWave **ppWave
 ) {
 	/* TODO: FACTWave */
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_PrepareStreamingWave(
@@ -712,7 +712,7 @@ uint32_t FACTAudioEngine_PrepareStreamingWave(
 	FACTWave **ppWave
 ) {
 	/* TODO: FACTWave */
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_RegisterNotification(FACTAudioEngine *engine, const FACTNotificationDescription *desc)
@@ -739,7 +739,7 @@ uint32_t FACTAudioEngine_RegisterNotification(FACTAudioEngine *engine, const FAC
 	engine->notifications[engine->notification_count++] = *desc;
 
 	FAudio_PlatformUnlockMutex(engine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 static void unregister_notification(FACTAudioEngine *engine, const FACTNotificationDescription *desc)
@@ -773,7 +773,7 @@ uint32_t FACTAudioEngine_UnRegisterNotification(FACTAudioEngine *engine, const F
 	FAudio_PlatformLockMutex(engine->apiLock);
 	unregister_notification(engine, desc);
 	FAudio_PlatformUnlockMutex(engine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint16_t FACTAudioEngine_GetCategory(
@@ -865,7 +865,7 @@ uint32_t FACTAudioEngine_Stop(
 		list = list->next;
 	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_SetVolume(
@@ -891,7 +891,7 @@ uint32_t FACTAudioEngine_SetVolume(
 		}
 	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_Pause(
@@ -923,7 +923,7 @@ uint32_t FACTAudioEngine_Pause(
 		list = list->next;
 	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint16_t FACTAudioEngine_GetGlobalVariableIndex(
@@ -962,7 +962,7 @@ uint32_t FACTAudioEngine_SetGlobalVariable(
 		var->maxValue
 	);
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTAudioEngine_GetGlobalVariable(
@@ -981,7 +981,7 @@ uint32_t FACTAudioEngine_GetGlobalVariable(
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	*pnValue = pEngine->globalVariableValues[nIndex];
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* SoundBank implementation */
@@ -1019,13 +1019,13 @@ uint32_t FACTSoundBank_GetNumCues(
 	if (pSoundBank == NULL)
 	{
 		*pnNumCues = 0;
-		return 0;
+		return FAUDIO_OK;
 	}
 
 	FAudio_PlatformLockMutex(pSoundBank->parentEngine->apiLock);
 	*pnNumCues = pSoundBank->cueCount;
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_GetCueProperties(
@@ -1087,7 +1087,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 	pProperties->currentInstances = pSoundBank->cues[nCueIndex].instanceCount;
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_Prepare(
@@ -1177,7 +1177,7 @@ uint32_t FACTSoundBank_Prepare(
 	}
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_Play(
@@ -1218,7 +1218,7 @@ uint32_t FACTSoundBank_Play(
 	FACTCue_Play(result);
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_Play3D(
@@ -1261,7 +1261,7 @@ uint32_t FACTSoundBank_Play3D(
 	FACTCue_Play(result);
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_Stop(
@@ -1302,7 +1302,7 @@ uint32_t FACTSoundBank_Stop(
 		}
 	}
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
@@ -1419,7 +1419,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 	mutex = pSoundBank->parentEngine->apiLock;
 	pSoundBank->parentEngine->pFree(pSoundBank);
 	FAudio_PlatformUnlockMutex(mutex);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTSoundBank_GetState(
@@ -1444,12 +1444,12 @@ uint32_t FACTSoundBank_GetState(
 			FAudio_PlatformUnlockMutex(
 				pSoundBank->parentEngine->apiLock
 			);
-			return 0;
+			return FAUDIO_OK;
 		}
 	}
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* WaveBank implementation */
@@ -1528,7 +1528,7 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 	mutex = pWaveBank->parentEngine->apiLock;
 	pWaveBank->parentEngine->pFree(pWaveBank);
 	FAudio_PlatformUnlockMutex(mutex);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWaveBank_GetState(
@@ -1553,12 +1553,12 @@ uint32_t FACTWaveBank_GetState(
 			FAudio_PlatformUnlockMutex(
 				pWaveBank->parentEngine->apiLock
 			);
-			return 0;
+			return FAUDIO_OK;
 		}
 	}
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWaveBank_GetNumWaves(
@@ -1573,7 +1573,7 @@ uint32_t FACTWaveBank_GetNumWaves(
 	FAudio_PlatformLockMutex(pWaveBank->parentEngine->apiLock);
 	*pnNumWaves = pWaveBank->entryCount;
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint16_t FACTWaveBank_GetWaveIndex(
@@ -1657,7 +1657,7 @@ uint32_t FACTWaveBank_GetWaveProperties(
 	pWaveProperties->streaming = pWaveBank->streaming;
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWaveBank_Prepare(
@@ -1919,7 +1919,7 @@ uint32_t FACTWaveBank_Prepare(
 	);
 
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWaveBank_Play(
@@ -1946,7 +1946,7 @@ uint32_t FACTWaveBank_Play(
 	);
 	FACTWave_Play(*ppWave);
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWaveBank_Stop(
@@ -1972,7 +1972,7 @@ uint32_t FACTWaveBank_Stop(
 		list = list->next;
 	}
 	FAudio_PlatformUnlockMutex(pWaveBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* Wave implementation */
@@ -2010,7 +2010,7 @@ uint32_t FACTWave_Destroy(FACTWave *pWave)
 	mutex = pWave->parentBank->parentEngine->apiLock;
 	pWave->parentBank->parentEngine->pFree(pWave);
 	FAudio_PlatformUnlockMutex(mutex);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_Play(FACTWave *pWave)
@@ -2028,7 +2028,7 @@ uint32_t FACTWave_Play(FACTWave *pWave)
 	);
 	FAudioSourceVoice_Start(pWave->voice, 0, 0);
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
@@ -2071,7 +2071,7 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 	send_wave_notification(pWave->parentBank->parentEngine, FACTNOTIFICATIONTYPE_WAVESTOP, &notification);
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_Pause(FACTWave *pWave, int32_t fPause)
@@ -2088,7 +2088,7 @@ uint32_t FACTWave_Pause(FACTWave *pWave, int32_t fPause)
 		FAudio_PlatformUnlockMutex(
 			pWave->parentBank->parentEngine->apiLock
 		);
-		return 0;
+		return FAUDIO_OK;
 	}
 
 	/* All we do is set the flag, the mixer handles the rest */
@@ -2104,7 +2104,7 @@ uint32_t FACTWave_Pause(FACTWave *pWave, int32_t fPause)
 	}
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_GetState(FACTWave *pWave, uint32_t *pdwState)
@@ -2117,7 +2117,7 @@ uint32_t FACTWave_GetState(FACTWave *pWave, uint32_t *pdwState)
 	FAudio_PlatformLockMutex(pWave->parentBank->parentEngine->apiLock);
 	*pdwState = pWave->state;
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_SetPitch(FACTWave *pWave, int16_t pitch)
@@ -2138,7 +2138,7 @@ uint32_t FACTWave_SetPitch(FACTWave *pWave, int16_t pitch)
 		0
 	);
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_SetVolume(FACTWave *pWave, float volume)
@@ -2159,7 +2159,7 @@ uint32_t FACTWave_SetVolume(FACTWave *pWave, float volume)
 		0
 	);
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_SetMatrixCoefficients(
@@ -2236,7 +2236,7 @@ uint32_t FACTWave_SetMatrixCoefficients(
 	{
 		FAudio_dealloca(mtxTmp);
 	}
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTWave_GetProperties(
@@ -2259,7 +2259,7 @@ uint32_t FACTWave_GetProperties(
 	pProperties->backgroundMusic = 0;
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* Cue implementation */
@@ -2306,7 +2306,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	mutex = pCue->parentBank->parentEngine->apiLock;
 	pCue->parentBank->parentEngine->pFree(pCue);
 	FAudio_PlatformUnlockMutex(mutex);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_Play(FACTCue *pCue)
@@ -2442,7 +2442,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	}
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
@@ -2459,7 +2459,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
 		);
-		return 0;
+		return FAUDIO_OK;
 	}
 
 	/* If we're stopping and we haven't asked for IMMEDIATE, we're already
@@ -2471,7 +2471,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
 		);
-		return 0;
+		return FAUDIO_OK;
 	}
 
 	/* There are three ways that a Cue might be stopped immediately:
@@ -2532,7 +2532,7 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 	FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUESTOP);
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t *pdwState)
@@ -2545,7 +2545,7 @@ uint32_t FACTCue_GetState(FACTCue *pCue, uint32_t *pdwState)
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 	*pdwState = pCue->state;
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_SetMatrixCoefficients(
@@ -2601,7 +2601,7 @@ uint32_t FACTCue_SetMatrixCoefficients(
 	FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUESTOP);
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint16_t FACTCue_GetVariableIndex(
@@ -2651,7 +2651,7 @@ uint32_t FACTCue_SetVariable(
 	);
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_GetVariable(
@@ -2684,7 +2684,7 @@ uint32_t FACTCue_GetVariable(
 	}
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
@@ -2703,7 +2703,7 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
 		);
-		return 0;
+		return FAUDIO_OK;
 	}
 
 	/* Store elapsed time */
@@ -2739,7 +2739,7 @@ uint32_t FACTCue_Pause(FACTCue *pCue, int32_t fPause)
 	}
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_GetProperties(
@@ -2820,7 +2820,7 @@ uint32_t FACTCue_GetProperties(
 			if (FACTWave_GetProperties(
 				pCue->playingSound->tracks[i].activeWave.wave,
 				&waveProps
-			) == 0) {
+			) == FAUDIO_OK) {
 				sndProps->arrTrackProperties[i].duration = (uint32_t) (
 					(
 						(float) waveProps.properties.durationInSamples /
@@ -2840,7 +2840,7 @@ uint32_t FACTCue_GetProperties(
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
 
 	*ppProperties = cueProps;
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_SetOutputVoices(
@@ -2848,7 +2848,7 @@ uint32_t FACTCue_SetOutputVoices(
 	const FAudioVoiceSends *pSendList /* Optional XAUDIO2_VOICE_SENDS */
 ) {
 	/* TODO */
-	return 0;
+	return FAUDIO_OK;
 }
 
 uint32_t FACTCue_SetOutputVoiceMatrix(
@@ -2859,7 +2859,7 @@ uint32_t FACTCue_SetOutputVoiceMatrix(
 	const float *pLevelMatrix /* SourceChannels * DestinationChannels */
 ) {
 	/* TODO */
-	return 0;
+	return FAUDIO_OK;
 }
 
 /* vim: set noexpandtab shiftwidth=8 tabstop=8: */
