@@ -2511,19 +2511,19 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 	if (magic != 0x4B424453 && magic != 0x5344424B)  /* 'SDBK' */
 	{
-		return -1; /* TODO: NOT XACT FILE */
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	contentVersion = read_u16(&ptr, se);
 	if (!FACT_INTERNAL_SupportedContent(contentVersion))
 	{
-		return -2;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	tool = read_u16(&ptr, se); /* Tool version */
 	if (tool != 43)
 	{
-		return -3;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	/* CRC, unused */
