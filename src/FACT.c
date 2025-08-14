@@ -2500,7 +2500,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUESTOP);
 
 				FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-				return 1;
+				return FACTENGINE_E_INSTANCELIMITFAILTOPLAY;
 
 			case MAX_INSTANCE_BEHAVIOR_QUEUE:
 				/* FIXME: How is this different from Replace Oldest? */
@@ -2570,7 +2570,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
 		);
-		return 1;
+		return FACTENGINE_E_INSTANCELIMITFAILTOPLAY;
 	}
 	data->instanceCount += 1;
 
