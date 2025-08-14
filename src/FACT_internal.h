@@ -141,6 +141,10 @@ enum variation_type
 	VARIATION_TYPE_SHUFFLE = 4,
 };
 
+#define VARIATION_TYPE_MASK	0x7
+
+#define EVENT_WAVE_HAS_TRACK_VARIATION	0x0040
+
 #define EVENT_STOP_IMMEDIATE	0x01
 #define EVENT_STOP_CUE		0x02
 
@@ -176,7 +180,8 @@ typedef struct FACTEvent
 				} simple;
 				struct
 				{
-					uint16_t variation;
+					enum variation_type variation_type;
+					bool has_track_variation;
 					uint16_t trackCount;
 					uint16_t *tracks;
 					uint8_t *wavebanks;
@@ -310,6 +315,8 @@ enum variation_table_type
     VARIATION_TABLE_TYPE_INTERACTIVE = 3,
     VARIATION_TABLE_TYPE_COMPACT_WAVE = 4,
 };
+
+#define VARIATION_TABLE_TYPE_MASK		0x7
 
 #define VARIATION_FLAG_VOLUME_ADD               0x0001
 #define VARIATION_FLAG_PITCH_ADD                0x0004

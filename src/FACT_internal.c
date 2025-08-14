@@ -197,12 +197,11 @@ void FACT_INTERNAL_GetNextWave(
 	/* Track Variation */
 	if (evt->wave.isComplex)
 	{
-		if (	trackInst->activeWave.wave == NULL ||
-			!(evt->wave.complex.variation & 0x00F0)	)
+		if (!trackInst->activeWave.wave || !(evt->wave.complex.has_track_variation))
 		{
 			/* No-op, no variation on loop */
 		}
-		switch (evt->wave.complex.variation & 0xf)
+		switch (evt->wave.complex.variation_type)
 		{
 			case VARIATION_TYPE_ORDERED:
 			case VARIATION_TYPE_ORDERED_FROM_RANDOM:
@@ -251,10 +250,7 @@ void FACT_INTERNAL_GetNextWave(
 				break;
 		}
 
-		if (evt->wave.complex.variation & 0x00F0)
-		{
-			has_track_variation = true;
-		}
+		has_track_variation = evt->wave.complex.has_track_variation;
 
 		wbIndex = evt->wave.complex.wavebanks[evtInst->valuei];
 		wbTrack = evt->wave.complex.tracks[evtInst->valuei];
@@ -761,8 +757,7 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 						newSound->sound->tracks[i].events[j].wave.loopCount;
 
 					evtInst = &newSound->tracks[i].events[j];
-					if (	!evt->wave.isComplex ||
-						(evt->wave.complex.variation & 0xF) == 0	)
+					if (!evt->wave.isComplex || evt->wave.complex.variation_type == VARIATION_TYPE_ORDERED)
 					{
 						evtInst->valuei = 0;
 					}
@@ -2303,6 +2298,8 @@ void FACT_INTERNAL_ParseTrackEvents(
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
 		{
+			enum variation_table_type table_type;
+
 			/* Complex Wave */
 			track->events[i].wave.isComplex = true;
 			track->events[i].wave.flags = read_u8(ptr);
@@ -2313,7 +2310,11 @@ void FACT_INTERNAL_ParseTrackEvents(
 			/* Track Variation */
 			evtInfo = read_u32(ptr, se);
 			track->events[i].wave.complex.trackCount = evtInfo & 0xFFFF;
-			track->events[i].wave.complex.variation = (evtInfo >> 16) & 0xFFFF;
+			track->events[i].wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
+			table_type = (evtInfo >> (16 + 3)) & VARIATION_TABLE_TYPE_MASK;
+			if (table_type != VARIATION_TABLE_TYPE_WAVE)
+				FAudio_Log("Unexpected variation table type.\n");
+			track->events[i].wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
 			*ptr += 4; /* Unknown values */
 			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
@@ -2365,6 +2366,8 @@ void FACT_INTERNAL_ParseTrackEvents(
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
 		{
+			enum variation_table_type table_type;
+
 			/* Complex Wave */
 			track->events[i].wave.isComplex = true;
 			track->events[i].wave.flags = read_u8(ptr);
@@ -2386,7 +2389,11 @@ void FACT_INTERNAL_ParseTrackEvents(
 			/* Track Variation */
 			evtInfo = read_u32(ptr, se);
 			track->events[i].wave.complex.trackCount = evtInfo & 0xFFFF;
-			track->events[i].wave.complex.variation = (evtInfo >> 16) & 0xFFFF;
+			track->events[i].wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
+			table_type = (evtInfo >> (16 + 3)) & VARIATION_TABLE_TYPE_MASK;
+			if (table_type != VARIATION_TABLE_TYPE_WAVE)
+				FAudio_Log("Unexpected variation table type.\n");
+			track->events[i].wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
 			*ptr += 4; /* Unknown values */
 			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
 				sizeof(uint16_t) *
