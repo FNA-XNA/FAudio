@@ -2037,18 +2037,18 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	se = magic == 0x58475346; /* Swap Endian */
 	if (magic != 0x46534758 && magic != 0x58475346) /* 'XGSF' */
 	{
-		return -1; /* TODO: NOT XACT FILE */
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	if (!FACT_INTERNAL_SupportedContent(read_u16(&ptr, se)))
 	{
-		return -2;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	tool = read_u16(&ptr, se); /* Tool version */
 	if (tool != 42)
 	{
-		return -3;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	ptr += 2; /* Unknown value */
@@ -2061,7 +2061,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	if (	version != 3 &&
 		version != 7	)
 	{
-		return -4; /* TODO: VERSION TOO OLD */
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	/* Object counts */
