@@ -3074,25 +3074,25 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	}
 	if (header.dwSignature != 0x444E4257)
 	{
-		return -1; /* TODO: NOT XACT FILE */
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	/* We support all Wavebank versions - Restore when SoundBank support them also. */
 	/*if (!FACT_INTERNAL_SupportedContent(header.dwVersion))
 	{
-		return -2;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 	*/
 	if (	header.dwVersion < FACT_CONTENT_VERSION_2_4 ||
 		header.dwVersion > FACT_CONTENT_VERSION	)
 	{
-		return -2;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	if (	header.dwVersion > FACT_CONTENT_VERSION_2_4 &&
 		!FACT_INTERNAL_SupportedWBContent(header.dwHeaderVersion)	)
 	{
-		return -3;
+		return FACTENGINE_E_INVALIDDATA;
 	}
 
 	wb = (FACTWaveBank*) pEngine->pMalloc(sizeof(FACTWaveBank));
