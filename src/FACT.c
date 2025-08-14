@@ -54,7 +54,7 @@ uint32_t FACTCreateEngineWithCustomAllocatorEXT(
 	*ppEngine = (FACTAudioEngine*) customMalloc(sizeof(FACTAudioEngine));
 	if (*ppEngine == NULL)
 	{
-		return -1; /* TODO: E_OUTOFMEMORY */
+		return FAUDIO_E_OUT_OF_MEMORY;
 	}
 	FAudio_zero(*ppEngine, sizeof(FACTAudioEngine));
 	(*ppEngine)->sbLock = FAudio_PlatformCreateMutex();
