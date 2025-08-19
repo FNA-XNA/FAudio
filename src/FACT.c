@@ -2321,7 +2321,11 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
-	FAudio_assert(!(pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
+	if (pCue->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_STOPPED))
+	{
+		FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
+		return FACTENGINE_E_INVALIDUSAGE;
+	}
 
 	data = &pCue->parentBank->cues[pCue->index];
 
@@ -2338,7 +2342,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		{
 			case MAX_INSTANCE_BEHAVIOR_FAIL:
 				pCue->state |= FACT_STATE_STOPPED;
-				pCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
+				pCue->state &= ~FACT_STATE_PAUSED;
 
 				FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUESTOP);
 
@@ -2416,11 +2420,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	data->instanceCount += 1;
 
 	pCue->state |= FACT_STATE_PLAYING;
-	pCue->state &= ~(
-		FACT_STATE_PAUSED |
-		FACT_STATE_STOPPED |
-		FACT_STATE_PREPARED
-	);
+	pCue->state &= ~(FACT_STATE_PAUSED | FACT_STATE_PREPARED);
 
 	FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUEPLAY);
 
