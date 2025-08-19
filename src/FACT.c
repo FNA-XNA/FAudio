@@ -2559,10 +2559,13 @@ uint32_t FACTCue_SetMatrixCoefficients(
 ) {
 	uint8_t i;
 
+	if (uSrcChannelCount < 1 || uSrcChannelCount > 8)
+		return FAUDIO_E_FAIL;
+
 	FAudio_PlatformLockMutex(pCue->parentBank->parentEngine->apiLock);
 
 	/* See FACTCue.matrixCoefficients declaration */
-	FAudio_assert(uSrcChannelCount > 0 && uSrcChannelCount < 3);
+	FAudio_assert(uSrcChannelCount <= 2);
 	FAudio_assert(uDstChannelCount > 0 && uDstChannelCount < 9);
 
 	/* Local storage */
