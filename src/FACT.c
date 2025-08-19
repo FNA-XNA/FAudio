@@ -1942,10 +1942,6 @@ uint32_t FACTWaveBank_Prepare(
 		format.pcm.wBitsPerSample = 16;
 		format.pcm.cbSize = 0;
 	}
-	else
-	{
-		FAudio_assert(0 && "Rebuild your WaveBanks with ADPCM!");
-	}
 	(*ppWave)->callback.callback.OnBufferEnd = pWaveBank->streaming ?
 		FACT_INTERNAL_OnBufferEnd :
 		NULL;
