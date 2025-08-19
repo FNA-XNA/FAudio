@@ -477,12 +477,6 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	FACTSoundInstance *newSound;
 	FACTRPC *rpc;
 	float lastX;
-
-	union
-	{
-		float maxf;
-		uint8_t maxi;
-	} limitmax;
 	FACTCue *tmp, *wnr;
 	uint16_t categoryIndex;
 	FACTAudioCategory *category;
@@ -613,6 +607,9 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			category = &cue->parentBank->parentEngine->categories[categoryIndex];
 			if (category->instanceCount >= category->instanceLimit)
 			{
+				float quietest_volume = FACTVOLUME_MAX;
+				uint8_t lowest_priority = UINT8_MAX;
+
 				wnr = NULL;
 				tmp = cue->parentBank->cueList;
 
@@ -640,33 +637,31 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 						break;
 
 					case MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST:
-						limitmax.maxf = FACTVOLUME_MAX;
 						while (tmp != NULL)
 						{
 							if (tmp != cue && tmp->playingSound != NULL &&
 								tmp->playingSound->sound->category == categoryIndex &&
-								/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
+								/*FIXME: tmp->playingSound->volume < quietest_volume &&*/
 								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
 							{
 								wnr = tmp;
-								/* limitmax.maxf = tmp->playingSound->volume; */
+								/* quietest_volume = tmp->playingSound->volume; */
 							}
 							tmp = tmp->next;
 						}
 						break;
 
 					case MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY:
-						limitmax.maxi = 0xFF;
 						while (tmp != NULL)
 						{
 							if (	tmp != cue &&
 								tmp->playingSound != NULL &&
 								tmp->playingSound->sound->category == categoryIndex &&
-								tmp->playingSound->sound->priority < limitmax.maxi &&
+								tmp->playingSound->sound->priority < lowest_priority &&
 								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
 							{
 								wnr = tmp;
-								limitmax.maxi = tmp->playingSound->sound->priority;
+								lowest_priority = tmp->playingSound->sound->priority;
 							}
 							tmp = tmp->next;
 						}

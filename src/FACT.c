@@ -2466,11 +2466,6 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 
 uint32_t FACTCue_Play(FACTCue *pCue)
 {
-	union
-	{
-		float maxf;
-		uint8_t maxi;
-	} limitmax;
 	FACTCue *tmp, *wnr;
 	uint16_t fadeInMS = 0;
 	FACTCueData *data;
@@ -2488,6 +2483,9 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	/* Cue Instance Limits */
 	if (data->instanceCount >= data->instanceLimit)
 	{
+		float quietest_volume = FACTVOLUME_MAX;
+		uint8_t lowest_priority = UINT8_MAX;
+
 		wnr = NULL;
 		tmp = pCue->parentBank->cueList;
 
@@ -2518,32 +2516,30 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 				break;
 
 			case MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST:
-				limitmax.maxf = FACTVOLUME_MAX;
 				while (tmp != NULL)
 				{
 					if (tmp != pCue && tmp->index == pCue->index &&
 						tmp->playingSound != NULL &&
-						/*FIXME: tmp->playingSound->volume < limitmax.maxf &&*/
+						/*FIXME: tmp->playingSound->volume < quietest_volume &&*/
 						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
 					{
 						wnr = tmp;
-						/* limitmax.maxf = tmp->playingSound->volume; */
+						/* quietest_volume = tmp->playingSound->volume; */
 					}
 					tmp = tmp->next;
 				}
 				break;
 
 			case MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY:
-				limitmax.maxi = 0xFF;
 				while (tmp != NULL)
 				{
 					if (tmp != pCue && tmp->index == pCue->index &&
 						tmp->playingSound != NULL &&
-						tmp->playingSound->sound->priority < limitmax.maxi &&
+						tmp->playingSound->sound->priority < lowest_priority &&
 						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED)))
 					{
 						wnr = tmp;
-						limitmax.maxi = tmp->playingSound->sound->priority;
+						lowest_priority = tmp->playingSound->sound->priority;
 					}
 					tmp = tmp->next;
 				}
