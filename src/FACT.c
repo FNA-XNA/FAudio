@@ -1838,8 +1838,8 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->pitch = 0;
 	(*ppWave)->loopCount = nLoopCount;
 
-	/* TODO: Convert dwPlayOffset to a byte offset */
-	FAudio_assert(dwPlayOffset == 0);
+	if (dwPlayOffset)
+		FAudio_Log("Unhandled play offset.\n");
 #if 0
 	if (dwFlags & FACT_FLAG_UNITS_MS)
 	{
