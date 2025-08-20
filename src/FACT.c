@@ -244,13 +244,7 @@ uint32_t FACTAudioEngine_GetFinalMixFormat(
 	FACTAudioEngine *pEngine,
 	FAudioWaveFormatExtensible *pFinalMixFormat
 ) {
-	FAudio_PlatformLockMutex(pEngine->apiLock);
-	FAudio_memcpy(
-		pFinalMixFormat,
-		&pEngine->audio->mixFormat,
-		sizeof(FAudioWaveFormatExtensible)
-	);
-	FAudio_PlatformUnlockMutex(pEngine->apiLock);
+	*pFinalMixFormat = pEngine->output_format;
 	return FAUDIO_OK;
 }
 
@@ -258,6 +252,7 @@ uint32_t FACTAudioEngine_Initialize(
 	FACTAudioEngine *pEngine,
 	const FACTRuntimeParameters *pParams
 ) {
+	FAudioDeviceDetails device_details;
 	uint32_t parseRet;
 	uint32_t deviceIndex;
 	FAudioVoiceDetails masterDetails;
@@ -360,22 +355,24 @@ uint32_t FACTAudioEngine_Initialize(
 		FAudioCreate(&pEngine->audio, 0, FAUDIO_DEFAULT_PROCESSOR);
 	}
 
+	if (!pParams->pRendererID || !pParams->pRendererID[0])
+	{
+		deviceIndex = 0;
+	}
+	else
+	{
+		deviceIndex = pParams->pRendererID[0] - L'0';
+		if (deviceIndex > FAudio_PlatformGetDeviceCount())
+			deviceIndex = 0;
+	}
+
+	FAudio_GetDeviceDetails(pEngine->audio, deviceIndex, &device_details);
+	pEngine->output_format = device_details.OutputFormat;
+
 	/* Create the audio device */
 	pEngine->master = pParams->pMasteringVoice;
 	if (pEngine->master == NULL)
 	{
-		if (pParams->pRendererID == NULL || pParams->pRendererID[0] == 0)
-		{
-			deviceIndex = 0;
-		}
-		else
-		{
-			deviceIndex = pParams->pRendererID[0] - L'0';
-			if (deviceIndex > FAudio_PlatformGetDeviceCount())
-			{
-				deviceIndex = 0;
-			}
-		}
 		if (FAudio_CreateMasteringVoice(
 			pEngine->audio,
 			&pEngine->master,
