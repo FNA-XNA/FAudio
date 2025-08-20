@@ -480,6 +480,7 @@ struct FACTAudioEngine
 	FAudio *audio;
 	FAudioMasteringVoice *master;
 	FAudioSubmixVoice *reverbVoice;
+	FAudioWaveFormatExtensible output_format;
 
 	/* Engine thread */
 	FAudioThread apiThread;
