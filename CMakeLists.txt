@@ -15,6 +15,7 @@ option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the hos
 option(BUILD_SDL3 "Build against SDL 3.0" ON)
 if(WIN32)
 option(PLATFORM_WIN32 "Enable native Win32 platform instead of SDL" OFF)
+option(WMA_DECODING "Enable WMA decoding support" OFF)
 endif()
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
@@ -115,14 +116,19 @@ add_library(${target}
 	src/FAudio_platform_sdl2.c
 	src/FAudio_platform_sdl3.c
 	src/FAudio_platform_win32.c
+	src/FAudio_platform_win32_wmadec.c
 	# Optional source files
 	src/XNA_Song.c
 )
 
+if(WMA_DECODING)
+	target_compile_definitions(${target} PRIVATE HAVE_WMADEC=1)
+	target_link_libraries(${target} PRIVATE ole32 mfplat mfuuid)
+endif()
+
 if(PLATFORM_WIN32)
 	target_link_libraries(${target} PRIVATE dxguid uuid winmm ole32 advapi32 user32 mfplat mfreadwrite mfuuid propsys)
 	target_compile_definitions(${target} PUBLIC FAUDIO_WIN32_PLATFORM)
-	target_compile_definitions(${target} PRIVATE HAVE_WMADEC=1)
 	set(PLATFORM_CFLAGS "-DFAUDIO_WIN32_PLATFORM")
 	set(XNASONG OFF)
 else()
