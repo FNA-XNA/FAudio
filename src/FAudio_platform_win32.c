@@ -26,8 +26,6 @@
 
 #ifdef FAUDIO_WIN32_PLATFORM
 
-#include "FAudio_internal.h"
-
 #include <stddef.h>
 
 #define COBJMACROS
@@ -41,6 +39,9 @@
 #include <audioclient.h>
 #include <mmdeviceapi.h>
 #include <devpkey.h>
+
+#define _SPEAKER_POSITIONS_ /* Defined by SDK. */
+#include "FAudio_internal.h"
 
 #ifdef _MSC_VER
 DEFINE_GUID(IID_IAudioClient,         0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2);
@@ -474,7 +475,7 @@ void FAudio_PlatformInit(
 	args->events[0] = audioEvent;
 	args->events[1] = data->stopEvent;
 	args->audio = audio;
-	if (flags & FAUDIO_1024_QUANTUM) args->updateSize = args->format.Format.nSamplesPerSec / (1000.0 / (64.0 / 3.0));
+	if (flags & FAUDIO_1024_QUANTUM) args->updateSize = (UINT)(args->format.Format.nSamplesPerSec / (1000.0 / (64.0 / 3.0)));
 	else args->updateSize = args->format.Format.nSamplesPerSec / 100;
 
 	data->audioThread = CreateThread(NULL, 0, &FAudio_AudioClientThread, args, 0, NULL);
@@ -794,7 +795,7 @@ static int64_t FAUDIOCALL FAudio_FILE_seek(
 	int whence
 ) {
 	if (!data) return -1;
-	fseek(data, offset, whence);
+	fseek(data, (long)offset, whence);
 	return ftell(data);
 }
 
@@ -808,11 +809,19 @@ static int FAUDIOCALL FAudio_FILE_close(void *data)
 FAudioIOStream* FAudio_fopen(const char *path)
 {
 	FAudioIOStream *io;
+	errno_t err = -1;
 
 	io = (FAudioIOStream*) FAudio_malloc(sizeof(FAudioIOStream));
 	if (!io) return NULL;
 
-	io->data = fopen(path, "rb");
+	err = fopen_s((FILE**)&(io->data), path, "rb");
+
+	if (err != 0 || io->data == NULL)
+	{
+		FAudio_free(io);
+		return NULL;
+	}
+
 	io->read = FAudio_FILE_read;
 	io->seek = FAudio_FILE_seek;
 	io->close = FAudio_FILE_close;
@@ -839,7 +848,7 @@ static size_t FAUDIOCALL FAudio_mem_read(
 
 	if (!data) return 0;
 
-	while (len && len > (io->len - io->pos)) len -= size;
+	while (len && len > (UINT)(io->len - io->pos)) len -= size;
 	FAudio_memcpy(dst, io->mem + io->pos, len);
 	io->pos += len;
 
@@ -1175,7 +1184,7 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	/* Finally. */
 	FAudioSourceVoice_Start(songVoice, 0, 0);
 	LOG_FUNC_EXIT(songAudio);
-	return duration / 10000000.;
+	return (float)(duration / 10000000.);
 }
 
 FAUDIOAPI void XNA_PauseSong()
