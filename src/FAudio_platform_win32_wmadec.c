@@ -41,7 +41,7 @@ static HRESULT FAudio_WMAMF_ProcessInput(
 	BYTE *copy_buf;
 	HRESULT hr;
 
-	copy_size = min(buffer->AudioBytes - impl->input_pos, impl->input_size);
+	copy_size = (DWORD)min(buffer->AudioBytes - impl->input_pos, impl->input_size);
 	if (!copy_size) return S_FALSE;
 	LOG_INFO(voice->audio, "pushing %x bytes at %x", copy_size, impl->input_pos);
 

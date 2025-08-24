@@ -61,9 +61,9 @@ static void FAudio_INTERNAL_MixCallback(
 		SDL_PutAudioStreamData(
 			stream,
 			dev->stagingBuffer,
-			dev->stagingLen
+			(int)dev->stagingLen
 		);
-		additional_amount -= dev->stagingLen;
+		additional_amount -= (int)dev->stagingLen;
 	}
 }
 
@@ -265,7 +265,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 
 	devs = SDL_GetAudioPlaybackDevices(&devcount);
-	if (index > devcount)
+	if ((int)index > devcount)
 	{
 		SDL_free(devs);
 		return FAUDIO_E_INVALID_CALL;
@@ -424,7 +424,7 @@ void FAudio_sleep(uint32_t ms)
 
 uint32_t FAudio_timems()
 {
-	return SDL_GetTicks();
+	return (uint32_t)SDL_GetTicks();
 }
 
 /* FAudio I/O */
