@@ -2423,7 +2423,7 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 	data->instanceCount += 1;
 
 	pCue->state |= FACT_STATE_PLAYING;
-	pCue->state &= ~(FACT_STATE_PAUSED | FACT_STATE_PREPARED);
+	pCue->state &= ~FACT_STATE_PREPARED;
 
 	FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUEPLAY);
 
