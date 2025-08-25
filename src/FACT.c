@@ -2020,12 +2020,15 @@ uint32_t FACTWave_Play(FACTWave *pWave)
 		return 1;
 	}
 	FAudio_PlatformLockMutex(pWave->parentBank->parentEngine->apiLock);
-	FAudio_assert(!(pWave->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING)));
+
+	if (pWave->state & (FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_STOPPED))
+	{
+		FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
+		return FACTENGINE_E_INVALIDUSAGE;
+	}
+
 	pWave->state |= FACT_STATE_PLAYING;
-	pWave->state &= ~(
-		FACT_STATE_PAUSED |
-		FACT_STATE_STOPPED
-	);
+	pWave->state &= ~FACT_STATE_PAUSED;
 	FAudioSourceVoice_Start(pWave->voice, 0, 0);
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
 	return FAUDIO_OK;
