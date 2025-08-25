@@ -3093,6 +3093,17 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		DOSWAP_64(wbinfo.BuildTime);
 	}
 	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
+
+	if (wb->streaming != isStreaming)
+	{
+		/* Native forbids creating an in-memory wave bank when the flags
+		 * include STREAMING. It allows creating a streaming wave bank
+		 * when the flags do not include STREAMING, but subsequent
+		 * attempts to use the wave bank crash. Forbid both. */
+		pEngine->pFree(wb);
+		return FACTENGINE_E_INVALIDUSAGE;
+	}
+
 	wb->entryCount = wbinfo.dwEntryCount;
 	memsize = FAudio_strlen(wbinfo.szBankName) + 1;
 	wb->name = (char*) pEngine->pMalloc(memsize);
@@ -3103,10 +3114,6 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	memsize = sizeof(uint32_t) * wbinfo.dwEntryCount;
 	wb->entryRefs = (uint32_t*) pEngine->pMalloc(memsize);
 	FAudio_zero(wb->entryRefs, memsize);
-
-	/* FIXME: How much do we care about this? */
-	FAudio_assert(wb->streaming == isStreaming);
-	wb->streaming = isStreaming;
 
 	/* WaveBank Entry Metadata */
 	SEEKSET(header.Segments[FACT_WAVEBANK_SEGIDX_ENTRYMETADATA].dwOffset)
