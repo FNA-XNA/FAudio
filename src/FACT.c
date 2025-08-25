@@ -2091,7 +2091,6 @@ uint32_t FACTWave_Pause(FACTWave *pWave, int32_t fPause)
 		return FAUDIO_OK;
 	}
 
-	/* All we do is set the flag, the mixer handles the rest */
 	if (fPause)
 	{
 		pWave->state |= FACT_STATE_PAUSED;
