@@ -2024,9 +2024,13 @@ uint32_t FACTWave_Play(FACTWave *pWave)
 		return FACTENGINE_E_INVALIDUSAGE;
 	}
 
-	pWave->state |= FACT_STATE_PLAYING;
-	pWave->state &= ~(FACT_STATE_PREPARED | FACT_STATE_PAUSED);
-	FAudioSourceVoice_Start(pWave->voice, 0, 0);
+	if (!(pWave->state & FACT_STATE_PAUSED))
+	{
+		pWave->state |= FACT_STATE_PLAYING;
+		pWave->state &= ~FACT_STATE_PREPARED;
+		FAudioSourceVoice_Start(pWave->voice, 0, 0);
+	}
+
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
 	return FAUDIO_OK;
 }
