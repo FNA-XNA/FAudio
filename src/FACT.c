@@ -659,7 +659,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	);
 	if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 	{
-		pEngine->prepared_wavebanks_capacity *= 2;
+		pEngine->prepared_wavebanks_capacity = FAudio_max(pEngine->prepared_wavebanks_capacity * 2, 8);
 		pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
 			pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 	}
@@ -729,7 +729,7 @@ uint32_t FACTAudioEngine_RegisterNotification(FACTAudioEngine *engine, const FAC
 
 	if (engine->notification_count == engine->notifications_capacity)
 	{
-		engine->notifications_capacity = max(engine->notifications_capacity * 2, 8);
+		engine->notifications_capacity = FAudio_max(engine->notifications_capacity * 2, 8);
 		engine->notifications = engine->pRealloc(engine->notifications,
 			engine->notifications_capacity * sizeof(FACTNotification));
 	}

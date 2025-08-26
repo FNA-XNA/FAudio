@@ -1946,7 +1946,7 @@ int32_t FACTCALL FACT_INTERNAL_DefaultGetOverlappedResult(
 /* Parsing functions */
 
 #define READ_FUNC(type, size, bitsize, suffix) \
-	static inline type read_##suffix(uint8_t **ptr, const bool swapendian) \
+	static inline type read_##suffix(const uint8_t **ptr, const bool swapendian) \
 	{ \
 		type result = *((type*) *ptr); \
 		*ptr += size; \
@@ -1955,9 +1955,9 @@ int32_t FACTCALL FACT_INTERNAL_DefaultGetOverlappedResult(
 			FAudio_swap##bitsize##LE(result); \
 	}
 
-static inline uint8_t read_u8(uint8_t **ptr)
+static inline uint8_t read_u8(const uint8_t **ptr)
 {
-	uint8_t result = *((uint8_t*) *ptr);
+	const uint8_t result = *((const uint8_t*) *ptr);
 	*ptr += 1;
 	return result;
 }
@@ -1965,7 +1965,7 @@ READ_FUNC(uint16_t, 2, 16, u16)
 READ_FUNC(uint32_t, 4, 32, u32)
 READ_FUNC(int16_t, 2, 16, s16)
 READ_FUNC(int32_t, 4, 32, s32)
-static inline float read_f32(uint8_t **ptr, const bool swapendian)
+static inline float read_f32(const uint8_t **ptr, const bool swapendian)
 {
 	float result = *((float*) *ptr);
 	*ptr += 4;
@@ -1974,7 +1974,7 @@ static inline float read_f32(uint8_t **ptr, const bool swapendian)
 
 #undef READ_FUNC
 
-static inline float read_volbyte(uint8_t **ptr)
+static inline float read_volbyte(const uint8_t **ptr)
 {
 	/* FIXME: This magnificent beauty came from Mathematica!
 	 * The byte values for all possible input dB values from the .xap are here:
@@ -2009,8 +2009,8 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	uint16_t i, j;
 	bool se;
 
-	uint8_t *ptr = (uint8_t*) pParams->pGlobalSettingsBuffer;
-	uint8_t *start = ptr;
+	const uint8_t *ptr = pParams->pGlobalSettingsBuffer;
+	const uint8_t *start = ptr;
 
 	magic = read_u32(&ptr, 0);
 	se = magic == 0x58475346; /* Swap Endian */
@@ -2184,7 +2184,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	);
 	for (i = 0; i < pEngine->categoryCount; i += 1)
 	{
-		uint8_t *offset_ptr = start + categoryNameIndexOffset + (i * 6);
+		const uint8_t *offset_ptr = start + categoryNameIndexOffset + (i * 6);
 		uint16_t unknown;
 
 		ptr = start + read_u32(&offset_ptr, se);
@@ -2205,7 +2205,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 	);
 	for (i = 0; i < pEngine->variableCount; i += 1)
 	{
-		uint8_t *offset_ptr = start + variableNameIndexOffset + (i * 6);
+		const uint8_t *offset_ptr = start + variableNameIndexOffset + (i * 6);
 		uint16_t unknown;
 
 		ptr = start + read_u32(&offset_ptr, se);
@@ -2229,7 +2229,7 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 }
 
 void FACT_INTERNAL_ParseTrackEvents(
-	uint8_t **ptr,
+	const uint8_t **ptr,
 	bool se,
 	FACTTrack *track,
 	FAudioMallocFunc pMalloc
@@ -2480,10 +2480,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	uint8_t platform;
 	size_t memsize;
 	uint16_t i, j, k, cur, tool;
-	uint8_t *ptrBookmark;
+	const uint8_t *ptrBookmark;
 
-	uint8_t *ptr = (uint8_t*) pvBuffer;
-	uint8_t *start = ptr;
+	const uint8_t *ptr = pvBuffer;
+	const uint8_t *start = ptr;
 
 	uint32_t magic = read_u32(&ptr, 0);
 	bool se = magic == 0x5344424B; /* Swap Endian */
@@ -2939,7 +2939,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		);
 		for (i = 0; i < sb->cueCount; i += 1)
 		{
-			uint8_t *offset_ptr = start + cueNameIndexOffset + (i * 6);
+			const uint8_t *offset_ptr = start + cueNameIndexOffset + (i * 6);
 			uint16_t unknown;
 
 			ptr = start + read_u32(&offset_ptr, se);
