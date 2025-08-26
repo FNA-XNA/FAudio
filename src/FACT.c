@@ -659,7 +659,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	);
 	if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 	{
-		pEngine->prepared_wavebanks_capacity *= 2;
+	    pEngine->prepared_wavebanks_capacity = max(pEngine->prepared_wavebanks_capacity * 2, 8);
 		pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
 			pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 	}
