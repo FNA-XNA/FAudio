@@ -430,7 +430,13 @@ typedef struct FACTSoundInstance
 	/* Fade data */
 	uint32_t fadeStart;
 	uint16_t fadeTarget;
-	uint8_t fadeType; /* In (1), Out (2), Release RPC (3) */
+	enum
+	{
+		FADE_TYPE_NONE,
+		FADE_TYPE_IN,
+		FADE_TYPE_OUT,
+		FADE_TYPE_RELEASE_RPC,
+	} fadeType;
 
 	/* Engine references */
 	FACTCue *parentCue;
