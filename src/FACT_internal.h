@@ -238,6 +238,12 @@ typedef struct FACTEvent
 	};
 } FACTEvent;
 
+struct rpc_codes
+{
+	const uint32_t *codes;
+	uint8_t count;
+};
+
 typedef struct FACTTrack
 {
 	uint32_t code;
@@ -247,8 +253,7 @@ typedef struct FACTTrack
 	uint8_t qfactor;
 	uint16_t frequency;
 
-	uint8_t rpcCodeCount;
-	uint32_t *rpcCodes;
+	struct rpc_codes rpc_codes;
 
 	uint8_t eventCount;
 	FACTEvent *events;
@@ -268,12 +273,12 @@ typedef struct FACTSound
 	int16_t pitch;
 	uint8_t priority;
 
+	struct rpc_codes rpc_codes;
+
 	uint8_t trackCount;
-	uint8_t rpcCodeCount;
 	uint8_t dspCodeCount;
 
 	FACTTrack *tracks;
-	uint32_t *rpcCodes;
 	uint32_t *dspCodes;
 } FACTSound;
 

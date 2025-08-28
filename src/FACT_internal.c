@@ -815,11 +815,11 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		cue->maxRpcReleaseTime = 0;
 		for (i = 0; i < newSound->sound->trackCount; i += 1)
 		{
-			for (j = 0; j < newSound->sound->tracks[i].rpcCodeCount; j += 1)
+			for (uint8_t j = 0; j < newSound->sound->tracks[i].rpc_codes.count; ++j)
 			{
 				rpc = FACT_INTERNAL_GetRPC(
 					newSound->parentCue->parentBank->parentEngine,
-					newSound->sound->tracks[i].rpcCodes[j]
+					newSound->sound->tracks[i].rpc_codes.codes[j]
 				);
 				if (	rpc->parameter == RPC_PARAMETER_VOLUME &&
 					(cue->parentBank->parentEngine->variables[rpc->variable].accessibility & ACCESSIBILITY_CUE))
@@ -990,29 +990,27 @@ static float FACT_INTERNAL_CalculateRPC(
 
 static void FACT_INTERNAL_UpdateRPCs(
 	FACTCue *cue,
-	uint8_t codeCount,
-	uint32_t *codes,
+	const struct rpc_codes *rpc_codes,
 	FACTInstanceRPCData *data,
 	uint32_t timestamp,
 	uint32_t elapsedTrack
 ) {
-	uint8_t i;
 	FACTRPC *rpc;
 	float rpcResult;
 	float variableValue;
 	FACTAudioEngine *engine = cue->parentBank->parentEngine;
 
-	if (codeCount > 0)
+	if (rpc_codes->count > 0)
 	{
 		/* Do NOT overwrite Frequency/QFactor! */
 		data->rpcVolume = 0.0f;
 		data->rpcPitch = 0.0f;
 		data->rpcReverbSend = 0.0f;
-		for (i = 0; i < codeCount; i += 1)
+		for (uint8_t i = 0; i < rpc_codes->count; ++i)
 		{
 			rpc = FACT_INTERNAL_GetRPC(
 				engine,
-				codes[i]
+				rpc_codes->codes[i]
 			);
 			if (engine->variables[rpc->variable].accessibility & ACCESSIBILITY_CUE)
 			{
@@ -1447,8 +1445,7 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 	sound->rpcData.rpcFilterQFactor = -1.0f;
 	FACT_INTERNAL_UpdateRPCs(
 		sound->parentCue,
-		sound->sound->rpcCodeCount,
-		sound->sound->rpcCodes,
+		&sound->sound->rpc_codes,
 		&sound->rpcData,
 		timestamp,
 		elapsedCue - sound->tracks[0].events[0].timestamp
@@ -1459,8 +1456,7 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 		sound->tracks[i].rpcData.rpcFilterQFactor = sound->rpcData.rpcFilterQFactor;
 		FACT_INTERNAL_UpdateRPCs(
 			sound->parentCue,
-			sound->sound->tracks[i].rpcCodeCount,
-			sound->sound->tracks[i].rpcCodes,
+			&sound->sound->tracks[i].rpc_codes,
 			&sound->tracks[i].rpcData,
 			timestamp,
 			elapsedCue - sound->sound->tracks[i].events[0].timestamp
@@ -2439,6 +2435,17 @@ void FACT_INTERNAL_ParseTrackEvents(
 	}
 }
 
+static void parse_rpc_codes(FACTAudioEngine *engine, struct rpc_codes *data, const uint8_t **ptr, bool se)
+{
+	uint32_t *codes;
+
+	data->count = read_u8(ptr);
+	codes = engine->pMalloc(data->count * sizeof(*codes));
+	data->codes = codes;
+	for (uint8_t i = 0; i < data->count; ++i)
+		codes[i] = read_u32(ptr, se);
+}
+
 uint32_t FACT_INTERNAL_ParseSoundBank(
 	FACTAudioEngine *pEngine,
 	const void *pvBuffer,
@@ -2612,34 +2619,20 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			const uint16_t rpcDataLength = read_u16(&ptr, se);
 			ptrBookmark = ptr - 2;
 
-			#define COPYRPCBLOCK(loc) \
-				loc.rpcCodeCount = read_u8(&ptr); \
-				memsize = sizeof(uint32_t) * loc.rpcCodeCount; \
-				loc.rpcCodes = (uint32_t*) pEngine->pMalloc(memsize); \
-				for (k = 0; k < loc.rpcCodeCount; k += 1) \
-				{ \
-					loc.rpcCodes[k] = read_u32(&ptr, se); \
-				} \
-
 			if (sb->sounds[i].flags & SOUND_FLAG_HAS_RPC)
 			{
-				COPYRPCBLOCK(sb->sounds[i])
+				parse_rpc_codes(pEngine, &sb->sounds[i].rpc_codes, &ptr, se);
 			}
 			else
 			{
-				sb->sounds[i].rpcCodeCount = 0;
-				sb->sounds[i].rpcCodes = NULL;
+				FAudio_zero(&sb->sounds[i].rpc_codes, sizeof(sb->sounds[i].rpc_codes));
 			}
 
 			if (sb->sounds[i].flags & SOUND_FLAG_HAS_TRACK_RPC)
 			{
 				for (j = 0; j < sb->sounds[i].trackCount; j += 1)
-				{
-					COPYRPCBLOCK(sb->sounds[i].tracks[j])
-				}
+					parse_rpc_codes(pEngine, &sb->sounds[i].tracks[j].rpc_codes, &ptr, se);
 			}
-
-			#undef COPYRPCBLOCK
 
 			/* FIXME: Does 0x08 mean something for RPCs...? */
 			if (ptr - ptrBookmark != rpcDataLength)
@@ -2647,8 +2640,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		}
 		else
 		{
-			sb->sounds[i].rpcCodeCount = 0;
-			sb->sounds[i].rpcCodes = NULL;
+			FAudio_zero(&sb->sounds[i].rpc_codes, sizeof(sb->sounds[i].rpc_codes));
 		}
 
 		if (sb->sounds[i].flags & SOUND_FLAG_HAS_DSP)
