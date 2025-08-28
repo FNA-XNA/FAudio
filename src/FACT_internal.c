@@ -2634,42 +2634,40 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		{
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				sb->sounds[i].tracks[j].volume = read_volbyte(&ptr);
+				FACTTrack *track = &sb->sounds[i].tracks[j];
 
-				sb->sounds[i].tracks[j].code = read_u32(&ptr, se);
+				track->volume = read_volbyte(&ptr);
+
+				track->code = read_u32(&ptr, se);
 
 				if (contentVersion == FACT_CONTENT_VERSION_3_0)
 				{
 					/* 3.0 doesn't have track filter data */
-					sb->sounds[i].tracks[j].filter = 0xFF;
+					track->filter = 0xFF;
 					continue;
 				}
 
 				filterData = read_u16(&ptr, se);
 				if (filterData & 0x0001)
 				{
-					sb->sounds[i].tracks[j].filter =
-						(filterData >> 1) & 0x02;
+					track->filter = (filterData >> 1) & 0x02;
 				}
 				else
 				{
 					/* Huh...? */
-					sb->sounds[i].tracks[j].filter = 0xFF;
+					track->filter = 0xFF;
 				}
-				sb->sounds[i].tracks[j].qfactor = (filterData >> 8) & 0xFF;
-				sb->sounds[i].tracks[j].frequency = read_u16(&ptr, se);
+				track->qfactor = (filterData >> 8) & 0xFF;
+				track->frequency = read_u16(&ptr, se);
 			}
 
 			/* All Track events are stored at the end of the block */
 			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
 			{
-				ptr = start + sb->sounds[i].tracks[j].code;
-				FACT_INTERNAL_ParseTrackEvents(
-					&ptr,
-					se,
-					&sb->sounds[i].tracks[j],
-					pEngine->pMalloc
-				);
+				FACTTrack *track = &sb->sounds[i].tracks[j];
+
+				ptr = start + track->code;
+				FACT_INTERNAL_ParseTrackEvents(&ptr, se, track, pEngine->pMalloc);
 			}
 		}
 	}
