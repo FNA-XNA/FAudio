@@ -424,7 +424,7 @@ typedef struct FACTTrackInstance
 typedef struct FACTSoundInstance
 {
 	/* Base Sound reference */
-	FACTSound *sound;
+	const FACTSound *sound;
 
 	/* Per-instance track information */
 	FACTTrackInstance *tracks;
@@ -535,7 +535,7 @@ struct FACTSoundBank
 	/* Actual SoundBank information */
 	char *name;
 	FACTCueData *cues;
-	FACTSound *sounds;
+	const FACTSound *sounds;
 	uint32_t *soundCodes;
 	FACTVariationTable *variations;
 	uint32_t *variationCodes;
@@ -608,7 +608,7 @@ struct FACTCue
 		 * Sound; XACT does not generate variation tables for
 		 * Cues with only one Sound.
 		 */
-		FACTSound *sound;
+		const FACTSound *sound;
 	};
 
 	/* Instance data */
@@ -635,7 +635,7 @@ struct FACTCue
 
 /* Internal functions */
 
-void FACT_INTERNAL_GetNextWave(FACTCue *cue, FACTSound *sound, const FACTTrack *track,
+void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTTrack *track,
 	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst);
 bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
