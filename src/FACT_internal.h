@@ -278,7 +278,7 @@ typedef struct FACTSound
 	uint8_t trackCount;
 	uint8_t dspCodeCount;
 
-	FACTTrack *tracks;
+	const FACTTrack *tracks;
 	uint32_t *dspCodes;
 } FACTSound;
 
@@ -635,7 +635,7 @@ struct FACTCue
 
 /* Internal functions */
 
-void FACT_INTERNAL_GetNextWave(FACTCue *cue, FACTSound *sound, FACTTrack *track,
+void FACT_INTERNAL_GetNextWave(FACTCue *cue, FACTSound *sound, const FACTTrack *track,
 	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst);
 bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
