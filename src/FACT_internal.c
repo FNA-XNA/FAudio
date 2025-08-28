@@ -2236,148 +2236,128 @@ void FACT_INTERNAL_ParseTrackEvents(
 	FAudio_zero(track->events, sizeof(FACTEvent) * track->eventCount);
 	for (i = 0; i < track->eventCount; i += 1)
 	{
-		evtInfo = read_u32(ptr, se);
-		track->events[i].randomOffset = read_u16(ptr, se);
+		FACTEvent *event = &track->events[i];
 
-		track->events[i].type = evtInfo & 0x001F;
-		track->events[i].timestamp = (evtInfo >> 5) & 0xFFFF;
+		evtInfo = read_u32(ptr, se);
+		event->randomOffset = read_u16(ptr, se);
+
+		event->type = evtInfo & 0x001F;
+		event->timestamp = (evtInfo >> 5) & 0xFFFF;
 
 		separator = read_u8(ptr);
 		FAudio_assert(separator == 0xFF); /* Separator? */
 
-		#define EVTTYPE(t) (track->events[i].type == t)
+		#define EVTTYPE(t) (event->type == t)
 		if (EVTTYPE(FACTEVENT_STOP))
 		{
-			track->events[i].stop.flags = read_u8(ptr);
+			event->stop.flags = read_u8(ptr);
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVE))
 		{
 			/* Basic Wave */
-			track->events[i].wave.isComplex = false;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.simple.track = read_u16(ptr, se);
-			track->events[i].wave.simple.wavebank = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr, se);
-			track->events[i].wave.angle = read_u16(ptr, se);
+			event->wave.isComplex = false;
+			event->wave.flags = read_u8(ptr);
+			event->wave.simple.track = read_u16(ptr, se);
+			event->wave.simple.wavebank = read_u8(ptr);
+			event->wave.loopCount = read_u8(ptr);
+			event->wave.position = read_u16(ptr, se);
+			event->wave.angle = read_u16(ptr, se);
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
 		{
 			enum variation_table_type table_type;
 
 			/* Complex Wave */
-			track->events[i].wave.isComplex = true;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr, se);
-			track->events[i].wave.angle = read_u16(ptr, se);
+			event->wave.isComplex = true;
+			event->wave.flags = read_u8(ptr);
+			event->wave.loopCount = read_u8(ptr);
+			event->wave.position = read_u16(ptr, se);
+			event->wave.angle = read_u16(ptr, se);
 
 			/* Track Variation */
 			evtInfo = read_u32(ptr, se);
-			track->events[i].wave.complex.trackCount = evtInfo & 0xFFFF;
-			track->events[i].wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
+			event->wave.complex.trackCount = evtInfo & 0xFFFF;
+			event->wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
 			table_type = (evtInfo >> (16 + 3)) & VARIATION_TABLE_TYPE_MASK;
 			if (table_type != VARIATION_TABLE_TYPE_WAVE)
 				FAudio_Log("Unexpected variation table type.\n");
-			track->events[i].wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
+			event->wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
 			*ptr += 4; /* Unknown values */
-			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
-				sizeof(uint16_t) *
-				track->events[i].wave.complex.trackCount
-			);
-			track->events[i].wave.complex.wavebanks = (uint8_t*) pMalloc(
-				sizeof(uint8_t) *
-				track->events[i].wave.complex.trackCount
-			);
-			track->events[i].wave.complex.weights = (uint8_t*) pMalloc(
-				sizeof(uint8_t) *
-				track->events[i].wave.complex.trackCount
-			);
-			for (j = 0; j < track->events[i].wave.complex.trackCount; j += 1)
+			event->wave.complex.tracks = pMalloc(sizeof(uint16_t) * event->wave.complex.trackCount);
+			event->wave.complex.wavebanks = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
+			event->wave.complex.weights = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
+			for (uint16_t j = 0; j < event->wave.complex.trackCount; ++j)
 			{
-				track->events[i].wave.complex.tracks[j] = read_u16(ptr, se);
-				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
+				event->wave.complex.tracks[j] = read_u16(ptr, se);
+				event->wave.complex.wavebanks[j] = read_u8(ptr);
 				minWeight = read_u8(ptr);
 				maxWeight = read_u8(ptr);
-				track->events[i].wave.complex.weights[j] = (
-					maxWeight - minWeight
-				);
+				event->wave.complex.weights[j] = maxWeight - minWeight;
 			}
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
 		{
 			/* Basic Wave */
-			track->events[i].wave.isComplex = false;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.simple.track = read_u16(ptr, se);
-			track->events[i].wave.simple.wavebank = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr, se);
-			track->events[i].wave.angle = read_u16(ptr, se);
+			event->wave.isComplex = false;
+			event->wave.flags = read_u8(ptr);
+			event->wave.simple.track = read_u16(ptr, se);
+			event->wave.simple.wavebank = read_u8(ptr);
+			event->wave.loopCount = read_u8(ptr);
+			event->wave.position = read_u16(ptr, se);
+			event->wave.angle = read_u16(ptr, se);
 
 			/* Effect Variation */
-			track->events[i].wave.minPitch = read_s16(ptr, se);
-			track->events[i].wave.maxPitch = read_s16(ptr, se);
-			track->events[i].wave.minVolume = read_volbyte(ptr);
-			track->events[i].wave.maxVolume = read_volbyte(ptr);
-			track->events[i].wave.minFrequency = read_f32(ptr, se);
-			track->events[i].wave.maxFrequency = read_f32(ptr, se);
-			track->events[i].wave.minQFactor = read_f32(ptr, se);
-			track->events[i].wave.maxQFactor = read_f32(ptr, se);
-			track->events[i].wave.variationFlags = read_u16(ptr, se);
+			event->wave.minPitch = read_s16(ptr, se);
+			event->wave.maxPitch = read_s16(ptr, se);
+			event->wave.minVolume = read_volbyte(ptr);
+			event->wave.maxVolume = read_volbyte(ptr);
+			event->wave.minFrequency = read_f32(ptr, se);
+			event->wave.maxFrequency = read_f32(ptr, se);
+			event->wave.minQFactor = read_f32(ptr, se);
+			event->wave.maxQFactor = read_f32(ptr, se);
+			event->wave.variationFlags = read_u16(ptr, se);
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKEFFECTVARIATION))
 		{
 			enum variation_table_type table_type;
 
 			/* Complex Wave */
-			track->events[i].wave.isComplex = true;
-			track->events[i].wave.flags = read_u8(ptr);
-			track->events[i].wave.loopCount = read_u8(ptr);
-			track->events[i].wave.position = read_u16(ptr, se);
-			track->events[i].wave.angle = read_u16(ptr, se);
+			event->wave.isComplex = true;
+			event->wave.flags = read_u8(ptr);
+			event->wave.loopCount = read_u8(ptr);
+			event->wave.position = read_u16(ptr, se);
+			event->wave.angle = read_u16(ptr, se);
 
 			/* Effect Variation */
-			track->events[i].wave.minPitch = read_s16(ptr, se);
-			track->events[i].wave.maxPitch = read_s16(ptr, se);
-			track->events[i].wave.minVolume = read_volbyte(ptr);
-			track->events[i].wave.maxVolume = read_volbyte(ptr);
-			track->events[i].wave.minFrequency = read_f32(ptr, se);
-			track->events[i].wave.maxFrequency = read_f32(ptr, se);
-			track->events[i].wave.minQFactor = read_f32(ptr, se);
-			track->events[i].wave.maxQFactor = read_f32(ptr, se);
-			track->events[i].wave.variationFlags = read_u16(ptr, se);
+			event->wave.minPitch = read_s16(ptr, se);
+			event->wave.maxPitch = read_s16(ptr, se);
+			event->wave.minVolume = read_volbyte(ptr);
+			event->wave.maxVolume = read_volbyte(ptr);
+			event->wave.minFrequency = read_f32(ptr, se);
+			event->wave.maxFrequency = read_f32(ptr, se);
+			event->wave.minQFactor = read_f32(ptr, se);
+			event->wave.maxQFactor = read_f32(ptr, se);
+			event->wave.variationFlags = read_u16(ptr, se);
 
 			/* Track Variation */
 			evtInfo = read_u32(ptr, se);
-			track->events[i].wave.complex.trackCount = evtInfo & 0xFFFF;
-			track->events[i].wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
+			event->wave.complex.trackCount = evtInfo & 0xFFFF;
+			event->wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
 			table_type = (evtInfo >> (16 + 3)) & VARIATION_TABLE_TYPE_MASK;
 			if (table_type != VARIATION_TABLE_TYPE_WAVE)
 				FAudio_Log("Unexpected variation table type.\n");
-			track->events[i].wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
+			event->wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
 			*ptr += 4; /* Unknown values */
-			track->events[i].wave.complex.tracks = (uint16_t*) pMalloc(
-				sizeof(uint16_t) *
-				track->events[i].wave.complex.trackCount
-			);
-			track->events[i].wave.complex.wavebanks = (uint8_t*) pMalloc(
-				sizeof(uint8_t) *
-				track->events[i].wave.complex.trackCount
-			);
-			track->events[i].wave.complex.weights = (uint8_t*) pMalloc(
-				sizeof(uint8_t) *
-				track->events[i].wave.complex.trackCount
-			);
-			for (j = 0; j < track->events[i].wave.complex.trackCount; j += 1)
+			event->wave.complex.tracks = pMalloc(sizeof(uint16_t) * event->wave.complex.trackCount);
+			event->wave.complex.wavebanks = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
+			event->wave.complex.weights = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
+			for (j = 0; j < event->wave.complex.trackCount; j += 1)
 			{
-				track->events[i].wave.complex.tracks[j] = read_u16(ptr, se);
-				track->events[i].wave.complex.wavebanks[j] = read_u8(ptr);
+				event->wave.complex.tracks[j] = read_u16(ptr, se);
+				event->wave.complex.wavebanks[j] = read_u8(ptr);
 				minWeight = read_u8(ptr);
 				maxWeight = read_u8(ptr);
-				track->events[i].wave.complex.weights[j] = (
-					maxWeight - minWeight
-				);
+				event->wave.complex.weights[j] = maxWeight - minWeight;
 			}
 		}
 		else if (	EVTTYPE(FACTEVENT_PITCH) ||
@@ -2385,43 +2365,43 @@ void FACT_INTERNAL_ParseTrackEvents(
 				EVTTYPE(FACTEVENT_PITCHREPEATING) ||
 				EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 		{
-			track->events[i].value.settings = read_u8(ptr);
-			if (track->events[i].value.settings & EVENT_SETTINGS_RAMP)
+			event->value.settings = read_u8(ptr);
+			if (event->value.settings & EVENT_SETTINGS_RAMP)
 			{
-				track->events[i].value.ramp.initialValue = read_f32(ptr, se);
-				track->events[i].value.ramp.initialSlope = read_f32(ptr, se) * 100;
-				track->events[i].value.ramp.slopeDelta = read_f32(ptr, se);
-				track->events[i].value.ramp.duration = read_u16(ptr, se);
+				event->value.ramp.initialValue = read_f32(ptr, se);
+				event->value.ramp.initialSlope = read_f32(ptr, se) * 100;
+				event->value.ramp.slopeDelta = read_f32(ptr, se);
+				event->value.ramp.duration = read_u16(ptr, se);
 			}
 			else /* Equation */
 			{
-				track->events[i].value.equation.flags = read_u8(ptr);
+				event->value.equation.flags = read_u8(ptr);
 
 				/* SetValue, SetRandomValue, anything else? */
-				FAudio_assert(track->events[i].value.equation.flags & (EVENT_EQUATION_RANDOM | EVENT_EQUATION_VALUE));
+				FAudio_assert(event->value.equation.flags & (EVENT_EQUATION_RANDOM | EVENT_EQUATION_VALUE));
 
-				track->events[i].value.equation.value1 = read_f32(ptr, se);
-				track->events[i].value.equation.value2 = read_f32(ptr, se);
+				event->value.equation.value1 = read_f32(ptr, se);
+				event->value.equation.value2 = read_f32(ptr, se);
 
 				*ptr += 5; /* Unknown values */
 
 				if (	EVTTYPE(FACTEVENT_PITCHREPEATING) ||
 					EVTTYPE(FACTEVENT_VOLUMEREPEATING)	)
 				{
-					track->events[i].value.repeats = read_u16(ptr, se);
-					track->events[i].value.frequency = read_u16(ptr, se);
+					event->value.repeats = read_u16(ptr, se);
+					event->value.frequency = read_u16(ptr, se);
 				}
 			}
 		}
 		else if (EVTTYPE(FACTEVENT_MARKER))
 		{
-			track->events[i].marker.marker = read_u32(ptr, se);
+			event->marker.marker = read_u32(ptr, se);
 		}
 		else if (EVTTYPE(FACTEVENT_MARKERREPEATING))
 		{
-			track->events[i].marker.marker = read_u32(ptr, se);
-			track->events[i].marker.repeats = read_u16(ptr, se);
-			track->events[i].marker.frequency = read_u16(ptr, se);
+			event->marker.marker = read_u32(ptr, se);
+			event->marker.repeats = read_u16(ptr, se);
+			event->marker.frequency = read_u16(ptr, se);
 		}
 		else
 		{
