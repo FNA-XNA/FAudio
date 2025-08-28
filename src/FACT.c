@@ -1110,8 +1110,6 @@ uint32_t FACTSoundBank_Prepare(
 
 	/* Engine references */
 	(*ppCue)->parentBank = pSoundBank;
-	(*ppCue)->next = NULL;
-	(*ppCue)->managed = false;
 	(*ppCue)->index = nCueIndex;
 
 	/* Sound data */
