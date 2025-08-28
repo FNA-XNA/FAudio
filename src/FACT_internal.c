@@ -174,7 +174,7 @@ static inline void FACT_INTERNAL_ReadFile(
 
 /* Internal Functions */
 
-void FACT_INTERNAL_GetNextWave(FACTCue *cue, FACTSound *sound, const FACTTrack *track,
+void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTTrack *track,
 	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst)
 {
 	FAudioSendDescriptor reverbDesc[2];
@@ -480,7 +480,7 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	LinkedList *list;
 	const FACTEvent *evt;
 	FACTEventInstance *evtInst;
-	FACTSound *baseSound = NULL;
+	const FACTSound *baseSound = NULL;
 	FACTSoundInstance *newSound;
 	FACTRPC *rpc;
 	float lastX;
@@ -2434,6 +2434,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		soundOffset;
 	uint32_t entryCountAndFlags;
 	uint16_t filterData;
+	FACTSound *sounds;
 	uint8_t platform;
 	size_t memsize;
 	uint16_t i, j, k, cur, tool;
@@ -2531,17 +2532,15 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 	/* Sound data */
 	ptr = start + soundOffset;
-	sb->sounds = (FACTSound*) pEngine->pMalloc(
-		sizeof(FACTSound) *
-		sb->soundCount
-	);
+	sounds = pEngine->pMalloc(sb->soundCount * sizeof(*sounds));
+	sb->sounds = sounds;
 	sb->soundCodes = (uint32_t*) pEngine->pMalloc(
 		sizeof(uint32_t) *
 		sb->soundCount
 	);
 	for (i = 0; i < sb->soundCount; i += 1)
 	{
-		FACTSound *sound = &sb->sounds[i];
+		FACTSound *sound = &sounds[i];
 		FACTTrack *tracks;
 
 		sb->soundCodes[i] = (uint32_t) (ptr - start);
