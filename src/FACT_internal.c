@@ -2264,9 +2264,6 @@ void FACT_INTERNAL_ParseTrackEvents(
 			track->events[i].wave.loopCount = read_u8(ptr);
 			track->events[i].wave.position = read_u16(ptr, se);
 			track->events[i].wave.angle = read_u16(ptr, se);
-
-			/* No Effect Variation */
-			track->events[i].wave.variationFlags = 0;
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVETRACKVARIATION))
 		{
@@ -2310,9 +2307,6 @@ void FACT_INTERNAL_ParseTrackEvents(
 					maxWeight - minWeight
 				);
 			}
-
-			/* No Effect Variation */
-			track->events[i].wave.variationFlags = 0;
 		}
 		else if (EVTTYPE(FACTEVENT_PLAYWAVEEFFECTVARIATION))
 		{
@@ -2398,7 +2392,6 @@ void FACT_INTERNAL_ParseTrackEvents(
 			track->events[i].value.settings = read_u8(ptr);
 			if (track->events[i].value.settings & EVENT_SETTINGS_RAMP)
 			{
-				track->events[i].value.repeats = 0;
 				track->events[i].value.ramp.initialValue = read_f32(ptr, se);
 				track->events[i].value.ramp.initialSlope = read_f32(ptr, se) * 100;
 				track->events[i].value.ramp.slopeDelta = read_f32(ptr, se);
@@ -2422,17 +2415,11 @@ void FACT_INTERNAL_ParseTrackEvents(
 					track->events[i].value.repeats = read_u16(ptr, se);
 					track->events[i].value.frequency = read_u16(ptr, se);
 				}
-				else
-				{
-					track->events[i].value.repeats = 0;
-				}
 			}
 		}
 		else if (EVTTYPE(FACTEVENT_MARKER))
 		{
 			track->events[i].marker.marker = read_u32(ptr, se);
-			track->events[i].marker.repeats = 0;
-			track->events[i].marker.frequency = 0;
 		}
 		else if (EVTTYPE(FACTEVENT_MARKERREPEATING))
 		{
@@ -2600,7 +2587,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
 			sb->sounds[i].tracks = (FACTTrack*) pEngine->pMalloc(memsize);
 			FAudio_zero(sb->sounds[i].tracks, memsize);
-			sb->sounds[i].tracks[0].volume = 0.0f;
 			sb->sounds[i].tracks[0].filter = 0xFF;
 			sb->sounds[i].tracks[0].eventCount = 1;
 			sb->sounds[i].tracks[0].events = (FACTEvent*) pEngine->pMalloc(
@@ -2648,14 +2634,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 					COPYRPCBLOCK(sb->sounds[i].tracks[j])
 				}
 			}
-			else
-			{
-				for (j = 0; j < sb->sounds[i].trackCount; j += 1)
-				{
-					sb->sounds[i].tracks[j].rpcCodeCount = 0;
-					sb->sounds[i].tracks[j].rpcCodes = NULL;
-				}
-			}
 
 			#undef COPYRPCBLOCK
 
@@ -2667,11 +2645,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		{
 			sb->sounds[i].rpcCodeCount = 0;
 			sb->sounds[i].rpcCodes = NULL;
-			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
-			{
-				sb->sounds[i].tracks[j].rpcCodeCount = 0;
-				sb->sounds[i].tracks[j].rpcCodes = NULL;
-			}
 		}
 
 		if (sb->sounds[i].flags & SOUND_FLAG_HAS_DSP)
@@ -2705,8 +2678,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				{
 					/* 3.0 doesn't have track filter data */
 					sb->sounds[i].tracks[j].filter = 0xFF;
-					sb->sounds[i].tracks[j].qfactor = 0;
-					sb->sounds[i].tracks[j].frequency = 0;
 					continue;
 				}
 
@@ -2908,7 +2879,6 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		sb->transitions[i].entries = (FACTTransition*) pEngine->pMalloc(
 			memsize
 		);
-		FAudio_zero(sb->transitions[i].entries, memsize);
 		for (j = 0; j < sb->transitions[i].entryCount; j += 1)
 		{
 			sb->transitions[i].entries[j].soundCode = read_s32(&ptr, se);
