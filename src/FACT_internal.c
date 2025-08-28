@@ -2537,24 +2537,25 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	);
 	for (i = 0; i < sb->soundCount; i += 1)
 	{
+		FACTSound *sound = &sb->sounds[i];
 		FACTTrack *tracks;
 
 		sb->soundCodes[i] = (uint32_t) (ptr - start);
-		sb->sounds[i].flags = read_u8(&ptr);
-		sb->sounds[i].category = read_u16(&ptr, se);
-		sb->sounds[i].volume = read_volbyte(&ptr);
-		sb->sounds[i].pitch = read_s16(&ptr, se);
-		sb->sounds[i].priority = read_u8(&ptr);
+		sound->flags = read_u8(&ptr);
+		sound->category = read_u16(&ptr, se);
+		sound->volume = read_volbyte(&ptr);
+		sound->pitch = read_s16(&ptr, se);
+		sound->priority = read_u8(&ptr);
 
 		/* Length of sound entry, unused */
 		ptr += 2;
 
-		if (sb->sounds[i].flags & SOUND_FLAG_COMPLEX)
+		if (sound->flags & SOUND_FLAG_COMPLEX)
 		{
-			sb->sounds[i].trackCount = read_u8(&ptr);
-			tracks = pEngine->pMalloc(sb->sounds[i].trackCount * sizeof(*tracks));
-			FAudio_zero(tracks, sb->sounds[i].trackCount * sizeof(*tracks));
-			sb->sounds[i].tracks = tracks;
+			sound->trackCount = read_u8(&ptr);
+			tracks = pEngine->pMalloc(sound->trackCount * sizeof(*tracks));
+			FAudio_zero(tracks, sound->trackCount * sizeof(*tracks));
+			sound->tracks = tracks;
 		}
 		else
 		{
@@ -2562,8 +2563,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 
 			tracks = pEngine->pMalloc(sizeof(*tracks));
 			FAudio_zero(tracks, sizeof(*tracks));
-			sb->sounds[i].trackCount = 1;
-			sb->sounds[i].tracks = tracks;
+			sound->trackCount = 1;
+			sound->tracks = tracks;
 			tracks[0].filter = 0xFF;
 			tracks[0].eventCount = 1;
 
@@ -2577,23 +2578,23 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			tracks[0].events = event;
 		}
 
-		if (sb->sounds[i].flags & SOUND_FLAG_RPC_MASK)
+		if (sound->flags & SOUND_FLAG_RPC_MASK)
 		{
 			const uint16_t rpcDataLength = read_u16(&ptr, se);
 			ptrBookmark = ptr - 2;
 
-			if (sb->sounds[i].flags & SOUND_FLAG_HAS_RPC)
+			if (sound->flags & SOUND_FLAG_HAS_RPC)
 			{
-				parse_rpc_codes(pEngine, &sb->sounds[i].rpc_codes, &ptr, se);
+				parse_rpc_codes(pEngine, &sound->rpc_codes, &ptr, se);
 			}
 			else
 			{
-				FAudio_zero(&sb->sounds[i].rpc_codes, sizeof(sb->sounds[i].rpc_codes));
+				FAudio_zero(&sound->rpc_codes, sizeof(sound->rpc_codes));
 			}
 
-			if (sb->sounds[i].flags & SOUND_FLAG_HAS_TRACK_RPC)
+			if (sound->flags & SOUND_FLAG_HAS_TRACK_RPC)
 			{
-				for (j = 0; j < sb->sounds[i].trackCount; j += 1)
+				for (j = 0; j < sound->trackCount; j += 1)
 					parse_rpc_codes(pEngine, &tracks[j].rpc_codes, &ptr, se);
 			}
 
@@ -2603,31 +2604,30 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		}
 		else
 		{
-			FAudio_zero(&sb->sounds[i].rpc_codes, sizeof(sb->sounds[i].rpc_codes));
+			FAudio_zero(&sound->rpc_codes, sizeof(sound->rpc_codes));
 		}
 
-		if (sb->sounds[i].flags & SOUND_FLAG_HAS_DSP)
+		if (sound->flags & SOUND_FLAG_HAS_DSP)
 		{
 			/* DSP presets length, unused */
 			ptr += 2;
 
-			sb->sounds[i].dspCodeCount = read_u8(&ptr);
-			memsize = sizeof(uint32_t) * sb->sounds[i].dspCodeCount;
-			sb->sounds[i].dspCodes = (uint32_t*) pEngine->pMalloc(memsize);
-			for (j = 0; j < sb->sounds[i].dspCodeCount; j += 1)
+			sound->dspCodeCount = read_u8(&ptr);
+			sound->dspCodes = pEngine->pMalloc(sound->dspCodeCount * sizeof(uint32_t));
+			for (uint8_t j = 0; j < sound->dspCodeCount; ++j)
 			{
-				sb->sounds[i].dspCodes[j] = read_u32(&ptr, se);
+				sound->dspCodes[j] = read_u32(&ptr, se);
 			}
 		}
 		else
 		{
-			sb->sounds[i].dspCodeCount = 0;
-			sb->sounds[i].dspCodes = NULL;
+			sound->dspCodeCount = 0;
+			sound->dspCodes = NULL;
 		}
 
-		if (sb->sounds[i].flags & SOUND_FLAG_COMPLEX)
+		if (sound->flags & SOUND_FLAG_COMPLEX)
 		{
-			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
+			for (j = 0; j < sound->trackCount; j += 1)
 			{
 				FACTTrack *track = &tracks[j];
 
@@ -2657,7 +2657,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			}
 
 			/* All Track events are stored at the end of the block */
-			for (j = 0; j < sb->sounds[i].trackCount; j += 1)
+			for (j = 0; j < sound->trackCount; j += 1)
 			{
 				FACTTrack *track = &tracks[j];
 
