@@ -645,10 +645,6 @@ void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS)
 
 void FACT_INTERNAL_SendCueNotification(FACTCue *cue, uint8_t type);
 
-/* RPC Helper Functions */
-
-FACTRPC* FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code);
-
 /* FACT Thread */
 
 int32_t FAUDIOCALL FACT_INTERNAL_APIThread(void* enginePtr);
