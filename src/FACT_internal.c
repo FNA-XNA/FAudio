@@ -464,6 +464,18 @@ void FACT_INTERNAL_GetNextWave(
 	}
 }
 
+static FACTRPC *FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code)
+{
+	for (uint16_t i = 0; i < engine->rpcCount; ++i)
+	{
+		if (engine->rpcCodes[i] == code)
+			return &engine->rpcs[i];
+	}
+
+	FAudio_assert(0 && "RPC code not found!");
+	return NULL;
+}
+
 bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 {
 	int32_t i, j, k;
@@ -913,26 +925,7 @@ void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS)
 	sound->parentCue->state |= FACT_STATE_STOPPING;
 }
 
-/* RPC Helper Functions */
-
-FACTRPC* FACT_INTERNAL_GetRPC(
-	FACTAudioEngine *engine,
-	uint32_t code
-) {
-	uint16_t i;
-	for (i = 0; i < engine->rpcCount; i += 1)
-	{
-		if (engine->rpcCodes[i] == code)
-		{
-			return &engine->rpcs[i];
-		}
-	}
-
-	FAudio_assert(0 && "RPC code not found!");
-	return NULL;
-}
-
-float FACT_INTERNAL_CalculateRPC(
+static float FACT_INTERNAL_CalculateRPC(
 	FACTRPC *rpc,
 	float var
 ) {
@@ -995,7 +988,7 @@ float FACT_INTERNAL_CalculateRPC(
 	return result;
 }
 
-void FACT_INTERNAL_UpdateRPCs(
+static void FACT_INTERNAL_UpdateRPCs(
 	FACTCue *cue,
 	uint8_t codeCount,
 	uint32_t *codes,
@@ -1094,7 +1087,7 @@ void FACT_INTERNAL_UpdateRPCs(
 
 /* Engine Update Function */
 
-void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
+static void FACT_INTERNAL_UpdateEngine(FACTAudioEngine *engine)
 {
 	FAudioFXReverbParameters rvbPar;
 	uint16_t i, j, par;
@@ -1195,7 +1188,7 @@ static inline void FACT_INTERNAL_StopTrack(
 	}
 }
 
-void FACT_INTERNAL_ActivateEvent(
+static void FACT_INTERNAL_ActivateEvent(
 	FACTSoundInstance *sound,
 	FACTTrack *track,
 	FACTTrackInstance *trackInst,
@@ -1389,7 +1382,7 @@ void FACT_INTERNAL_ActivateEvent(
 	evtInst->finished = true;
 }
 
-bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
+static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 {
 	uint8_t i, j;
 	uint32_t waveState;
@@ -1587,7 +1580,7 @@ bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timestamp)
 	return finished;
 }
 
-void FACT_INTERNAL_UpdateCue(FACTCue *cue)
+static void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 {
 	uint32_t i;
 	float next;

@@ -791,7 +791,7 @@ uint16_t FACTAudioEngine_GetCategory(
 	return FACTCATEGORY_INVALID;
 }
 
-bool FACT_INTERNAL_IsInCategory(
+static bool FACT_INTERNAL_IsInCategory(
 	FACTAudioEngine *engine,
 	uint16_t target,
 	uint16_t category
