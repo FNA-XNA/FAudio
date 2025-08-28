@@ -174,14 +174,9 @@ static inline void FACT_INTERNAL_ReadFile(
 
 /* Internal Functions */
 
-void FACT_INTERNAL_GetNextWave(
-	FACTCue *cue,
-	FACTSound *sound,
-	FACTTrack *track,
-	FACTTrackInstance *trackInst,
-	FACTEvent *evt,
-	FACTEventInstance *evtInst
-) {
+void FACT_INTERNAL_GetNextWave(FACTCue *cue, FACTSound *sound, FACTTrack *track,
+	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst)
+{
 	FAudioSendDescriptor reverbDesc[2];
 	bool has_track_variation = false;
 	FAudioVoiceSends reverbSends;
@@ -483,7 +478,7 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	const char *wbName;
 	FACTWaveBank *wb = NULL;
 	LinkedList *list;
-	FACTEvent *evt;
+	const FACTEvent *evt;
 	FACTEventInstance *evtInst;
 	FACTSound *baseSound = NULL;
 	FACTSoundInstance *newSound;
@@ -1186,14 +1181,9 @@ static inline void FACT_INTERNAL_StopTrack(
 	}
 }
 
-static void FACT_INTERNAL_ActivateEvent(
-	FACTSoundInstance *sound,
-	FACTTrack *track,
-	FACTTrackInstance *trackInst,
-	FACTEvent *evt,
-	FACTEventInstance *evtInst,
-	uint32_t elapsed
-) {
+static void FACT_INTERNAL_ActivateEvent(FACTSoundInstance *sound, FACTTrack *track,
+	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst, uint32_t elapsed)
+{
 	uint8_t i;
 	float svResult;
 	bool skipLoopCheck = false;
@@ -2223,20 +2213,19 @@ void FACT_INTERNAL_ParseTrackEvents(
 	FACTTrack *track,
 	FAudioMallocFunc pMalloc
 ) {
+	FACTEvent *events;
 	uint32_t evtInfo;
 	uint8_t minWeight, maxWeight, separator;
 	uint8_t i;
 	uint16_t j;
 
 	track->eventCount = read_u8(ptr);
-	track->events = (FACTEvent*) pMalloc(
-		sizeof(FACTEvent) *
-		track->eventCount
-	);
-	FAudio_zero(track->events, sizeof(FACTEvent) * track->eventCount);
+	events = pMalloc(sizeof(*events) * track->eventCount);
+	FAudio_zero(events, sizeof(*events) * track->eventCount);
+	track->events = events;
 	for (i = 0; i < track->eventCount; i += 1)
 	{
-		FACTEvent *event = &track->events[i];
+		FACTEvent *event = &events[i];
 
 		evtInfo = read_u32(ptr, se);
 		event->randomOffset = read_u16(ptr, se);
@@ -2570,24 +2559,23 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 		}
 		else
 		{
+			FACTEvent *event;
+
 			sb->sounds[i].trackCount = 1;
 			memsize = sizeof(FACTTrack) * sb->sounds[i].trackCount;
 			sb->sounds[i].tracks = (FACTTrack*) pEngine->pMalloc(memsize);
 			FAudio_zero(sb->sounds[i].tracks, memsize);
 			sb->sounds[i].tracks[0].filter = 0xFF;
 			sb->sounds[i].tracks[0].eventCount = 1;
-			sb->sounds[i].tracks[0].events = (FACTEvent*) pEngine->pMalloc(
-				sizeof(FACTEvent)
-			);
-			FAudio_zero(
-				sb->sounds[i].tracks[0].events,
-				sizeof(FACTEvent)
-			);
-			sb->sounds[i].tracks[0].events[0].type = FACTEVENT_PLAYWAVE;
-			sb->sounds[i].tracks[0].events[0].wave.position = 0; /* FIXME */
-			sb->sounds[i].tracks[0].events[0].wave.angle = 0; /* FIXME */
-			sb->sounds[i].tracks[0].events[0].wave.simple.track = read_u16(&ptr, se);
-			sb->sounds[i].tracks[0].events[0].wave.simple.wavebank = read_u8(&ptr);
+
+			event = pEngine->pMalloc(sizeof(*event));
+			FAudio_zero(event, sizeof(*event));
+			event->type = FACTEVENT_PLAYWAVE;
+			event->wave.position = 0; /* FIXME */
+			event->wave.angle = 0; /* FIXME */
+			event->wave.simple.track = read_u16(&ptr, se);
+			event->wave.simple.wavebank = read_u8(&ptr);
+			sb->sounds[i].tracks[0].events = event;
 		}
 
 		if (sb->sounds[i].flags & SOUND_FLAG_RPC_MASK)

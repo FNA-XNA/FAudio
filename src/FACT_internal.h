@@ -256,7 +256,7 @@ typedef struct FACTTrack
 	struct rpc_codes rpc_codes;
 
 	uint8_t eventCount;
-	FACTEvent *events;
+	const FACTEvent *events;
 } FACTTrack;
 
 #define SOUND_FLAG_COMPLEX		0x01
@@ -417,7 +417,7 @@ typedef struct FACTTrackInstance
 		float baseQFactor;
 		float baseFrequency;
 	} activeWave, upcomingWave;
-	FACTEvent *waveEvt;
+	const FACTEvent *waveEvt;
 	FACTEventInstance *waveEvtInst;
 } FACTTrackInstance;
 
@@ -635,14 +635,8 @@ struct FACTCue
 
 /* Internal functions */
 
-void FACT_INTERNAL_GetNextWave(
-	FACTCue *cue,
-	FACTSound *sound,
-	FACTTrack *track,
-	FACTTrackInstance *trackInst,
-	FACTEvent *evt,
-	FACTEventInstance *evtInst
-);
+void FACT_INTERNAL_GetNextWave(FACTCue *cue, FACTSound *sound, FACTTrack *track,
+	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst);
 bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);

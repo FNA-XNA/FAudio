@@ -1368,9 +1368,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 				}
 				#undef MATCH
 			}
-			pSoundBank->parentEngine->pFree(
-				pSoundBank->sounds[i].tracks[j].events
-			);
+			pSoundBank->parentEngine->pFree((void *)pSoundBank->sounds[i].tracks[j].events);
 		}
 		pSoundBank->parentEngine->pFree(pSoundBank->sounds[i].tracks);
 		pSoundBank->parentEngine->pFree((void *)pSoundBank->sounds[i].rpc_codes.codes);
