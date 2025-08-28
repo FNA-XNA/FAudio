@@ -1370,7 +1370,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 			}
 			pSoundBank->parentEngine->pFree((void *)pSoundBank->sounds[i].tracks[j].events);
 		}
-		pSoundBank->parentEngine->pFree(pSoundBank->sounds[i].tracks);
+		pSoundBank->parentEngine->pFree((void *)pSoundBank->sounds[i].tracks);
 		pSoundBank->parentEngine->pFree((void *)pSoundBank->sounds[i].rpc_codes.codes);
 		pSoundBank->parentEngine->pFree(pSoundBank->sounds[i].dspCodes);
 	}
