@@ -15,7 +15,7 @@ option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the hos
 option(BUILD_SDL3 "Build against SDL 3.0" ON)
 if(WIN32)
 option(PLATFORM_WIN32 "Enable native Win32 platform instead of SDL" OFF)
-option(WMA_DECODING "Enable WMA decoding support" OFF)
+option(WMA_DECODING "Enable WMA decoding support" ${PLATFORM_WIN32})
 endif()
 option(XNASONG "Build with XNA_Song.c" ON)
 option(LOG_ASSERTIONS "Bind FAudio_assert to log, instead of platform's assert" OFF)
