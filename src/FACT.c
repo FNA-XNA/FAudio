@@ -1070,14 +1070,14 @@ uint32_t FACTSoundBank_GetCueProperties(
 		else
 		{
 			pProperties->interactive = 0;
-			pProperties->iaVariableIndex = 0;
+			pProperties->iaVariableIndex = FACTINDEX_INVALID;
 		}
 		pProperties->numVariations = pSoundBank->variations[i].entryCount;
 	}
 	else
 	{
 		pProperties->interactive = 0;
-		pProperties->iaVariableIndex = 0;
+		pProperties->iaVariableIndex = FACTINDEX_INVALID;
 		pProperties->numVariations = 1;
 	}
 	pProperties->maxInstances = pSoundBank->cues[nCueIndex].instanceLimit;
