@@ -2747,60 +2747,60 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 	}
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
+		FACTVariationTable *table = &sb->variations[i];
+
 		sb->variationCodes[i] = (uint32_t) (ptr - start);
 		entryCountAndFlags = read_u32(&ptr, se);
-		sb->variations[i].entryCount = entryCountAndFlags & 0xFFFF;
-		sb->variations[i].type = (entryCountAndFlags >> (16 + 3)) & 0x07;
+		table->entryCount = entryCountAndFlags & 0xFFFF;
+		table->type = (entryCountAndFlags >> (16 + 3)) & 0x07;
 		ptr += 2; /* Unknown value */
-		sb->variations[i].variable = read_s16(&ptr, se);
-		memsize = sizeof(FACTVariation) * sb->variations[i].entryCount;
-		sb->variations[i].entries = (FACTVariation*) pEngine->pMalloc(
-			memsize
-		);
-		FAudio_zero(sb->variations[i].entries, memsize);
+		table->variable = read_s16(&ptr, se);
+		memsize = sizeof(FACTVariation) * table->entryCount;
+		table->entries = pEngine->pMalloc(memsize);
+		FAudio_zero(table->entries, memsize);
 
-		switch (sb->variations[i].type)
+		switch (table->type)
 		{
 			case VARIATION_TABLE_TYPE_WAVE:
-				sb->variations[i].isComplex = false;
-				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				table->isComplex = false;
+				for (j = 0; j < table->entryCount; j += 1)
 				{
-					sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
-					sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
-					sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
-					sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+					table->entries[j].simple.track = read_u16(&ptr, se);
+					table->entries[j].simple.wavebank = read_u8(&ptr);
+					table->entries[j].minWeight = read_u8(&ptr) / 255.0f;
+					table->entries[j].maxWeight = read_u8(&ptr) / 255.0f;
 				}
 				break;
 
 			case VARIATION_TABLE_TYPE_SOUND:
-				sb->variations[i].isComplex = true;
-				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				table->isComplex = true;
+				for (j = 0; j < table->entryCount; j += 1)
 				{
-					sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
-					sb->variations[i].entries[j].minWeight = read_u8(&ptr) / 255.0f;
-					sb->variations[i].entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+					table->entries[j].soundCode = read_u32(&ptr, se);
+					table->entries[j].minWeight = read_u8(&ptr) / 255.0f;
+					table->entries[j].maxWeight = read_u8(&ptr) / 255.0f;
 				}
 				break;
 
 			case VARIATION_TABLE_TYPE_INTERACTIVE:
-				sb->variations[i].isComplex = true;
-				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				table->isComplex = true;
+				for (j = 0; j < table->entryCount; j += 1)
 				{
-					sb->variations[i].entries[j].soundCode = read_u32(&ptr, se);
-					sb->variations[i].entries[j].minWeight = read_f32(&ptr, se);
-					sb->variations[i].entries[j].maxWeight = read_f32(&ptr, se);
-					sb->variations[i].entries[j].linger = read_u32(&ptr, se);
+					table->entries[j].soundCode = read_u32(&ptr, se);
+					table->entries[j].minWeight = read_f32(&ptr, se);
+					table->entries[j].maxWeight = read_f32(&ptr, se);
+					table->entries[j].linger = read_u32(&ptr, se);
 				}
 				break;
 
 			case VARIATION_TABLE_TYPE_COMPACT_WAVE:
-				sb->variations[i].isComplex = false;
-				for (j = 0; j < sb->variations[i].entryCount; j += 1)
+				table->isComplex = false;
+				for (j = 0; j < table->entryCount; j += 1)
 				{
-					sb->variations[i].entries[j].simple.track = read_u16(&ptr, se);
-					sb->variations[i].entries[j].simple.wavebank = read_u8(&ptr);
-					sb->variations[i].entries[j].minWeight = 0.0f;
-					sb->variations[i].entries[j].maxWeight = 1.0f;
+					table->entries[j].simple.track = read_u16(&ptr, se);
+					table->entries[j].simple.wavebank = read_u8(&ptr);
+					table->entries[j].minWeight = 0.0f;
+					table->entries[j].maxWeight = 1.0f;
 				}
 				break;
 
