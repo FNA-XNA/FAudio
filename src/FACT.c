@@ -1078,7 +1078,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 	{
 		pProperties->interactive = 0;
 		pProperties->iaVariableIndex = 0;
-		pProperties->numVariations = 0;
+		pProperties->numVariations = 1;
 	}
 	pProperties->maxInstances = pSoundBank->cues[nCueIndex].instanceLimit;
 	pProperties->currentInstances = pSoundBank->cues[nCueIndex].instanceCount;
