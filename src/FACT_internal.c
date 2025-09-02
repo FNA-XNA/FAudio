@@ -2735,21 +2735,16 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			sizeof(FACTVariationTable) *
 			sb->variationCount
 		);
-		sb->variationCodes = (uint32_t*) pEngine->pMalloc(
-			sizeof(uint32_t) *
-			sb->variationCount
-		);
 	}
 	else
 	{
 		sb->variations = NULL;
-		sb->variationCodes = NULL;
 	}
 	for (i = 0; i < sb->variationCount; i += 1)
 	{
 		FACTVariationTable *table = &sb->variations[i];
 
-		sb->variationCodes[i] = (uint32_t) (ptr - start);
+		table->code = ptr - start;
 		entryCountAndFlags = read_u32(&ptr, se);
 		table->entryCount = entryCountAndFlags & 0xFFFF;
 		table->type = (entryCountAndFlags >> (16 + 3)) & 0x07;

@@ -339,6 +339,7 @@ enum variation_table_type
 
 typedef struct FACTVariationTable
 {
+	uint32_t code;
 	enum variation_table_type type;
 	int16_t variable;
 	bool isComplex;
@@ -538,7 +539,6 @@ struct FACTSoundBank
 	const FACTSound *sounds;
 	uint32_t *soundCodes;
 	FACTVariationTable *variations;
-	uint32_t *variationCodes;
 	FACTTransitionTable *transitions;
 	uint32_t *transitionCodes;
 };

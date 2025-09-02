@@ -1054,7 +1054,7 @@ uint32_t FACTSoundBank_GetCueProperties(
 	{
 		for (i = 0; i < pSoundBank->variationCount; i += 1)
 		{
-			if (pSoundBank->variationCodes[i] == pSoundBank->cues[nCueIndex].sbCode)
+			if (pSoundBank->variations[i].code == pSoundBank->cues[nCueIndex].sbCode)
 			{
 				break;
 			}
@@ -1129,7 +1129,7 @@ uint32_t FACTSoundBank_Prepare(
 	{
 		for (i = 0; i < pSoundBank->variationCount; i += 1)
 		{
-			if ((*ppCue)->data->sbCode == pSoundBank->variationCodes[i])
+			if ((*ppCue)->data->sbCode == pSoundBank->variations[i].code)
 			{
 				(*ppCue)->variation = &pSoundBank->variations[i];
 				break;
@@ -1385,7 +1385,6 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		);
 	}
 	pSoundBank->parentEngine->pFree(pSoundBank->variations);
-	pSoundBank->parentEngine->pFree(pSoundBank->variationCodes);
 
 	/* Transition data */
 	for (i = 0; i < pSoundBank->transitionCount; i += 1)
