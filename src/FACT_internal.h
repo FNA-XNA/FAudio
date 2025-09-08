@@ -622,7 +622,6 @@ struct FACTCue
 	uint32_t state;
 	FACTWave *simpleWave;
 	FACTSoundInstance *playingSound;
-	FACTVariation *playingVariation;
 	uint32_t maxRpcReleaseTime;
 
 	/* 3D Data */

@@ -2784,27 +2784,29 @@ uint32_t FACTCue_GetProperties(
 
 	/* Variation Properties */
 	varProps = &cueProps->activeVariationProperties.variationProperties;
-	if (pCue->playingVariation != NULL)
+	if (pCue->playingSound)
 	{
-		varProps->index = 0; /* TODO: Index of what...? */
-		/* TODO: This is just max - min right? Also why u8 wtf */
-		varProps->weight = (uint8_t) (
-			pCue->playingVariation->maxWeight -
-			pCue->playingVariation->minWeight
-		);
-		if (pCue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
+		if (pCue->data->flags & CUE_FLAG_SINGLE_SOUND)
 		{
-			varProps->iaVariableMin =
-				pCue->playingVariation->minWeight;
-			varProps->iaVariableMax =
-				pCue->playingVariation->maxWeight;
+			varProps->weight = 0xff;
 		}
 		else
 		{
-			varProps->iaVariableMin = 0;
-			varProps->iaVariableMax = 0;
+			const FACTVariation *variation = &pCue->variation->entries[pCue->playingSound->variation_index];
+
+			varProps->index = pCue->playingSound->variation_index;
+
+			/* TODO: This is just max - min right? Also why u8 wtf */
+			varProps->weight = variation->maxWeight - variation->minWeight;
+
+			if (pCue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
+			{
+				varProps->iaVariableMin = variation->minWeight;
+				varProps->iaVariableMax = variation->maxWeight;
+			}
+
+			varProps->linger = variation->linger;
 		}
-		varProps->linger = pCue->playingVariation->linger;
 	}
 
 	/* Sound Properties */
