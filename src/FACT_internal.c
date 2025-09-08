@@ -692,8 +692,8 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		newSound->rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		newSound->rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 		newSound->variation_index = variation_index;
-		newSound->fadeType = (fadeInMS > 0) ? FADE_TYPE_IN : FADE_TYPE_NONE;
-		if (newSound->fadeType == FADE_TYPE_IN)
+		newSound->state = (fadeInMS > 0) ? SOUND_STATE_FADE_IN : SOUND_STATE_PLAYING;
+		if (newSound->state == SOUND_STATE_FADE_IN)
 		{
 			newSound->fadeStart = FAudio_timems();
 			newSound->fadeTarget = fadeInMS;
@@ -888,7 +888,7 @@ void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS)
 	}
 #endif
 
-	sound->fadeType = FADE_TYPE_OUT;
+	sound->state = SOUND_STATE_FADE_OUT;
 	sound->fadeStart = FAudio_timems();
 	sound->fadeTarget = fadeOutMS;
 
@@ -904,7 +904,7 @@ void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS)
 		return;
 	}
 
-	sound->fadeType = FADE_TYPE_RELEASE_RPC;
+	sound->state = SOUND_STATE_RELEASE_RPC;
 	sound->fadeStart = FAudio_timems();
 	sound->fadeTarget = releaseMS;
 
@@ -1010,7 +1010,7 @@ static void FACT_INTERNAL_UpdateRPCs(
 					engine->variableNames[rpc->variable],
 					"ReleaseTime"
 				) == 0) {
-					if (cue->playingSound->fadeType == FADE_TYPE_RELEASE_RPC)
+					if (cue->playingSound->state == SOUND_STATE_RELEASE_RPC)
 					{
 						variableValue = (float) (timestamp - cue->playingSound->fadeStart);
 					}
@@ -1369,7 +1369,7 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 
 	/* Instance limiting Fade in/out */
 	float fadeVolume;
-	if (sound->fadeType == FADE_TYPE_IN)
+	if (sound->state == SOUND_STATE_FADE_IN)
 	{
 		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
@@ -1377,7 +1377,7 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 			fadeVolume = 1.0f;
 			sound->fadeStart = 0;
 			sound->fadeTarget = 0;
-			sound->fadeType = FADE_TYPE_NONE;
+			sound->state = SOUND_STATE_PLAYING;
 		}
 		else
 		{
@@ -1387,7 +1387,7 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 			);
 		}
 	}
-	else if (sound->fadeType == FADE_TYPE_OUT)
+	else if (sound->state == SOUND_STATE_FADE_OUT)
 	{
 		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
@@ -1399,7 +1399,7 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 			(float) sound->fadeTarget
 		);
 	}
-	else if (sound->fadeType == FADE_TYPE_RELEASE_RPC)
+	else if (sound->state == SOUND_STATE_RELEASE_RPC)
 	{
 		if ((timestamp - sound->fadeStart) >= sound->fadeTarget)
 		{
