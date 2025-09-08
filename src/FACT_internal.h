@@ -438,11 +438,11 @@ typedef struct FACTSoundInstance
 	uint16_t fadeTarget;
 	enum
 	{
-		FADE_TYPE_NONE,
-		FADE_TYPE_IN,
-		FADE_TYPE_OUT,
-		FADE_TYPE_RELEASE_RPC,
-	} fadeType;
+		SOUND_STATE_FADE_IN,
+		SOUND_STATE_PLAYING,
+		SOUND_STATE_FADE_OUT,
+		SOUND_STATE_RELEASE_RPC,
+	} state;
 
 	/* index in the parent cue's variation table */
 	uint16_t variation_index;
