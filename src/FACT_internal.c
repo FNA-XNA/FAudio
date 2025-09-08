@@ -527,7 +527,76 @@ static bool get_active_variation_index(FACTCue *cue, uint16_t *index)
 	}
 }
 
-bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
+/* Returns false if the behaviour is FAIL. */
+static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category, uint16_t *fade_in_ms)
+{
+	const FACTAudioEngine *engine = cue->parentBank->parentEngine;
+	float quietest_volume = FACTVOLUME_MAX;
+	enum max_instance_behavior behaviour;
+	uint8_t lowest_priority = UINT8_MAX;
+	FACTCue *replaced = NULL;
+
+	if (category)
+		behaviour = category->maxInstanceBehavior;
+	else
+		behaviour = cue->data->maxInstanceBehavior;
+
+	if (behaviour == MAX_INSTANCE_BEHAVIOR_FAIL)
+	{
+		cue->state |= FACT_STATE_STOPPED;
+		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
+		return false;
+	}
+
+	for (FACTCue *cursor = cue->parentBank->cueList; cursor; cursor = cursor->next)
+	{
+		if (cursor == cue || !cursor->playingSound || (cursor->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED)))
+			continue;
+
+		if (category && category != &engine->categories[cursor->playingSound->sound->category])
+			continue;
+
+		/* FIXME: How does QUEUE differ from REPLACE_OLDEST? */
+		if (behaviour == MAX_INSTANCE_BEHAVIOR_QUEUE
+			|| behaviour == MAX_INSTANCE_BEHAVIOR_REPLACE_OLDEST)
+		{
+			replaced = cursor;
+			break;
+		}
+		else if (behaviour == MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST)
+		{
+			/* FIXME */
+			/* if (cursor->playingSound->volume < quietest_volume) */
+			replaced = cursor;
+			/* quietest_volume = cursor->playingSound->volume; */
+		}
+		else if (behaviour == MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY)
+		{
+			if (cursor->playingSound->sound->priority < lowest_priority)
+			{
+				replaced = cursor;
+				lowest_priority = cursor->playingSound->sound->priority;
+			}
+		}
+	}
+
+	if (replaced)
+	{
+		*fade_in_ms = category->fadeInMS;
+		if (replaced->playingSound != NULL)
+		{
+			FACT_INTERNAL_BeginFadeOut(replaced->playingSound, category->fadeOutMS);
+		}
+		else
+		{
+			FACTCue_Stop(replaced, 0);
+		}
+	}
+
+	return true;
+}
+
+bool create_sound(FACTCue *cue)
 {
 	int32_t i, j, k;
 	float max, next, weight;
@@ -540,10 +609,16 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	FACTSoundInstance *newSound;
 	FACTRPC *rpc;
 	float lastX;
-	FACTCue *tmp, *wnr;
 	uint16_t categoryIndex;
 	FACTAudioCategory *category;
 	uint16_t variation_index;
+	uint16_t fadeInMS = 0;
+
+	if (cue->data->instanceCount >= cue->data->instanceLimit)
+	{
+		if (!handle_instance_limit(cue, NULL, &fadeInMS))
+			return false;
+	}
 
 	if (cue->data->flags & CUE_FLAG_SINGLE_SOUND)
 	{
@@ -604,79 +679,8 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			category = &cue->parentBank->parentEngine->categories[categoryIndex];
 			if (category->instanceCount >= category->instanceLimit)
 			{
-				float quietest_volume = FACTVOLUME_MAX;
-				uint8_t lowest_priority = UINT8_MAX;
-
-				wnr = NULL;
-				tmp = cue->parentBank->cueList;
-
-				switch (category->maxInstanceBehavior)
-				{
-					case MAX_INSTANCE_BEHAVIOR_FAIL:
-						cue->state |= FACT_STATE_STOPPED;
-						cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
-						return false;
-
-					case MAX_INSTANCE_BEHAVIOR_QUEUE:
-						/* FIXME: How is this different from Replace Oldest? */
-					case MAX_INSTANCE_BEHAVIOR_REPLACE_OLDEST:
-						while (tmp != NULL)
-						{
-							if (tmp != cue && tmp->playingSound != NULL &&
-								tmp->playingSound->sound->category == categoryIndex &&
-								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
-							{
-								wnr = tmp;
-								break;
-							}
-							tmp = tmp->next;
-						}
-						break;
-
-					case MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST:
-						while (tmp != NULL)
-						{
-							if (tmp != cue && tmp->playingSound != NULL &&
-								tmp->playingSound->sound->category == categoryIndex &&
-								/*FIXME: tmp->playingSound->volume < quietest_volume &&*/
-								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
-							{
-								wnr = tmp;
-								/* quietest_volume = tmp->playingSound->volume; */
-							}
-							tmp = tmp->next;
-						}
-						break;
-
-					case MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY:
-						while (tmp != NULL)
-						{
-							if (	tmp != cue &&
-								tmp->playingSound != NULL &&
-								tmp->playingSound->sound->category == categoryIndex &&
-								tmp->playingSound->sound->priority < lowest_priority &&
-								!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
-							{
-								wnr = tmp;
-								lowest_priority = tmp->playingSound->sound->priority;
-							}
-							tmp = tmp->next;
-						}
-						break;
-				}
-
-				if (wnr != NULL)
-				{
-					fadeInMS = category->fadeInMS;
-					if (wnr->playingSound != NULL)
-					{
-						FACT_INTERNAL_BeginFadeOut(wnr->playingSound, category->fadeOutMS);
-					}
-					else
-					{
-						FACTCue_Stop(wnr, 0);
-					}
-				}
+				if (!handle_instance_limit(cue, category, &fadeInMS))
+					return false;
 			}
 			category->instanceCount += 1;
 		}
@@ -1623,7 +1627,7 @@ static void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			cue->elapsed = 0;
 			 */
 
-			FACT_INTERNAL_CreateSound(cue, 0 /* fadeIn */);
+			create_sound(cue);
 		}
 	}
 }

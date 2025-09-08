@@ -639,7 +639,7 @@ struct FACTCue
 
 void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTTrack *track,
 	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst);
-bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
+bool create_sound(FACTCue *cue);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS);

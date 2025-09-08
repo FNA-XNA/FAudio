@@ -2309,8 +2309,6 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 
 uint32_t FACTCue_Play(FACTCue *pCue)
 {
-	FACTCue *tmp, *wnr;
-	uint16_t fadeInMS = 0;
 	FACTCueData *data;
 	if (pCue == NULL)
 	{
@@ -2327,88 +2325,8 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 
 	data = &pCue->parentBank->cues[pCue->index];
 
-	/* Cue Instance Limits */
-	if (data->instanceCount >= data->instanceLimit)
-	{
-		float quietest_volume = FACTVOLUME_MAX;
-		uint8_t lowest_priority = UINT8_MAX;
-
-		wnr = NULL;
-		tmp = pCue->parentBank->cueList;
-
-		switch (data->maxInstanceBehavior)
-		{
-			case MAX_INSTANCE_BEHAVIOR_FAIL:
-				pCue->state |= FACT_STATE_STOPPED;
-				pCue->state &= ~FACT_STATE_PAUSED;
-
-				FACT_INTERNAL_SendCueNotification(pCue, FACTNOTIFICATIONTYPE_CUESTOP);
-
-				FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
-				return FACTENGINE_E_INSTANCELIMITFAILTOPLAY;
-
-			case MAX_INSTANCE_BEHAVIOR_QUEUE:
-				/* FIXME: How is this different from Replace Oldest? */
-			case MAX_INSTANCE_BEHAVIOR_REPLACE_OLDEST:
-				while (tmp != NULL)
-				{
-					if (tmp != pCue && tmp->index == pCue->index &&
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED)))
-					{
-						wnr = tmp;
-						break;
-					}
-					tmp = tmp->next;
-				}
-				break;
-
-			case MAX_INSTANCE_BEHAVIOR_REPLACE_QUIETEST:
-				while (tmp != NULL)
-				{
-					if (tmp != pCue && tmp->index == pCue->index &&
-						tmp->playingSound != NULL &&
-						/*FIXME: tmp->playingSound->volume < quietest_volume &&*/
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED))	)
-					{
-						wnr = tmp;
-						/* quietest_volume = tmp->playingSound->volume; */
-					}
-					tmp = tmp->next;
-				}
-				break;
-
-			case MAX_INSTANCE_BEHAVIOR_REPLACE_LOWEST_PRIORITY:
-				while (tmp != NULL)
-				{
-					if (tmp != pCue && tmp->index == pCue->index &&
-						tmp->playingSound != NULL &&
-						tmp->playingSound->sound->priority < lowest_priority &&
-						!(tmp->state & (FACT_STATE_STOPPING | FACT_STATE_STOPPED)))
-					{
-						wnr = tmp;
-						lowest_priority = tmp->playingSound->sound->priority;
-					}
-					tmp = tmp->next;
-				}
-				break;
-		}
-
-		if (wnr != NULL)
-		{
-			fadeInMS = data->fadeInMS;
-			if (wnr->playingSound != NULL)
-			{
-				FACT_INTERNAL_BeginFadeOut(wnr->playingSound, data->fadeOutMS);
-			}
-			else
-			{
-				FACTCue_Stop(wnr, 0);
-			}
-		}
-	}
-
 	/* Need an initial sound to play */
-	if (!FACT_INTERNAL_CreateSound(pCue, fadeInMS))
+	if (!create_sound(pCue))
 	{
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
