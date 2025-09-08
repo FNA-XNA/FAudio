@@ -543,16 +543,17 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	FACTCue *tmp, *wnr;
 	uint16_t categoryIndex;
 	FACTAudioCategory *category;
+	uint16_t variation_index;
 
 	if (cue->data->flags & CUE_FLAG_SINGLE_SOUND)
 	{
 		/* Sound */
 		baseSound = cue->sound;
+		variation_index = 0;
 	}
 	else if (cue->variation)
 	{
 		const FACTVariation *variation;
-		uint16_t variation_index;
 
 		if (!get_active_variation_index(cue, &variation_index))
 			return true;
@@ -690,6 +691,7 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		newSound->rpcData.rpcReverbSend = 0.0f;
 		newSound->rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		newSound->rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+		newSound->variation_index = variation_index;
 		newSound->fadeType = (fadeInMS > 0) ? FADE_TYPE_IN : FADE_TYPE_NONE;
 		if (newSound->fadeType == FADE_TYPE_IN)
 		{

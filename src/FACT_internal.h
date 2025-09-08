@@ -444,6 +444,9 @@ typedef struct FACTSoundInstance
 		FADE_TYPE_RELEASE_RPC,
 	} fadeType;
 
+	/* index in the parent cue's variation table */
+	uint16_t variation_index;
+
 	/* Engine references */
 	FACTCue *parentCue;
 } FACTSoundInstance;
