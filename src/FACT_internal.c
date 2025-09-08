@@ -471,6 +471,62 @@ static FACTRPC *FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code)
 	return NULL;
 }
 
+static bool get_active_variation_index(FACTCue *cue, uint16_t *index)
+{
+	FACTAudioEngine *engine = cue->parentBank->parentEngine;
+	const FACTVariationTable *table = cue->variation;
+
+	if (table->type == VARIATION_TABLE_TYPE_INTERACTIVE)
+	{
+		float value;
+
+		if (engine->variables[table->variable].accessibility & ACCESSIBILITY_CUE)
+			FACTCue_GetVariable(cue, cue->variation->variable, &value);
+		else
+			FACTAudioEngine_GetGlobalVariable(engine, table->variable, &value);
+
+		for (uint16_t i = 0; i < table->entryCount; ++i)
+		{
+			if (value <= cue->variation->entries[i].maxWeight &&
+				value >= cue->variation->entries[i].minWeight)
+			{
+				*index = i;
+				return true;
+			}
+		}
+
+		/* The variable doesn't match any value, so we are silent,
+		 * but still "playing". */
+		return false;
+	}
+	else
+	{
+		/* Random */
+		float max = 0.0f;
+		float value;
+
+		for (uint16_t i = 0; i < table->entryCount; ++i)
+			max += (table->entries[i].maxWeight - table->entries[i].minWeight);
+
+		value = FACT_INTERNAL_rng() * max;
+
+		for (int32_t i = table->entryCount - 1; i > 0; --i)
+		{
+			float weight = (table->entries[i].maxWeight - table->entries[i].minWeight);
+
+			if (value > (max - weight))
+			{
+				*index = i;
+				return true;
+			}
+			max -= weight;
+		}
+
+		*index = 0;
+		return true;
+	}
+}
+
 bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 {
 	int32_t i, j, k;
@@ -495,78 +551,20 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 	}
 	else if (cue->variation)
 	{
+		const FACTVariation *variation;
+		uint16_t variation_index;
+
+		if (!get_active_variation_index(cue, &variation_index))
+			return true;
+		variation = &cue->variation->entries[variation_index];
+
 		/* Variation */
-		if (cue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
-		{
-			if (cue->parentBank->parentEngine->variables[cue->variation->variable].accessibility & ACCESSIBILITY_CUE)
-			{
-				FACTCue_GetVariable(
-					cue,
-					cue->variation->variable,
-					&next
-				);
-			}
-			else
-			{
-				FACTAudioEngine_GetGlobalVariable(
-					cue->parentBank->parentEngine,
-					cue->variation->variable,
-					&next
-				);
-			}
-			for (i = 0; i < cue->variation->entryCount; i += 1)
-			{
-				if (	next <= cue->variation->entries[i].maxWeight &&
-					next >= cue->variation->entries[i].minWeight	)
-				{
-					break;
-				}
-			}
-
-			/* This should only happen when the user control
-			 * variable is none of the sound probabilities, in
-			 * which case we are just silent. But, we should still
-			 * claim to be "playing" in the meantime.
-			 */
-			if (i == cue->variation->entryCount)
-			{
-				return true;
-			}
-		}
-		else
-		{
-			/* Random */
-			max = 0.0f;
-			for (i = 0; i < cue->variation->entryCount; i += 1)
-			{
-				max += (
-					cue->variation->entries[i].maxWeight -
-					cue->variation->entries[i].minWeight
-				);
-			}
-			next = FACT_INTERNAL_rng() * max;
-
-			/* Use > 0, not >= 0. If we hit 0, that's it! */
-			for (i = cue->variation->entryCount - 1; i > 0; i -= 1)
-			{
-				weight = (
-					cue->variation->entries[i].maxWeight -
-					cue->variation->entries[i].minWeight
-				);
-				if (next > (max - weight))
-				{
-					break;
-				}
-				max -= weight;
-			}
-		}
-
 		if (cue->variation->isComplex)
 		{
 			/* Grab the Sound via the code. FIXME: Do this at load time? */
 			for (j = 0; j < cue->parentBank->soundCount; j += 1)
 			{
-				if (cue->variation->entries[i].soundCode == cue->parentBank->soundCodes[j])
+				if (variation->soundCode == cue->parentBank->soundCodes[j])
 				{
 					baseSound = &cue->parentBank->sounds[j];
 					break;
@@ -576,9 +574,7 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 		else
 		{
 			/* Pull in the WaveBank... */
-			wbName = cue->parentBank->wavebankNames[
-				cue->variation->entries[i].simple.wavebank
-			];
+			wbName = cue->parentBank->wavebankNames[variation->simple.wavebank];
 			list = cue->parentBank->parentEngine->wbList;
 			while (list != NULL)
 			{
@@ -592,14 +588,7 @@ bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS)
 			FAudio_assert(wb != NULL);
 
 			/* Generate the wave... */
-			FACTWaveBank_Prepare(
-				wb,
-				cue->variation->entries[i].simple.track,
-				0,
-				0,
-				0,
-				&cue->simpleWave
-			);
+			FACTWaveBank_Prepare(wb, variation->simple.track, 0, 0, 0, &cue->simpleWave);
 			cue->simpleWave->parentCue = cue;
 		}
 	}
