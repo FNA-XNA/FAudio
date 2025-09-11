@@ -487,8 +487,8 @@ static bool get_active_variation_index(FACTCue *cue, uint16_t *index)
 
 		for (uint16_t i = 0; i < table->entryCount; ++i)
 		{
-			if (value <= cue->variation->entries[i].maxWeight &&
-				value >= cue->variation->entries[i].minWeight)
+			if (value <= cue->variation->entries[i].interactive.var_max &&
+				value >= cue->variation->entries[i].interactive.var_min)
 			{
 				*index = i;
 				return true;
@@ -502,17 +502,21 @@ static bool get_active_variation_index(FACTCue *cue, uint16_t *index)
 	else
 	{
 		/* Random */
-		float max = 0.0f;
-		float value;
+		uint32_t max = 0;
+		uint32_t value;
 
 		for (uint16_t i = 0; i < table->entryCount; ++i)
-			max += (table->entries[i].maxWeight - table->entries[i].minWeight);
+		{
+			const FACTVariation *variation = &table->entries[i];
+			max += (variation->noninteractive.weight_max - variation->noninteractive.weight_min);
+		}
 
 		value = FACT_INTERNAL_rng() * max;
 
 		for (int32_t i = table->entryCount - 1; i > 0; --i)
 		{
-			float weight = (table->entries[i].maxWeight - table->entries[i].minWeight);
+			const FACTVariation *variation = &table->entries[i];
+			uint8_t weight = (variation->noninteractive.weight_max - variation->noninteractive.weight_min);
 
 			if (value > (max - weight))
 			{
@@ -2793,8 +2797,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				{
 					table->entries[j].simple.track = read_u16(&ptr, se);
 					table->entries[j].simple.wavebank = read_u8(&ptr);
-					table->entries[j].minWeight = read_u8(&ptr) / 255.0f;
-					table->entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+					table->entries[j].noninteractive.weight_min = read_u8(&ptr);
+					table->entries[j].noninteractive.weight_max = read_u8(&ptr);
 				}
 				break;
 
@@ -2803,8 +2807,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				for (j = 0; j < table->entryCount; j += 1)
 				{
 					table->entries[j].soundCode = read_u32(&ptr, se);
-					table->entries[j].minWeight = read_u8(&ptr) / 255.0f;
-					table->entries[j].maxWeight = read_u8(&ptr) / 255.0f;
+					table->entries[j].noninteractive.weight_min = read_u8(&ptr);
+					table->entries[j].noninteractive.weight_max = read_u8(&ptr);
 				}
 				break;
 
@@ -2813,8 +2817,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				for (j = 0; j < table->entryCount; j += 1)
 				{
 					table->entries[j].soundCode = read_u32(&ptr, se);
-					table->entries[j].minWeight = read_f32(&ptr, se);
-					table->entries[j].maxWeight = read_f32(&ptr, se);
+					table->entries[j].interactive.var_min = read_f32(&ptr, se);
+					table->entries[j].interactive.var_max = read_f32(&ptr, se);
 					table->entries[j].linger = read_u32(&ptr, se);
 				}
 				break;
@@ -2825,8 +2829,8 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 				{
 					table->entries[j].simple.track = read_u16(&ptr, se);
 					table->entries[j].simple.wavebank = read_u8(&ptr);
-					table->entries[j].minWeight = 0.0f;
-					table->entries[j].maxWeight = 1.0f;
+					table->entries[j].noninteractive.weight_min = 0;
+					table->entries[j].noninteractive.weight_max = UINT8_MAX;
 				}
 				break;
 

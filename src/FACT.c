@@ -2716,14 +2716,13 @@ uint32_t FACTCue_GetProperties(
 
 			if (pCue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 			{
-				varProps->iaVariableMin = variation->minWeight;
-				varProps->iaVariableMax = variation->maxWeight;
+				varProps->iaVariableMin = variation->interactive.var_min;
+				varProps->iaVariableMax = variation->interactive.var_max;
 				varProps->weight = 0xff;
 			}
 			else
 			{
-				/* TODO: This is just max - min right? Also why u8 wtf */
-				varProps->weight = variation->maxWeight - variation->minWeight;
+				varProps->weight = variation->noninteractive.weight_max;
 			}
 
 			varProps->linger = variation->linger;

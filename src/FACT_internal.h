@@ -307,8 +307,17 @@ typedef struct FACTVariation
 		} simple;
 		uint32_t soundCode;
 	};
-	float minWeight;
-	float maxWeight;
+	union
+	{
+		struct
+		{
+			uint8_t weight_min, weight_max;
+		} noninteractive;
+		struct
+		{
+			float var_min, var_max;
+		} interactive;
+	};
 	uint32_t linger;
 } FACTVariation;
 
