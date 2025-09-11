@@ -2741,23 +2741,20 @@ uint32_t FACTCue_GetProperties(
 
 		for (i = 0; i < sndProps->numTracks; i += 1)
 		{
-			if (FACTWave_GetProperties(
-				pCue->playingSound->tracks[i].activeWave.wave,
-				&waveProps
-			) == FAUDIO_OK) {
-				sndProps->arrTrackProperties[i].duration = (uint32_t) (
-					(
-						(float) waveProps.properties.durationInSamples /
-						(float) waveProps.properties.format.nSamplesPerSec
-					) / 1000.0f
-				);
-				sndProps->arrTrackProperties[i].numVariations = 1; /* ? */
-				sndProps->arrTrackProperties[i].numChannels =
-					waveProps.properties.format.nChannels;
-				sndProps->arrTrackProperties[i].waveVariation = 0; /* ? */
-				sndProps->arrTrackProperties[i].loopCount =
-					pCue->playingSound->tracks[i].waveEvt->wave.loopCount;
-			}
+			FACTTrackProperties *track_props = &sndProps->arrTrackProperties[i];
+			FACTTrackInstance *track = &pCue->playingSound->tracks[i];
+
+			FAudio_assert(track->activeWave.wave);
+			FACTWave_GetProperties(track->activeWave.wave, &waveProps);
+
+			track_props->duration = (
+				(float) waveProps.properties.durationInSamples /
+				(float) waveProps.properties.format.nSamplesPerSec
+			) / 1000.0f;
+			track_props->numVariations = 1; /* ? */
+			track_props->numChannels = waveProps.properties.format.nChannels;
+			track_props->waveVariation = 0; /* ? */
+			track_props->loopCount = pCue->playingSound->tracks[i].waveEvt->wave.loopCount;
 		}
 	}
 
