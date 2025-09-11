@@ -1094,6 +1094,7 @@ uint32_t FACTSoundBank_Prepare(
 	int32_t timeOffset,
 	FACTCue** ppCue
 ) {
+	bool interactive = false;
 	uint16_t i;
 	FACTCue *latest;
 
@@ -1137,6 +1138,7 @@ uint32_t FACTSoundBank_Prepare(
 		}
 		if ((*ppCue)->variation && (*ppCue)->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE)
 		{
+			interactive = true;
 			(*ppCue)->interactive = pSoundBank->parentEngine->variables[
 				(*ppCue)->variation->variable
 			].initialValue;
@@ -1170,6 +1172,9 @@ uint32_t FACTSoundBank_Prepare(
 		}
 		latest->next = *ppCue;
 	}
+
+	if (!interactive)
+		create_sound(*ppCue);
 
 	FAudio_PlatformUnlockMutex(pSoundBank->parentEngine->apiLock);
 	return FAUDIO_OK;
@@ -2309,7 +2314,6 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 
 uint32_t FACTCue_Play(FACTCue *pCue)
 {
-	FACTCueData *data;
 	if (pCue == NULL)
 	{
 		return 1;
@@ -2323,17 +2327,13 @@ uint32_t FACTCue_Play(FACTCue *pCue)
 		return FACTENGINE_E_INVALIDUSAGE;
 	}
 
-	data = &pCue->parentBank->cues[pCue->index];
-
-	/* Need an initial sound to play */
-	if (!create_sound(pCue))
+	if (!play_sound(pCue))
 	{
 		FAudio_PlatformUnlockMutex(
 			pCue->parentBank->parentEngine->apiLock
 		);
 		return FACTENGINE_E_INSTANCELIMITFAILTOPLAY;
 	}
-	data->instanceCount += 1;
 
 	pCue->state |= FACT_STATE_PLAYING;
 	pCue->state &= ~FACT_STATE_PREPARED;
