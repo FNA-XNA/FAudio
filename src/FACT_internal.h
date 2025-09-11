@@ -438,6 +438,7 @@ typedef struct FACTSoundInstance
 	uint16_t fadeTarget;
 	enum
 	{
+		SOUND_STATE_STOPPED,
 		SOUND_STATE_FADE_IN,
 		SOUND_STATE_PLAYING,
 		SOUND_STATE_FADE_OUT,
@@ -639,7 +640,8 @@ struct FACTCue
 
 void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTTrack *track,
 	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst);
-bool create_sound(FACTCue *cue);
+void create_sound(FACTCue *cue);
+bool play_sound(FACTCue *cue);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS);

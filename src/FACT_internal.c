@@ -596,7 +596,7 @@ static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category, uin
 	return true;
 }
 
-bool create_sound(FACTCue *cue)
+void create_sound(FACTCue *cue)
 {
 	int32_t i, j, k;
 	float max, next, weight;
@@ -612,13 +612,6 @@ bool create_sound(FACTCue *cue)
 	uint16_t categoryIndex;
 	FACTAudioCategory *category;
 	uint16_t variation_index;
-	uint16_t fadeInMS = 0;
-
-	if (cue->data->instanceCount >= cue->data->instanceLimit)
-	{
-		if (!handle_instance_limit(cue, NULL, &fadeInMS))
-			return false;
-	}
 
 	if (cue->data->flags & CUE_FLAG_SINGLE_SOUND)
 	{
@@ -631,7 +624,7 @@ bool create_sound(FACTCue *cue)
 		const FACTVariation *variation;
 
 		if (!get_active_variation_index(cue, &variation_index))
-			return true;
+			return;
 		variation = &cue->variation->entries[variation_index];
 
 		/* Variation */
@@ -672,19 +665,6 @@ bool create_sound(FACTCue *cue)
 	/* Alloc SoundInstance variables */
 	if (baseSound != NULL)
 	{
-		/* Category Instance Limits */
-		categoryIndex = baseSound->category;
-		if (categoryIndex != FACTCATEGORY_INVALID)
-		{
-			category = &cue->parentBank->parentEngine->categories[categoryIndex];
-			if (category->instanceCount >= category->instanceLimit)
-			{
-				if (!handle_instance_limit(cue, category, &fadeInMS))
-					return false;
-			}
-			category->instanceCount += 1;
-		}
-
 		newSound = (FACTSoundInstance*) cue->parentBank->parentEngine->pMalloc(
 			sizeof(FACTSoundInstance)
 		);
@@ -696,17 +676,7 @@ bool create_sound(FACTCue *cue)
 		newSound->rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
 		newSound->rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 		newSound->variation_index = variation_index;
-		newSound->state = (fadeInMS > 0) ? SOUND_STATE_FADE_IN : SOUND_STATE_PLAYING;
-		if (newSound->state == SOUND_STATE_FADE_IN)
-		{
-			newSound->fadeStart = FAudio_timems();
-			newSound->fadeTarget = fadeInMS;
-		}
-		else
-		{
-			newSound->fadeStart = 0;
-			newSound->fadeTarget = 0;
-		}
+		newSound->state = SOUND_STATE_STOPPED;
 		newSound->tracks = (FACTTrackInstance*) cue->parentBank->parentEngine->pMalloc(
 			sizeof(FACTTrackInstance) * newSound->sound->trackCount
 		);
@@ -829,6 +799,47 @@ bool create_sound(FACTCue *cue)
 		}
 
 		cue->playingSound = newSound;
+	}
+}
+
+bool play_sound(FACTCue *cue)
+{
+	FACTSoundInstance *sound;
+	uint16_t fade_in_ms = 0;
+
+	/* Interactive cues might not currently have a sound. */
+	if (!cue->playingSound)
+		return true;
+	sound = cue->playingSound;
+
+	if (cue->data->instanceCount >= cue->data->instanceLimit)
+	{
+		if (!handle_instance_limit(cue, NULL, &fade_in_ms))
+			return false;
+	}
+
+	if (sound->sound->category != FACTCATEGORY_INVALID)
+	{
+		FACTAudioCategory *category = &cue->parentBank->parentEngine->categories[sound->sound->category];
+		if (category->instanceCount >= category->instanceLimit)
+		{
+			if (!handle_instance_limit(cue, category, &fade_in_ms))
+				return false;
+		}
+
+		++category->instanceCount;
+	}
+	++cue->data->instanceCount;
+
+	if (fade_in_ms)
+	{
+		sound->fadeTarget = fade_in_ms;
+		sound->fadeStart = FAudio_timems();
+		sound->state = SOUND_STATE_FADE_IN;
+	}
+	else
+	{
+		sound->state = SOUND_STATE_PLAYING;
 	}
 
 	return true;
@@ -1371,6 +1382,9 @@ static bool FACT_INTERNAL_UpdateSound(FACTSoundInstance *sound, uint32_t timesta
 	FAudioFilterParameters filterParams;
 	bool finished = true;
 
+	if (sound->state == SOUND_STATE_STOPPED)
+		return false;
+
 	/* Instance limiting Fade in/out */
 	float fadeVolume;
 	if (sound->state == SOUND_STATE_FADE_IN)
@@ -1627,7 +1641,13 @@ static void FACT_INTERNAL_UpdateCue(FACTCue *cue)
 			cue->elapsed = 0;
 			 */
 
-			create_sound(cue);
+			if (cue->state & FACT_STATE_PLAYING)
+			{
+				/* Interactive cues might not have a sound yet. */
+				if (!cue->playingSound)
+					create_sound(cue);
+				play_sound(cue);
+			}
 		}
 	}
 }
