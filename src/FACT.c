@@ -1361,7 +1361,7 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 					if (pSoundBank->sounds[i].tracks[j].events[k].wave.isComplex)
 					{
 						pSoundBank->parentEngine->pFree(
-							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.tracks
+							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.wave_indices
 						);
 						pSoundBank->parentEngine->pFree(
 							pSoundBank->sounds[i].tracks[j].events[k].wave.complex.wavebanks
