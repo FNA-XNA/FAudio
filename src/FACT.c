@@ -2749,9 +2749,17 @@ uint32_t FACTCue_GetProperties(
 
 			track_props->duration = (waveProps.properties.durationInSamples * 1000)
 				/ waveProps.properties.format.nSamplesPerSec;
-			track_props->numVariations = 1; /* ? */
 			track_props->numChannels = waveProps.properties.format.nChannels;
-			track_props->waveVariation = 0; /* ? */
+			if (track->waveEvt->wave.isComplex)
+			{
+				track_props->numVariations = track->waveEvt->wave.complex.wave_count;
+				track_props->waveVariation = track->waveEvtInst->valuei;
+			}
+			else
+			{
+				track_props->numVariations = 1;
+				track_props->waveVariation = 0;
+			}
 			track_props->loopCount = pCue->playingSound->tracks[i].waveEvt->wave.loopCount;
 		}
 	}
