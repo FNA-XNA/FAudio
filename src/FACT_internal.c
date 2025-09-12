@@ -723,9 +723,15 @@ void create_sound(FACTCue *cue)
 						newSound->sound->tracks[i].events[j].wave.loopCount;
 
 					evtInst = &track->events[j];
-					if (!evt->wave.isComplex || evt->wave.complex.variation_type == VARIATION_TYPE_ORDERED)
+					if (!evt->wave.isComplex)
 					{
 						evtInst->valuei = 0;
+					}
+					else if (evt->wave.complex.variation_type == VARIATION_TYPE_ORDERED)
+					{
+						/* Initialize it to -1; this will be incremented
+						 * in GetNextWave(). */
+						evtInst->valuei = -1;
 					}
 					else
 					{
