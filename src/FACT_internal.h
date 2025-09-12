@@ -143,7 +143,7 @@ enum variation_type
 
 #define VARIATION_TYPE_MASK	0x7
 
-#define EVENT_WAVE_HAS_TRACK_VARIATION	0x0040
+#define EVENT_WAVE_HAS_VARIATION	0x0040
 
 #define EVENT_STOP_IMMEDIATE	0x01
 #define EVENT_STOP_CUE		0x02
@@ -169,21 +169,20 @@ typedef struct FACTEvent
 			uint16_t position;
 			uint16_t angle;
 
-			/* Track Variation */
 			bool isComplex;
 			FAUDIONAMELESS union
 			{
 				struct
 				{
-					uint16_t track;
+					uint16_t wave_index;
 					uint8_t wavebank;
 				} simple;
 				struct
 				{
 					enum variation_type variation_type;
-					bool has_track_variation;
-					uint16_t trackCount;
-					uint16_t *tracks;
+					bool has_variation;
+					uint16_t wave_count;
+					uint16_t *wave_indices;
 					uint8_t *wavebanks;
 					uint8_t *weights;
 				} complex;

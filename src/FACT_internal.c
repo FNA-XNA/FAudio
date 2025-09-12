@@ -178,12 +178,12 @@ void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTT
 	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst)
 {
 	FAudioSendDescriptor reverbDesc[2];
-	bool has_track_variation = false;
+	bool has_variation = false;
 	FAudioVoiceSends reverbSends;
 	const char *wbName;
 	FACTWaveBank *wb = NULL;
 	LinkedList *list;
-	uint16_t wbTrack;
+	uint16_t wave_index;
 	uint8_t wbIndex;
 	uint8_t loopCount = 0;
 	float max, next;
@@ -192,7 +192,7 @@ void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTT
 	/* Track Variation */
 	if (evt->wave.isComplex)
 	{
-		if (!trackInst->activeWave.wave || !(evt->wave.complex.has_track_variation))
+		if (!trackInst->activeWave.wave || !(evt->wave.complex.has_variation))
 		{
 			/* No-op, no variation on loop */
 		}
@@ -201,16 +201,16 @@ void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTT
 			case VARIATION_TYPE_ORDERED:
 			case VARIATION_TYPE_ORDERED_FROM_RANDOM:
 				evtInst->valuei += 1;
-				if (evtInst->valuei >= evt->wave.complex.trackCount)
+				if (evtInst->valuei >= evt->wave.complex.wave_count)
 					evtInst->valuei = 0;
 				break;
 
 			case VARIATION_TYPE_RANDOM:
 				max = 0.0f;
-				for (i = 0; i < evt->wave.complex.trackCount; i += 1)
+				for (i = 0; i < evt->wave.complex.wave_count; i += 1)
 					max += evt->wave.complex.weights[i];
 				next = FACT_INTERNAL_rng() * max;
-				for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
+				for (i = evt->wave.complex.wave_count; i > 0; i -= 1)
 				{
 					if (next > (max - evt->wave.complex.weights[i - 1]))
 					{
@@ -224,14 +224,14 @@ void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTT
 			case VARIATION_TYPE_RANDOM_NO_REPEATS:
 			case VARIATION_TYPE_SHUFFLE:
 				max = 0.0f;
-				for (i = 0; i < evt->wave.complex.trackCount; i += 1)
+				for (i = 0; i < evt->wave.complex.wave_count; i += 1)
 				{
 					if (i == evtInst->valuei)
 						continue;
 					max += evt->wave.complex.weights[i];
 				}
 				next = FACT_INTERNAL_rng() * max;
-				for (i = evt->wave.complex.trackCount; i > 0; i -= 1)
+				for (i = evt->wave.complex.wave_count; i > 0; i -= 1)
 				{
 					if (i - 1 == evtInst->valuei)
 						continue;
@@ -245,15 +245,15 @@ void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTT
 				break;
 		}
 
-		has_track_variation = evt->wave.complex.has_track_variation;
+		has_variation = evt->wave.complex.has_variation;
 
 		wbIndex = evt->wave.complex.wavebanks[evtInst->valuei];
-		wbTrack = evt->wave.complex.tracks[evtInst->valuei];
+		wave_index = evt->wave.complex.wave_indices[evtInst->valuei];
 	}
 	else
 	{
 		wbIndex = evt->wave.simple.wavebank;
-		wbTrack = evt->wave.simple.track;
+		wave_index = evt->wave.simple.wave_index;
 	}
 	wbName = cue->parentBank->wavebankNames[wbIndex];
 	list = cue->parentBank->parentEngine->wbList;
@@ -269,20 +269,13 @@ void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTT
 	FAudio_assert(wb != NULL);
 
 	/* Generate the Wave */
-	if (evtInst->loopCount == 255 && !has_track_variation &&
+	if (evtInst->loopCount == 255 && !has_variation &&
 		!(evt->wave.variationFlags & VARIATION_FLAG_LOOP_MASK))
 	{
 		/* For infinite loops with no variation, let Wave do the work */
 		loopCount = 255;
 	}
-	FACTWaveBank_Prepare(
-		wb,
-		wbTrack,
-		evt->wave.flags,
-		0,
-		loopCount,
-		&trackInst->upcomingWave.wave
-	);
+	FACTWaveBank_Prepare(wb, wave_index, evt->wave.flags, 0, loopCount, &trackInst->upcomingWave.wave);
 	trackInst->upcomingWave.wave->parentCue = cue;
 	if (sound->dspCodeCount > 0) /* Never more than 1...? */
 	{
@@ -737,12 +730,12 @@ void create_sound(FACTCue *cue)
 					else
 					{
 						max = 0.0f;
-						for (k = 0; k < evt->wave.complex.trackCount; k += 1)
+						for (k = 0; k < evt->wave.complex.wave_count; k += 1)
 						{
 							max += evt->wave.complex.weights[k];
 						}
 						next = FACT_INTERNAL_rng() * max;
-						for (k = evt->wave.complex.trackCount - 1; k >= 0; k -= 1)
+						for (k = evt->wave.complex.wave_count - 1; k >= 0; k -= 1)
 						{
 							if (next > (max - evt->wave.complex.weights[k]))
 							{
@@ -2278,7 +2271,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 			/* Basic Wave */
 			event->wave.isComplex = false;
 			event->wave.flags = read_u8(ptr);
-			event->wave.simple.track = read_u16(ptr, se);
+			event->wave.simple.wave_index = read_u16(ptr, se);
 			event->wave.simple.wavebank = read_u8(ptr);
 			event->wave.loopCount = read_u8(ptr);
 			event->wave.position = read_u16(ptr, se);
@@ -2297,19 +2290,19 @@ void FACT_INTERNAL_ParseTrackEvents(
 
 			/* Track Variation */
 			evtInfo = read_u32(ptr, se);
-			event->wave.complex.trackCount = evtInfo & 0xFFFF;
+			event->wave.complex.wave_count = evtInfo & 0xFFFF;
 			event->wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
 			table_type = (evtInfo >> (16 + 3)) & VARIATION_TABLE_TYPE_MASK;
 			if (table_type != VARIATION_TABLE_TYPE_WAVE)
 				FAudio_Log("Unexpected variation table type.\n");
-			event->wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
+			event->wave.complex.has_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_VARIATION;
 			*ptr += 4; /* Unknown values */
-			event->wave.complex.tracks = pMalloc(sizeof(uint16_t) * event->wave.complex.trackCount);
-			event->wave.complex.wavebanks = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
-			event->wave.complex.weights = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
-			for (uint16_t j = 0; j < event->wave.complex.trackCount; ++j)
+			event->wave.complex.wave_indices = pMalloc(sizeof(uint16_t) * event->wave.complex.wave_count);
+			event->wave.complex.wavebanks = pMalloc(sizeof(uint8_t) * event->wave.complex.wave_count);
+			event->wave.complex.weights = pMalloc(sizeof(uint8_t) * event->wave.complex.wave_count);
+			for (uint16_t j = 0; j < event->wave.complex.wave_count; ++j)
 			{
-				event->wave.complex.tracks[j] = read_u16(ptr, se);
+				event->wave.complex.wave_indices[j] = read_u16(ptr, se);
 				event->wave.complex.wavebanks[j] = read_u8(ptr);
 				minWeight = read_u8(ptr);
 				maxWeight = read_u8(ptr);
@@ -2321,7 +2314,7 @@ void FACT_INTERNAL_ParseTrackEvents(
 			/* Basic Wave */
 			event->wave.isComplex = false;
 			event->wave.flags = read_u8(ptr);
-			event->wave.simple.track = read_u16(ptr, se);
+			event->wave.simple.wave_index = read_u16(ptr, se);
 			event->wave.simple.wavebank = read_u8(ptr);
 			event->wave.loopCount = read_u8(ptr);
 			event->wave.position = read_u16(ptr, se);
@@ -2362,19 +2355,19 @@ void FACT_INTERNAL_ParseTrackEvents(
 
 			/* Track Variation */
 			evtInfo = read_u32(ptr, se);
-			event->wave.complex.trackCount = evtInfo & 0xFFFF;
+			event->wave.complex.wave_count = evtInfo & 0xFFFF;
 			event->wave.complex.variation_type = (evtInfo >> 16) & VARIATION_TYPE_MASK;
 			table_type = (evtInfo >> (16 + 3)) & VARIATION_TABLE_TYPE_MASK;
 			if (table_type != VARIATION_TABLE_TYPE_WAVE)
 				FAudio_Log("Unexpected variation table type.\n");
-			event->wave.complex.has_track_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_TRACK_VARIATION;
+			event->wave.complex.has_variation = (evtInfo >> 16) & EVENT_WAVE_HAS_VARIATION;
 			*ptr += 4; /* Unknown values */
-			event->wave.complex.tracks = pMalloc(sizeof(uint16_t) * event->wave.complex.trackCount);
-			event->wave.complex.wavebanks = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
-			event->wave.complex.weights = pMalloc(sizeof(uint8_t) * event->wave.complex.trackCount);
-			for (j = 0; j < event->wave.complex.trackCount; j += 1)
+			event->wave.complex.wave_indices = pMalloc(sizeof(uint16_t) * event->wave.complex.wave_count);
+			event->wave.complex.wavebanks = pMalloc(sizeof(uint8_t) * event->wave.complex.wave_count);
+			event->wave.complex.weights = pMalloc(sizeof(uint8_t) * event->wave.complex.wave_count);
+			for (j = 0; j < event->wave.complex.wave_count; j += 1)
 			{
-				event->wave.complex.tracks[j] = read_u16(ptr, se);
+				event->wave.complex.wave_indices[j] = read_u16(ptr, se);
 				event->wave.complex.wavebanks[j] = read_u8(ptr);
 				minWeight = read_u8(ptr);
 				maxWeight = read_u8(ptr);
@@ -2607,7 +2600,7 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			event->type = FACTEVENT_PLAYWAVE;
 			event->wave.position = 0; /* FIXME */
 			event->wave.angle = 0; /* FIXME */
-			event->wave.simple.track = read_u16(&ptr, se);
+			event->wave.simple.wave_index = read_u16(&ptr, se);
 			event->wave.simple.wavebank = read_u8(&ptr);
 			tracks[0].events = event;
 		}
