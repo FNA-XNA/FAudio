@@ -682,48 +682,50 @@ void create_sound(FACTCue *cue)
 		);
 		for (i = 0; i < newSound->sound->trackCount; i += 1)
 		{
-			newSound->tracks[i].rpcData.rpcVolume = 0.0f;
-			newSound->tracks[i].rpcData.rpcPitch = 0.0f;
-			newSound->tracks[i].rpcData.rpcReverbSend = 0.0f;
-			newSound->tracks[i].rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
-			newSound->tracks[i].rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+			FACTTrackInstance *track = &newSound->tracks[i];
 
-			newSound->tracks[i].evtVolume = 0.0f;
-			newSound->tracks[i].evtPitch = 0.0f;
+			track->rpcData.rpcVolume = 0.0f;
+			track->rpcData.rpcPitch = 0.0f;
+			track->rpcData.rpcReverbSend = 0.0f;
+			track->rpcData.rpcFilterQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+			track->rpcData.rpcFilterFreq = FAUDIO_DEFAULT_FILTER_FREQUENCY;
 
-			newSound->tracks[i].activeWave.wave = NULL;
-			newSound->tracks[i].activeWave.baseVolume = 0.0f;
-			newSound->tracks[i].activeWave.basePitch = 0;
-			newSound->tracks[i].activeWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
-			newSound->tracks[i].activeWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
-			newSound->tracks[i].upcomingWave.wave = NULL;
-			newSound->tracks[i].upcomingWave.baseVolume = 0.0f;
-			newSound->tracks[i].upcomingWave.basePitch = 0;
-			newSound->tracks[i].upcomingWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
-			newSound->tracks[i].upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+			track->evtVolume = 0.0f;
+			track->evtPitch = 0.0f;
 
-			newSound->tracks[i].events = (FACTEventInstance*) cue->parentBank->parentEngine->pMalloc(
+			track->activeWave.wave = NULL;
+			track->activeWave.baseVolume = 0.0f;
+			track->activeWave.basePitch = 0;
+			track->activeWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+			track->activeWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+			track->upcomingWave.wave = NULL;
+			track->upcomingWave.baseVolume = 0.0f;
+			track->upcomingWave.basePitch = 0;
+			track->upcomingWave.baseQFactor = FAUDIO_DEFAULT_FILTER_ONEOVERQ;
+			track->upcomingWave.baseFrequency = FAUDIO_DEFAULT_FILTER_FREQUENCY;
+
+			track->events = cue->parentBank->parentEngine->pMalloc(
 				sizeof(FACTEventInstance) * newSound->sound->tracks[i].eventCount
 			);
 			for (j = 0; j < newSound->sound->tracks[i].eventCount; j += 1)
 			{
 				evt = &newSound->sound->tracks[i].events[j];
 
-				newSound->tracks[i].events[j].timestamp =
+				track->events[j].timestamp =
 					newSound->sound->tracks[i].events[j].timestamp;
-				newSound->tracks[i].events[j].loopCount = 0;
-				newSound->tracks[i].events[j].finished = false;
-				newSound->tracks[i].events[j].value = 0.0f;
+				track->events[j].loopCount = 0;
+				track->events[j].finished = false;
+				track->events[j].value = 0.0f;
 
 				if (	evt->type == FACTEVENT_PLAYWAVE ||
 					evt->type == FACTEVENT_PLAYWAVETRACKVARIATION ||
 					evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 					evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 				{
-					newSound->tracks[i].events[j].loopCount =
+					track->events[j].loopCount =
 						newSound->sound->tracks[i].events[j].wave.loopCount;
 
-					evtInst = &newSound->tracks[i].events[j];
+					evtInst = &track->events[j];
 					if (!evt->wave.isComplex || evt->wave.complex.variation_type == VARIATION_TYPE_ORDERED)
 					{
 						evtInst->valuei = 0;
@@ -750,22 +752,22 @@ void create_sound(FACTCue *cue)
 						cue,
 						newSound->sound,
 						&newSound->sound->tracks[i],
-						&newSound->tracks[i],
+						track,
 						evt,
 						evtInst
 					);
-					newSound->tracks[i].waveEvt = evt;
-					newSound->tracks[i].waveEvtInst = evtInst;
+					track->waveEvt = evt;
+					track->waveEvtInst = evtInst;
 				}
 				else if (	evt->type == FACTEVENT_PITCHREPEATING ||
 						evt->type == FACTEVENT_VOLUMEREPEATING	)
 				{
-					newSound->tracks[i].events[j].loopCount =
+					track->events[j].loopCount =
 						newSound->sound->tracks[i].events[j].value.repeats;
 				}
 				else if (evt->type == FACTEVENT_MARKERREPEATING)
 				{
-					newSound->tracks[i].events[j].loopCount =
+					track->events[j].loopCount =
 						newSound->sound->tracks[i].events[j].marker.repeats;
 				}
 			}
