@@ -1694,6 +1694,8 @@ uint32_t FACTWaveBank_Prepare(
 	(*ppWave)->parentCue = NULL;
 	(*ppWave)->index = nWaveIndex;
 
+	(*ppWave)->background_music = (dwFlags & FACT_FLAG_BACKGROUND_MUSIC);
+
 	/* Playback */
 	(*ppWave)->state = FACT_STATE_PREPARED;
 	(*ppWave)->volume = 1.0f;
@@ -2258,8 +2260,7 @@ uint32_t FACTWave_GetProperties(
 		&pProperties->properties
 	);
 
-	/* FIXME: This is unsupported on PC, do we care about this? */
-	pProperties->backgroundMusic = 0;
+	pProperties->backgroundMusic = pWave->background_music;
 
 	FAudio_PlatformUnlockMutex(pWave->parentBank->parentEngine->apiLock);
 	return FAUDIO_OK;

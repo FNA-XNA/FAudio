@@ -585,6 +585,9 @@ struct FACTWave
 	FACTCue *parentCue;
 	uint16_t index;
 
+	/* Only used for GetProperties(). */
+	bool background_music;
+
 	/* Playback */
 	uint32_t state;
 	float volume;
