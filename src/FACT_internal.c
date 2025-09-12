@@ -756,6 +756,12 @@ void create_sound(FACTCue *cue)
 						evt,
 						evtInst
 					);
+					/* Initialize the active wave immediately,
+					 * although it isn't playing yet.
+					 * GetProperties() should return its information. */
+					track->activeWave = track->upcomingWave;
+					track->upcomingWave.wave = NULL;
+
 					track->waveEvt = evt;
 					track->waveEvtInst = evtInst;
 				}
@@ -1248,14 +1254,18 @@ static void FACT_INTERNAL_ActivateEvent(FACTSoundInstance *sound, const FACTTrac
 			evt->type == FACTEVENT_PLAYWAVEEFFECTVARIATION ||
 			evt->type == FACTEVENT_PLAYWAVETRACKEFFECTVARIATION	)
 	{
-		FAudio_assert(trackInst->activeWave.wave == NULL);
-		FAudio_assert(trackInst->upcomingWave.wave != NULL);
-		FAudio_memcpy(
-			&trackInst->activeWave,
-			&trackInst->upcomingWave,
-			sizeof(trackInst->activeWave)
-		);
-		trackInst->upcomingWave.wave = NULL;
+		/* The next wave might have already been assigned to activeWave. */
+
+		if (!trackInst->activeWave.wave)
+		{
+			FAudio_assert(trackInst->upcomingWave.wave != NULL);
+			FAudio_memcpy(
+				&trackInst->activeWave,
+				&trackInst->upcomingWave,
+				sizeof(trackInst->activeWave)
+			);
+			trackInst->upcomingWave.wave = NULL;
+		}
 		FACTWave_Play(trackInst->activeWave.wave);
 	}
 
