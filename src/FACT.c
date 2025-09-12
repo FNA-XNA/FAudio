@@ -2761,6 +2761,8 @@ uint32_t FACTCue_GetProperties(
 				track_props->waveVariation = 0;
 			}
 			track_props->loopCount = pCue->playingSound->tracks[i].waveEvt->wave.loopCount;
+			/* Native doesn't take variation into account here. */
+			track_props->duration *= (track_props->loopCount + 1);
 		}
 	}
 
