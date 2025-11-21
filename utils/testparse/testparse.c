@@ -165,7 +165,7 @@ static void print_soundbank(FACTAudioEngine *engine, uint8_t *buf, size_t len)
 						printf(
 							"\t\t\t\t\t\tTrack Variation Type: %d\n"
 							"\t\t\t\t\t\tTrack Count: %d\n",
-							evt->wave.complex.variation,
+							evt->wave.complex.variation_type,
 							evt->wave.complex.trackCount
 						);
 						for (l = 0; l < evt->wave.complex.trackCount; l += 1)

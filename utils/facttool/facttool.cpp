@@ -698,7 +698,7 @@ void FAudioTool_Update()
 									{
 										ImGui::Text(
 											"Track Variation Type: %d",
-											evt->wave.complex.variation
+											evt->wave.complex.variation_type
 										);
 										ImGui::Text(
 											"Track Count: %d",
