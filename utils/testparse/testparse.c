@@ -298,12 +298,12 @@ static void print_soundbank(FACTAudioEngine *engine, uint8_t *buf, size_t len)
 	{
 		printf(
 			"\tVariation %d, Code %d:\n"
-			"\t\tFlags: %X\n"
+			"\t\tType: %X\n"
 			"\t\tInteractive Variable Index: %d\n"
 			"\t\tEntry Count: %d\n",
 			i,
 			sb->variationCodes[i],
-			sb->variations[i].flags,
+			sb->variations[i].type,
 			sb->variations[i].variable,
 			sb->variations[i].entryCount
 		);

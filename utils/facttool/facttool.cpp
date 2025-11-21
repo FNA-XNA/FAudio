@@ -880,8 +880,8 @@ void FAudioTool_Update()
 			soundBanks[i]->variationCodes[j]
 		)) {
 			ImGui::Text(
-				"Flags: %X",
-				soundBanks[i]->variations[j].flags
+				"Type: %X",
+				soundBanks[i]->variations[j].type
 			);
 			ImGui::Text(
 				"Interactive Variable Index: %d",
