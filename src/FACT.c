@@ -356,7 +356,7 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	for (size_t i = 0; i < pEngine->wavebank_notification_count; ++i)
 		pEngine->notificationCallback(&pEngine->wavebank_notifications[i]);
 	pEngine->wavebank_notification_count = 0;
-	free(pEngine->wavebank_notifications);
+	pEngine->pFree(pEngine->wavebank_notifications);
 
 	pEngine->notifications = 0;
 
