@@ -1432,7 +1432,7 @@ uint32_t FACTSoundBank_GetState(
 
 	FAudio_PlatformLockMutex(pSoundBank->parentEngine->apiLock);
 
-	*pdwState = FACT_STATE_PREPARED;
+	*pdwState = 0;
 	for (i = 0; i < pSoundBank->cueCount; i += 1)
 	{
 		if (pSoundBank->cues[i].instanceCount > 0)
