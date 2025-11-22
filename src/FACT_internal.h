@@ -143,7 +143,7 @@ enum variation_type
 
 #define VARIATION_TYPE_MASK	0x7
 
-#define EVENT_WAVE_HAS_TRACK_VARIATION	0x0040
+#define EVENT_WAVE_HAS_VARIATION	0x0040
 
 #define EVENT_STOP_IMMEDIATE	0x01
 #define EVENT_STOP_CUE		0x02
@@ -169,21 +169,20 @@ typedef struct FACTEvent
 			uint16_t position;
 			uint16_t angle;
 
-			/* Track Variation */
 			bool isComplex;
 			FAUDIONAMELESS union
 			{
 				struct
 				{
-					uint16_t track;
+					uint16_t wave_index;
 					uint8_t wavebank;
 				} simple;
 				struct
 				{
 					enum variation_type variation_type;
-					bool has_track_variation;
-					uint16_t trackCount;
-					uint16_t *tracks;
+					bool has_variation;
+					uint16_t wave_count;
+					uint16_t *wave_indices;
 					uint8_t *wavebanks;
 					uint8_t *weights;
 				} complex;
@@ -238,6 +237,12 @@ typedef struct FACTEvent
 	};
 } FACTEvent;
 
+struct rpc_codes
+{
+	const uint32_t *codes;
+	uint8_t count;
+};
+
 typedef struct FACTTrack
 {
 	uint32_t code;
@@ -247,11 +252,10 @@ typedef struct FACTTrack
 	uint8_t qfactor;
 	uint16_t frequency;
 
-	uint8_t rpcCodeCount;
-	uint32_t *rpcCodes;
+	struct rpc_codes rpc_codes;
 
 	uint8_t eventCount;
-	FACTEvent *events;
+	const FACTEvent *events;
 } FACTTrack;
 
 #define SOUND_FLAG_COMPLEX		0x01
@@ -268,12 +272,12 @@ typedef struct FACTSound
 	int16_t pitch;
 	uint8_t priority;
 
+	struct rpc_codes rpc_codes;
+
 	uint8_t trackCount;
-	uint8_t rpcCodeCount;
 	uint8_t dspCodeCount;
 
-	FACTTrack *tracks;
-	uint32_t *rpcCodes;
+	const FACTTrack *tracks;
 	uint32_t *dspCodes;
 } FACTSound;
 
@@ -302,8 +306,17 @@ typedef struct FACTVariation
 		} simple;
 		uint32_t soundCode;
 	};
-	float minWeight;
-	float maxWeight;
+	union
+	{
+		struct
+		{
+			uint8_t weight_min, weight_max;
+		} noninteractive;
+		struct
+		{
+			float var_min, var_max;
+		} interactive;
+	};
 	uint32_t linger;
 } FACTVariation;
 
@@ -334,6 +347,7 @@ enum variation_table_type
 
 typedef struct FACTVariationTable
 {
+	uint32_t code;
 	enum variation_table_type type;
 	int16_t variable;
 	bool isComplex;
@@ -412,14 +426,14 @@ typedef struct FACTTrackInstance
 		float baseQFactor;
 		float baseFrequency;
 	} activeWave, upcomingWave;
-	FACTEvent *waveEvt;
+	const FACTEvent *waveEvt;
 	FACTEventInstance *waveEvtInst;
 } FACTTrackInstance;
 
 typedef struct FACTSoundInstance
 {
 	/* Base Sound reference */
-	FACTSound *sound;
+	const FACTSound *sound;
 
 	/* Per-instance track information */
 	FACTTrackInstance *tracks;
@@ -430,7 +444,17 @@ typedef struct FACTSoundInstance
 	/* Fade data */
 	uint32_t fadeStart;
 	uint16_t fadeTarget;
-	uint8_t fadeType; /* In (1), Out (2), Release RPC (3) */
+	enum
+	{
+		SOUND_STATE_STOPPED,
+		SOUND_STATE_FADE_IN,
+		SOUND_STATE_PLAYING,
+		SOUND_STATE_FADE_OUT,
+		SOUND_STATE_RELEASE_RPC,
+	} state;
+
+	/* index in the parent cue's variation table */
+	uint16_t variation_index;
 
 	/* Engine references */
 	FACTCue *parentCue;
@@ -480,6 +504,7 @@ struct FACTAudioEngine
 	FAudio *audio;
 	FAudioMasteringVoice *master;
 	FAudioSubmixVoice *reverbVoice;
+	FAudioWaveFormatExtensible output_format;
 
 	/* Engine thread */
 	FAudioThread apiThread;
@@ -491,14 +516,13 @@ struct FACTAudioEngine
 	FAudioFreeFunc pFree;
 	FAudioReallocFunc pRealloc;
 
-	/* Peristent Notifications */
-	uint32_t notifications;
-	void *cue_context;
-	void *sb_context;
-	void *wb_context;
-	void *wave_context;
-	FACTNotification *wavebank_notifications;
-	size_t wavebank_notification_count, wavebank_notifications_capacity;
+	FACTNotificationDescription *notifications;
+	size_t notification_count, notifications_capacity;
+
+	/* Wave banks to send PREPARED notifications for.
+	 * These are queued and processed in DoWork(). */
+	FACTWaveBank **prepared_wavebanks;
+	size_t prepared_wavebank_count, prepared_wavebanks_capacity;
 
 	/* Settings handle */
 	void *settings;
@@ -509,8 +533,6 @@ struct FACTSoundBank
 	/* Engine references */
 	FACTAudioEngine *parentEngine;
 	FACTCue *cueList;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Array sizes */
 	uint16_t cueCount;
@@ -526,10 +548,9 @@ struct FACTSoundBank
 	/* Actual SoundBank information */
 	char *name;
 	FACTCueData *cues;
-	FACTSound *sounds;
+	const FACTSound *sounds;
 	uint32_t *soundCodes;
 	FACTVariationTable *variations;
-	uint32_t *variationCodes;
 	FACTTransitionTable *transitions;
 	uint32_t *transitionCodes;
 };
@@ -540,8 +561,6 @@ struct FACTWaveBank
 	FACTAudioEngine *parentEngine;
 	LinkedList *waveList;
 	FAudioMutex waveLock;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Actual WaveBank information */
 	char *name;
@@ -565,8 +584,9 @@ struct FACTWave
 	FACTWaveBank *parentBank;
 	FACTCue *parentCue;
 	uint16_t index;
-	bool notifyOnDestroy;
-	void *usercontext;
+
+	/* Only used for GetProperties(). */
+	bool background_music;
 
 	/* Playback */
 	uint32_t state;
@@ -592,8 +612,6 @@ struct FACTCue
 	FACTCue *next;
 	bool managed;
 	uint16_t index;
-	bool notifyOnDestroy;
-	void *usercontext;
 
 	/* Sound data */
 	FACTCueData *data;
@@ -605,7 +623,7 @@ struct FACTCue
 		 * Sound; XACT does not generate variation tables for
 		 * Cues with only one Sound.
 		 */
-		FACTSound *sound;
+		const FACTSound *sound;
 	};
 
 	/* Instance data */
@@ -616,7 +634,6 @@ struct FACTCue
 	uint32_t state;
 	FACTWave *simpleWave;
 	FACTSoundInstance *playingSound;
-	FACTVariation *playingVariation;
 	uint32_t maxRpcReleaseTime;
 
 	/* 3D Data */
@@ -632,24 +649,15 @@ struct FACTCue
 
 /* Internal functions */
 
-void FACT_INTERNAL_GetNextWave(
-	FACTCue *cue,
-	FACTSound *sound,
-	FACTTrack *track,
-	FACTTrackInstance *trackInst,
-	FACTEvent *evt,
-	FACTEventInstance *evtInst
-);
-bool FACT_INTERNAL_CreateSound(FACTCue *cue, uint16_t fadeInMS);
+void FACT_INTERNAL_GetNextWave(FACTCue *cue, const FACTSound *sound, const FACTTrack *track,
+	FACTTrackInstance *trackInst, const FACTEvent *evt, FACTEventInstance *evtInst);
+void create_sound(FACTCue *cue);
+bool play_sound(FACTCue *cue);
 void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound);
 void FACT_INTERNAL_BeginFadeOut(FACTSoundInstance *sound, uint16_t fadeOutMS);
 void FACT_INTERNAL_BeginReleaseRPC(FACTSoundInstance *sound, uint16_t releaseMS);
 
 void FACT_INTERNAL_SendCueNotification(FACTCue *cue, uint8_t type);
-
-/* RPC Helper Functions */
-
-FACTRPC* FACT_INTERNAL_GetRPC(FACTAudioEngine *engine, uint32_t code);
 
 /* FACT Thread */
 
