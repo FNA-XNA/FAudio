@@ -33,7 +33,7 @@ static void remove_single_notification(FACTAudioEngine *engine, size_t index)
 {
 	--engine->notification_count;
 	if (index < engine->notification_count)
-		memmove(&engine->notifications[index], &engine->notifications[index + 1],
+		FAudio_memmove(&engine->notifications[index], &engine->notifications[index + 1],
 				(engine->notification_count - index) * sizeof(FACTNotificationDescription));
 }
 
@@ -44,7 +44,7 @@ static void send_wavebank_notification(FACTAudioEngine *engine, uint8_t type, FA
 	notification.type = type;
 	notification.waveBank.pWaveBank = wavebank;
 
-	for (ssize_t i = engine->notification_count - 1; i >= 0; --i)
+	for (ptrdiff_t i = engine->notification_count - 1; i >= 0; --i)
 	{
 		FACTNotificationDescription *desc = &engine->notifications[i];
 
@@ -66,7 +66,7 @@ static void send_wave_notification(FACTAudioEngine *engine, uint8_t type, const 
 	notification.type = type;
 	notification.wave = *wave;
 
-	for (ssize_t i = engine->notification_count - 1; i >= 0; --i)
+	for (ptrdiff_t i = engine->notification_count - 1; i >= 0; --i)
 	{
 		FACTNotificationDescription *desc = &engine->notifications[i];
 
@@ -88,7 +88,7 @@ static void send_soundbank_notification(FACTAudioEngine *engine, FACTSoundBank *
 	notification.type = FACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED;
 	notification.soundBank.pSoundBank = soundbank;
 
-	for (ssize_t i = engine->notification_count - 1; i >= 0; --i)
+	for (ptrdiff_t i = engine->notification_count - 1; i >= 0; --i)
 	{
 		FACTNotificationDescription *desc = &engine->notifications[i];
 
@@ -113,7 +113,7 @@ void FACT_INTERNAL_SendCueNotification(FACTCue *cue, uint8_t type)
 	notification.cue.pSoundBank = cue->parentBank;
 	notification.cue.pCue = cue;
 
-	for (ssize_t i = engine->notification_count - 1; i >= 0; --i)
+	for (ptrdiff_t i = engine->notification_count - 1; i >= 0; --i)
 	{
 		FACTNotificationDescription *desc = &engine->notifications[i];
 
@@ -659,7 +659,7 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	);
 	if (pEngine->prepared_wavebank_count == pEngine->prepared_wavebanks_capacity)
 	{
-	    pEngine->prepared_wavebanks_capacity = max(pEngine->prepared_wavebanks_capacity * 2, 8);
+	    pEngine->prepared_wavebanks_capacity = FAudio_max(pEngine->prepared_wavebanks_capacity * 2, 8);
 		pEngine->prepared_wavebanks = pEngine->pRealloc(pEngine->prepared_wavebanks,
 			pEngine->prepared_wavebanks_capacity * sizeof(FACTWaveBank *));
 	}
@@ -729,7 +729,7 @@ uint32_t FACTAudioEngine_RegisterNotification(FACTAudioEngine *engine, const FAC
 
 	if (engine->notification_count == engine->notifications_capacity)
 	{
-		engine->notifications_capacity = max(engine->notifications_capacity * 2, 8);
+		engine->notifications_capacity = FAudio_max(engine->notifications_capacity * 2, 8);
 		engine->notifications = engine->pRealloc(engine->notifications,
 			engine->notifications_capacity * sizeof(FACTNotification));
 	}
