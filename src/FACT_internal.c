@@ -2206,8 +2206,10 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		ptr = start + read_u32(&offset_ptr, se);
 		unknown = read_u16(&offset_ptr, se);
 
+#if 0 /* FIXME: Cattle Country trips this, so we can maybe figure this out */
 		if (unknown != 0xff)
-			FAudio_Log("Ignoring unknown value.\n");
+			FAudio_Log("Category Names: Ignoring unknown value.\n");
+#endif
 
 		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
 		pEngine->categoryNames[i] = (char*) pEngine->pMalloc(memsize);
@@ -2227,8 +2229,10 @@ uint32_t FACT_INTERNAL_ParseAudioEngine(
 		ptr = start + read_u32(&offset_ptr, se);
 		unknown = read_u16(&offset_ptr, se);
 
+#if 0 /* FIXME: Cattle Country trips this, so we can maybe figure this out */
 		if (unknown != 0xff)
-			FAudio_Log("Ignoring unknown value.\n");
+			FAudio_Log("Variable Names: Ignoring unknown value.\n");
+#endif
 
 		memsize = FAudio_strlen((char*) ptr) + 1; /* Dastardly! */
 		pEngine->variableNames[i] = (char*) pEngine->pMalloc(memsize);
@@ -2963,8 +2967,10 @@ uint32_t FACT_INTERNAL_ParseSoundBank(
 			ptr = start + read_u32(&offset_ptr, se);
 			unknown = read_u16(&offset_ptr, se);
 
+#if 0 /* FIXME: Cattle Country trips this, so we can maybe figure this out */
 			if (unknown != 0xff)
-				FAudio_Log("Ignoring unknown value.\n");
+				FAudio_Log("Cue Names: Ignoring unknown value.\n");
+#endif
 
 			memsize = FAudio_strlen((char*) ptr) + 1;
 			sb->cueNames[i] = (char*) pEngine->pMalloc(memsize);
