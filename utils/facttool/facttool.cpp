@@ -570,7 +570,7 @@ void FAudioTool_Update()
 				);
 				ImGui::Text(
 					"RPC Code Count: %d",
-					soundBanks[i]->sounds[j].rpcCodeCount
+					soundBanks[i]->sounds[j].rpc_codes.count
 				);
 				ImGui::Text(
 					"DSP Preset Code Count: %d",
@@ -582,11 +582,11 @@ void FAudioTool_Update()
 				);
 				if (ImGui::TreeNode("RPC Codes"))
 				{
-					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].rpcCodeCount; k += 1)
+					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].rpc_codes.count; k += 1)
 					{
 						ImGui::Text(
 							"%d",
-							soundBanks[i]->sounds[j].rpcCodes[k]
+							soundBanks[i]->sounds[j].rpc_codes.codes[k]
 						);
 					}
 					ImGui::TreePop();
@@ -602,7 +602,7 @@ void FAudioTool_Update()
 					}
 					ImGui::TreePop();
 				}
-				if (ImGui::TreeNode("Tracks"))
+				if (ImGui::TreeNode("Waves"))
 				{
 					for (uint8_t k = 0; k < soundBanks[i]->sounds[j].trackCount; k += 1)
 					if (ImGui::TreeNode(
@@ -628,7 +628,7 @@ void FAudioTool_Update()
 						);
 						ImGui::Text(
 							"RPC Code Count: %d",
-							soundBanks[i]->sounds[j].tracks[k].rpcCodeCount
+							soundBanks[i]->sounds[j].tracks[k].rpc_codes.count
 						);
 						ImGui::Text(
 							"Event Count: %d",
@@ -636,11 +636,11 @@ void FAudioTool_Update()
 						);
 						if (ImGui::TreeNode("RPC Codes"))
 						{
-							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].tracks[k].rpcCodeCount; l += 1)
+							for (uint8_t l = 0; l < soundBanks[i]->sounds[j].tracks[k].rpc_codes.count; l += 1)
 							{
 								ImGui::Text(
 									"%d",
-									soundBanks[i]->sounds[j].tracks[k].rpcCodes[l]
+									soundBanks[i]->sounds[j].tracks[k].rpc_codes.codes[l]
 								);
 							}
 							ImGui::TreePop();
@@ -697,24 +697,24 @@ void FAudioTool_Update()
 									if (evt->wave.isComplex)
 									{
 										ImGui::Text(
-											"Track Variation Type: %d",
+											"Wave Variation Type: %d",
 											evt->wave.complex.variation_type
 										);
 										ImGui::Text(
-											"Track Count: %d",
-											evt->wave.complex.trackCount
+											"Wave Count: %d",
+											evt->wave.complex.wave_count
 										);
-										if (ImGui::TreeNode("Tracks"))
+										if (ImGui::TreeNode("Waves"))
 										{
-											for (uint16_t m = 0; m < evt->wave.complex.trackCount; m += 1)
+											for (uint16_t m = 0; m < evt->wave.complex.wave_count; m += 1)
 											if (ImGui::TreeNode(
 												(void*) (intptr_t) m,
 												"Track #%d",
 												m
 											)) {
 												ImGui::Text(
-													"Track Index: %d",
-													evt->wave.complex.tracks[m]
+													"Wave Index: %d",
+													evt->wave.complex.wave_indices[m]
 												);
 												ImGui::Text(
 													"WaveBank Index: %d",
@@ -732,8 +732,8 @@ void FAudioTool_Update()
 									else
 									{
 										ImGui::Text(
-											"Track Index: %d",
-											evt->wave.simple.track
+											"Wave Index: %d",
+											evt->wave.simple.wave_index
 										);
 										ImGui::Text(
 											"WaveBank Index: %d",
@@ -877,7 +877,7 @@ void FAudioTool_Update()
 		if (ImGui::TreeNode(
 			(void*) (intptr_t) j,
 			"Code #%d",
-			soundBanks[i]->variationCodes[j]
+			soundBanks[i]->variations[j].code
 		)) {
 			ImGui::Text(
 				"Type: %X",
@@ -919,14 +919,28 @@ void FAudioTool_Update()
 							soundBanks[i]->variations[j].entries[k].simple.wavebank
 						);
 					}
-					ImGui::Text(
-						"Min Weight: %f",
-						soundBanks[i]->variations[j].entries[k].minWeight
-					);
-					ImGui::Text(
-						"Max Weight: %f",
-						soundBanks[i]->variations[j].entries[k].maxWeight
-					);
+					if (soundBanks[i]->variations[j].type == VARIATION_TABLE_TYPE_INTERACTIVE)
+					{
+						ImGui::Text(
+							"Min Range: %f",
+							soundBanks[i]->variations[j].entries[k].interactive.var_min
+						);
+						ImGui::Text(
+							"Max Range: %f",
+							soundBanks[i]->variations[j].entries[k].interactive.var_max
+						);
+					}
+					else
+					{
+						ImGui::Text(
+							"Min Weight: %f",
+							soundBanks[i]->variations[j].entries[k].noninteractive.weight_min
+						);
+						ImGui::Text(
+							"Max Weight: %f",
+							soundBanks[i]->variations[j].entries[k].noninteractive.weight_max
+						);
+					}
 					ImGui::TreePop();
 				}
 				ImGui::TreePop();
