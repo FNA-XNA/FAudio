@@ -540,8 +540,7 @@ static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category)
 
 	if (behaviour == MAX_INSTANCE_BEHAVIOR_FAIL)
 	{
-		cue->state |= FACT_STATE_STOPPED;
-		cue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_STOPPING | FACT_STATE_PAUSED);
+		FACTCue_Stop(cue, FACT_FLAG_STOP_IMMEDIATE);
 		return false;
 	}
 
