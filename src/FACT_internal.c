@@ -587,9 +587,16 @@ static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category, uin
 		{
 			*fade_in_ms = 0;
 		}
-		if (replaced->playingSound != NULL && category != NULL)
+		if (replaced->playingSound != NULL)
 		{
-			FACT_INTERNAL_BeginFadeOut(replaced->playingSound, category->fadeOutMS);
+			if (category != NULL)
+			{
+				FACT_INTERNAL_BeginFadeOut(replaced->playingSound, category->fadeOutMS);
+			}
+			else
+			{
+				FACT_INTERNAL_BeginFadeOut(replaced->playingSound, cue->data->fadeOutMS);
+			}
 		}
 		else
 		{
