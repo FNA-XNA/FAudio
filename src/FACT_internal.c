@@ -525,7 +525,7 @@ static bool get_active_variation_index(FACTCue *cue, uint16_t *index)
 }
 
 /* Returns false if the behaviour is FAIL. */
-static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category, uint16_t *fade_in_ms)
+static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category)
 {
 	const FACTAudioEngine *engine = cue->parentBank->parentEngine;
 	float quietest_volume = FACTVOLUME_MAX;
@@ -579,14 +579,6 @@ static bool handle_instance_limit(FACTCue *cue, FACTAudioCategory *category, uin
 
 	if (replaced)
 	{
-		if (category != NULL)
-		{
-			*fade_in_ms = category->fadeInMS;
-		}
-		else
-		{
-			*fade_in_ms = 0;
-		}
 		if (replaced->playingSound != NULL)
 		{
 			if (category != NULL)
@@ -839,8 +831,9 @@ bool play_sound(FACTCue *cue)
 
 	if (cue->data->instanceCount >= cue->data->instanceLimit)
 	{
-		if (!handle_instance_limit(cue, NULL, &fade_in_ms))
+		if (!handle_instance_limit(cue, NULL))
 			return false;
+		fade_in_ms = cue->data->fadeInMS;
 	}
 
 	if (sound->sound->category != FACTCATEGORY_INVALID)
@@ -848,8 +841,9 @@ bool play_sound(FACTCue *cue)
 		FACTAudioCategory *category = &cue->parentBank->parentEngine->categories[sound->sound->category];
 		if (category->instanceCount >= category->instanceLimit)
 		{
-			if (!handle_instance_limit(cue, category, &fade_in_ms))
+			if (!handle_instance_limit(cue, category))
 				return false;
+			fade_in_ms = category->fadeInMS;
 		}
 
 		++category->instanceCount;
