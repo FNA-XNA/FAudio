@@ -456,10 +456,6 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	send_queued_wavebank_notifications(pEngine);
 	pEngine->pFree(pEngine->prepared_wavebanks);
 
-	pEngine->pFree(pEngine->notifications);
-	pEngine->notification_count = 0;
-	pEngine->notifications_capacity = 0;
-
 	/* This method destroys all existing cues, sound banks, and wave banks.
 	 * It blocks until all cues are destroyed.
 	 */
@@ -471,6 +467,10 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	{
 		FACTSoundBank_Destroy((FACTSoundBank*) pEngine->sbList->entry);
 	}
+
+	pEngine->pFree(pEngine->notifications);
+	pEngine->notification_count = 0;
+	pEngine->notifications_capacity = 0;
 
 	/* Category data */
 	for (i = 0; i < pEngine->categoryCount; i += 1)
