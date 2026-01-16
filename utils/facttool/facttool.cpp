@@ -144,25 +144,32 @@ void FAudioTool_Update()
 			)) {
 				/* Load up file... */
 				buf = (uint8_t*) SDL_LoadFile(enginename, &len);
-				FACTRuntimeParameters params;
-				SDL_memset(
-					&params,
-					'\0',
-					sizeof(FACTRuntimeParameters)
-				);
-				params.pGlobalSettingsBuffer = buf;
-				params.globalSettingsBufferSize = len;
+				if (buf != NULL)
+				{
+					FACTRuntimeParameters params;
+					SDL_memset(
+						&params,
+						'\0',
+						sizeof(FACTRuntimeParameters)
+					);
+					params.pGlobalSettingsBuffer = buf;
+					params.globalSettingsBufferSize = len;
 
-				/* Create engine... */
-				FACTAudioEngine *engine;
-				FACTCreateEngine(0, &engine);
-				FACTAudioEngine_Initialize(engine, &params);
-				SDL_free(buf);
+					/* Create engine... */
+					FACTAudioEngine *engine;
+					FACTCreateEngine(0, &engine);
+					FACTAudioEngine_Initialize(engine, &params);
+					SDL_free(buf);
 
-				/* Add to UI... */
-				engines.push_back(engine);
-				engineNames.push_back(enginename);
-				engineShows.push_back(true);
+					/* Add to UI... */
+					engines.push_back(engine);
+					engineNames.push_back(enginename);
+					engineShows.push_back(true);
+				}
+				else
+				{
+					SDL_Log("Failed to load %s", enginename);
+				}
 			}
 		}
 		ImGui::End();
@@ -344,24 +351,31 @@ void FAudioTool_Update()
 				/* Load up file... */
 				buf = (uint8_t*) SDL_LoadFile(soundbankname, &len);
 
-				/* Create SoundBank... */
-				FACTSoundBank *sb;
-				FACTAudioEngine_CreateSoundBank(
-					engines[i],
-					buf,
-					len,
-					0,
-					0,
-					&sb
-				);
-				SDL_free(buf);
+				if (buf != NULL)
+				{
+					/* Create SoundBank... */
+					FACTSoundBank *sb;
+					FACTAudioEngine_CreateSoundBank(
+						engines[i],
+						buf,
+						len,
+						0,
+						0,
+						&sb
+					);
+					SDL_free(buf);
 
-				/* Add to UI... */
-				soundBanks.push_back(sb);
-				soundbankNames.push_back(
-					"SoundBank: " + std::string(sb->name)
-				);
-				soundbankShows.push_back(true);
+					/* Add to UI... */
+					soundBanks.push_back(sb);
+					soundbankNames.push_back(
+						"SoundBank: " + std::string(sb->name)
+					);
+					soundbankShows.push_back(true);
+				}
+				else
+				{
+					SDL_Log("Failed to load %s", soundbankname);
+				}
 			}
 
 			/* Open WaveBank */
@@ -374,24 +388,31 @@ void FAudioTool_Update()
 				/* Load up file... */
 				buf = (uint8_t*) SDL_LoadFile(wavebankname, &len);
 
-				/* Create WaveBank... */
-				FACTWaveBank *wb;
-				FACTAudioEngine_CreateInMemoryWaveBank(
-					engines[i],
-					buf,
-					len,
-					0,
-					0,
-					&wb
-				);
+				if (buf != NULL)
+				{
+					/* Create WaveBank... */
+					FACTWaveBank *wb;
+					FACTAudioEngine_CreateInMemoryWaveBank(
+						engines[i],
+						buf,
+						len,
+						0,
+						0,
+						&wb
+					);
 
-				/* Add to UI... */
-				waveBanks.push_back(wb);
-				wavebankMems.push_back(buf);
-				wavebankNames.push_back(
-					"WaveBank: " + std::string(wb->name)
-				);
-				wavebankShows.push_back(true);
+					/* Add to UI... */
+					waveBanks.push_back(wb);
+					wavebankMems.push_back(buf);
+					wavebankNames.push_back(
+						"WaveBank: " + std::string(wb->name)
+					);
+					wavebankShows.push_back(true);
+				}
+				else
+				{
+					SDL_Log("Failed to load %s", wavebankname);
+				}
 			}
 
 			ImGui::Separator();
