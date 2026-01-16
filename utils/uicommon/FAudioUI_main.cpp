@@ -167,6 +167,7 @@ int main(int argc, char **argv)
 		SDL_WINDOW_RESIZABLE
 	);
 	renderer = SDL_CreateRenderer(window, NULL);
+	SDL_SetRenderVSync(renderer, 1);
 	SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
 
 	/* ImGui setup */
@@ -214,6 +215,7 @@ int main(int argc, char **argv)
 	SDL_SetTextureBlendMode(fontTexture, SDL_BLENDMODE_BLEND);
 	io.Fonts->TexID = (void*) fontTexture;
 
+	SDL_StartTextInput(window);
 	while (run)
 	{
 		while (SDL_PollEvent(&evt) == 1)
