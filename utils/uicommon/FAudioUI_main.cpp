@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 		TOOL_NAME,
 		TOOL_WIDTH,
 		TOOL_HEIGHT,
-		SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
+		SDL_WINDOW_RESIZABLE
 	);
 	renderer = SDL_CreateRenderer(window, NULL);
 	SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
