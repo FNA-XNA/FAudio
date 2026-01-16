@@ -41,6 +41,24 @@ extern int TOOL_HEIGHT;
 extern void FAudioTool_Update();
 extern void FAudioTool_Quit();
 
+/* https://github.com/libsdl-org/SDL/issues/9009 */
+static int SDL_RenderGeometryRaw8BitColor(SDL_Renderer* renderer, ImVector<SDL_FColor>& colors_out, SDL_Texture* texture, const float* xy, int xy_stride, const SDL_Color* color, int color_stride, const float* uv, int uv_stride, int num_vertices, const void* indices, int num_indices, int size_indices)
+{
+    const Uint8* color2 = (const Uint8*)color;
+    colors_out.resize(num_vertices);
+    SDL_FColor* color3 = colors_out.Data;
+    for (int i = 0; i < num_vertices; i++)
+    {
+        color3[i].r = color->r / 255.0f;
+        color3[i].g = color->g / 255.0f;
+        color3[i].b = color->b / 255.0f;
+        color3[i].a = color->a / 255.0f;
+        color2 += color_stride;
+        color = (const SDL_Color*)color2;
+    }
+    return SDL_RenderGeometryRaw(renderer, texture, xy, xy_stride, color3, sizeof(*color3), uv, uv_stride, num_vertices, indices, num_indices, size_indices);
+}
+
 /* ImGui Callbacks */
 
 static void RenderDrawLists(ImDrawData *draw_data)
@@ -48,6 +66,7 @@ static void RenderDrawLists(ImDrawData *draw_data)
 	ImGuiIO& io = ImGui::GetIO();
 	SDL_Renderer *renderer = (SDL_Renderer*) io.BackendRendererUserData;
 	SDL_Rect rect;
+	ImVector<SDL_FColor> ColorBuffer;
 
 	/* Set up viewport/scissor rects (based on display size/scale */
 	rect.x = 0;
@@ -84,12 +103,13 @@ static void RenderDrawLists(ImDrawData *draw_data)
 			rect.h = (int) (pcmd->ClipRect.w - pcmd->ClipRect.y);
 			SDL_SetRenderClipRect(renderer, &rect);
 
-			SDL_RenderGeometryRaw(
+			SDL_RenderGeometryRaw8BitColor(
 				renderer,
+				ColorBuffer,
 				(SDL_Texture*) pcmd->TextureId,
 				(const float*) xy,
 				(int) sizeof(ImDrawVert),
-				(const SDL_FColor*) cl,
+				(const SDL_Color*) cl,
 				(int) sizeof(ImDrawVert),
 				(const float*) uv,
 				(int) sizeof(ImDrawVert),
