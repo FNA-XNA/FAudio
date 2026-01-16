@@ -2069,9 +2069,17 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 		FAudioSourceVoice_ExitLoop(pWave->voice, 0);
 	}
 
-	notification.cueIndex = pWave->parentCue->index;
 	notification.pCue = pWave->parentCue;
-	notification.pSoundBank = pWave->parentCue->parentBank;
+	if (pWave->parentCue != NULL)
+	{
+		notification.cueIndex = pWave->parentCue->index;
+		notification.pSoundBank = pWave->parentCue->parentBank;
+	}
+	else
+	{
+		notification.cueIndex = FACTINDEX_INVALID;
+		notification.pSoundBank = NULL;
+	}
 	notification.pWave = pWave;
 	notification.pWaveBank = pWave->parentBank;
 	send_wave_notification(pWave->parentBank->parentEngine, FACTNOTIFICATIONTYPE_WAVESTOP, &notification);
