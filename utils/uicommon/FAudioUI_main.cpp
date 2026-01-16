@@ -288,11 +288,11 @@ int main(int argc, char **argv)
 		/* Reset some things now that input's updated */
 		if (io.MouseDrawCursor)
 		{
-			SDL_ShowCursor();
+			SDL_HideCursor();
 		}
 		else
 		{
-			SDL_HideCursor();
+			SDL_ShowCursor();
 		}
 		tLast = tCur;
 		mouseClicked[0] = 0;
