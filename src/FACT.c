@@ -1104,6 +1104,9 @@ uint32_t FACTSoundBank_Prepare(
 		return 1;
 	}
 
+	if (nCueIndex >= pSoundBank->cueCount)
+		return FACTENGINE_E_INVALIDVARIABLEINDEX;
+
 	*ppCue = (FACTCue*) pSoundBank->parentEngine->pMalloc(sizeof(FACTCue));
 	FAudio_zero(*ppCue, sizeof(FACTCue));
 
