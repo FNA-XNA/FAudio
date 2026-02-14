@@ -1113,7 +1113,7 @@ uint32_t FAudioVoice_SetOutputVoices(
 	const FAudioVoiceSends *pSendList
 ) {
 	uint32_t i;
-	uint32_t outChannels;
+	uint32_t sendRate, nextRate, outChannels;
 	FAudioVoiceSends defaultSends;
 	FAudioSendDescriptor defaultSend;
 
@@ -1123,6 +1123,29 @@ uint32_t FAudioVoice_SetOutputVoices(
 	{
 		LOG_API_EXIT(voice->audio)
 		return FAUDIO_E_INVALID_CALL;
+	}
+
+	if (pSendList != NULL && pSendList->SendCount > 1)
+	{
+		if (pSendList->pSends[0].pOutputVoice->type == FAUDIO_VOICE_SOURCE)
+		{
+			LOG_API_EXIT(voice->audio)
+			return FAUDIO_E_INVALID_CALL;
+		}
+		sendRate = (pSendList->pSends[0].pOutputVoice->type == FAUDIO_VOICE_MASTER) ?
+			pSendList->pSends[0].pOutputVoice->master.inputSampleRate :
+			pSendList->pSends[0].pOutputVoice->mix.inputSampleRate;
+		for (i = 0; i < pSendList->SendCount; i += 1)
+		{
+			nextRate = (pSendList->pSends[i].pOutputVoice->type == FAUDIO_VOICE_MASTER) ?
+				pSendList->pSends[i].pOutputVoice->master.inputSampleRate :
+				pSendList->pSends[i].pOutputVoice->mix.inputSampleRate;
+			if (nextRate != sendRate)
+			{
+				LOG_API_EXIT(voice->audio)
+				return FAUDIO_E_INVALID_CALL;
+			}
+		}
 	}
 
 	FAudio_PlatformLockMutex(voice->sendLock);
