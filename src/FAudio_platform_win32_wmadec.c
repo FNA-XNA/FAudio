@@ -154,7 +154,7 @@ static HRESULT FAudio_WMAMF_ProcessOutput(
 	return S_OK;
 };
 
-void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *decodeCache, uint32_t samples)
+void decode_wma(FAudioVoice *voice, struct queued_buffer *buffer, float *decodeCache, uint32_t samples)
 {
 	const FAudioWaveFormatExtensible *wfx = (FAudioWaveFormatExtensible *)voice->src.format;
 	size_t samples_pos, samples_size, copy_size = 0;
@@ -167,7 +167,7 @@ void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *decodeCache, ui
 	{
 		if (wfx->Format.wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
 		{
-			const FAudioBufferWMA *wma = &voice->src.queued_buffers[0].bufferWMA;
+			const FAudioBufferWMA *wma = &buffer->bufferWMA;
 			const UINT32 *output_sizes = wma->pDecodedPacketCumulativeBytes;
 
 			impl->input_size = wfx->Format.nBlockAlign;
@@ -202,7 +202,7 @@ void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *decodeCache, ui
 			0
 		);
 		FAudio_assert(!FAILED(hr) && "Failed to notify decoder stream start!");
-		FAudio_WMAMF_ProcessInput(voice, buffer);
+		FAudio_WMAMF_ProcessInput(voice, &buffer->buffer);
 	}
 
 	samples_pos = voice->src.curBufferOffset * voice->src.format->nChannels * sizeof(float);
@@ -210,11 +210,11 @@ void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *decodeCache, ui
 
 	while (impl->output_pos < samples_pos + samples_size)
 	{
-		hr = FAudio_WMAMF_ProcessOutput(voice, buffer);
+		hr = FAudio_WMAMF_ProcessOutput(voice, &buffer->buffer);
 		if (FAILED(hr)) goto error;
 		if (hr == S_OK) continue;
 
-		hr  = FAudio_WMAMF_ProcessInput(voice, buffer);
+		hr  = FAudio_WMAMF_ProcessInput(voice, &buffer->buffer);
 		if (FAILED(hr)) goto error;
 		if (hr == S_OK) continue;
 
@@ -605,7 +605,7 @@ void FAudio_WMADEC_end_buffer(FAudioSourceVoice *voice)
 
 #else /* HAVE_WMADEC */
 
-void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *dst, uint32_t sample_count)
+void decode_wma(FAudioVoice *voice, struct queued_buffer *buffer, float *dst, uint32_t sample_count)
 {
 	LOG_FUNC_ENTER(voice->audio)
 	LOG_ERROR(voice->audio, "%s", "WMA IS NOT SUPPORTED IN THIS BUILD!")
