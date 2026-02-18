@@ -297,12 +297,10 @@ typedef enum FAudioVoiceType
 	FAUDIO_VOICE_MASTER
 } FAudioVoiceType;
 
-typedef struct FAudioBufferEntry FAudioBufferEntry;
-struct FAudioBufferEntry
+struct queued_buffer
 {
 	FAudioBuffer buffer;
 	FAudioBufferWMA bufferWMA;
-	FAudioBufferEntry *next;
 };
 
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(
@@ -527,8 +525,12 @@ struct FAudioVoice
 			float freqRatio;
 			uint8_t newBuffer;
 			uint64_t totalSamples;
-			FAudioBufferEntry *bufferList;
-			FAudioBufferEntry *flushList;
+
+			struct queued_buffer *queued_buffers;
+			size_t queued_buffer_count, queued_buffers_capacity;
+			struct queued_buffer *flush_buffers;
+			size_t flush_buffer_count, flush_buffers_capacity;
+
 			FAudioMutex bufferLock;
 		} src;
 		struct
@@ -579,6 +581,8 @@ uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
 	const FAudioVoiceSends *pSendList
 );
 extern const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64];
+
+bool array_reserve(FAudio *audio, void **elements, size_t *capacity, size_t count, size_t size);
 
 /* Debug */
 

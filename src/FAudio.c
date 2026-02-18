@@ -414,8 +414,6 @@ uint32_t FAudio_CreateSourceVoice(
 	(*ppSourceVoice)->src.active = 0;
 	(*ppSourceVoice)->src.freqRatio = 1.0f;
 	(*ppSourceVoice)->src.totalSamples = 0;
-	(*ppSourceVoice)->src.bufferList = NULL;
-	(*ppSourceVoice)->src.flushList = NULL;
 	(*ppSourceVoice)->src.bufferLock = FAudio_PlatformCreateMutex();
 	LOG_MUTEX_CREATE(audio, (*ppSourceVoice)->src.bufferLock)
 
@@ -2370,8 +2368,6 @@ static void destroy_voice(FAudioVoice *voice)
 
 	if (voice->type == FAUDIO_VOICE_SOURCE)
 	{
-		FAudioBufferEntry *entry, *next;
-
 #ifdef FAUDIO_DUMP_VOICES
 		FAudio_DUMPVOICE_Finalize((FAudioSourceVoice*) voice);
 #endif /* FAUDIO_DUMP_VOICES */
@@ -2394,22 +2390,8 @@ static void destroy_voice(FAudioVoice *voice)
 		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-		entry = voice->src.bufferList;
-		while (entry != NULL)
-		{
-			next = entry->next;
-			voice->audio->pFree(entry);
-			entry = next;
-		}
-
-		entry = voice->src.flushList;
-		while (entry != NULL)
-		{
-			next = entry->next;
-			voice->audio->pFree(entry);
-			entry = next;
-		}
-
+		voice->audio->pFree(voice->src.queued_buffers);
+		voice->audio->pFree(voice->src.flush_buffers);
 		voice->audio->pFree(voice->src.format);
 		LOG_MUTEX_DESTROY(voice->audio, voice->src.bufferLock)
 		FAudio_PlatformDestroyMutex(voice->src.bufferLock);
@@ -2634,7 +2616,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 ) {
 	uint32_t adpcmMask;
 	uint32_t playBegin, playLength, loopBegin, loopLength, bufferLength;
-	FAudioBufferEntry *entry, *list;
+	struct queued_buffer *entry;
 
 	LOG_API_ENTER(voice->audio)
 	LOG_INFO(
@@ -2754,8 +2736,13 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		loopLength = playBegin + playLength;
 	}
 
-	/* Allocate, now that we have valid input */
-	entry = (FAudioBufferEntry*) voice->audio->pMalloc(sizeof(FAudioBufferEntry));
+	FAudio_PlatformLockMutex(voice->src.bufferLock);
+	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+
+	array_reserve(voice->audio, (void **)&voice->src.queued_buffers, &voice->src.queued_buffers_capacity,
+		voice->src.queued_buffer_count + 1, sizeof(*voice->src.queued_buffers));
+
+	entry = &voice->src.queued_buffers[voice->src.queued_buffer_count++];
 	FAudio_memcpy(&entry->buffer, pBuffer, sizeof(FAudioBuffer));
 	entry->buffer.PlayBegin = playBegin;
 	entry->buffer.PlayLength = playLength;
@@ -2765,7 +2752,6 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	{
 		FAudio_memcpy(&entry->bufferWMA, pBufferWMA, sizeof(FAudioBufferWMA));
 	}
-	entry->next = NULL;
 
 	if (	voice->audio->version <= 7 && (
 		entry->buffer.LoopCount > 0 &&
@@ -2782,30 +2768,12 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 #endif /* FAUDIO_DUMP_VOICES */
 
-	/* Submit! */
-	FAudio_PlatformLockMutex(voice->src.bufferLock);
-	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-	if (voice->src.bufferList == NULL)
+	if (voice->src.queued_buffer_count == 1)
 	{
-		voice->src.bufferList = entry;
 		voice->src.curBufferOffset = entry->buffer.PlayBegin;
 		voice->src.newBuffer = 1;
 	}
-	else
-	{
-		list = voice->src.bufferList;
-		while (list->next != NULL)
-		{
-			list = list->next;
-		}
-		list->next = entry;
 
-		/* For some bizarre reason we get scenarios where a buffer is freed, only to
-		 * have the allocator give us the exact same address and somehow get a single
-		 * buffer referencing itself. I don't even know.
-		 */
-		FAudio_assert(list != entry);
-	}
 	LOG_INFO(
 		voice->audio,
 		"%p: appended buffer %p",
@@ -2821,7 +2789,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudioSourceVoice *voice
 ) {
-	FAudioBufferEntry *entry, *latest;
+	size_t offset = 0;
 
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
@@ -2829,37 +2797,26 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
+	array_reserve(voice->audio, (void **)&voice->src.flush_buffers, &voice->src.flush_buffers_capacity,
+		voice->src.flush_buffer_count + voice->src.queued_buffer_count, sizeof(*voice->src.flush_buffers));
+
 	/* If the source is playing, don't flush the active buffer */
-	entry = voice->src.bufferList;
-	if ((voice->src.active == 1) && entry != NULL && !voice->src.newBuffer)
+	if (voice->src.active == 1 && voice->src.queued_buffer_count > 0 && !voice->src.newBuffer)
 	{
-		entry = entry->next;
-		voice->src.bufferList->next = NULL;
+		offset = 1;
 	}
 	else
 	{
 		voice->src.curBufferOffset = 0;
-		voice->src.bufferList = NULL;
 		voice->src.newBuffer = 0;
 	}
 
-	/* Move them to the pending flush list */
-	if (entry != NULL)
-	{
-		if (voice->src.flushList == NULL)
-		{
-			voice->src.flushList = entry;
-		}
-		else
-		{
-			latest = voice->src.flushList;
-			while (latest->next != NULL)
-			{
-				latest = latest->next;
-			}
-			latest->next = entry;
-		}
-	}
+	if (voice->src.queued_buffer_count > offset)
+		FAudio_memcpy(voice->src.flush_buffers + voice->src.flush_buffer_count,
+			voice->src.queued_buffers + offset,
+			voice->src.queued_buffer_count - offset);
+	voice->src.queued_buffer_count -= offset;
+	voice->src.flush_buffer_count += offset;
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
@@ -2870,19 +2827,14 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 uint32_t FAudioSourceVoice_Discontinuity(
 	FAudioSourceVoice *voice
 ) {
-	FAudioBufferEntry *buf;
-
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
-	if (voice->src.bufferList != NULL)
-	{
-		for (buf = voice->src.bufferList; buf->next != NULL; buf = buf->next);
-		buf->buffer.Flags |= FAUDIO_END_OF_STREAM;
-	}
+	if (voice->src.queued_buffer_count)
+		voice->src.queued_buffers[voice->src.queued_buffer_count - 1].buffer.Flags |= FAUDIO_END_OF_STREAM;
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
@@ -2911,10 +2863,8 @@ uint32_t FAudioSourceVoice_ExitLoop(
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
-	if (voice->src.bufferList != NULL)
-	{
-		voice->src.bufferList->buffer.LoopCount = 0;
-	}
+	if (voice->src.queued_buffer_count)
+		voice->src.queued_buffers[0].buffer.LoopCount = 0;
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
@@ -2927,8 +2877,6 @@ void FAudioSourceVoice_GetState(
 	FAudioVoiceState *pVoiceState,
 	uint32_t Flags
 ) {
-	FAudioBufferEntry *entry;
-
 	LOG_API_ENTER(voice->audio)
 	FAudio_assert(voice->type == FAUDIO_VOICE_SOURCE);
 
@@ -2942,27 +2890,13 @@ void FAudioSourceVoice_GetState(
 
 	pVoiceState->BuffersQueued = 0;
 	pVoiceState->pCurrentBufferContext = NULL;
-	if (voice->src.bufferList != NULL)
-	{
-		entry = voice->src.bufferList;
-		if (!voice->src.newBuffer)
-		{
-			pVoiceState->pCurrentBufferContext = entry->buffer.pContext;
-		}
-		do
-		{
-			pVoiceState->BuffersQueued += 1;
-			entry = entry->next;
-		} while (entry != NULL);
-	}
+
+	if (voice->src.queued_buffer_count && !voice->src.newBuffer)
+		pVoiceState->pCurrentBufferContext = voice->src.queued_buffers[0].buffer.pContext;
+	pVoiceState->BuffersQueued += voice->src.queued_buffer_count;
 
 	/* Pending flushed buffers also count */
-	entry = voice->src.flushList;
-	while (entry != NULL)
-	{
-		pVoiceState->BuffersQueued += 1;
-		entry = entry->next;
-	}
+	pVoiceState->BuffersQueued += voice->src.flush_buffer_count;
 
 	LOG_INFO(
 		voice->audio,
@@ -3035,8 +2969,7 @@ uint32_t FAudioSourceVoice_SetSourceSampleRate(
 
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-	if (	voice->audio->version > 7 &&
-		voice->src.bufferList != NULL	)
+	if (voice->audio->version > 7 && voice->src.queued_buffer_count > 0)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)

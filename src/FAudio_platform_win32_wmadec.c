@@ -158,7 +158,7 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 	{
 		if (wfx->Format.wFormatTag == FAUDIO_FORMAT_EXTENSIBLE)
 		{
-			const FAudioBufferWMA *wma = &voice->src.bufferList->bufferWMA;
+			const FAudioBufferWMA *wma = &voice->src.queued_buffers[0].bufferWMA;
 			const UINT32 *output_sizes = wma->pDecodedPacketCumulativeBytes;
 
 			impl->input_size = wfx->Format.nBlockAlign;
