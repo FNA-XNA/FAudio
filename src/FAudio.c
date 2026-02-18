@@ -2632,7 +2632,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA
 ) {
-	uint32_t adpcmMask, *adpcmByteCount;
+	uint32_t adpcmMask;
 	uint32_t playBegin, playLength, loopBegin, loopLength, bufferLength;
 	FAudioBufferEntry *entry, *list;
 
@@ -2746,12 +2746,6 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		playLength -= playLength % adpcmMask;
 		loopBegin -= loopBegin % adpcmMask;
 		loopLength -= loopLength % adpcmMask;
-
-		/* This is basically a const_cast... */
-		adpcmByteCount = (uint32_t*) &pBuffer->AudioBytes;
-		*adpcmByteCount = (
-			pBuffer->AudioBytes / voice->src.format->nBlockAlign
-		) * voice->src.format->nBlockAlign;
 	}
 	else if (pBufferWMA != NULL || voice->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
 	{
