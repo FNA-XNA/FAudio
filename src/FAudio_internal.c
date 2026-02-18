@@ -1807,15 +1807,8 @@ static inline int16_t FAudio_INTERNAL_ParseNibble(
 	return sample;
 }
 
-#define READ(item, type) \
-	item = *((type*) *buf); \
-	*buf += sizeof(type);
-
-static inline void FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
-	uint8_t **buf,
-	int16_t *blockCache,
-	uint32_t align
-) {
+static void decode_mono_adpcm_block(const uint8_t *src, int16_t *dst, uint32_t block_size)
+{
 	uint32_t i;
 
 	/* Temp storage for ADPCM blocks */
@@ -1824,40 +1817,39 @@ static inline void FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
 	int16_t sample1;
 	int16_t sample2;
 
-	/* Preamble */
-	READ(predictor, uint8_t)
-	READ(delta, int16_t)
-	READ(sample1, int16_t)
-	READ(sample2, int16_t)
-	align -= 7;
+	predictor = src[0];
+	delta = *(int16_t *)&src[1];
+	sample1 = *(int16_t *)&src[3];
+	sample2 = *(int16_t *)&src[5];
+	block_size -= 7;
+	src += 7;
 
 	/* Samples */
-	*blockCache++ = sample2;
-	*blockCache++ = sample1;
-	for (i = 0; i < align; i += 1, *buf += 1)
+	*dst++ = sample2;
+	*dst++ = sample1;
+	for (i = 0; i < block_size; ++i)
 	{
-		*blockCache++ = FAudio_INTERNAL_ParseNibble(
-			*(*buf) >> 4,
+		*dst++ = FAudio_INTERNAL_ParseNibble(
+			*src >> 4,
 			predictor,
 			&delta,
 			&sample1,
 			&sample2
 		);
-		*blockCache++ = FAudio_INTERNAL_ParseNibble(
-			*(*buf) & 0x0F,
+		*dst++ = FAudio_INTERNAL_ParseNibble(
+			*src & 0xf,
 			predictor,
 			&delta,
 			&sample1,
 			&sample2
 		);
+
+		++src;
 	}
 }
 
-static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
-	uint8_t **buf,
-	int16_t *blockCache,
-	uint32_t align
-) {
+static void decode_stereo_adpcm_block(const uint8_t *src, int16_t *dst, uint32_t block_size)
+{
 	uint32_t i;
 
 	/* Temp storage for ADPCM blocks */
@@ -1871,44 +1863,47 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 	int16_t r_sample2;
 
 	/* Preamble */
-	READ(l_predictor, uint8_t)
-	READ(r_predictor, uint8_t)
-	READ(l_delta, int16_t)
-	READ(r_delta, int16_t)
-	READ(l_sample1, int16_t)
-	READ(r_sample1, int16_t)
-	READ(l_sample2, int16_t)
-	READ(r_sample2, int16_t)
-	align -= 14;
+	l_predictor = src[0];
+	r_predictor = src[1];
+	l_delta = *(int16_t *)&src[2];
+	r_delta = *(int16_t *)&src[4];
+	l_sample1 = *(int16_t *)&src[6];
+	r_sample1 = *(int16_t *)&src[8];
+	l_sample2 = *(int16_t *)&src[10];
+	r_sample2 = *(int16_t *)&src[12];
+	block_size -= 14;
+	src += 14;
 
 	/* Samples */
-	*blockCache++ = l_sample2;
-	*blockCache++ = r_sample2;
-	*blockCache++ = l_sample1;
-	*blockCache++ = r_sample1;
-	for (i = 0; i < align; i += 1, *buf += 1)
+	*dst++ = l_sample2;
+	*dst++ = r_sample2;
+	*dst++ = l_sample1;
+	*dst++ = r_sample1;
+	for (i = 0; i < block_size; ++i)
 	{
-		*blockCache++ = FAudio_INTERNAL_ParseNibble(
-			*(*buf) >> 4,
+		*dst++ = FAudio_INTERNAL_ParseNibble(
+			*src >> 4,
 			l_predictor,
 			&l_delta,
 			&l_sample1,
 			&l_sample2
 		);
-		*blockCache++ = FAudio_INTERNAL_ParseNibble(
-			*(*buf) & 0x0F,
+		*dst++ = FAudio_INTERNAL_ParseNibble(
+			*src & 0xf,
 			r_predictor,
 			&r_delta,
 			&r_sample1,
 			&r_sample2
 		);
+
+		++src;
 	}
 }
 
-#undef READ
-
 void FAudio_INTERNAL_DecodeMonoMSADPCM(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
 {
+	const uint32_t block_size = voice->src.format->nBlockAlign;
+
 	/* Loop variables */
 	uint32_t copy, done = 0;
 
@@ -1938,16 +1933,13 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(FAudioVoice *voice, const void *src, floa
 	while (done < samples)
 	{
 		copy = FAudio_min(samples - done, bsize - midOffset);
-		FAudio_INTERNAL_DecodeMonoMSADPCMBlock(
-			&buf,
-			blockCache,
-			voice->src.format->nBlockAlign
-		);
+		decode_mono_adpcm_block(buf, blockCache, block_size);
 		FAudio_INTERNAL_Convert_S16_To_F32(
 			blockCache + midOffset,
 			decodeCache,
 			copy
 		);
+		buf += block_size;
 		decodeCache += copy;
 		done += copy;
 		midOffset = 0;
@@ -1958,6 +1950,8 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(FAudioVoice *voice, const void *src, floa
 
 void FAudio_INTERNAL_DecodeStereoMSADPCM(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
 {
+	const uint32_t block_size = voice->src.format->nBlockAlign;
+
 	/* Loop variables */
 	uint32_t copy, done = 0;
 
@@ -1987,16 +1981,13 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(FAudioVoice *voice, const void *src, fl
 	while (done < samples)
 	{
 		copy = FAudio_min(samples - done, bsize - midOffset);
-		FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
-			&buf,
-			blockCache,
-			voice->src.format->nBlockAlign
-		);
+		decode_stereo_adpcm_block(buf, blockCache, block_size);
 		FAudio_INTERNAL_Convert_S16_To_F32(
 			blockCache + (midOffset * 2),
 			decodeCache,
 			copy * 2
 		);
+		buf += block_size;
 		decodeCache += copy * 2;
 		done += copy;
 		midOffset = 0;
