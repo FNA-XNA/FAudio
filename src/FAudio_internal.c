@@ -385,6 +385,13 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 	return result;
 }
 
+static uint32_t buffer_get_end(const FAudioBuffer *buffer)
+{
+	if (buffer->LoopCount)
+		return buffer->LoopBegin + buffer->LoopLength;
+	return buffer->PlayBegin + buffer->PlayLength;
+}
+
 static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
@@ -400,7 +407,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	{
 		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
 		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
-		uint32_t end, decode_count;
+		uint32_t decode_count;
 
 		/* Start-of-buffer behavior */
 		if (voice->src.newBuffer)
@@ -434,12 +441,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			}
 		}
 
-		end = (buffer->LoopCount > 0) ?
-			(buffer->LoopBegin + buffer->LoopLength) :
-			buffer->PlayBegin + buffer->PlayLength;
-
 		/* Number of samples we are decoding in one call. */
-		decode_count = FAudio_min(*toDecode - decoded, end - voice->src.curBufferOffset);
+		decode_count = FAudio_min(*toDecode - decoded,
+			buffer_get_end(buffer) - voice->src.curBufferOffset);
 
 #ifdef HAVE_WMADEC
 		if (voice->src.wmadec)
@@ -621,14 +625,11 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	{
 		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
 		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
-		uint32_t end, decode_count;
-
-		end = (buffer->LoopCount > 0) ?
-			(buffer->LoopBegin + buffer->LoopLength) :
-			buffer->PlayBegin + buffer->PlayLength;
+		uint32_t decode_count;
 
 		/* Number of samples we are decoding in one call. */
-		decode_count = FAudio_min(EXTRA_DECODE_PADDING, end - voice->src.curBufferOffset);
+		decode_count = FAudio_min(EXTRA_DECODE_PADDING,
+			buffer_get_end(buffer) - voice->src.curBufferOffset);
 
 #ifdef HAVE_WMADEC
 		if (voice->src.wmadec)
