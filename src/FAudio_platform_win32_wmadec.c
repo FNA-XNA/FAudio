@@ -28,18 +28,19 @@ struct FAudioWMADEC
 	size_t output_size;
 	size_t input_pos;
 	size_t input_size;
+	bool eos;
 };
 
 static void send_eos(struct FAudioWMADEC *decoder)
 {
 	HRESULT hr;
 
-	if (!decoder->input_size)
+	if (decoder->eos)
 		return;
 
 	hr = IMFTransform_ProcessMessage(decoder->decoder, MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
 	FAudio_assert(!FAILED(hr) && "Failed to send EOS!");
-	decoder->input_size = 0;
+	decoder->eos = true;
 }
 
 static HRESULT FAudio_WMAMF_ProcessInput(
@@ -221,7 +222,8 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 		if (FAILED(hr)) goto error;
 		if (hr == S_OK) continue;
 
-		if (!impl->input_size) break;
+		if (impl->eos)
+			break;
 
 		send_eos(impl);
 	}
@@ -601,6 +603,7 @@ void FAudio_WMADEC_end_buffer(FAudioSourceVoice *voice)
 
 	impl->output_pos = 0;
 	impl->input_pos = 0;
+	impl->eos = false;
 
 	LOG_FUNC_EXIT(voice->audio)
 }
