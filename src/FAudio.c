@@ -472,13 +472,15 @@ uint32_t FAudio_CreateSourceVoice(
 				COMPARE_GUID(WMAUDIO_LOSSLESS)	)
 		{
 #ifdef HAVE_WMADEC
-			if (FAudio_WMADEC_init(*ppSourceVoice, fmtex->SubFormat.Data1) != 0)
+			uint32_t hr;
+
+			if ((hr = FAudio_WMADEC_init(*ppSourceVoice, fmtex->SubFormat.Data1)))
 			{
-				(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
+				audio->pFree(*ppSourceVoice);
+				return hr;
 			}
 #else
 			FAudio_assert(0 && "xWMA is not supported!");
-			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
 #endif /* HAVE_WMADEC */
 		}
 		else
@@ -490,13 +492,15 @@ uint32_t FAudio_CreateSourceVoice(
 	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
 	{
 #ifdef HAVE_WMADEC
-		if (FAudio_WMADEC_init(*ppSourceVoice, FAUDIO_FORMAT_XMAUDIO2) != 0)
+		uint32_t hr;
+
+		if ((hr = FAudio_WMADEC_init(*ppSourceVoice, FAUDIO_FORMAT_XMAUDIO2)))
 		{
-			(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
+			audio->pFree(*ppSourceVoice);
+			return hr;
 		}
 #else
 		FAudio_assert(0 && "XMA2 is not supported!");
-		(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodeWMAERROR;
 #endif /* HAVE_WMADEC */
 	}
 	else if ((*ppSourceVoice)->src.format->wFormatTag == FAUDIO_FORMAT_MSADPCM)

@@ -784,6 +784,7 @@ DECODE_FUNC(WMAERROR)
 
 /* WMA decoding */
 
+void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *dst, uint32_t sample_count);
 #ifdef HAVE_WMADEC
 uint32_t FAudio_WMADEC_init(FAudioSourceVoice *pSourceVoice, uint32_t type);
 void FAudio_WMADEC_free(FAudioSourceVoice *voice);
