@@ -304,7 +304,7 @@ struct queued_buffer
 };
 
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(FAudioVoice *voice,
-	const void *src, float *dst, uint32_t sample_count);
+	const void *src, float *dst, uint32_t block_offset, uint32_t sample_count);
 
 typedef void (FAUDIOCALL * FAudioResampleCallback)(
 	float *restrict dCache,
@@ -515,6 +515,13 @@ struct FAudioVoice
 			FAudioDecodeCallback decode;
 			FAudioResampleCallback resample;
 			FAudioVoiceCallback *callback;
+
+			/* Number of samples in a block, where the byte size of
+			 * a block is format->nBlockAlign.
+			 *
+			 * This is 1 for PCM formats, but depends on the format
+			 * for ADPCM. For WMV it is not used. */
+			uint32_t samples_per_block;
 
 			/* Dynamic */
 			uint8_t active;
@@ -762,7 +769,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 /* Decoders */
 
 #define DECODE_FUNC(type) extern void FAudio_INTERNAL_Decode##type(FAudioVoice *voice, \
-	const void *src, float *dst, uint32_t sample_count);
+	const void *src, float *dst, uint32_t block_offset, uint32_t sample_count);
 DECODE_FUNC(PCM8)
 DECODE_FUNC(PCM16)
 DECODE_FUNC(PCM24)
