@@ -303,12 +303,8 @@ struct queued_buffer
 	FAudioBufferWMA bufferWMA;
 };
 
-typedef void (FAUDIOCALL * FAudioDecodeCallback)(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,	/* Buffer to decode */
-	float *decodeCache,	/* Decode into here */
-	uint32_t samples	/* Samples to decode */
-);
+typedef void (FAUDIOCALL * FAudioDecodeCallback)(FAudioVoice *voice,
+	const void *src, float *dst, uint32_t sample_count);
 
 typedef void (FAUDIOCALL * FAudioResampleCallback)(
 	float *restrict dCache,
@@ -765,13 +761,8 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON);
 
 /* Decoders */
 
-#define DECODE_FUNC(type) \
-	extern void FAudio_INTERNAL_Decode##type( \
-		FAudioVoice *voice, \
-		FAudioBuffer *buffer, \
-		float *decodeCache, \
-		uint32_t samples \
-	);
+#define DECODE_FUNC(type) extern void FAudio_INTERNAL_Decode##type(FAudioVoice *voice, \
+	const void *src, float *dst, uint32_t sample_count);
 DECODE_FUNC(PCM8)
 DECODE_FUNC(PCM16)
 DECODE_FUNC(PCM24)
