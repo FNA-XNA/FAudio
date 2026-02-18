@@ -371,6 +371,8 @@ uint32_t FAudio_CreateSourceVoice(
 			fmtex->wfx.nBlockAlign / fmtex->wfx.nChannels
 		) - 6) * 2;
 		(*ppSourceVoice)->src.format = &fmtex->wfx;
+
+		(*ppSourceVoice)->src.samples_per_block = fmtex->wSamplesPerBlock;
 	}
 	else if (pSourceFormat->wFormatTag == FAUDIO_FORMAT_XMAUDIO2)
 	{
@@ -448,6 +450,8 @@ uint32_t FAudio_CreateSourceVoice(
 				FAudio_assert(0 && "Unrecognized wBitsPerSample!");
 			}
 			#undef DECODER
+
+			(*ppSourceVoice)->src.samples_per_block = 1;
 		}
 		else if (COMPARE_GUID(IEEE_FLOAT))
 		{
@@ -466,6 +470,8 @@ uint32_t FAudio_CreateSourceVoice(
 			{
 				(*ppSourceVoice)->src.decode = FAudio_INTERNAL_DecodePCM32F;
 			}
+
+			(*ppSourceVoice)->src.samples_per_block = 1;
 		}
 		else if (	COMPARE_GUID(WMAUDIO2) ||
 				COMPARE_GUID(WMAUDIO3) ||
