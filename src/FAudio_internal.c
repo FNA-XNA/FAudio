@@ -406,7 +406,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	while (decoded < *toDecode && voice->src.queued_buffer_count)
 	{
 		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
-		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
+		struct queued_buffer *buffer = &voice->src.queued_buffers[0];
 		uint32_t decode_count;
 
 		/* Start-of-buffer behavior */
@@ -427,7 +427,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 				voice->src.callback->OnBufferStart(
 					voice->src.callback,
-					buffer->pContext
+					buffer->buffer.pContext
 				);
 
 				FAudio_PlatformLockMutex(voice->audio->sourceLock);
@@ -443,7 +443,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 		/* Number of samples we are decoding in one call. */
 		decode_count = FAudio_min(*toDecode - decoded,
-			buffer_get_end(buffer) - voice->src.curBufferOffset);
+			buffer_get_end(&buffer->buffer) - voice->src.curBufferOffset);
 
 #ifdef HAVE_WMADEC
 		if (voice->src.wmadec)
@@ -453,7 +453,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		else
 #endif
 		{
-			voice->src.decode(voice, buffer, dst, decode_count);
+			voice->src.decode(voice, &buffer->buffer, dst, decode_count);
 		}
 
 		LOG_INFO(
@@ -473,12 +473,12 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		/* End-of-buffer behavior */
 		if (decoded < *toDecode)
 		{
-			if (buffer->LoopCount > 0)
+			if (buffer->buffer.LoopCount > 0)
 			{
-				voice->src.curBufferOffset = buffer->LoopBegin;
-				if (buffer->LoopCount < FAUDIO_LOOP_INFINITE)
+				voice->src.curBufferOffset = buffer->buffer.LoopBegin;
+				if (buffer->buffer.LoopCount < FAUDIO_LOOP_INFINITE)
 				{
-					buffer->LoopCount -= 1;
+					buffer->buffer.LoopCount -= 1;
 				}
 				if (	voice->src.callback != NULL &&
 					voice->src.callback->OnLoopEnd != NULL	)
@@ -494,7 +494,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 					voice->src.callback->OnLoopEnd(
 						voice->src.callback,
-						buffer->pContext
+						buffer->buffer.pContext
 					);
 
 					FAudio_PlatformLockMutex(voice->audio->sourceLock);
@@ -509,8 +509,8 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			}
 			else
 			{
-				bool eos = buffer->Flags & FAUDIO_END_OF_STREAM;
-				void *end_context = buffer->pContext;
+				bool eos = buffer->buffer.Flags & FAUDIO_END_OF_STREAM;
+				void *end_context = buffer->buffer.pContext;
 
 #ifdef HAVE_WMADEC
 				if (voice->src.wmadec != NULL)
@@ -589,8 +589,8 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 					if (voice->src.queued_buffer_count)
 					{
-						buffer = &voice->src.queued_buffers[0].buffer;
-						voice->src.curBufferOffset = buffer->PlayBegin;
+						buffer = &voice->src.queued_buffers[0];
+						voice->src.curBufferOffset = buffer->buffer.PlayBegin;
 
 						if (voice->src.callback->OnBufferStart)
 						{
@@ -603,7 +603,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 							FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 							LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-							voice->src.callback->OnBufferStart(voice->src.callback, buffer->pContext);
+							voice->src.callback->OnBufferStart(voice->src.callback, buffer->buffer.pContext);
 
 							FAudio_PlatformLockMutex(voice->audio->sourceLock);
 							LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
@@ -624,12 +624,12 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	if (voice->src.queued_buffer_count)
 	{
 		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
-		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
+		struct queued_buffer *buffer = &voice->src.queued_buffers[0];
 		uint32_t decode_count;
 
 		/* Number of samples we are decoding in one call. */
 		decode_count = FAudio_min(EXTRA_DECODE_PADDING,
-			buffer_get_end(buffer) - voice->src.curBufferOffset);
+			buffer_get_end(&buffer->buffer) - voice->src.curBufferOffset);
 
 #ifdef HAVE_WMADEC
 		if (voice->src.wmadec)
@@ -639,7 +639,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		else
 #endif
 		{
-			voice->src.decode(voice, buffer, dst, decode_count);
+			voice->src.decode(voice, &buffer->buffer, dst, decode_count);
 		}
 
 		/* Do NOT increment curBufferOffset! */
