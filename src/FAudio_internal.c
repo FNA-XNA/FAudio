@@ -163,6 +163,33 @@ void FAudio_INTERNAL_debug_fmt(
 }
 #endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
 
+bool array_reserve(FAudio *audio, void **elements, size_t *capacity, size_t count, size_t size)
+{
+    unsigned int new_capacity, max_capacity;
+    void *new_elements;
+
+    if (count <= *capacity)
+        return true;
+
+    max_capacity = ~(size_t)0 / size;
+    if (count > max_capacity)
+        return false;
+
+    new_capacity = FAudio_max(4, *capacity);
+    while (new_capacity < count && new_capacity <= max_capacity / 2)
+        new_capacity *= 2;
+    if (new_capacity < count)
+        new_capacity = max_capacity;
+
+    if (!(new_elements = audio->pRealloc(*elements, new_capacity * size)))
+        return false;
+
+    *elements = new_elements;
+    *capacity = new_capacity;
+
+    return true;
+}
+
 void LinkedList_AddEntry(
 	LinkedList **start,
 	void* toAdd,
@@ -300,9 +327,7 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 	uint32_t decoding
 ) {
 	uint32_t end, result;
-	FAudioBuffer *buffer;
 	FAudioWaveFormatExtensible *fmt;
-	FAudioBufferEntry *list = voice->src.bufferList;
 
 	LOG_FUNC_ENTER(voice->audio)
 
@@ -314,9 +339,11 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 		return 0;
 	}
 #endif /* HAVE_WMADEC */
-	while (list != NULL && decoding > 0)
+
+	for (size_t i = 0; i < voice->src.queued_buffer_count; ++i)
 	{
-		buffer = &list->buffer;
+		const FAudioBuffer *buffer = &voice->src.queued_buffers[i].buffer;
+
 		if (buffer->LoopCount > 0)
 		{
 			end = (
@@ -338,7 +365,6 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 			break;
 		}
 		decoding -= end;
-		list = list->next;
 	}
 
 	/* Convert samples to bytes, factoring block alignment */
@@ -364,16 +390,16 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	uint64_t *toDecode
 ) {
 	uint32_t end, endRead, decoding, decoded = 0;
-	FAudioBuffer *buffer = &voice->src.bufferList->buffer;
-	FAudioBufferEntry *toDelete;
 
 	LOG_FUNC_ENTER(voice->audio)
 
 	/* This should never go past the max ratio size */
 	FAudio_assert(*toDecode <= voice->src.decodeSamples);
 
-	while (decoded < *toDecode && buffer != NULL)
+	while (decoded < *toDecode && voice->src.queued_buffer_count)
 	{
+		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
+
 		decoding = (uint32_t) *toDecode - decoded;
 
 		/* Start-of-buffer behavior */
@@ -480,6 +506,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 			}
 			else
 			{
+				bool eos = buffer->Flags & FAUDIO_END_OF_STREAM;
+				void *end_context = buffer->pContext;
+
 #ifdef HAVE_WMADEC
 				if (voice->src.wmadec != NULL)
 				{
@@ -487,7 +516,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				}
 #endif /* HAVE_WMADEC */
 				/* For EOS we can stop storing fraction offsets */
-				if (buffer->Flags & FAUDIO_END_OF_STREAM)
+				if (eos)
 				{
 					voice->src.curBufferOffsetDec = 0;
 					voice->src.totalSamples = 0;
@@ -501,17 +530,15 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				)
 
 				/* Change active buffer, delete finished buffer */
-				toDelete = voice->src.bufferList;
-				voice->src.bufferList = voice->src.bufferList->next;
-				if (voice->src.bufferList != NULL)
+				FAudio_memmove(&voice->src.queued_buffers[0], &voice->src.queued_buffers[1],
+					(voice->src.queued_buffer_count - 1) * sizeof(*voice->src.queued_buffers));
+				--voice->src.queued_buffer_count;
+				if (voice->src.queued_buffer_count)
 				{
-					buffer = &voice->src.bufferList->buffer;
-					voice->src.curBufferOffset = buffer->PlayBegin;
+					voice->src.curBufferOffset = voice->src.queued_buffers[0].buffer.PlayBegin;
 				}
 				else
 				{
-					buffer = NULL;
-
 					/* FIXME: I keep going past the buffer so fuck it */
 					FAudio_zero(
 						voice->audio->decodeCache + (
@@ -539,13 +566,9 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 					if (voice->src.callback->OnBufferEnd != NULL)
 					{
-						voice->src.callback->OnBufferEnd(
-							voice->src.callback,
-							toDelete->buffer.pContext
-						);
+						voice->src.callback->OnBufferEnd(voice->src.callback, end_context);
 					}
-					if (	toDelete->buffer.Flags & FAUDIO_END_OF_STREAM &&
-						voice->src.callback->OnStreamEnd != NULL	)
+					if (eos && voice->src.callback->OnStreamEnd)
 					{
 						voice->src.callback->OnStreamEnd(
 							voice->src.callback
@@ -561,48 +584,44 @@ static void FAudio_INTERNAL_DecodeBuffers(
 					FAudio_PlatformLockMutex(voice->src.bufferLock);
 					LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
-					/* One last chance at redemption */
-					if (buffer == NULL && voice->src.bufferList != NULL)
+					if (voice->src.queued_buffer_count)
 					{
-						buffer = &voice->src.bufferList->buffer;
+						buffer = &voice->src.queued_buffers[0].buffer;
 						voice->src.curBufferOffset = buffer->PlayBegin;
-					}
 
-					if (buffer != NULL && voice->src.callback->OnBufferStart != NULL)
-					{
-						FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-						LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+						if (voice->src.callback->OnBufferStart)
+						{
+							FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+							LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
 
-						FAudio_PlatformUnlockMutex(voice->sendLock);
-						LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+							FAudio_PlatformUnlockMutex(voice->sendLock);
+							LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 
-						FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-						LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+							FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+							LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-						voice->src.callback->OnBufferStart(
-							voice->src.callback,
-							buffer->pContext
-						);
+							voice->src.callback->OnBufferStart(voice->src.callback, buffer->pContext);
 
-						FAudio_PlatformLockMutex(voice->audio->sourceLock);
-						LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+							FAudio_PlatformLockMutex(voice->audio->sourceLock);
+							LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 
-						FAudio_PlatformLockMutex(voice->sendLock);
-						LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
+							FAudio_PlatformLockMutex(voice->sendLock);
+							LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 
-						FAudio_PlatformLockMutex(voice->src.bufferLock);
-						LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+							FAudio_PlatformLockMutex(voice->src.bufferLock);
+							LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+						}
 					}
 				}
-
-				voice->audio->pFree(toDelete);
 			}
 		}
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
-	if (buffer)
+	if (voice->src.queued_buffer_count)
 	{
+		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
+
 		end = (buffer->LoopCount > 0) ?
 			(buffer->LoopBegin + buffer->LoopLength) :
 			buffer->PlayBegin + buffer->PlayLength;
@@ -896,7 +915,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
 	/* Nothing to do? */
-	if (voice->src.bufferList == NULL)
+	if (!voice->src.queued_buffer_count)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
@@ -1025,7 +1044,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	}
 
 	/* Update buffer offsets */
-	if (voice->src.bufferList != NULL)
+	if (voice->src.queued_buffer_count)
 	{
 		/* Increment fixed offset by resample size, int to fixed... */
 		voice->src.curBufferOffsetDec += toResample * voice->src.resampleStep;
@@ -1291,16 +1310,13 @@ end:
 
 static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 {
-	FAudioBufferEntry *entry;
-
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
 	/* Remove pending flushed buffers and send an event for each one */
-	while (voice->src.flushList != NULL)
+	for (size_t i = 0; i < voice->src.flush_buffer_count; ++i)
 	{
-		entry = voice->src.flushList;
-		voice->src.flushList = voice->src.flushList->next;
+		struct queued_buffer *buffer = &voice->src.flush_buffers[i];
 
 		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
 		{
@@ -1310,10 +1326,7 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-			voice->src.callback->OnBufferEnd(
-				voice->src.callback,
-				entry->buffer.pContext
-			);
+			voice->src.callback->OnBufferEnd(voice->src.callback, buffer->buffer.pContext);
 
 			FAudio_PlatformLockMutex(voice->audio->sourceLock);
 			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
@@ -1321,8 +1334,9 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 			FAudio_PlatformLockMutex(voice->src.bufferLock);
 			LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 		}
-		voice->audio->pFree(entry);
 	}
+
+	voice->src.flush_buffer_count = 0;
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
