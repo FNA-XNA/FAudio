@@ -453,7 +453,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		else
 #endif
 		{
-			voice->src.decode(voice, &buffer->buffer, dst, decode_count);
+			voice->src.decode(voice, buffer->buffer.pAudioData, dst, decode_count);
 		}
 
 		LOG_INFO(
@@ -639,7 +639,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		else
 #endif
 		{
-			voice->src.decode(voice, &buffer->buffer, dst, decode_count);
+			voice->src.decode(voice, buffer->buffer.pAudioData, dst, decode_count);
 		}
 
 		/* Do NOT increment curBufferOffset! */
@@ -1682,15 +1682,11 @@ const float FAUDIO_INTERNAL_MATRIX_DEFAULTS[8][8][64] =
 
 /* PCM Decoding */
 
-void FAudio_INTERNAL_DecodePCM8(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodePCM8(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	LOG_FUNC_ENTER(voice->audio)
 	FAudio_INTERNAL_Convert_U8_To_F32(
-		((uint8_t*) buffer->pAudioData) + (
+		((const uint8_t *)src) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
 		decodeCache,
@@ -1699,15 +1695,11 @@ void FAudio_INTERNAL_DecodePCM8(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-void FAudio_INTERNAL_DecodePCM16(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodePCM16(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	LOG_FUNC_ENTER(voice->audio)
 	FAudio_INTERNAL_Convert_S16_To_F32(
-		((int16_t*) buffer->pAudioData) + (
+		((const int16_t *)src) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
 		decodeCache,
@@ -1716,18 +1708,14 @@ void FAudio_INTERNAL_DecodePCM16(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-void FAudio_INTERNAL_DecodePCM24(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodePCM24(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	uint32_t i, j;
 	const uint8_t *buf;
 	LOG_FUNC_ENTER(voice->audio)
 
 	/* FIXME: Uh... is this something that can be SIMD-ified? */
-	buf = buffer->pAudioData + (
+	buf = (const uint8_t *)src + (
 		voice->src.curBufferOffset * voice->src.format->nBlockAlign
 	);
 	for (i = 0; i < samples; i += 1, buf += voice->src.format->nBlockAlign)
@@ -1743,15 +1731,11 @@ void FAudio_INTERNAL_DecodePCM24(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-void FAudio_INTERNAL_DecodePCM32(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodePCM32(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	LOG_FUNC_ENTER(voice->audio)
 	FAudio_INTERNAL_Convert_S32_To_F32(
-		((int32_t*) buffer->pAudioData) + (
+		((const int32_t *)src) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
 		decodeCache,
@@ -1760,16 +1744,12 @@ void FAudio_INTERNAL_DecodePCM32(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-void FAudio_INTERNAL_DecodePCM32F(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodePCM32F(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	LOG_FUNC_ENTER(voice->audio)
 	FAudio_memcpy(
 		decodeCache,
-		((float*) buffer->pAudioData) + (
+		((const float *)src) + (
 			voice->src.curBufferOffset * voice->src.format->nChannels
 		),
 		sizeof(float) * samples * voice->src.format->nChannels
@@ -1927,12 +1907,8 @@ static inline void FAudio_INTERNAL_DecodeStereoMSADPCMBlock(
 
 #undef READ
 
-void FAudio_INTERNAL_DecodeMonoMSADPCM(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodeMonoMSADPCM(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	/* Loop variables */
 	uint32_t copy, done = 0;
 
@@ -1949,7 +1925,7 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	LOG_FUNC_ENTER(voice->audio)
 
 	/* Where are we starting? */
-	buf = (uint8_t*) buffer->pAudioData + (
+	buf = (uint8_t *)src + (
 		(voice->src.curBufferOffset / bsize) *
 		voice->src.format->nBlockAlign
 	);
@@ -1980,12 +1956,8 @@ void FAudio_INTERNAL_DecodeMonoMSADPCM(
 	LOG_FUNC_EXIT(voice->audio)
 }
 
-void FAudio_INTERNAL_DecodeStereoMSADPCM(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void FAudio_INTERNAL_DecodeStereoMSADPCM(FAudioVoice *voice, const void *src, float *decodeCache, uint32_t samples)
+{
 	/* Loop variables */
 	uint32_t copy, done = 0;
 
@@ -2002,7 +1974,7 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 	LOG_FUNC_ENTER(voice->audio)
 
 	/* Where are we starting? */
-	buf = (uint8_t*) buffer->pAudioData + (
+	buf = (uint8_t *)src + (
 		(voice->src.curBufferOffset / bsize) *
 		voice->src.format->nBlockAlign
 	);
