@@ -547,20 +547,6 @@ static void FAudio_INTERNAL_DecodeBuffers(
 				{
 					voice->src.curBufferOffset = voice->src.queued_buffers[0].buffer.PlayBegin;
 				}
-				else
-				{
-					/* FIXME: I keep going past the buffer so fuck it */
-					FAudio_zero(
-						voice->audio->decodeCache + (
-							decoded *
-							voice->src.format->nChannels
-						),
-						sizeof(float) * (
-							(*toDecode - decoded) *
-							voice->src.format->nChannels
-						)
-					);
-				}
 
 				/* Callbacks */
 				if (voice->src.callback != NULL)
@@ -628,6 +614,21 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
+
+	if (decoded < *toDecode)
+	{
+		FAudio_zero(
+			voice->audio->decodeCache + (
+				decoded *
+				voice->src.format->nChannels
+			),
+			sizeof(float) * (
+				(*toDecode - decoded) *
+				voice->src.format->nChannels
+			)
+		);
+	}
+
 	if (voice->src.queued_buffer_count)
 	{
 		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
