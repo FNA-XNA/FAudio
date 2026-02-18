@@ -398,6 +398,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 	while (decoded < *toDecode && voice->src.queued_buffer_count)
 	{
+		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
 		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
 		uint32_t end, decode_count;
 
@@ -440,15 +441,16 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		/* Number of samples we are decoding in one call. */
 		decode_count = FAudio_min(*toDecode - decoded, end - voice->src.curBufferOffset);
 
-		/* Decode... */
-		voice->src.decode(
-			voice,
-			buffer,
-			voice->audio->decodeCache + (
-				decoded * voice->src.format->nChannels
-			),
-			decode_count
-		);
+#ifdef HAVE_WMADEC
+		if (voice->src.wmadec)
+		{
+			decode_wma(voice, buffer, dst, decode_count);
+		}
+		else
+#endif
+		{
+			voice->src.decode(voice, buffer, dst, decode_count);
+		}
 
 		LOG_INFO(
 			voice->audio,
@@ -617,6 +619,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 	/* ... FIXME: I keep going past the buffer so fuck it */
 	if (voice->src.queued_buffer_count)
 	{
+		float *dst = voice->audio->decodeCache + (decoded * voice->src.format->nChannels);
 		FAudioBuffer *buffer = &voice->src.queued_buffers[0].buffer;
 		uint32_t end, decode_count;
 
@@ -627,14 +630,17 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		/* Number of samples we are decoding in one call. */
 		decode_count = FAudio_min(EXTRA_DECODE_PADDING, end - voice->src.curBufferOffset);
 
-		voice->src.decode(
-			voice,
-			buffer,
-			voice->audio->decodeCache + (
-				decoded * voice->src.format->nChannels
-			),
-			decode_count
-		);
+#ifdef HAVE_WMADEC
+		if (voice->src.wmadec)
+		{
+			decode_wma(voice, buffer, dst, decode_count);
+		}
+		else
+#endif
+		{
+			voice->src.decode(voice, buffer, dst, decode_count);
+		}
+
 		/* Do NOT increment curBufferOffset! */
 
 		if (decode_count < EXTRA_DECODE_PADDING)
@@ -2023,20 +2029,6 @@ void FAudio_INTERNAL_DecodeStereoMSADPCM(
 		midOffset = 0;
 	}
 	FAudio_dealloca(blockCache);
-	LOG_FUNC_EXIT(voice->audio)
-}
-
-/* Fallback WMA decoder, get ready for spam! */
-
-void FAudio_INTERNAL_DecodeWMAERROR(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
-	LOG_FUNC_ENTER(voice->audio)
-	LOG_ERROR(voice->audio, "%s", "WMA IS NOT SUPPORTED IN THIS BUILD!")
-	FAudio_zero(decodeCache, samples * voice->src.format->nChannels * sizeof(float));
 	LOG_FUNC_EXIT(voice->audio)
 }
 

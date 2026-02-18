@@ -1,8 +1,8 @@
 /* FAudio WMADEC implementation over Win32 MF */
 
-#ifdef HAVE_WMADEC
-
 #include "FAudio_internal.h"
+
+#ifdef HAVE_WMADEC
 
 #include <stddef.h>
 
@@ -154,12 +154,8 @@ static HRESULT FAudio_WMAMF_ProcessOutput(
 	return S_OK;
 };
 
-static void FAudio_INTERNAL_DecodeWMAMF(
-	FAudioVoice *voice,
-	FAudioBuffer *buffer,
-	float *decodeCache,
-	uint32_t samples
-) {
+void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *decodeCache, uint32_t samples)
+{
 	const FAudioWaveFormatExtensible *wfx = (FAudioWaveFormatExtensible *)voice->src.format;
 	size_t samples_pos, samples_size, copy_size = 0;
 	struct FAudioWMADEC *impl = voice->src.wmadec;
@@ -552,7 +548,6 @@ next:
 	FAudio_assert(!FAILED(hr) && "Failed to start decoder stream!");
 
 	voice->src.wmadec = impl;
-	voice->src.decode = FAudio_INTERNAL_DecodeWMAMF;
 
 	LOG_FUNC_EXIT(voice->audio);
 	return 0;
@@ -605,6 +600,16 @@ void FAudio_WMADEC_end_buffer(FAudioSourceVoice *voice)
 	impl->input_pos = 0;
 	impl->eos = false;
 
+	LOG_FUNC_EXIT(voice->audio)
+}
+
+#else /* HAVE_WMADEC */
+
+void decode_wma(FAudioVoice *voice, FAudioBuffer *buffer, float *dst, uint32_t sample_count)
+{
+	LOG_FUNC_ENTER(voice->audio)
+	LOG_ERROR(voice->audio, "%s", "WMA IS NOT SUPPORTED IN THIS BUILD!")
+	FAudio_zero(dst, sample_count * voice->src.format->nChannels * sizeof(float));
 	LOG_FUNC_EXIT(voice->audio)
 }
 
