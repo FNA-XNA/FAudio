@@ -30,6 +30,18 @@ struct FAudioWMADEC
 	size_t input_size;
 };
 
+static void send_eos(struct FAudioWMADEC *decoder)
+{
+	HRESULT hr;
+
+	if (!decoder->input_size)
+		return;
+
+	hr = IMFTransform_ProcessMessage(decoder->decoder, MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+	FAudio_assert(!FAILED(hr) && "Failed to send EOS!");
+	decoder->input_size = 0;
+}
+
 static HRESULT FAudio_WMAMF_ProcessInput(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer
@@ -211,14 +223,7 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 
 		if (!impl->input_size) break;
 
-		LOG_INFO(voice->audio, "sending EOS to %p", impl->decoder);
-		hr = IMFTransform_ProcessMessage(
-			impl->decoder,
-			MFT_MESSAGE_NOTIFY_END_OF_STREAM,
-			0
-		);
-		FAudio_assert(!FAILED(hr) && "Failed to send EOS!");
-		impl->input_size = 0;
+		send_eos(impl);
 	}
 
 	if (impl->output_pos > samples_pos)
@@ -560,17 +565,7 @@ void FAudio_WMADEC_free(FAudioSourceVoice *voice)
 	FAudio_PlatformLockMutex(voice->audio->sourceLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 
-	if (impl->input_size)
-	{
-		LOG_INFO(voice->audio, "sending EOS to %p", impl->decoder);
-		hr = IMFTransform_ProcessMessage(
-			impl->decoder,
-			MFT_MESSAGE_NOTIFY_END_OF_STREAM,
-			0
-		);
-		FAudio_assert(!FAILED(hr) && "Failed to send EOS!");
-		impl->input_size = 0;
-	}
+	send_eos(impl);
 	if (impl->output_pos)
 	{
 		LOG_INFO(voice->audio, "sending DRAIN to %p", impl->decoder);
@@ -602,17 +597,8 @@ void FAudio_WMADEC_end_buffer(FAudioSourceVoice *voice)
 
 	LOG_FUNC_ENTER(voice->audio)
 
-	if (impl->input_size)
-	{
-		LOG_INFO(voice->audio, "sending EOS to %p", impl->decoder);
-		hr = IMFTransform_ProcessMessage(
-			impl->decoder,
-			MFT_MESSAGE_NOTIFY_END_OF_STREAM,
-			0
-		);
-		FAudio_assert(!FAILED(hr) && "Failed to send EOS!");
-		impl->input_size = 0;
-	}
+	send_eos(impl);
+
 	impl->output_pos = 0;
 	impl->input_pos = 0;
 
