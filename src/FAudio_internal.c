@@ -392,6 +392,122 @@ static uint32_t buffer_get_end(const FAudioBuffer *buffer)
 	return buffer->PlayBegin + buffer->PlayLength;
 }
 
+static void end_buffer(FAudioSourceVoice *voice)
+{
+	struct queued_buffer *buffer = &voice->src.queued_buffers[0];
+	bool eos = buffer->buffer.Flags & FAUDIO_END_OF_STREAM;
+	FAudioVoiceCallback *callback = voice->src.callback;
+	void *context = buffer->buffer.pContext;
+
+	if (buffer->buffer.LoopCount > 0)
+	{
+		voice->src.curBufferOffset = buffer->buffer.LoopBegin;
+		if (buffer->buffer.LoopCount < FAUDIO_LOOP_INFINITE)
+			--buffer->buffer.LoopCount;
+
+		if (callback && callback->OnLoopEnd)
+		{
+			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+			FAudio_PlatformUnlockMutex(voice->sendLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
+			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
+			callback->OnLoopEnd(callback, context);
+
+			FAudio_PlatformLockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
+			FAudio_PlatformLockMutex(voice->sendLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
+
+			FAudio_PlatformLockMutex(voice->src.bufferLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+		}
+
+		return;
+	}
+
+#ifdef HAVE_WMADEC
+	if (voice->src.wmadec)
+		FAudio_WMADEC_end_buffer(voice);
+#endif /* HAVE_WMADEC */
+
+	if (eos)
+	{
+		voice->src.curBufferOffsetDec = 0;
+		voice->src.totalSamples = 0;
+	}
+
+	LOG_INFO(voice->audio, "Voice %p, finished with buffer %p", voice, buffer)
+
+	FAudio_memmove(&voice->src.queued_buffers[0], &voice->src.queued_buffers[1],
+		(voice->src.queued_buffer_count - 1) * sizeof(*voice->src.queued_buffers));
+	--voice->src.queued_buffer_count;
+
+	if (voice->src.queued_buffer_count)
+		voice->src.curBufferOffset = voice->src.queued_buffers[0].buffer.PlayBegin;
+
+	if (callback)
+	{
+		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+		FAudio_PlatformUnlockMutex(voice->sendLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
+		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
+		if (callback->OnBufferEnd)
+			callback->OnBufferEnd(callback, context);
+
+		if (eos && callback->OnStreamEnd)
+			callback->OnStreamEnd(callback);
+
+		FAudio_PlatformLockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
+		FAudio_PlatformLockMutex(voice->sendLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
+
+		FAudio_PlatformLockMutex(voice->src.bufferLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+
+		if (voice->src.queued_buffer_count)
+		{
+			buffer = &voice->src.queued_buffers[0];
+			voice->src.curBufferOffset = buffer->buffer.PlayBegin;
+
+			if (voice->src.callback->OnBufferStart)
+			{
+				FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+				LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+				FAudio_PlatformUnlockMutex(voice->sendLock);
+				LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
+				FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+				LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
+				callback->OnBufferStart(callback, buffer->buffer.pContext);
+
+				FAudio_PlatformLockMutex(voice->audio->sourceLock);
+				LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
+				FAudio_PlatformLockMutex(voice->sendLock);
+				LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
+
+				FAudio_PlatformLockMutex(voice->src.bufferLock);
+				LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+			}
+		}
+	}
+}
+
 static void FAudio_INTERNAL_DecodeBuffers(
 	FAudioSourceVoice *voice,
 	uint64_t *toDecode
@@ -479,138 +595,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 
 		/* End-of-buffer behavior */
 		if (decoded < *toDecode)
-		{
-			if (buffer->buffer.LoopCount > 0)
-			{
-				voice->src.curBufferOffset = buffer->buffer.LoopBegin;
-				if (buffer->buffer.LoopCount < FAUDIO_LOOP_INFINITE)
-				{
-					buffer->buffer.LoopCount -= 1;
-				}
-				if (	voice->src.callback != NULL &&
-					voice->src.callback->OnLoopEnd != NULL	)
-				{
-					FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-					LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
-
-					FAudio_PlatformUnlockMutex(voice->sendLock);
-					LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
-					FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-					LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
-
-					voice->src.callback->OnLoopEnd(
-						voice->src.callback,
-						buffer->buffer.pContext
-					);
-
-					FAudio_PlatformLockMutex(voice->audio->sourceLock);
-					LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
-
-					FAudio_PlatformLockMutex(voice->sendLock);
-					LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
-
-					FAudio_PlatformLockMutex(voice->src.bufferLock);
-					LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-				}
-			}
-			else
-			{
-				bool eos = buffer->buffer.Flags & FAUDIO_END_OF_STREAM;
-				void *end_context = buffer->buffer.pContext;
-
-#ifdef HAVE_WMADEC
-				if (voice->src.wmadec != NULL)
-				{
-					FAudio_WMADEC_end_buffer(voice);
-				}
-#endif /* HAVE_WMADEC */
-				/* For EOS we can stop storing fraction offsets */
-				if (eos)
-				{
-					voice->src.curBufferOffsetDec = 0;
-					voice->src.totalSamples = 0;
-				}
-
-				LOG_INFO(
-					voice->audio,
-					"Voice %p, finished with buffer %p",
-					(void*) voice,
-					(void*) buffer
-				)
-
-				/* Change active buffer, delete finished buffer */
-				FAudio_memmove(&voice->src.queued_buffers[0], &voice->src.queued_buffers[1],
-					(voice->src.queued_buffer_count - 1) * sizeof(*voice->src.queued_buffers));
-				--voice->src.queued_buffer_count;
-				if (voice->src.queued_buffer_count)
-				{
-					voice->src.curBufferOffset = voice->src.queued_buffers[0].buffer.PlayBegin;
-				}
-
-				/* Callbacks */
-				if (voice->src.callback != NULL)
-				{
-					FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-					LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
-
-					FAudio_PlatformUnlockMutex(voice->sendLock);
-					LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
-					FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-					LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
-
-					if (voice->src.callback->OnBufferEnd != NULL)
-					{
-						voice->src.callback->OnBufferEnd(voice->src.callback, end_context);
-					}
-					if (eos && voice->src.callback->OnStreamEnd)
-					{
-						voice->src.callback->OnStreamEnd(
-							voice->src.callback
-						);
-					}
-
-					FAudio_PlatformLockMutex(voice->audio->sourceLock);
-					LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
-
-					FAudio_PlatformLockMutex(voice->sendLock);
-					LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
-
-					FAudio_PlatformLockMutex(voice->src.bufferLock);
-					LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-
-					if (voice->src.queued_buffer_count)
-					{
-						buffer = &voice->src.queued_buffers[0];
-						voice->src.curBufferOffset = buffer->buffer.PlayBegin;
-
-						if (voice->src.callback->OnBufferStart)
-						{
-							FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-							LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
-
-							FAudio_PlatformUnlockMutex(voice->sendLock);
-							LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
-							FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-							LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
-
-							voice->src.callback->OnBufferStart(voice->src.callback, buffer->buffer.pContext);
-
-							FAudio_PlatformLockMutex(voice->audio->sourceLock);
-							LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
-
-							FAudio_PlatformLockMutex(voice->sendLock);
-							LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
-
-							FAudio_PlatformLockMutex(voice->src.bufferLock);
-							LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-						}
-					}
-				}
-			}
-		}
+			end_buffer(voice);
 	}
 
 	/* ... FIXME: I keep going past the buffer so fuck it */
