@@ -301,7 +301,14 @@ struct queued_buffer
 {
 	FAudioBuffer buffer;
 	FAudioBufferWMA bufferWMA;
+	uint32_t loop_bytes, play_bytes;
 	bool sent_OnStartBuffer;
+	bool internal;
+
+	/* Byte offset of the first block in this buffer. This is usually zero,
+	 * but will be nonzero if the previous buffer did not have an aligned
+	 * size. */
+	uint32_t first_block_offset;
 };
 
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(FAudioVoice *voice,
@@ -533,6 +540,11 @@ struct FAudioVoice
 			size_t queued_buffer_count, queued_buffers_capacity;
 			struct queued_buffer *flush_buffers;
 			size_t flush_buffer_count, flush_buffers_capacity;
+
+			/* Data left over from one or more buffers whose size
+			 * was unaligned. */
+			uint8_t *unaligned_data;
+			uint32_t unaligned_size;
 
 			FAudioMutex bufferLock;
 		} src;
