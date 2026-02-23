@@ -59,9 +59,7 @@ static void FAudio_DUMPVOICE_WriteBuffer(
 	const FAudioSourceVoice *voice,
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA,
-	const uint32_t playBegin,
-	const uint32_t playLength
-);
+	const uint32_t size);
 #endif /* FAUDIO_DUMP_VOICES */
 
 /* FAudio Version */
@@ -2411,6 +2409,7 @@ static void destroy_voice(FAudioVoice *voice)
 			FAudio_WMADEC_free(voice);
 		}
 #endif /* HAVE_WMADEC */
+		voice->audio->pFree(voice->src.unaligned_data);
 	}
 	else if (voice->type == FAUDIO_VOICE_SUBMIX)
 	{
@@ -2624,6 +2623,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA
 ) {
+	const uint32_t samples_per_block = voice->src.samples_per_block;
+	const uint32_t block_size = voice->src.format->nBlockAlign;
 	uint32_t adpcmMask;
 	uint32_t playBegin, playLength, loopBegin, loopLength, bufferLength;
 	struct queued_buffer *entry;
@@ -2690,12 +2691,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 			voice->src.format->nBlockAlign;
 	}
 
-	/* PlayLength Default */
-	if (playLength == 0)
-	{
-		playLength = bufferLength - playBegin;
-	}
-	else if (playBegin + playLength > bufferLength || playBegin + playLength < playLength)
+	if (playBegin + playLength > bufferLength || playBegin + playLength < playLength)
 	{
 		/* Reading past the end of the buffer, or begin + length overflow uint32_t, which
 		 * would also read past the end of the buffer. */
@@ -2710,12 +2706,6 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		{
 			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
-		}
-
-		/* LoopLength Default */
-		if (loopLength == 0)
-		{
-			loopLength = playBegin + playLength - loopBegin;
 		}
 
 		/* "The value of LoopBegin + LoopLength must be greater than PlayBegin
@@ -2763,6 +2753,18 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	{
 		FAudio_memcpy(&entry->bufferWMA, pBufferWMA, sizeof(FAudioBufferWMA));
 	}
+	else
+	{
+		if (loopLength)
+			entry->loop_bytes = loopLength / samples_per_block * block_size;
+		else
+			entry->loop_bytes = pBuffer->AudioBytes - (loopBegin / samples_per_block * block_size);
+
+		if (playLength)
+			entry->play_bytes = playLength / samples_per_block * block_size;
+		else
+			entry->play_bytes = pBuffer->AudioBytes - (playBegin / samples_per_block * block_size);
+	}
 
 	if (	voice->audio->version <= 7 && (
 		entry->buffer.LoopCount > 0 &&
@@ -2773,9 +2775,9 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 
 #ifdef FAUDIO_DUMP_VOICES
 	/* dumping current buffer, append into "data" section */
-	if (pBuffer->pAudioData != NULL && playLength > 0)
+	if (pBuffer->pAudioData && entry->play_bytes)
 	{
-		FAudio_DUMPVOICE_WriteBuffer(voice, pBuffer, pBufferWMA, playBegin, playLength);
+		FAudio_DUMPVOICE_WriteBuffer(voice, pBuffer, pBufferWMA, entry->play_bytes);
 	}
 #endif /* FAUDIO_DUMP_VOICES */
 
@@ -3299,8 +3301,7 @@ static void FAudio_DUMPVOICE_WriteBuffer(
 	const FAudioSourceVoice *voice,
 	const FAudioBuffer *pBuffer,
 	const FAudioBufferWMA *pBufferWMA,
-	const uint32_t playBegin,
-	const uint32_t playLength
+	const uint32_t size
 ) {
 	FAudioIOStreamOut *io_data = DumpVoices_fopen(voice, voice->src.format, "ab", "data");
 	if (io_data == NULL)
@@ -3332,8 +3333,8 @@ static void FAudio_DUMPVOICE_WriteBuffer(
 		/* dump unencoded buffer contents */
 		uint16_t bytesPerFrame = (voice->src.format->nChannels * voice->src.format->wBitsPerSample / 8);
 		FAudio_assert(bytesPerFrame > 0);
-		const void *pAudioDataBegin = pBuffer->pAudioData + playBegin*bytesPerFrame;
-		io_data->write(io_data->data, pAudioDataBegin, bytesPerFrame, playLength);
+		const void *pAudioDataBegin = pBuffer->pAudioData + pBuffer->PlayBegin * bytesPerFrame;
+		io_data->write(io_data->data, pAudioDataBegin, 1, size);
 	}
 	FAudio_PlatformUnlockMutex((FAudioMutex) io_data->lock);
 	FAudio_close_out(io_data);
