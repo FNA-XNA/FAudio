@@ -301,6 +301,7 @@ struct queued_buffer
 {
 	FAudioBuffer buffer;
 	FAudioBufferWMA bufferWMA;
+	bool sent_OnStartBuffer;
 };
 
 typedef void (FAUDIOCALL * FAudioDecodeCallback)(FAudioVoice *voice,
@@ -526,7 +527,6 @@ struct FAudioVoice
 			/* Dynamic */
 			uint8_t active;
 			float freqRatio;
-			uint8_t newBuffer;
 			uint64_t totalSamples;
 
 			struct queued_buffer *queued_buffers;
