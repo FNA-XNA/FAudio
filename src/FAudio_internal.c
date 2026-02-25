@@ -477,9 +477,10 @@ static void end_buffer(FAudioSourceVoice *voice)
 		FAudio_PlatformLockMutex(voice->src.bufferLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
-		if (voice->src.queued_buffer_count)
+		if (voice->src.queued_buffer_count && !voice->src.queued_buffers[0].sent_OnStartBuffer)
 		{
 			buffer = &voice->src.queued_buffers[0];
+			buffer->sent_OnStartBuffer = true;
 			voice->src.curBufferOffset = buffer->buffer.PlayBegin;
 
 			if (voice->src.callback->OnBufferStart)
@@ -528,9 +529,10 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		uint32_t decode_count;
 
 		/* Start-of-buffer behavior */
-		if (voice->src.newBuffer)
+		if (!buffer->sent_OnStartBuffer)
 		{
-			voice->src.newBuffer = 0;
+			buffer->sent_OnStartBuffer = true;
+
 			if (	voice->src.callback != NULL &&
 				voice->src.callback->OnBufferStart != NULL	)
 			{

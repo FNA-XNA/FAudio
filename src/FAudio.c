@@ -2753,6 +2753,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		voice->src.queued_buffer_count + 1, sizeof(*voice->src.queued_buffers));
 
 	entry = &voice->src.queued_buffers[voice->src.queued_buffer_count++];
+	FAudio_memset(entry, 0, sizeof(*entry));
 	FAudio_memcpy(&entry->buffer, pBuffer, sizeof(FAudioBuffer));
 	entry->buffer.PlayBegin = playBegin;
 	entry->buffer.PlayLength = playLength;
@@ -2779,10 +2780,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 #endif /* FAUDIO_DUMP_VOICES */
 
 	if (voice->src.queued_buffer_count == 1)
-	{
 		voice->src.curBufferOffset = entry->buffer.PlayBegin;
-		voice->src.newBuffer = 1;
-	}
 
 	LOG_INFO(
 		voice->audio,
@@ -2811,14 +2809,14 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 		voice->src.flush_buffer_count + voice->src.queued_buffer_count, sizeof(*voice->src.flush_buffers));
 
 	/* If the source is playing, don't flush the active buffer */
-	if (voice->src.active == 1 && voice->src.queued_buffer_count > 0 && !voice->src.newBuffer)
+	if (voice->src.active == 1 && voice->src.queued_buffer_count > 0
+		&& voice->src.queued_buffers[0].sent_OnStartBuffer)
 	{
 		offset = 1;
 	}
 	else
 	{
 		voice->src.curBufferOffset = 0;
-		voice->src.newBuffer = 0;
 	}
 
 	if (voice->src.queued_buffer_count > offset)
@@ -2901,7 +2899,7 @@ void FAudioSourceVoice_GetState(
 	pVoiceState->BuffersQueued = 0;
 	pVoiceState->pCurrentBufferContext = NULL;
 
-	if (voice->src.queued_buffer_count && !voice->src.newBuffer)
+	if (voice->src.queued_buffer_count && voice->src.queued_buffers[0].sent_OnStartBuffer)
 		pVoiceState->pCurrentBufferContext = voice->src.queued_buffers[0].buffer.pContext;
 	pVoiceState->BuffersQueued += voice->src.queued_buffer_count;
 
