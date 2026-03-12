@@ -458,6 +458,8 @@ uint32_t FAudio_CreateSourceVoice(
 		/* Does XAudio2 validate this input?! */
 		fmtex->wfx.cbSize = sizeof(FAudioXMA2WaveFormat) - sizeof(FAudioWaveFormatEx);
 		(*ppSourceVoice)->src.format = &fmtex->wfx;
+
+		(*ppSourceVoice)->src.samples_per_block = fmtex->dwSamplesEncoded / fmtex->wBlockCount;
 	}
 	else
 	{
