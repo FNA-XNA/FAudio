@@ -163,7 +163,7 @@ extern void FAudio_Log(char const *msg);
 
 #define FAudio_strlen(ptr) SDL_strlen(ptr)
 #define FAudio_strcmp(str1, str2) SDL_strcmp(str1, str2)
-#define FAudio_strncmp(str1, str2, size) SDL_strncmp(str1, str1, size)
+#define FAudio_strncmp(str1, str2, size) SDL_strncmp(str1, str2, size)
 #define FAudio_strlcpy(ptr1, ptr2, size) SDL_strlcpy(ptr1, ptr2, size)
 
 #define FAudio_pow(x, y) SDL_pow(x, y)
