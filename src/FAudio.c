@@ -2767,8 +2767,23 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 
 	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL && voice->src.format->wFormatTag != FAUDIO_FORMAT_XMAUDIO2)
 	{
+		uint32_t realPlayLength = playLength;
+		uint32_t realLoopLength = loopLength;
+
+		/* PlayLength Default */
+		if (realPlayLength == 0)
+		{
+			realPlayLength = bufferLength - playBegin;
+		}
+
+		/* LoopLength Default */
+		if (realLoopLength == 0)
+		{
+			realLoopLength = playBegin + realPlayLength - loopBegin;
+		}
+
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
-		if (loopBegin >= (playBegin + playLength))
+		if (loopBegin >= (playBegin + realPlayLength))
 		{
 			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
@@ -2778,8 +2793,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		 * and less than PlayBegin + PlayLength"
 		 */
 		if (	voice->audio->version > 7 && (
-			(loopBegin + loopLength) <= playBegin ||
-			(loopBegin + loopLength) > (playBegin + playLength))	)
+			(loopBegin + realLoopLength) <= playBegin ||
+			(loopBegin + realLoopLength) > (playBegin + realPlayLength))	)
 		{
 			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
