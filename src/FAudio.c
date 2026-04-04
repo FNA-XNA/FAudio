@@ -2905,7 +2905,7 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	if (voice->src.queued_buffer_count > offset)
 		FAudio_memcpy(voice->src.flush_buffers + voice->src.flush_buffer_count,
 			voice->src.queued_buffers + offset,
-			voice->src.queued_buffer_count - offset);
+			(voice->src.queued_buffer_count - offset) * sizeof(*voice->src.flush_buffers));
 	voice->src.queued_buffer_count -= offset;
 	voice->src.flush_buffer_count += offset;
 
