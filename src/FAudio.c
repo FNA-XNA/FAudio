@@ -348,7 +348,7 @@ uint32_t FAudio_CreateSourceVoice(
 
 	if (pSendList == NULL && audio->master == NULL)
 	{
-		LOG_ERROR(audio, "CreateSourceVoice called before mastering voice was initialized");
+		LOG_ERROR(audio, "%s", "CreateSourceVoice called before mastering voice was initialized");
 		return FAUDIO_E_INVALID_CALL;
 	}
 
@@ -679,7 +679,7 @@ uint32_t FAudio_CreateSubmixVoice(
 
 	if (pSendList == NULL && audio->master == NULL)
 	{
-		LOG_ERROR(audio, "CreateSubmixVoice called before mastering voice was initialized");
+		LOG_ERROR(audio, "%s", "CreateSubmixVoice called before mastering voice was initialized");
 		return FAUDIO_E_INVALID_CALL;
 	}
 
