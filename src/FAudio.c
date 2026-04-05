@@ -128,6 +128,8 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 #ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
 	FAudio_SetDebugConfiguration(*ppFAudio, &debugInit, NULL);
 #endif /* FAUDIO_DISABLE_DEBUGCONFIGURATION */
+	(*ppFAudio)->refLock = FAudio_PlatformCreateMutex();
+	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->refLock)
 	(*ppFAudio)->sourceLock = FAudio_PlatformCreateMutex();
 	LOG_MUTEX_CREATE((*ppFAudio), (*ppFAudio)->sourceLock)
 	(*ppFAudio)->submixLock = FAudio_PlatformCreateMutex();
@@ -145,10 +147,20 @@ uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
 
 uint32_t FAudio_AddRef(FAudio *audio)
 {
+	uint32_t refcount;
+
 	LOG_API_ENTER(audio)
+
+	// FIXME: This should be SDL_AtomicIncRef -flibit
+	FAudio_PlatformLockMutex(audio->refLock);
+	LOG_MUTEX_LOCK(audio, audio->refLock)
 	audio->refcount += 1;
+	refcount = audio->refcount;
+	FAudio_PlatformUnlockMutex(audio->refLock);
+	LOG_MUTEX_UNLOCK(audio, audio->refLock)
+
 	LOG_API_EXIT(audio)
-	return audio->refcount;
+	return refcount;
 }
 
 static void destroy_voice(FAudioVoice *voice);
@@ -159,8 +171,15 @@ uint32_t FAudio_Release(FAudio *audio)
 	FAudioVoice *voice;
 
 	LOG_API_ENTER(audio)
+
+	// FIXME: This should be SDL_AtomicDecRef -flibit
+	FAudio_PlatformLockMutex(audio->refLock);
+	LOG_MUTEX_LOCK(audio, audio->refLock)
 	audio->refcount -= 1;
 	refcount = audio->refcount;
+	FAudio_PlatformUnlockMutex(audio->refLock);
+	LOG_MUTEX_UNLOCK(audio, audio->refLock)
+
 	if (audio->refcount == 0)
 	{
 		while (audio->sources)
@@ -180,6 +199,8 @@ uint32_t FAudio_Release(FAudio *audio)
 		audio->pFree(audio->decodeCache);
 		audio->pFree(audio->resampleCache);
 		audio->pFree(audio->effectChainCache);
+		LOG_MUTEX_DESTROY(audio, audio->refLock)
+		FAudio_PlatformDestroyMutex(audio->refLock);
 		LOG_MUTEX_DESTROY(audio, audio->sourceLock)
 		FAudio_PlatformDestroyMutex(audio->sourceLock);
 		LOG_MUTEX_DESTROY(audio, audio->submixLock)
