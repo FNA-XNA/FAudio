@@ -1738,6 +1738,7 @@ uint32_t FAudio_INTERNAL_VoiceOutputFrequency(
 	if ((pSendList == NULL) || (pSendList->SendCount == 0))
 	{
 		/* When we're deliberately given no sends, use master rate! */
+		FAudio_assert(voice->audio->master != NULL);
 		outSampleRate = voice->audio->master->master.inputSampleRate;
 	}
 	else

@@ -346,6 +346,12 @@ uint32_t FAudio_CreateSourceVoice(
 	LOG_API_ENTER(audio)
 	LOG_FORMAT(audio, pSourceFormat)
 
+	if (pSendList == NULL && audio->master == NULL)
+	{
+		LOG_ERROR(audio, "CreateSourceVoice called before mastering voice was initialized")
+		return FAUDIO_E_INVALID_CALL;
+	}
+
 	*ppSourceVoice = (FAudioSourceVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSourceVoice, sizeof(FAudioSourceVoice));
 	(*ppSourceVoice)->audio = audio;
@@ -670,6 +676,12 @@ uint32_t FAudio_CreateSubmixVoice(
 	uint32_t i;
 
 	LOG_API_ENTER(audio)
+
+	if (pSendList == NULL && audio->master == NULL)
+	{
+		LOG_ERROR(audio, "CreateSourceVoice called before mastering voice was initialized")
+		return FAUDIO_E_INVALID_CALL;
+	}
 
 	*ppSubmixVoice = (FAudioSubmixVoice*) audio->pMalloc(sizeof(FAudioVoice));
 	FAudio_zero(*ppSubmixVoice, sizeof(FAudioSubmixVoice));
