@@ -45,10 +45,13 @@ jobs:
       run: apt install -y chrpath
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
 
     - name: Build (Debug)
       run: ninja -C debug
+
+    - name: Run Tests
+      run: ./debug/faudio_tests
 
     - name: CMake configure (Release)
       run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
