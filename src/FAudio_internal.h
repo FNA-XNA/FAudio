@@ -535,6 +535,7 @@ struct FAudioVoice
 			/* Dynamic */
 			uint8_t active;
 			float freqRatio;
+			bool firstBufferWaiting;
 			uint64_t totalSamples;
 
 			struct queued_buffer *queued_buffers;
