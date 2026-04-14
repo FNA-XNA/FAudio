@@ -3021,7 +3021,7 @@ void FAudioSourceVoice_GetState(
 	pVoiceState->BuffersQueued = 0;
 	pVoiceState->pCurrentBufferContext = NULL;
 
-	if (voice->src.queued_buffer_count && voice->src.queued_buffers[0].sent_OnStartBuffer)
+	if (voice->src.queued_buffer_count)
 		pVoiceState->pCurrentBufferContext = voice->src.queued_buffers[0].buffer.pContext;
 	pVoiceState->BuffersQueued += voice->src.queued_buffer_count;
 
