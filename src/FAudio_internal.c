@@ -1416,8 +1416,14 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 	FAudio_PlatformLockMutex(voice->src.bufferLock);
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
+	if (voice->src.callback == NULL || voice->src.callback->OnBufferEnd == NULL)
+	{
+		/* We can skip the memory churn below if nobody's looking */
+		voice->src.flush_buffer_count = 0;
+	}
+
 	/* Remove pending flushed buffers and send an event for each one */
-	while (voice->src.flush_buffer_count > 0)
+	else while (voice->src.flush_buffer_count > 0)
 	{
 		void* pContext = voice->src.flush_buffers[0].buffer.pContext;
 
@@ -1428,22 +1434,19 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 		FAudio_memmove(&voice->src.flush_buffers[0], &voice->src.flush_buffers[1],
 			voice->src.flush_buffer_count * sizeof(*voice->src.flush_buffers));
 
-		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
-		{
-			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
 
-			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-			voice->src.callback->OnBufferEnd(voice->src.callback, pContext);
+		voice->src.callback->OnBufferEnd(voice->src.callback, pContext);
 
-			FAudio_PlatformLockMutex(voice->audio->sourceLock);
-			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+		FAudio_PlatformLockMutex(voice->audio->sourceLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 
-			FAudio_PlatformLockMutex(voice->src.bufferLock);
-			LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-		}
+		FAudio_PlatformLockMutex(voice->src.bufferLock);
+		LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 	}
 
 
