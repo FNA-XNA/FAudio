@@ -652,11 +652,12 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		try_collect_unaligned_data(voice);
 
 		/* Start-of-buffer behavior */
-		if (!buffer->sent_OnStartBuffer && !buffer->internal)
+		if (!buffer->sent_OnStartBuffer)
 		{
 			buffer->sent_OnStartBuffer = true;
 
-			if (	voice->src.callback != NULL &&
+			if (	!buffer->internal &&
+				voice->src.callback != NULL &&
 				voice->src.callback->OnBufferStart != NULL	)
 			{
 				FAudio_PlatformUnlockMutex(voice->src.bufferLock);
