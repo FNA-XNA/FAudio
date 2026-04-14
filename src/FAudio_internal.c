@@ -1417,14 +1417,16 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 	LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 
 	/* Remove pending flushed buffers and send an event for each one */
-	for (size_t i = 0; i < voice->src.flush_buffer_count; ++i)
+	while (voice->src.flush_buffer_count > 0)
 	{
-		struct queued_buffer *buffer = &voice->src.flush_buffers[i];
+		void* pContext = voice->src.flush_buffers[0].buffer.pContext;
 
 		/* Subtract each one instead of setting 0 at the end; this is
 		 * needed to make GetState accurate inside this callback
 		 */
 		voice->src.flush_buffer_count -= 1;
+		FAudio_memmove(&voice->src.flush_buffers[0], &voice->src.flush_buffers[1],
+			voice->src.flush_buffer_count * sizeof(*voice->src.flush_buffers));
 
 		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
 		{
@@ -1434,7 +1436,7 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-			voice->src.callback->OnBufferEnd(voice->src.callback, buffer->buffer.pContext);
+			voice->src.callback->OnBufferEnd(voice->src.callback, pContext);
 
 			FAudio_PlatformLockMutex(voice->audio->sourceLock);
 			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
