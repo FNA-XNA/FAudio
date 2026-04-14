@@ -2798,22 +2798,25 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		return FAUDIO_E_INVALID_CALL;
 	}
 
-	/* PlayLength Default */
-	if (playLength == 0)
-	{
-		playLength = bufferLength - playBegin;
-	}
-
-	/* LoopLength Default */
-	if (loopLength == 0)
-	{
-		loopLength = playBegin + playLength - loopBegin;
-	}
-
 	if (pBuffer->LoopCount > 0 && pBufferWMA == NULL && voice->src.format->wFormatTag != FAUDIO_FORMAT_XMAUDIO2)
 	{
+		uint32_t realPlayLength = playLength;
+		uint32_t realLoopLength = loopLength;
+
+		/* PlayLength Default */
+		if (realPlayLength == 0)
+		{
+			realPlayLength = bufferLength - playBegin;
+		}
+
+		/* LoopLength Default */
+		if (realLoopLength == 0)
+		{
+			realLoopLength = playBegin + realPlayLength - loopBegin;
+		}
+
 		/* "The value of LoopBegin must be less than PlayBegin + PlayLength" */
-		if (loopBegin >= (playBegin + playLength))
+		if (loopBegin >= (playBegin + realPlayLength))
 		{
 			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
@@ -2823,8 +2826,8 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 		 * and less than PlayBegin + PlayLength"
 		 */
 		if (	voice->audio->version > 7 && (
-			(loopBegin + loopLength) <= playBegin ||
-			(loopBegin + loopLength) > (playBegin + playLength))	)
+			(loopBegin + realLoopLength) <= playBegin ||
+			(loopBegin + realLoopLength) > (playBegin + realPlayLength))	)
 		{
 			LOG_API_EXIT(voice->audio)
 			return FAUDIO_E_INVALID_CALL;
@@ -2866,8 +2869,15 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 	else
 	{
-		entry->loop_bytes = loopLength / samples_per_block * block_size;
-		entry->play_bytes = playLength / samples_per_block * block_size;
+		if (loopLength)
+			entry->loop_bytes = loopLength / samples_per_block * block_size;
+		else
+			entry->loop_bytes = pBuffer->AudioBytes - (loopBegin / samples_per_block * block_size);
+
+		if (playLength)
+			entry->play_bytes = playLength / samples_per_block * block_size;
+		else
+			entry->play_bytes = pBuffer->AudioBytes - (playBegin / samples_per_block * block_size);
 	}
 
 	if (	voice->audio->version <= 7 && (
