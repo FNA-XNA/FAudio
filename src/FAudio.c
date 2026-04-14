@@ -2899,10 +2899,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 #endif /* FAUDIO_DUMP_VOICES */
 
 	if (voice->src.queued_buffer_count == 1)
-	{
 		voice->src.curBufferOffset = entry->buffer.PlayBegin;
-		voice->src.firstBufferWaiting = true;
-	}
 
 	LOG_INFO(
 		voice->audio,
@@ -2939,7 +2936,6 @@ uint32_t FAudioSourceVoice_FlushSourceBuffers(
 	else
 	{
 		voice->src.curBufferOffset = 0;
-		voice->src.firstBufferWaiting = 0;
 	}
 
 	if (voice->src.queued_buffer_count > offset)
@@ -3025,7 +3021,7 @@ void FAudioSourceVoice_GetState(
 	pVoiceState->BuffersQueued = 0;
 	pVoiceState->pCurrentBufferContext = NULL;
 
-	if (voice->src.queued_buffer_count && !voice->src.firstBufferWaiting)
+	if (voice->src.queued_buffer_count && voice->src.queued_buffers[0].sent_OnStartBuffer)
 		pVoiceState->pCurrentBufferContext = voice->src.queued_buffers[0].buffer.pContext;
 	pVoiceState->BuffersQueued += voice->src.queued_buffer_count;
 

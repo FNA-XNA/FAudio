@@ -455,7 +455,6 @@ static void start_buffer(FAudioSourceVoice *voice, struct queued_buffer *buffer)
 	if (!buffer->sent_OnStartBuffer)
 	{
 		buffer->sent_OnStartBuffer = true;
-		voice->src.firstBufferWaiting = false;
 
 		if (	!buffer->internal &&
 			voice->src.callback != NULL &&
