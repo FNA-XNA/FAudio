@@ -1421,6 +1421,11 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 	{
 		struct queued_buffer *buffer = &voice->src.flush_buffers[i];
 
+		/* Subtract each one instead of setting 0 at the end; this is
+		 * needed to make GetState accurate inside this callback
+		 */
+		voice->src.flush_buffer_count -= 1;
+
 		if (voice->src.callback != NULL && voice->src.callback->OnBufferEnd != NULL)
 		{
 			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
@@ -1439,7 +1444,6 @@ static void FAudio_INTERNAL_FlushPendingBuffers(FAudioSourceVoice *voice)
 		}
 	}
 
-	voice->src.flush_buffer_count = 0;
 
 	FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 	LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
