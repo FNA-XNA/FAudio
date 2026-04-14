@@ -400,8 +400,9 @@ static uint32_t buffer_get_end(FAudioSourceVoice *voice, const struct queued_buf
 #endif
 
 	if (buffer->buffer.LoopCount)
-		return buffer->buffer.LoopBegin + buffer->buffer.LoopLength;
-	return buffer->buffer.PlayBegin + buffer->buffer.PlayLength;
+		return buffer->buffer.LoopBegin + ((buffer->loop_bytes - buffer->first_block_offset) / block_size * samples_per_block);
+
+	return buffer->buffer.PlayBegin + ((buffer->play_bytes - buffer->first_block_offset) / block_size * samples_per_block);
 }
 
 /* If there is any leftover unaligned data at the end of this buffer, stash it
