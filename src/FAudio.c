@@ -2882,6 +2882,7 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 
 	if (	voice->audio->version <= 7 && (
 		entry->buffer.LoopCount > 0 &&
+		entry->buffer.LoopLength &&
 		entry->buffer.LoopBegin + entry->buffer.LoopLength <= entry->buffer.PlayBegin))
 	{
 		entry->buffer.LoopCount = 0;
