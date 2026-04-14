@@ -2869,15 +2869,17 @@ uint32_t FAudioSourceVoice_SubmitSourceBuffer(
 	}
 	else
 	{
-		if (loopLength)
-			entry->loop_bytes = loopLength / samples_per_block * block_size;
-		else
-			entry->loop_bytes = pBuffer->AudioBytes - (loopBegin / samples_per_block * block_size);
-
 		if (playLength)
 			entry->play_bytes = playLength / samples_per_block * block_size;
 		else
 			entry->play_bytes = pBuffer->AudioBytes - (playBegin / samples_per_block * block_size);
+
+		if (loopLength)
+			entry->loop_bytes = loopLength / samples_per_block * block_size;
+		else
+			entry->loop_bytes = entry->play_bytes
+				+ (playBegin / samples_per_block * block_size)
+				- (loopBegin / samples_per_block * block_size);
 	}
 
 	if (	voice->audio->version <= 7 && (
