@@ -516,7 +516,7 @@ static void end_buffer(FAudioSourceVoice *voice)
 	if (voice->src.queued_buffer_count)
 		voice->src.curBufferOffset = voice->src.queued_buffers[0].buffer.PlayBegin;
 
-	if (callback)
+	if (callback && !internal)
 	{
 		FAudio_PlatformUnlockMutex(voice->src.bufferLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
@@ -527,10 +527,10 @@ static void end_buffer(FAudioSourceVoice *voice)
 		FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
 		LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-		if (!internal && callback->OnBufferEnd)
+		if (callback->OnBufferEnd)
 			callback->OnBufferEnd(callback, context);
 
-		if (!internal && eos && callback->OnStreamEnd)
+		if (eos && callback->OnStreamEnd)
 			callback->OnStreamEnd(callback);
 
 		FAudio_PlatformLockMutex(voice->audio->sourceLock);
@@ -541,35 +541,35 @@ static void end_buffer(FAudioSourceVoice *voice)
 
 		FAudio_PlatformLockMutex(voice->src.bufferLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+	}
 
-		if (voice->src.queued_buffer_count && !voice->src.queued_buffers[0].sent_OnStartBuffer)
+	if (voice->src.queued_buffer_count && !voice->src.queued_buffers[0].sent_OnStartBuffer)
+	{
+		buffer = &voice->src.queued_buffers[0];
+		buffer->sent_OnStartBuffer = true;
+		voice->src.curBufferOffset = buffer->buffer.PlayBegin;
+
+		if (callback && callback->OnBufferStart && !buffer->internal)
 		{
-			buffer = &voice->src.queued_buffers[0];
-			buffer->sent_OnStartBuffer = true;
-			voice->src.curBufferOffset = buffer->buffer.PlayBegin;
+			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
 
-			if (voice->src.callback->OnBufferStart && !buffer->internal)
-			{
-				FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-				LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+			FAudio_PlatformUnlockMutex(voice->sendLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
 
-				FAudio_PlatformUnlockMutex(voice->sendLock);
-				LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
 
-				FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-				LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+			callback->OnBufferStart(callback, buffer->buffer.pContext);
 
-				callback->OnBufferStart(callback, buffer->buffer.pContext);
+			FAudio_PlatformLockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
 
-				FAudio_PlatformLockMutex(voice->audio->sourceLock);
-				LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+			FAudio_PlatformLockMutex(voice->sendLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
 
-				FAudio_PlatformLockMutex(voice->sendLock);
-				LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
-
-				FAudio_PlatformLockMutex(voice->src.bufferLock);
-				LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-			}
+			FAudio_PlatformLockMutex(voice->src.bufferLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 		}
 	}
 }
