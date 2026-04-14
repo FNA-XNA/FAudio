@@ -450,6 +450,42 @@ static void save_unaligned_end_data(FAudioSourceVoice *voice, const struct queue
 	voice->src.unaligned_size += (end_pos - byte_pos);
 }
 
+static void start_buffer(FAudioSourceVoice *voice, struct queued_buffer *buffer)
+{
+	if (!buffer->sent_OnStartBuffer)
+	{
+		buffer->sent_OnStartBuffer = true;
+
+		if (	!buffer->internal &&
+			voice->src.callback != NULL &&
+			voice->src.callback->OnBufferStart != NULL	)
+		{
+			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
+
+			FAudio_PlatformUnlockMutex(voice->sendLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
+
+			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
+
+			voice->src.callback->OnBufferStart(
+				voice->src.callback,
+				buffer->buffer.pContext
+			);
+
+			FAudio_PlatformLockMutex(voice->audio->sourceLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
+
+			FAudio_PlatformLockMutex(voice->sendLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
+
+			FAudio_PlatformLockMutex(voice->src.bufferLock);
+			LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
+		}
+	}
+}
+
 static void end_buffer(FAudioSourceVoice *voice)
 {
 	struct queued_buffer *buffer = &voice->src.queued_buffers[0];
@@ -542,36 +578,6 @@ static void end_buffer(FAudioSourceVoice *voice)
 		FAudio_PlatformLockMutex(voice->src.bufferLock);
 		LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
 	}
-
-	if (voice->src.queued_buffer_count && !voice->src.queued_buffers[0].sent_OnStartBuffer)
-	{
-		buffer = &voice->src.queued_buffers[0];
-		buffer->sent_OnStartBuffer = true;
-		voice->src.curBufferOffset = buffer->buffer.PlayBegin;
-
-		if (callback && callback->OnBufferStart && !buffer->internal)
-		{
-			FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
-
-			FAudio_PlatformUnlockMutex(voice->sendLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
-			FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-			LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
-
-			callback->OnBufferStart(callback, buffer->buffer.pContext);
-
-			FAudio_PlatformLockMutex(voice->audio->sourceLock);
-			LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
-
-			FAudio_PlatformLockMutex(voice->sendLock);
-			LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
-
-			FAudio_PlatformLockMutex(voice->src.bufferLock);
-			LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-		}
-	}
 }
 
 /* If we have saved unaligned data, and the next buffer has enough data to
@@ -652,38 +658,7 @@ static void FAudio_INTERNAL_DecodeBuffers(
 		try_collect_unaligned_data(voice);
 
 		/* Start-of-buffer behavior */
-		if (!buffer->sent_OnStartBuffer)
-		{
-			buffer->sent_OnStartBuffer = true;
-
-			if (	!buffer->internal &&
-				voice->src.callback != NULL &&
-				voice->src.callback->OnBufferStart != NULL	)
-			{
-				FAudio_PlatformUnlockMutex(voice->src.bufferLock);
-				LOG_MUTEX_UNLOCK(voice->audio, voice->src.bufferLock)
-
-				FAudio_PlatformUnlockMutex(voice->sendLock);
-				LOG_MUTEX_UNLOCK(voice->audio, voice->sendLock)
-
-				FAudio_PlatformUnlockMutex(voice->audio->sourceLock);
-				LOG_MUTEX_UNLOCK(voice->audio, voice->audio->sourceLock)
-
-				voice->src.callback->OnBufferStart(
-					voice->src.callback,
-					buffer->buffer.pContext
-				);
-
-				FAudio_PlatformLockMutex(voice->audio->sourceLock);
-				LOG_MUTEX_LOCK(voice->audio, voice->audio->sourceLock)
-
-				FAudio_PlatformLockMutex(voice->sendLock);
-				LOG_MUTEX_LOCK(voice->audio, voice->sendLock)
-
-				FAudio_PlatformLockMutex(voice->src.bufferLock);
-				LOG_MUTEX_LOCK(voice->audio, voice->src.bufferLock)
-			}
-		}
+		start_buffer(voice, buffer);
 
 		/* Number of samples we are decoding in one call. */
 		decode_count = FAudio_min(*toDecode - decoded,
