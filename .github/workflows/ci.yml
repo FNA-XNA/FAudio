@@ -51,7 +51,7 @@ jobs:
       run: ninja -C debug
 
     - name: Run Tests
-      run: ./debug/faudio_tests
+      run: SDL_AUDIO_DRIVER=dummy ./debug/faudio_tests
 
     - name: CMake configure (Release)
       run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
