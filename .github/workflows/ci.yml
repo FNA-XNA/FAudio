@@ -417,7 +417,6 @@ jobs:
     - name: Archive build result
       uses: actions/upload-artifact@v4
       with:
-        name: FNA3D-wasm-${{ matrix.artifact_suffix }}
+        name: FAudio-wasm-${{ matrix.artifact_suffix }}
         path: |
-          build/libFNA3D.a
-          build/libmojoshader.a
+          build/libFAudio.a
