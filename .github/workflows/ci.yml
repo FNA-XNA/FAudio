@@ -339,3 +339,84 @@ jobs:
           sudo pkg install -y cmake ninja sdl3
           cmake -B build -G Ninja .
           cmake --build build --verbose -- -j`sysctl -n hw.ncpu`
+  wasm:
+    name: WebAssembly (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Pthreads
+            artifact_suffix: mt
+            pthread_enabled: ON
+            pthread_flag: -pthread
+          - name: Single-threaded
+            artifact_suffix: st
+            pthread_enabled: OFF
+            pthread_flag: ""
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - uses: emscripten-core/setup-emsdk@v15
+      with:
+        version: 3.1.56
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y ninja-build cmake python-is-python3 spirv-headers
+
+    - name: Verify Emscripten
+      run: emcc -v
+
+    - name: Cache SDL3
+      id: cache-sdl3
+      uses: actions/cache@v4
+      with:
+        path: SDL
+        key: ${{ runner.os }}-wasm-sdl3-${{ env.SDL3_VERSION }}-emsdk-3.1.56-${{ matrix.artifact_suffix }}
+
+    - name: Clone SDL3
+      if: steps.cache-sdl3.outputs.cache-hit != 'true'
+      run: git clone --depth 1 --branch release-$SDL3_VERSION https://github.com/libsdl-org/SDL.git
+
+    - name: Build SDL3
+      if: steps.cache-sdl3.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        cd SDL
+        export CFLAGS="${{ matrix.pthread_flag }}"
+        emcmake cmake -B build -G Ninja . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DSDL_SHARED=OFF \
+          -DSDL_STATIC=ON \
+          -DSDL_TESTS=OFF \
+          -DSDL_INSTALL_TESTS=OFF \
+          -DSDL_PTHREADS=${{ matrix.pthread_enabled }} \
+          -DSDL_PTHREADS_SEM=${{ matrix.pthread_enabled }}
+        ninja -C build
+
+    - name: Configure FAudio
+      shell: bash
+      run: |
+        export CFLAGS="${{ matrix.pthread_flag }}"
+        export CXXFLAGS="${{ matrix.pthread_flag }}"
+        emcmake cmake -B build -G Ninja . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DBUILD_SDL3=ON \
+          -DSDL3_INCLUDE_DIRS=${GITHUB_WORKSPACE}/SDL/include \
+          -DSDL3_LIBRARIES=${GITHUB_WORKSPACE}/SDL/build/libSDL3.a
+
+    - name: Build FAudio
+      run: ninja -C build
+
+    - name: Archive build result
+      uses: actions/upload-artifact@v4
+      with:
+        name: FAudio-wasm-${{ matrix.artifact_suffix }}
+        path: |
+          build/libFAudio.a
