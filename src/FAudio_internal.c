@@ -1911,9 +1911,13 @@ static void decode_mono_adpcm_block(const uint8_t *src, float *dst, uint32_t off
 	src += 7;
 
 	/* Samples */
-	*dst++ = sample2 / 32768.0;
-	*dst++ = sample1 / 32768.0;
-	for (i = 0; i < offset + count; i += 2)
+	for (i = 0; i < min(2, offset + count); ++i)
+	{
+		if (i < offset) continue;
+		if (i == 0) *dst++ = sample2 / 32768.0;
+		if (i == 1) *dst++ = sample1 / 32768.0;
+	}
+	for (; i < offset + count; i += 2)
 	{
 		float high, low;
 
@@ -1935,7 +1939,8 @@ static void decode_mono_adpcm_block(const uint8_t *src, float *dst, uint32_t off
 		if (i >= offset)
 		{
 			*dst++ = high;
-			*dst++ = low;
+			if (i + 1 < offset + count)
+				*dst++ = low;
 		}
 
 		++src;
@@ -1968,12 +1973,21 @@ static void decode_stereo_adpcm_block(const uint8_t *src, float *dst, uint32_t o
 	src += 14;
 
 	/* Samples */
-	*dst++ = l_sample2 / 32768.0;
-	*dst++ = r_sample2 / 32768.0;
-	*dst++ = l_sample1 / 32768.0;
-	*dst++ = r_sample1 / 32768.0;
-
-	for (i = 0; i < offset + count; ++i)
+	for (i = 0; i < min(2, offset + count); ++i)
+	{
+		if (i < offset) continue;
+		if (i == 0)
+		{
+			*dst++ = l_sample2 / 32768.0;
+			*dst++ = r_sample2 / 32768.0;
+		}
+		if (i == 1)
+		{
+			*dst++ = l_sample1 / 32768.0;
+			*dst++ = r_sample1 / 32768.0;
+		}
+	}
+	for (; i < offset + count; ++i)
 	{
 		float left, right;
 
