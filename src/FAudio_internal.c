@@ -1911,7 +1911,7 @@ static void decode_mono_adpcm_block(const uint8_t *src, float *dst, uint32_t off
 	src += 7;
 
 	/* Samples */
-	for (i = 0; i < min(2, offset + count); ++i)
+	for (i = 0; i < FAudio_min(2, offset + count); ++i)
 	{
 		if (i < offset) continue;
 		if (i == 0) *dst++ = sample2 / 32768.0;
@@ -1973,7 +1973,7 @@ static void decode_stereo_adpcm_block(const uint8_t *src, float *dst, uint32_t o
 	src += 14;
 
 	/* Samples */
-	for (i = 0; i < min(2, offset + count); ++i)
+	for (i = 0; i < FAudio_min(2, offset + count); ++i)
 	{
 		if (i < offset) continue;
 		if (i == 0)
