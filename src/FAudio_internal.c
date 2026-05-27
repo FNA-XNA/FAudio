@@ -1700,6 +1700,7 @@ void FAudio_INTERNAL_FreeEffectChain(FAudioVoice *voice)
 	{
 		voice->effects.desc[i].pEffect->UnlockForProcess(voice->effects.desc[i].pEffect);
 		voice->effects.desc[i].pEffect->Release(voice->effects.desc[i].pEffect);
+		voice->audio->pFree(voice->effects.parameters[i]);
 	}
 
 	voice->audio->pFree(voice->effects.desc);
