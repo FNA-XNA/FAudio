@@ -33,21 +33,6 @@ For Xbox GDK, see the 'visualc-gdk/' directory.
 
 For iOS/tvOS and macOS universal binaries, see the 'Xcode/' directory.
 
-Unit tests
-----------
-FAudio includes a set of unit tests which document the behavior of XAudio2 and
-are to be run against FAudio to verify it has the same behavior. The tests are
-NOT built by default; set BUILD_TESTS=1 to build and then run the output with:
-
-    $ ./faudio_tests
-
-To build a Windows executable to run the tests against XAudio2, use the
-provided Makefile. This requires mingw-w64 to build.
-
-    $ cd tests/
-    $ make faudio_tests.exe
-    # run faudio_tests.exe on a Windows box
-
 Found an issue?
 ---------------
 Issues and patches can be reported via GitHub:

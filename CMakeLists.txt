@@ -11,7 +11,6 @@ endif()
 
 # Options
 option(BUILD_UTILS "Build utils/ folder" OFF)
-option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 option(BUILD_SDL3 "Build against SDL 3.0" ON)
 if(WIN32)
 option(PLATFORM_WIN32 "Enable native Win32 platform instead of SDL" OFF)
@@ -333,13 +332,6 @@ else()
 	set(FAudio_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR})
 	set(FAudio_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
 	set(FAudio_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
-endif()
-
-# tests/ Folder
-if(BUILD_TESTS)
-	add_executable(faudio_tests tests/xaudio2.c)
-	target_compile_definitions(faudio_tests PRIVATE _DEFAULT_SOURCE _BSD_SOURCE)
-	target_link_libraries(faudio_tests PRIVATE ${target})
 endif()
 
 # Installation

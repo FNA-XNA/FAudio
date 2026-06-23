@@ -45,13 +45,10 @@ jobs:
       run: apt install -y chrpath
 
     - name: CMake configure (Debug)
-      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+      run: cmake -B debug -G Ninja . -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build (Debug)
       run: ninja -C debug
-
-    - name: Run Tests
-      run: SDL_AUDIO_DRIVER=dummy ./debug/faudio_tests
 
     - name: CMake configure (Release)
       run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
@@ -420,3 +417,71 @@ jobs:
         name: FAudio-wasm-${{ matrix.artifact_suffix }}
         path: |
           build/libFAudio.a
+
+  wine-tests:
+    name: Wine Unit Tests
+    runs-on: ubuntu-latest
+    container:
+      image: fedora
+    steps:
+    - name: Update System
+      run: sudo dnf update -y
+
+    - name: Install Basics
+      run: sudo dnf install -y wine dnf-plugins-core
+
+    - name: Install Wine Build Dependencies
+      run: sudo dnf builddep -y wine.x86_64 --allowerasing
+
+    - name: Clone
+      uses: actions/checkout@v4
+
+    - name: Clone Wine
+      uses: actions/checkout@v4
+      with:
+        repository: wine-mirror/wine
+        path: wine
+
+    - name: Update Wine Files
+      run: |
+        cp include/* wine/libs/faudio/include
+        cp src/F* wine/libs/faudio/src/
+        cp src/matrix_defaults.inl wine/libs/faudio/src/
+        cp src/stb.h wine/libs/faudio/src/
+
+    - name: Build Wine Tests
+      run: |
+        cd wine
+        ./configure --without-x --without-freetype --enable-win64
+        make dlls/xaudio2_0/all -j$(nproc)
+        make dlls/xaudio2_1/all -j$(nproc)
+        make dlls/xaudio2_2/all -j$(nproc)
+        make dlls/xaudio2_3/all -j$(nproc)
+        make dlls/xaudio2_4/all -j$(nproc)
+        make dlls/xaudio2_5/all -j$(nproc)
+        make dlls/xaudio2_6/all -j$(nproc)
+        make dlls/xaudio2_7/all -j$(nproc)
+        make dlls/xaudio2_8/all -j$(nproc)
+        make dlls/xaudio2_9/all -j$(nproc)
+        make dlls/xaudio2_7/tests/all -j$(nproc)
+        make dlls/xaudio2_8/tests/all -j$(nproc)
+
+    - name: Overwrite XAudio2 DLLs
+      run: |
+        sudo cp wine/dlls/xaudio2_0/x86_64-windows/xaudio2_0.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_1/x86_64-windows/xaudio2_1.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_2/x86_64-windows/xaudio2_2.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_3/x86_64-windows/xaudio2_3.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_4/x86_64-windows/xaudio2_4.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_5/x86_64-windows/xaudio2_5.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_6/x86_64-windows/xaudio2_6.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_7/x86_64-windows/xaudio2_7.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_8/x86_64-windows/xaudio2_8.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+        sudo cp wine/dlls/xaudio2_9/x86_64-windows/xaudio2_9.dll /usr/lib64/wine-wow64/wine/x86_64-windows/
+
+    - name: Run Wine Tests
+      run: |
+        mkdir ~/.wine
+        sudo chown -R $USER:$USER ~/.wine
+        wine wine/dlls/xaudio2_7/tests/x86_64-windows/xaudio2_7_test.exe
+        wine wine/dlls/xaudio2_8/tests/x86_64-windows/xaudio2_8_test.exe
