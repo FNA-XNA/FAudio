@@ -1287,6 +1287,39 @@ void FAudio_INTERNAL_Mix_Generic_SSE2(
 }
 #endif /* HAVE_SSE2_INTRINSICS */
 
+#if HAVE_NEON_INTRINSICS
+void FAudio_INTERNAL_Mix_Generic_NEON(
+	uint32_t toMix,
+	uint32_t srcChans,
+	uint32_t dstChans,
+	float *restrict src,
+	float *restrict dst,
+	float *restrict coefficients
+) {
+	uint32_t i, co, ci;
+	for (i = 0; i < toMix; i += 1, src += srcChans, dst += dstChans)
+	for (co = 0; co < dstChans; co += 1)
+	{
+		for (ci = 0; srcChans - ci >= 4; ci += 4)
+		{
+			/* do SIMD */
+			const float32x4_t vols = vld1q_f32(&coefficients[co * srcChans + ci]);
+			const float32x4_t dat = vld1q_f32(&src[ci]);
+			dst[co] += vaddvq_f32(vmulq_f32(dat, vols));
+		}
+
+		for (; ci < srcChans; ci += 1)
+		{
+			/* do scalar */
+			dst[co] += (
+				src[ci] *
+				coefficients[co * srcChans + ci]
+			);
+		}
+	}
+}
+#endif /* HAVE_NEON_INTRINSICS */
+
 void FAudio_INTERNAL_Mix_1in_1out_Scalar(
 	uint32_t toMix,
 	uint32_t UNUSED1,
@@ -1539,7 +1572,7 @@ void FAudio_INTERNAL_InitSIMDFunctions(uint8_t hasSSE2, uint8_t hasNEON)
 		FAudio_INTERNAL_ResampleMono = FAudio_INTERNAL_ResampleMono_NEON;
 		FAudio_INTERNAL_ResampleStereo = FAudio_INTERNAL_ResampleStereo_NEON;
 		FAudio_INTERNAL_Amplify = FAudio_INTERNAL_Amplify_NEON;
-		FAudio_INTERNAL_Mix_Generic = FAudio_INTERNAL_Mix_Generic_Scalar;
+		FAudio_INTERNAL_Mix_Generic = FAudio_INTERNAL_Mix_Generic_NEON;
 		return;
 	}
 #endif
