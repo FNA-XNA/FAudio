@@ -545,10 +545,11 @@ uint32_t FAudio_CreateSourceVoice(
 		else if (COMPARE_GUID(IEEE_FLOAT))
 		{
 			/* FIXME: Weird behavior!
-			 * Prototype creates a source with the IEEE_FLOAT tag,
-			 * but it's actually PCM16. It seems to prioritize
-			 * wBitsPerSample over the format tag. Not sure if we
-			 * should fold this section into the section above...?
+			 * Prototype (appid 10150) creates a source with the
+			 * IEEE_FLOAT tag, but it's actually PCM16. It seems to
+			 * prioritize wBitsPerSample over the format tag. Not
+			 * sure if we should fold this section into the section
+			 * above...?
 			 * -flibit
 			 */
 			if (fmtex->Format.wBitsPerSample == 16)
