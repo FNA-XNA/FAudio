@@ -1445,13 +1445,19 @@ void F3DAudioCalculate(
 	F3DAUDIO_VECTOR emitterToListener;
 	float eToLDistance, normalizedDistance, dp;
 
+	/* Clang treats #pragma pack(push, 1) as both pack and align attributes.
+	 * 1 byte alignment can produce UB or even errors with modern Apple linker:
+	 * https://github.com/FNA-XNA/FAudio/issues/362
+	 * - F3DAUDIO_DISTANCE_CURVE_POINT requires 4 bytes alignment for float values
+	 * - F3DAUDIO_DISTANCE_CURVE requires 8 bytes alignment for 64-bit pointer
+	 */
 	#define DEFAULT_POINTS(name, x1, y1, x2, y2) \
-		static F3DAUDIO_DISTANCE_CURVE_POINT name##Points[2] = \
+		static ALIGN(F3DAUDIO_DISTANCE_CURVE_POINT, 4) name##Points[2] = \
 		{ \
 			{ x1, y1 }, \
 			{ x2, y2 } \
 		}; \
-		static F3DAUDIO_DISTANCE_CURVE name##Default = \
+		static ALIGN(F3DAUDIO_DISTANCE_CURVE, 8) name##Default = \
 		{ \
 			(F3DAUDIO_DISTANCE_CURVE_POINT*) &name##Points[0], 2 \
 		};
