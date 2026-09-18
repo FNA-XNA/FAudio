@@ -3064,6 +3064,9 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 	}
 	wb->streaming = (wbinfo.dwFlags & FACT_WAVEBANK_TYPE_STREAMING);
 
+	/* FIXME: flibit is dumb and exploited this to save memory in
+	 * various games, add this back when he fixes his shit */
+#if 0
 	if (wb->streaming != isStreaming)
 	{
 		/* Native forbids creating an in-memory wave bank when the flags
@@ -3073,6 +3076,9 @@ uint32_t FACT_INTERNAL_ParseWaveBank(
 		pEngine->pFree(wb);
 		return FACTENGINE_E_INVALIDUSAGE;
 	}
+#else
+	wb->streaming = isStreaming;
+#endif
 
 	wb->entryCount = wbinfo.dwEntryCount;
 	memsize = FAudio_strlen(wbinfo.szBankName) + 1;
