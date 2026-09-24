@@ -1543,8 +1543,7 @@ void F3DAudioCalculate(
 		/* Determined roughly.
 		 * Below that distance, the emitter angle is considered to be PI/2.
 		 */
-		#define EMITTER_ANGLE_NULL_DISTANCE 1.2e-7
-		if (eToLDistance < EMITTER_ANGLE_NULL_DISTANCE)
+		if (eToLDistance < FLT_EPSILON)
 		{
 			pDSPSettings->EmitterToListenerAngle = F3DAUDIO_PI / 2.0f;
 		}
