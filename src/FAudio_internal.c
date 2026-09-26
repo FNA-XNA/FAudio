@@ -328,7 +328,7 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 ) {
 	const uint32_t block_size = voice->src.format->nBlockAlign;
 	const uint32_t samples_per_block = voice->src.samples_per_block;
-	uint32_t result = (decoding * block_size / samples_per_block);
+	uint32_t result;
 	FAudioWaveFormatExtensible *fmt;
 
 	LOG_FUNC_ENTER(voice->audio)
@@ -342,6 +342,7 @@ static uint32_t FAudio_INTERNAL_GetBytesRequested(
 	}
 #endif /* HAVE_WMADEC */
 
+	result = (decoding * block_size / samples_per_block);
 	for (size_t i = 0; i < voice->src.queued_buffer_count; ++i)
 	{
 		const struct queued_buffer *buffer = &voice->src.queued_buffers[i];
