@@ -1147,6 +1147,7 @@ static void FAudio_INTERNAL_MixSource(FAudioSourceVoice *voice)
 	{
 		/* Actually, just use the existing buffer... */
 		finalSamples = voice->audio->decoded_audio;
+		voice->src.resampleOffset += (toResample << FIXED_PRECISION);
 	}
 	else
 	{
