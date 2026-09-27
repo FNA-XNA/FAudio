@@ -1405,12 +1405,14 @@ static inline void CalculateDoppler(
 		scaledSpeedOfSound = SpeedOfSound / pEmitter->DopplerScaler;
 
 		/* Clamp... */
-		float _listenerVelocityComponent = FAudio_min(
+		float _listenerVelocityComponent = FAudio_clamp(
 			*listenerVelocityComponent,
+			-scaledSpeedOfSound,
 			scaledSpeedOfSound
 		);
-		float _emitterVelocityComponent = FAudio_min(
+		float _emitterVelocityComponent = FAudio_clamp(
 			*emitterVelocityComponent,
+			-scaledSpeedOfSound,
 			scaledSpeedOfSound
 		);
 
