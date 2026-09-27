@@ -1387,7 +1387,7 @@ static inline void CalculateDoppler(
 	*DopplerFactor = 1.0f;
 
 	/* Project... */
-	if (eToLDistance != 0.0f)
+	if (eToLDistance > FLT_EPSILON)
 	{
 		*listenerVelocityComponent =
 			VectorDot(emitterToListener, pListener->Velocity) / eToLDistance;
