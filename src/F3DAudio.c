@@ -1383,7 +1383,6 @@ static inline void CalculateDoppler(
 	float* emitterVelocityComponent,
 	float* DopplerFactor
 ) {
-	float scaledSpeedOfSound;
 	*DopplerFactor = 1.0f;
 
 	/* Project... */
@@ -1402,25 +1401,15 @@ static inline void CalculateDoppler(
 
 	if (pEmitter->DopplerScaler > 0.0f)
 	{
-		scaledSpeedOfSound = SpeedOfSound / pEmitter->DopplerScaler;
+		/* Multiply... */
+		float scaledListenerVelocityComponent = *listenerVelocityComponent * pEmitter->DopplerScaler;
+		float scaledEmitterVelocityComponent = *emitterVelocityComponent * pEmitter->DopplerScaler;
 
-		/* Clamp... */
-		float _listenerVelocityComponent = FAudio_clamp(
-			*listenerVelocityComponent,
-			-scaledSpeedOfSound,
-			scaledSpeedOfSound
-		);
-		float _emitterVelocityComponent = FAudio_clamp(
-			*emitterVelocityComponent,
-			-scaledSpeedOfSound,
-			scaledSpeedOfSound
-		);
-
-		/* ... then Multiply. */
+		/* ... then Clamp. */
 		*DopplerFactor = (
-			SpeedOfSound - pEmitter->DopplerScaler * _listenerVelocityComponent
+			SpeedOfSound - FAudio_clamp(scaledListenerVelocityComponent, -SpeedOfSound, SpeedOfSound)
 		) / (
-			SpeedOfSound - pEmitter->DopplerScaler * _emitterVelocityComponent
+			SpeedOfSound - FAudio_clamp(scaledEmitterVelocityComponent, -SpeedOfSound, SpeedOfSound)
 		);
 		if (isnan(*DopplerFactor)) /* If emitter/listener are at the same pos... */
 		{
