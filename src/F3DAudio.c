@@ -27,7 +27,7 @@
 #include "F3DAudio.h"
 #include "FAudio_internal.h"
 
-#include <float.h> /* ONLY USE THIS FOR FLT_MIN/FLT_MAX! */
+#include <float.h> /* ONLY USE THIS FOR FLT_MIN/FLT_MAX/FLT_EPSILON! */
 
 /* UTILITY MACROS */
 
