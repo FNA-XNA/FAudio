@@ -1375,6 +1375,7 @@ static inline void CalculateMatrix(
  */
 static inline void CalculateDoppler(
 	float SpeedOfSound,
+	float SpeedOfSoundEpsilon,
 	const F3DAUDIO_LISTENER* pListener,
 	const F3DAUDIO_EMITTER* pEmitter,
 	F3DAUDIO_VECTOR emitterToListener,
@@ -1407,9 +1408,9 @@ static inline void CalculateDoppler(
 
 		/* ... then Clamp. */
 		*DopplerFactor = (
-			SpeedOfSound - FAudio_clamp(scaledListenerVelocityComponent, -SpeedOfSound, SpeedOfSound)
+			SpeedOfSound - FAudio_clamp(scaledListenerVelocityComponent, -SpeedOfSoundEpsilon, SpeedOfSoundEpsilon)
 		) / (
-			SpeedOfSound - FAudio_clamp(scaledEmitterVelocityComponent, -SpeedOfSound, SpeedOfSound)
+			SpeedOfSound - FAudio_clamp(scaledEmitterVelocityComponent, -SpeedOfSoundEpsilon, SpeedOfSoundEpsilon)
 		);
 		if (isnan(*DopplerFactor)) /* If emitter/listener are at the same pos... */
 		{
@@ -1518,6 +1519,7 @@ void F3DAudioCalculate(
 	{
 		CalculateDoppler(
 			SPEEDOFSOUND(Instance),
+			SPEEDOFSOUNDEPSILON(Instance),
 			pListener,
 			pEmitter,
 			emitterToListener,
