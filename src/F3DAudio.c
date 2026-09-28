@@ -1393,36 +1393,32 @@ static inline void CalculateDoppler(
 			VectorDot(emitterToListener, pListener->Velocity) / eToLDistance;
 		*emitterVelocityComponent =
 			VectorDot(emitterToListener, pEmitter->Velocity) / eToLDistance;
+
+		if (pEmitter->DopplerScaler > 0.0f)
+		{
+			/* Multiply... */
+			float scaledListenerVelocityComponent = *listenerVelocityComponent * pEmitter->DopplerScaler;
+			float scaledEmitterVelocityComponent = *emitterVelocityComponent * pEmitter->DopplerScaler;
+
+			/* ... then Clamp. */
+			*DopplerFactor = (
+				SpeedOfSound - FAudio_clamp(scaledListenerVelocityComponent, -SpeedOfSoundEpsilon, SpeedOfSoundEpsilon)
+			) / (
+				SpeedOfSound - FAudio_clamp(scaledEmitterVelocityComponent, -SpeedOfSoundEpsilon, SpeedOfSoundEpsilon)
+			);
+
+			/* Limit the pitch shifting to 2 octaves up and 1 octave down */
+			*DopplerFactor = FAudio_clamp(
+				*DopplerFactor,
+				0.5f,
+				4.0f
+			);
+		}
 	}
 	else
 	{
 		*listenerVelocityComponent = 0.0f;
 		*emitterVelocityComponent = 0.0f;
-	}
-
-	if (pEmitter->DopplerScaler > 0.0f)
-	{
-		/* Multiply... */
-		float scaledListenerVelocityComponent = *listenerVelocityComponent * pEmitter->DopplerScaler;
-		float scaledEmitterVelocityComponent = *emitterVelocityComponent * pEmitter->DopplerScaler;
-
-		/* ... then Clamp. */
-		*DopplerFactor = (
-			SpeedOfSound - FAudio_clamp(scaledListenerVelocityComponent, -SpeedOfSoundEpsilon, SpeedOfSoundEpsilon)
-		) / (
-			SpeedOfSound - FAudio_clamp(scaledEmitterVelocityComponent, -SpeedOfSoundEpsilon, SpeedOfSoundEpsilon)
-		);
-		if (isnan(*DopplerFactor)) /* If emitter/listener are at the same pos... */
-		{
-			*DopplerFactor = 1.0f;
-		}
-
-		/* Limit the pitch shifting to 2 octaves up and 1 octave down */
-		*DopplerFactor = FAudio_clamp(
-			*DopplerFactor,
-			0.5f,
-			4.0f
-		);
 	}
 }
 
