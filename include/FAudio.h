@@ -316,6 +316,8 @@ typedef struct FAudioDebugConfiguration
 	int32_t LogFileline;
 	int32_t LogFunctionName;
 	int32_t LogTiming;
+    void (*LogCallback)(const char* msg, void* userData);
+    void* LogUserData;
 } FAudioDebugConfiguration;
 
 #pragma pack(pop)
