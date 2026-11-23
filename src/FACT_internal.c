@@ -900,7 +900,8 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 	}
 	sound->parentCue->parentBank->parentEngine->pFree(sound->tracks);
 
-	if (sound->sound->category != FACTCATEGORY_INVALID)
+	if (	sound->sound->category != FACTCATEGORY_INVALID &&
+		sound->state != SOUND_STATE_STOPPED	)
 	{
 		sound->parentCue->parentBank->parentEngine->categories[
 			sound->sound->category
@@ -911,7 +912,10 @@ void FACT_INTERNAL_DestroySound(FACTSoundInstance *sound)
 	{
 		sound->parentCue->state |= FACT_STATE_STOPPED;
 		sound->parentCue->state &= ~(FACT_STATE_PLAYING | FACT_STATE_PAUSED | FACT_STATE_STOPPING);
-		sound->parentCue->data->instanceCount -= 1;
+		if (sound->state != SOUND_STATE_STOPPED)
+		{
+			sound->parentCue->data->instanceCount -= 1;
+		}
 
 		FACT_INTERNAL_SendCueNotification(sound->parentCue, FACTNOTIFICATIONTYPE_CUESTOP);
 	}
