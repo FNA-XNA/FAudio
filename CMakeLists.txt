@@ -13,6 +13,7 @@ endif()
 option(BUILD_UTILS "Build utils/ folder" OFF)
 option(BUILD_TESTS "Build tests/ folder for unit tests to be executed on the host against FAudio" OFF)
 option(BUILD_SDL3 "Build against SDL 3.0" ON)
+option(BUILD_SSE3 "Build with SSE3 requirement" OFF)
 if(WIN32)
 option(PLATFORM_WIN32 "Enable native Win32 platform instead of SDL" OFF)
 option(WMA_DECODING "Enable WMA decoding support" ${PLATFORM_WIN32})
@@ -120,6 +121,11 @@ add_library(${target}
 	# Optional source files
 	src/XNA_Song.c
 )
+
+# CPU Flags
+if(BUILD_SSE3)
+	target_compile_options(${target} PRIVATE "-msse3")
+endif()
 
 if(WMA_DECODING)
 	target_compile_definitions(${target} PRIVATE HAVE_WMADEC=1)

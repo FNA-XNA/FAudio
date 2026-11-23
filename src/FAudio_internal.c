@@ -26,6 +26,38 @@
 
 #include "FAudio_internal.h"
 
+/* Helpers to disable denormals, improves performance
+ * TODO: This detection is sloppy and lazy, should be more like FAudio_internal_simd.c
+ */
+#ifdef __SSE3__
+#include <pmmintrin.h>
+#endif
+
+static inline uint32_t PushFPState()
+{
+#ifdef __SSE3__
+	/* This is an inlined version of the following:
+	 * _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	 * _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+	 */
+	uint32_t prevState = _mm_getcsr();
+	_mm_setcsr(
+		(prevState & ~(_MM_FLUSH_ZERO_MASK | _MM_DENORMALS_ZERO_MASK)) |
+		(_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON)
+	);
+	return prevState;
+#else
+	return 0;
+#endif
+}
+
+static inline void PopFPState(uint32_t prevState)
+{
+#ifdef __SSE3__
+	_mm_setcsr(prevState);
+#endif
+}
+
 #ifndef FAUDIO_DISABLE_DEBUGCONFIGURATION
 void FAudio_INTERNAL_debug(
 	FAudio *audio,
@@ -1542,6 +1574,7 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	LinkedList *list;
 	float *effectOut;
 	FAudioEngineCallback *callback;
+	uint32_t fpState;
 
 	LOG_FUNC_ENTER(audio)
 	if (!audio->active)
@@ -1570,6 +1603,8 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	}
 	FAudio_PlatformUnlockMutex(audio->callbackLock);
 	LOG_MUTEX_UNLOCK(audio, audio->callbackLock)
+
+	fpState = PushFPState();
 
 	/* Writes to master will directly write to output, but ONLY if there
 	 * isn't any channel-changing effect processing to do first.
@@ -1664,6 +1699,8 @@ static void FAUDIOCALL FAudio_INTERNAL_GenerateOutput(FAudio *audio, float *outp
 	}
 	FAudio_PlatformUnlockMutex(audio->master->effectLock);
 	LOG_MUTEX_UNLOCK(audio, audio->master->effectLock)
+
+	PopFPState(fpState);
 
 	/* OnProcessingPassEnd callbacks */
 	FAudio_PlatformLockMutex(audio->callbackLock);

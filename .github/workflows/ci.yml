@@ -54,7 +54,7 @@ jobs:
       run: SDL_AUDIO_DRIVER=dummy ./debug/faudio_tests
 
     - name: CMake configure (Release)
-      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B release -G Ninja . -DCMAKE_BUILD_TYPE=Release -DBUILD_SSE3=ON
 
     - name: Build (Release)
       run: |
@@ -166,7 +166,7 @@ jobs:
         run: ninja -C release-x86
 
       - name: CMake configure 64-bit (Release)
-        run: mingw64-cmake -B release-x64 -G Ninja . -DCMAKE_BUILD_TYPE=Release
+        run: mingw64-cmake -B release-x64 -G Ninja . -DCMAKE_BUILD_TYPE=Release -DBUILD_SSE3=ON
 
       - name: Build 64-bit (Release)
         run: ninja -C release-x64
