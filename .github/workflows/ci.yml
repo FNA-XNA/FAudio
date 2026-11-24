@@ -336,7 +336,7 @@ jobs:
         version: '15.1'
         run: |
           sudo pkg update
-          sudo pkg install -y cmake ninja sdl3
+          sudo pkg install -y cmake-core ninja sdl3
           cmake -B build -G Ninja .
           cmake --build build --verbose -- -j`sysctl -n hw.ncpu`
   wasm:
