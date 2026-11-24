@@ -29,13 +29,15 @@
 /* Helpers to disable denormals, improves performance
  * TODO: This detection is sloppy and lazy, should be more like FAudio_internal_simd.c
  */
-#ifdef __SSE3__
+#if defined(__SSE3__)
 #include <pmmintrin.h>
+#elif defined(__aarch64__) && (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 14)))
+#include <arm_acle.h>
 #endif
 
 static inline uint32_t PushFPState()
 {
-#ifdef __SSE3__
+#if defined(__SSE3__)
 	/* This is an inlined version of the following:
 	 * _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 	 * _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
@@ -46,6 +48,14 @@ static inline uint32_t PushFPState()
 		(_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON)
 	);
 	return prevState;
+#elif defined(__aarch64__) && (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 14)))
+	uint32_t prevState = __arm_rsr("fpcr");
+	/* According to the ARM docs, 24 is the FTZ bit.
+	 * Just in case: I checked specifically for the Cortex-A57, the Nintendo Switch CPU.
+	 * -flibit
+	 */
+	__arm_wsr("fpcr", prevState | (1 << 24));
+	return prevState;
 #else
 	return 0;
 #endif
@@ -53,8 +63,10 @@ static inline uint32_t PushFPState()
 
 static inline void PopFPState(uint32_t prevState)
 {
-#ifdef __SSE3__
+#if defined(__SSE3__)
 	_mm_setcsr(prevState);
+#elif defined(__aarch64__) && (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 14)))
+	__arm_wsr("fpcr", prevState);
 #endif
 }
 
